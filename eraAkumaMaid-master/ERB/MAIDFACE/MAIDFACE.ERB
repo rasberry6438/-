@@ -1,0 +1,1996 @@
+﻿;-------------------------------------------------
+;顔を描画する関数群。製作者　金吉獣料理
+;-------------------------------------------------
+;MAIDFACE{X}はARG:0～ARG:{X-1}のX人の顔を横に並べて出力する関数。
+;画像のピクセル数はとりあえず自動的に150*150に近い物が選択される。
+;height属性
+;表示サイズの縦幅をフォントサイズに対する％で指定します。省略すると100です。
+;負の値を指定した場合、画像を縦に反転して表示します。
+;width属性
+;表示サイズの横幅をフォントサイズに対する％で指定します。省略すると0です。
+;0の場合、元画像の縦横比を維持する値になります。
+;負の値を指定した場合、画像を横に反転して表示します。
+;ypos属性
+;表示位置の縦軸位置をフォントサイズに対する％で指定します。省略すると0です。
+;「行の高さ」ではなく「フォントサイズ」が基準であることに注意してください。
+;横軸位置の調整には<shape type='space'>やbuttonのpos属性を利用してください。
+;-------------------------------------------------
+@PRINT_MAIDFACE, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+#DIM LCOUNT
+#DIM MEMO_REDRAW
+#DIM ACTOR, 6
+#DIM NUM_ACTOR
+#DIMS MEMO_MAIDFACE
+
+SIF TFLAG:颜绘スキップ
+	RETURN 0
+
+MEMO_REDRAW = CURRENTREDRAW()
+REDRAW 0
+
+NUM_ACTOR = 0
+VARSET ACTOR
+FOR LCOUNT, 0, 6
+	SIF LCOUNT >= 1 && ARG:LCOUNT <= 0
+		BREAK
+	SIF ARG:LCOUNT >= CHARANUM
+		CONTINUE
+	SIF CFLAG:(ARG:LCOUNT):颜绘 == 0
+		CONTINUE
+
+	ACTOR:NUM_ACTOR = ARG:LCOUNT
+	NUM_ACTOR += 1
+NEXT
+
+VARSET LATESTFACECHARA
+VARSET LATESTFACEID
+STR:参照用MAIDFACE文字列 = 
+
+FOR LCOUNT, 0, 6
+	SIF ACTOR:LCOUNT <= 0
+		BREAK
+	SIF ARG:LCOUNT >= CHARANUM
+		CONTINUE
+
+	;この中で STR:参照用MAIDFACE文字列 を用いて計算する
+	CALL PRINT_MAIDFACE_SUB, ACTOR:LCOUNT, LCOUNT
+NEXT
+
+TFLAG:MAX_height = 0
+STR:颜绘再現文字列 = 
+IF STR:参照用MAIDFACE文字列 != ""
+	STR:颜绘再現文字列 = %STR:参照用MAIDFACE文字列%
+
+	HTML_PRINT CONVERTSTR(STR:颜绘再現文字列)
+	CALL MULTILINE, TFLAG:MAX_height
+	TFLAG:颜绘表示中 = LINECOUNT
+ENDIF
+REDRAW MEMO_REDRAW
+
+
+;-------------------------------------------------
+;STR:参照用MAIDFACE文字列 を用いて颜绘の文字列を受け渡すので、これを呼ぶ前に初期化する事
+;-------------------------------------------------
+@PRINT_MAIDFACE_SUB, ARG, ARG:1
+#DIMS MEMO_MAIDFACE
+#DIM NUM_MAIDFACE
+
+NUM_MAIDFACE = ARG:1
+
+CALL SET_CHANGE_FACE, ARG
+
+IF TFLAG:颜绘动画中
+	MEMO_MAIDFACE = %MAIDFACE_ANIME(ARG, NUM_MAIDFACE)%
+ELSE
+	MEMO_MAIDFACE = %MAIDFACE(ARG, NUM_MAIDFACE)%
+ENDIF
+
+CALL CREATE_SPRITE_MAIDFACE, ARG, NUM_MAIDFACE, MEMO_MAIDFACE
+
+
+@CREATE_SPRITE_MAIDFACE, ARG, ARG:1, ARGS
+#DIMS MEMO_MAIDFACE
+#DIM NUM_MAIDFACE
+;スプライトに対応する颜绘文字列
+#DIMS STR_SPRITE
+;スプライトのサイズや表示場所
+#DIMS POS_SPRITE
+
+NUM_MAIDFACE = ARG:1
+MEMO_MAIDFACE = %ARGS%
+
+SIF MEMO_MAIDFACE == ""
+	RETURN 0
+
+STR_SPRITE = %EXTSTR(MEMO_MAIDFACE, "", ",")%
+POS_SPRITE = %EXTSTR(MEMO_MAIDFACE, ",")%
+
+;この颜绘が既に作られている場合
+IF CHECK_CREATED_MAIDFACE(STR_SPRITE)
+	STR:参照用MAIDFACE文字列 += @"颜绘{CHECK_CREATED_MAIDFACE(STR_SPRITE)},%POS_SPRITE%"
+	;作成した角色とIDをメモ
+	LATESTFACECHARA:NUM_MAIDFACE = ARG
+	LATESTFACEID:NUM_MAIDFACE = CHECK_CREATED_MAIDFACE(STR_SPRITE)
+ELSE
+	CALL OVERLAY_GCREATE, MAIDEFACEID, STR_SPRITE
+
+	SIF SPRITECREATED(@"颜绘{MAIDEFACEID}")
+		SPRITEDISPOSE @"颜绘{MAIDEFACEID}"
+
+	;スプライト名をつける
+	SPRITECREATE @"颜绘{MAIDEFACEID}", MAIDEFACEID
+
+	;STRにこのスプライトに対応する颜绘文字列を記録
+	STR:MAIDEFACEID = %STR_SPRITE%
+
+	STR:参照用MAIDFACE文字列 += @"颜绘{MAIDEFACEID},%POS_SPRITE%"
+
+	;作成した角色とIDをメモ
+	LATESTFACECHARA:NUM_MAIDFACE = ARG
+	LATESTFACEID:NUM_MAIDFACE = MAIDEFACEID
+
+	;MAIDEFACEIDを次のものにする
+	MAIDEFACEID += 1
+	SIF MAIDEFACEID >= 3500		;MAIDEFACEIDの保存数を変える場合はここを変える
+		MAIDEFACEID = 3000
+ENDIF
+
+
+;颜绘のGraphicsIDは3000～3499で順番に詰められていく
+@CHECK_CREATED_MAIDFACE(ARGS)
+#FUNCTION
+#DIM LCOUNT
+
+FOR LCOUNT, 3000, 3500
+	SELECTCASE STR:LCOUNT
+	CASE ""
+		RETURNF 0
+	CASE ARGS
+		SIF STRCOUNT(ARGS, "カスタム")
+			RETURNF 0
+		RETURNF LCOUNT
+	ENDSELECT
+NEXT
+RETURNF 0
+
+;GETCONFIG("一行の高さ")=19換算でARG行分高さに相当する値を返す
+@PICSIZE(ARG)
+#FUNCTION
+#DIM LCOUNT
+#DIM VALUE_height
+#DIM REAL_height
+
+VALUE_height = ARG*GETCONFIG("一行の高さ")
+;一行の高さ=19の際に、実際にどのぐらいの尺寸になるかの目安
+REAL_height = ARG*19
+
+;まずは基本計算
+LOCAL = 100*19*ARG/GETCONFIG("フォントサイズ")
+LOCAL -= LOCAL%(100*GETCONFIG("一行の高さ")/GETCONFIG("フォントサイズ") )
+
+RETURNF LOCAL
+
+;CONFIG("颜绘サイズ")に応じたPICSIZEを返す
+@MAIDFACESIZE()
+#FUNCTION
+RETURNF PICSIZE(9)
+
+
+;余白も加味した颜绘サイズの半角文字数
+@NUMC_MAIDFACE()
+#FUNCTION
+#DIM FSIZE
+#DIM VALUE
+FSIZE = MAIDFACESIZE()
+;余白はFPOSとの和が100の倍数になるようにする(100 - FSIZE%100がその操作)
+VALUE = FSIZE + 100 - FSIZE%100
+;値100=全角一文字なので、半角を意味する50で割る。これでVALUEは半角何文字なのかが分かる
+VALUE /= 50
+;颜绘は横に６つ並べる予定なので、VALUE*6が横幅より著しく短い場合にはその分余白におまけをつける
+;SIF NUM("折り返し文字数") - VALUE*6 > 6
+;	VALUE += 1
+RETURNF VALUE
+
+;-------------------------------------------------
+;出してしまった颜绘を消す関数
+;もしも前提が異なる場合は数字を変える事
+;-------------------------------------------------
+@CLEAR_MAIDFACE
+CLEARLINE MAIDFACESIZE()/100
+
+VARSET LATESTFACECHARA
+VARSET LATESTFACEID
+
+;-------------------------------------------------
+;角色ARGの顔を描画する関数。ARG:1には何人目の位置かが入っている
+;ピクセル数は選べるようにしようと思ったが150*150固定
+;-------------------------------------------------
+@MAIDFACE(ARG, ARG:1)
+#FUNCTIONS
+#DIM LCOUNT
+#DIM NUM_MAIDFACE
+#DIM FSIZE
+#DIM FPOS
+#DIM MEMO_value
+#DIMS DYNAMIC MEMO_title
+
+#DIMS DYNAMIC BG
+;髪
+#DIMS DYNAMIC RIBBON
+#DIMS DYNAMIC HAIR_LENGTH
+#DIMS DYNAMIC HAIR_LENGTH_ACCE
+#DIMS DYNAMIC HAIR_BACK
+#DIMS DYNAMIC HAIR_FRONT
+#DIMS DYNAMIC HAIR_AHOGE
+;髪の横に出てるもの
+#DIMS DYNAMIC HAIR_SIDE
+#DIMS DYNAMIC HAIR_SIDE_FRONT
+#DIMS DYNAMIC HAIR_SIDE_L_BACK
+#DIMS DYNAMIC HAIR_SIDE_L
+;麻花辫
+#DIMS DYNAMIC HAIR_PLAIT
+#DIMS DYNAMIC HAIR_PLAIT_L
+
+#DIMS DYNAMIC HAIR_MESH
+#DIMS DYNAMIC HAIR_INNER
+
+#DIMS DYNAMIC HAIR_PLAIT_INNER
+#DIMS DYNAMIC HAIR_PLAIT_L_INNER
+;肌～口
+#DIMS DYNAMIC MAIDFACE_SKIN
+#DIMS DYNAMIC FACE_ACCE
+#DIMS DYNAMIC FACE_EFFECT
+#DIMS DYNAMIC SUNTAN
+#DIMS DYNAMIC MAKEUP
+#DIMS DYNAMIC HOHO
+#DIMS DYNAMIC HOKURO
+#DIMS DYNAMIC CHEEK
+#DIMS DYNAMIC EAR
+#DIMS DYNAMIC EAR_BACK
+#DIMS DYNAMIC ANIMAL_EARS
+#DIMS DYNAMIC MOUTH
+#DIMS DYNAMIC FANG
+;目
+#DIMS DYNAMIC LEYE
+#DIMS DYNAMIC REYE
+#DIMS DYNAMIC LEYE_UNDER
+#DIMS DYNAMIC REYE_UNDER
+#DIMS DYNAMIC LEYE_OVER
+#DIMS DYNAMIC REYE_OVER
+#DIM IS_LEYE_HIGHLIGHT
+#DIM IS_REYE_HIGHLIGHT
+#DIMS DYNAMIC LEYE_HIGHLIGHT
+#DIMS DYNAMIC REYE_HIGHLIGHT
+#DIMS DYNAMIC LEYE_SIROME
+#DIMS DYNAMIC REYE_SIROME
+;睫毛
+#DIMS DYNAMIC LEYE_EYELASH
+#DIMS DYNAMIC REYE_EYELASH
+
+;服装
+#DIMS DYNAMIC CLOBASE
+#DIMS DYNAMIC KASANEGI
+#DIMS DYNAMIC FACE_MASK
+;角
+#DIMS DYNAMIC TUNO_SIDE
+#DIMS DYNAMIC TUNO
+#DIMS DYNAMIC TUNO_MID
+#DIMS DYNAMIC TUNO_BACK
+;眼鏡
+#DIMS DYNAMIC MEGANE
+;眉
+#DIMS DYNAMIC MAYU
+;其他
+#DIMS DYNAMIC BUKKAKE
+#DIMS DYNAMIC OTHER
+#DIMS DYNAMIC SWEAT
+;帽子や髪飾は"頭の上に乗せてるだけ"or"頭上を覆う"or"フードのように頭部全体を覆う"など複数の段階に分かれる
+#DIMS DYNAMIC HAIRACCE_SMALL
+#DIMS DYNAMIC HAIRACCE_ZUN
+#DIMS DYNAMIC HAIRACCE_LARGE
+#DIMS DYNAMIC HAIRACCE_HUGE
+#DIMS DYNAMIC HAIRACCE_HEAD
+;最終的に上３つをまとめてこれに置き換える
+#DIMS DYNAMIC HAIRACCE_FRONT
+#DIMS DYNAMIC HAIRACCE_OVER
+#DIMS DYNAMIC EMOTE
+;萌え袖判定
+#DIM IS_MOESODE
+#DIMS DYNAMIC EYE_COND
+
+;CSTR:颜绘変化 の記録用(この関数内でのみ変化が起きるが、最後に元に戻すため)
+#DIMS DYNAMIC MEMO_CSTR
+
+SIF CFLAG:ARG:颜绘 == 0
+	RETURNF ""
+
+NUM_MAIDFACE = ARG:1
+IS_LEYE_HIGHLIGHT = 0
+IS_REYE_HIGHLIGHT = 0
+IS_MOESODE = 0
+
+;一行の高さ19で９行相当にしたい。800だとフォントサイズの８倍なので縦の長さが足りない
+FSIZE = MAIDFACESIZE()
+FPOS = NUM_MAIDFACE * NUMC_MAIDFACE()*50
+
+IF COND("颜绘セーブロード中")
+	MEMO_value = CFLAG:ARG:角色用
+ELSEIF COND("角色メイク中")
+	MEMO_value = NO:ARG
+ELSE
+	MEMO_value = CFLAG:ARG:優先順位
+ENDIF
+SIF COND("阴蒂ック指令表示中") == 0 && COND("角色メイク中") == 0
+	MEMO_value = 0
+
+;背景
+IF COND("颜绘セーブロード中")
+	BG = 0背景黄色枠有+
+	MEMO_title = [{CFLAG:ARG:角色用, 2}]号的数据
+ELSEIF COND("角色メイク中") || COND("お友達紹介イベント中") || COND("颜绘セーブロード中") || COND("颜绘シミュ中")
+	BG = 0背景黄色枠有+
+	MEMO_title = [%CSTR:ARG:称号%]%NAME:ARG% (%CSTR:ARG:学年%) 特技：%CSTR:ARG:建议%
+ELSE
+	MEMO_title = [%CSTR:ARG:称号%]%NAME:ARG% (%CSTR:ARG:学年%) 特技：%CSTR:ARG:建议%
+	SIF CFLAG:ARG:躁动难忍
+		MEMO_title += "（躁动难忍している）"
+
+	IF DAYEV("圣诞节期間") && PLACE("野外") && COND("归途")
+		BG = 0圣诞节+
+	ELSEIF DAYEV("圣诞节期間") && COND("约会中") && COND("夕") + COND("夜")
+		BG = 0圣诞节+
+	ELSEIF COND("登校中")
+		IF DAYEV("夏服期間")
+			BG = 0青空快晴+
+		ELSE
+			BG = 0青空+
+		ENDIF
+	ELSEIF PLACE("魔界")
+		BG = 0魔界空+
+	ELSEIF PLACE("映画館")
+		BG = 0映画館+
+	ELSEIF PLACE("図書館") || PLACE("書店")
+		BG = 0図書館+
+	ELSEIF PLACE("喫茶店")
+		IF COND("夜")
+			BG = 0喫茶店夜+
+		ELSE
+			BG = 0喫茶店昼+
+		ENDIF
+	ELSEIF PLACE("公園")
+		BG = 0公園_%TEXTS("季節")%_%TEXTS("時間")%+
+	ELSEIF PLACE("裏路地")
+		IF COND("夜")
+			BG = 0裏路地夜+
+		ELSE
+			BG = 0裏路地傍晚+
+		ENDIF
+	ELSEIF PLACE("試着室")
+		BG = 0背景黄色枠有+
+	ELSEIF PLACE("ロッカールーム") || PLACE("教室")
+		BG = 0部室+
+	ELSEIF PLACE("海")
+		SELECTCASE NUM_MAIDFACE
+		CASE 0
+			BG = 0海太陽+
+		CASEELSE
+			BG = 0海+
+		ENDSELECT
+	ELSEIF PLACE("部室")
+		SELECTCASE NUM_MAIDFACE
+		CASE 0
+			SELECTCASE TEXTS("季節")
+			CASE "春"
+				BG = 0部室1+
+			CASE "夏"
+				BG = 0部室3+
+			CASE "秋"
+				BG = 0部室1+
+			CASE "冬"
+				BG = 0部室2+
+			ENDSELECT
+		CASEELSE
+			BG = 0部室+
+		ENDSELECT
+	ELSEIF PLACE("情人旅館")
+		IF COND("夜")
+			BG = 0情人旅館夜+
+		ELSE
+			BG = 0情人旅館傍晚+
+		ENDIF
+	ELSEIF PLACE("Ｈ目的") && PLACE("学園内")
+		BG = 0部室+
+	ELSEIF COND("夜")
+		SELECTCASE NUM_MAIDFACE
+		CASE 0
+			BG = 0夜空月+
+		CASEELSE
+			BG = 0夜空+
+		ENDSELECT
+	ELSEIF COND("归途")
+		;雨に降られた
+		IF STRCOUNT(SAVESTR:現在位置, "阵雨")
+			BG = 0雨+
+		ELSE
+			BG = 0傍晚+
+		ENDIF
+	ELSE
+		SELECTCASE NUM_MAIDFACE
+		CASE 0
+			IF DAYEV("夏服期間")
+				BG = 0青空快晴+
+			ELSE
+				BG = 0青空+
+			ENDIF
+		CASEELSE
+			IF DAYEV("夏服期間")
+				BG = 0青空快晴+
+			ELSE
+				BG = 0青空雲+
+			ENDIF
+		ENDSELECT
+	ENDIF
+ENDIF
+
+
+IF CSTR:ARG:颜绘変化 == "無人"
+	RETURNF @"%BG%,{FPOS},{FSIZE},{FSIZE},{0},{MEMO_value},%MEMO_title%/"
+ELSEIF CEVENT("颜绘没有", ARG)
+	LOCALS = 0背景黄色枠有+,{FPOS},{FSIZE},{FSIZE},{0},{MEMO_value},/
+	RETURNF LOCALS
+ELSEIF COND("颜绘パネル中", ARG)
+	;現在存在している角色
+	IF EXISTCSV_EX(NO:ARG)
+		LOCALS = 颜绘パネル{NO:ARG}+,{FPOS},{FSIZE},{FSIZE},{0},{MEMO_value},%MEMO_title%/
+		RETURNF LOCALS
+	ENDIF
+ENDIF
+
+MEMO_CSTR = %CSTR:ARG:颜绘変化%
+;CSTR:颜绘変化 を調整する
+IF CSTR:ARG:颜绘変化改髪 != ""
+	VARSET LOCALS
+	SPLIT @"/%CSTR:ARG:颜绘変化%", "/", LOCALS
+
+	;颜绘コンディションも見る
+	SIF STRCOUNT(CSTR:ARG:颜绘変化改髪, @"＠%CONDS("颜绘コンディション", ARG)%：") && STRCOUNT(CSTR:ARG:颜绘変化, CONDS("颜绘コンディション", ARG) ) == 0
+		LOCALS:0 = %CONDS("颜绘コンディション", ARG)%
+
+	CSTR:ARG:颜绘変化 = 
+	FOR LCOUNT, 0, 10
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			CONTINUE
+		CASEELSE
+			IF STRCOUNT(CSTR:ARG:颜绘変化改髪, @"＠%LOCALS:LCOUNT%：")
+				CSTR:ARG:颜绘変化 += @"%EXTSTR(CSTR:ARG:颜绘変化改髪, @"%LOCALS:LCOUNT%：", "_")%/"
+			ELSE
+				CSTR:ARG:颜绘変化 += @"%LOCALS:LCOUNT%/"
+			ENDIF
+		ENDSELECT
+	NEXT
+	CSTR:ARG:颜绘変化改髪 = 
+ENDIF
+
+HAIR_FRONT = 16%CONDS("前髪", ARG)%\[%CONDS("髪色の種類", ARG)%\]+
+SELECTCASE CONDS("前髪", ARG)
+CASE "撩刘海", "編髪", "外八刘海", "外八刘海２", "露额頭", "露额頭２", "分卷发２"
+	SIF TALENT:ARG:動物耳
+		HAIR_FRONT = 16%CONDS("前髪", ARG)%動物耳\[%CONDS("髪色の種類", ARG)%\]+
+CASE "乱髪２"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "超長"
+		HAIR_FRONT = 16%CONDS("前髪", ARG)%超長\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "長"
+		HAIR_FRONT = 16%CONDS("前髪", ARG)%長\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "乱髪３"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+		HAIR_FRONT = 16%CONDS("前髪", ARG)%長\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "長鬓角", "長鬓角２"
+	HAIR_FRONT += @"16%CONDS("前髪", ARG)%髪飾\[%CONDS("髪色の種類", ARG)%\]+"
+ENDSELECT
+
+SELECTCASE CONDS("髪長", ARG)
+CASE "短"
+	SELECTCASE CONDS("後髪", ARG)
+	CASE "自然"
+		HAIR_LENGTH = 4自然短\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "外八"
+		HAIR_LENGTH = 4外八短\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "卷髪"
+		HAIR_LENGTH = 4卷髪短\[%CONDS("髪色の種類", ARG)%\]+
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "巻髪"
+	SELECTCASE CONDS("後髪", ARG)
+	CASE "自然"
+		HAIR_LENGTH = 4自然巻髪\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "直髪"
+		HAIR_LENGTH = 4直髪巻髪\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "外八"
+		HAIR_LENGTH = 4外八巻髪\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "卷髪"
+		HAIR_LENGTH = 4卷髪巻髪\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "中等長度"
+	SELECTCASE CONDS("後髪", ARG)
+	CASE "自然"
+		HAIR_LENGTH = 4自然中等長度\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "直髪"
+		HAIR_LENGTH = 4直髪中等長度\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "外八"
+		HAIR_LENGTH = 4外八中等長度\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "卷髪"
+		HAIR_LENGTH = 4卷髪中等長度\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "披肩"
+	SELECTCASE CONDS("後髪", ARG)
+	CASE "自然"
+		HAIR_LENGTH = 4自然披肩\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "直髪"
+		HAIR_LENGTH = 4直髪中等長度\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "外八"
+		HAIR_LENGTH = 4外八中等長度\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "卷髪"
+		HAIR_LENGTH = 4卷髪披肩\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "長", "超長"
+	SELECTCASE CONDS("後髪", ARG)
+	CASE "自然"
+		HAIR_LENGTH = 4自然長\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "直髪"
+		HAIR_LENGTH = 4直髪長\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "外八"
+		HAIR_LENGTH = 4外八長\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "卷髪"
+		HAIR_LENGTH = 4卷髪長\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+ENDSELECT
+SIF COND("種族：史莱姆", ARG)
+	HAIR_LENGTH = 4液状後髪\[%CONDS("髪色の種類", ARG)%\]+
+
+SELECTCASE CONDS("改髪", ARG)
+CASE "三股辫双马尾"
+	HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE_L_BACK = 3左三股辫尾\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右三股辫尾\[%CONDS("髪色の種類", ARG)%\]+
+CASE "おしゃれ三股辫"
+	HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_PLAIT_L = 3左おしゃれ三股辫\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_PLAIT = 6右おしゃれ三股辫\[%CONDS("髪色の種類", ARG)%\]+
+
+	HAIR_PLAIT_L_INNER = 17左おしゃれ三股辫\[%CONDS("渐变颜色", ARG)%\]+
+	HAIR_PLAIT_INNER = 17右おしゃれ三股辫\[%CONDS("渐变颜色", ARG)%\]+
+CASE "長双马尾"
+	HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE_L_BACK = 3左長尾\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右長尾\[%CONDS("髪色の種類", ARG)%\]+
+CASE "双马尾"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+	HAIR_SIDE_L_BACK = 3左尾\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右尾\[%CONDS("髪色の種類", ARG)%\]+
+CASE "短双马尾"
+	HAIR_SIDE_L_BACK = 3左短尾\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右短尾\[%CONDS("髪色の種類", ARG)%\]+
+CASE "卷双马尾"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+	HAIR_SIDE_L_BACK = 3左卷髪\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右卷髪\[%CONDS("髪色の種類", ARG)%\]+
+CASE "钻頭双马尾ール"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+	HAIR_SIDE_L_BACK = 3左钻頭\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右钻頭\[%CONDS("髪色の種類", ARG)%\]+
+CASE "团子頭双马尾"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+	HAIR_SIDE_L_BACK = 3左団子頭尾\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右団子頭尾\[%CONDS("髪色の種類", ARG)%\]+
+CASE "細双马尾"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+	HAIR_SIDE_L_BACK = 3左細尾\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右細尾\[%CONDS("髪色の種類", ARG)%\]+
+
+;これだけ他の改髪とは別物レベルに特殊なので要注意
+CASE "三股辫编发"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+	HAIR_SIDE = 6右三股辫编发\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE_FRONT = 6右三股辫编发前\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE_L_BACK = 3左三股辫编发\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE_L = 3左三股辫编发前\[%CONDS("髪色の種類", ARG)%\]+
+
+CASE "侧边马尾"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "短", "巻髪"
+		HAIR_SIDE_L_BACK = 3左短尾\[%CONDS("髪色の種類", ARG)%\]+
+	CASEELSE
+		HAIR_SIDE_L_BACK = 3左尾\[%CONDS("髪色の種類", ARG)%\]+
+		SELECTCASE CONDS("後髪", ARG)
+		CASE "自然"
+			HAIR_LENGTH = 4自然巻髪\[%CONDS("髪色の種類", ARG)%\]+
+		CASE "直髪"
+			HAIR_LENGTH = 4直髪巻髪\[%CONDS("髪色の種類", ARG)%\]+
+		CASE "外八"
+			HAIR_LENGTH = 4外八巻髪\[%CONDS("髪色の種類", ARG)%\]+
+		CASE "卷髪"
+			HAIR_LENGTH = 4卷髪巻髪\[%CONDS("髪色の種類", ARG)%\]+
+		ENDSELECT
+
+	ENDSELECT
+CASE "马尾辫"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+		HAIR_BACK = 3長马尾辫\[%CONDS("髪色の種類", ARG)%\]+
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+		HAIR_BACK = 3马尾辫\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "麻花辫"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+		HAIR_LENGTH = 4麻花辫長\[%CONDS("髪色の種類", ARG)%\]+
+	CASEELSE
+		HAIR_LENGTH = 4麻花辫披肩\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "麻花辫２"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+		HAIR_LENGTH = 4麻花辫２長
+	CASE "披肩"
+		HAIR_LENGTH = 4麻花辫２披肩
+	CASEELSE
+		HAIR_LENGTH = 4麻花辫２中等長度
+	ENDSELECT
+
+	SELECTCASE CONDS("後髪", ARG)
+	CASE "直髪"
+		HAIR_LENGTH += @"直髪\[%CONDS("髪色の種類", ARG)%\]+"
+	CASEELSE
+		HAIR_LENGTH += @"\[%CONDS("髪色の種類", ARG)%\]+"
+	ENDSELECT
+CASE "单辫"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "長", "超長"
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+		HAIR_BACK = 3長单辫\[%CONDS("髪色の種類", ARG)%\]+
+	CASEELSE
+		HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+		HAIR_BACK = 3单辫\[%CONDS("髪色の種類", ARG)%\]+
+	ENDSELECT
+CASE "单辫２"
+	HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_BACK = 3单辫２\[%CONDS("髪色の種類", ARG)%\]+
+CASE "双辫"
+	HAIR_LENGTH = 4双辫\[%CONDS("髪色の種類", ARG)%\]+
+CASE "三股辫"
+	HAIR_LENGTH_ACCE = 6三股辫\[%CONDS("髪色の種類", ARG)%\]+
+CASE "大三股辫"
+	HAIR_LENGTH = 4大三股辫\[%CONDS("髪色の種類", ARG)%\]+
+CASE "団子頭"
+	HAIR_SIDE_L_BACK = 3左団子頭\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6右団子頭\[%CONDS("髪色の種類", ARG)%\]+
+CASE "低団子頭"
+	HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_BACK = 3低団子頭\[%CONDS("髪色の種類", ARG)%\]+
+CASE "编起来"
+	HAIR_BACK = 3编起来\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+CASE "盘頭"
+	HAIR_BACK = 3盘頭\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+CASE "高侧盘頭"
+	HAIR_LENGTH = 4直髪短\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_SIDE = 6高侧盘頭\[%CONDS("髪色の種類", ARG)%\]+
+CASE "侧盘頭"
+	SELECTCASE CONDS("髪長", ARG)
+	CASE "短", "巻髪"
+		HAIR_LENGTH = 4巻髪侧盘頭\[%CONDS("髪色の種類", ARG)%\]+
+	CASE "中等長度", "披肩"
+		SELECTCASE CONDS("後髪", ARG)
+		CASE "卷髪"
+			HAIR_LENGTH = 4卷髪中等長度侧盘頭\[%CONDS("髪色の種類", ARG)%\]+
+		CASEELSE
+			HAIR_LENGTH = 4直髪中等長度侧盘頭\[%CONDS("髪色の種類", ARG)%\]+
+		ENDSELECT
+	CASEELSE
+		SELECTCASE CONDS("後髪", ARG)
+		CASE "直髪"
+			HAIR_LENGTH = 4直髪長侧盘頭\[%CONDS("髪色の種類", ARG)%\]+
+		CASE "卷髪"
+			HAIR_LENGTH = 4卷髪長侧盘頭\[%CONDS("髪色の種類", ARG)%\]+
+		CASE "外八"
+			HAIR_LENGTH = 4外八長侧盘頭\[%CONDS("髪色の種類", ARG)%\]+
+		CASEELSE
+			HAIR_LENGTH = 4自然長侧盘頭\[%CONDS("髪色の種類", ARG)%\]+
+		ENDSELECT
+	ENDSELECT
+CASE "简易扎发"
+	HAIR_LENGTH = 4简易扎发\[%CONDS("髪色の種類", ARG)%\]+
+	HAIR_LENGTH_ACCE = 4简易扎发後发发卡\[%CONDS("髪色の種類", ARG)%\]+
+CASE "妹妹頭"
+	HAIR_LENGTH = 4妹妹頭\[%CONDS("髪色の種類", ARG)%\]+
+ENDSELECT
+
+
+SELECTCASE NONUM(CONDS("呆毛", ARG) )
+CASE "呆毛"
+	HAIR_AHOGE = 19%CONDS("呆毛", ARG)%\[%CONDS("髪色の種類", ARG)%\]+
+;色が無いもの
+CASE "触角"
+	HAIR_AHOGE = 19%CONDS("呆毛", ARG)%+
+ENDSELECT
+
+SELECTCASE NONUM(CONDS("挑染の種類", ARG) )
+CASE "挑染"
+	HAIR_MESH = 17%CONDS("挑染の種類", ARG)%\[%CONDS("挑染の色", ARG)%\]+
+ENDSELECT
+
+
+SELECTCASE CONDS("蝴蝶結", ARG)
+CASE "无蝴蝶結"
+CASE "頭上蝴蝶結"
+	SELECTCASE CONDS("髪色の種類", ARG)
+	CASE "青"
+		HAIRACCE_SMALL = 15頭上蝴蝶結黄+
+	CASE "黒", "銀", "緑"
+		HAIRACCE_SMALL = 15頭上蝴蝶結赤+
+	CASE "赤", "茶", "桃", "桃金"
+		HAIRACCE_SMALL = 15頭上蝴蝶結白+
+	CASE "金"
+		HAIRACCE_SMALL = 15頭上蝴蝶結青+
+	CASEELSE
+		HAIRACCE_SMALL = 15頭上蝴蝶結黒+
+	ENDSELECT
+CASE "頭後蝴蝶結"
+	SELECTCASE CONDS("髪色の種類", ARG)
+	CASE "赤", "桃", "桃金", "紫"
+		RIBBON = 1%CONDS("蝴蝶結", ARG)%白+
+	CASE "青", "緑"
+		RIBBON = 1%CONDS("蝴蝶結", ARG)%黄+
+	CASEELSE
+		RIBBON = 1%CONDS("蝴蝶結", ARG)%赤+
+	ENDSELECT
+CASEELSE
+	SELECTCASE CONDS("改髪", ARG)
+	CASE "団子頭", "团子頭双马尾"
+		HAIR_SIDE += @"1%CONDS("蝴蝶結", ARG)%団子頭%CLOCOLOR_MAIDFACE(@"%CONDS("蝴蝶結", ARG)%団子頭", "", ARG)%+"
+	CASE "侧边马尾"
+		IF CONDS("蝴蝶結", ARG) == "单側蝴蝶結" && CONDS("髪長", ARG) == "長" && CONDS("後髪", ARG) == "自然"
+			HAIR_SIDE += "1单側蝴蝶結侧边马尾+"
+		ELSE
+			RIBBON = 1%CONDS("蝴蝶結", ARG)%%CLOCOLOR_MAIDFACE(CONDS("蝴蝶結", ARG), "", ARG)%+
+		ENDIF
+	CASE "三股辫编发"
+
+	CASEELSE
+		RIBBON = 1%CONDS("蝴蝶結", ARG)%%CLOCOLOR_MAIDFACE(CONDS("蝴蝶結", ARG), "", ARG)%+
+	ENDSELECT
+ENDSELECT
+SIF CHECK_OTHER("簪子", ARG)
+	RIBBON = 1簪子+
+
+;顔
+MAIDFACE_SKIN = 7肌\[%CONDS("顔の色", ARG)%\]+
+;晒痕
+SIF COND("晒痕", ARG)
+	SUNTAN = 7晒痕%CONDS("晒痕トップ", ARG)%\[%CONDS("顔の色晒痕有", ARG)%\]+
+;坊主頭
+SELECTCASE CONDS("髪長", ARG)
+CASE "坊主"
+	HAIR_LENGTH = 
+	HAIR_LENGTH_ACCE = 
+	HAIR_BACK = 
+	HAIR_SIDE = 
+	HAIR_SIDE_L = 
+	HAIR_SIDE_L_BACK = 
+	HAIR_SIDE_FRONT = 
+	HAIR_PLAIT = 
+	HAIR_PLAIT_L = 
+	HAIR_FRONT = 
+	HAIR_AHOGE = 
+	HAIR_MESH = 
+	HAIR_INNER = 
+	HAIR_PLAIT_INNER = 
+	HAIR_PLAIT_L_INNER = 
+
+	IF COND("晒痕", ARG)
+		SUNTAN += @"7坊主\[晒痕\]+"
+	ELSE
+		MAIDFACE_SKIN += @"7坊主\[%CONDS("顔の色", ARG)%\]+"
+	ENDIF
+ENDSELECT
+
+
+;頬化粧
+SELECTCASE CONDS("頬化粧", ARG)
+CASE "脸谱赤"
+	MAKEUP = 8脸谱\[赤\]+
+CASE "脸谱青"
+	MAKEUP = 8脸谱\[青\]+
+CASE "战妆"
+	MAKEUP = 8战妆\[灰\]+
+CASE "光滑"
+	MAKEUP = 8%CONDS("頬化粧", ARG)%+
+ENDSELECT
+;頬傷や頬創口貼
+SIF STRCOUNT(CSTR:ARG:頬, "頬傷左")
+	HOHO += @"8頬傷左\[%CONDS("顔の色", ARG)%\]+"
+SIF STRCOUNT(CSTR:ARG:頬, "頬傷右")
+	HOHO += @"8頬傷右\[%CONDS("顔の色", ARG)%\]+"
+SIF STRCOUNT(CSTR:ARG:頬, "頬傷鼻")
+	HOHO += @"8頬傷鼻\[%CONDS("顔の色", ARG)%\]+"
+SIF STRCOUNT(CSTR:ARG:頬, "頬創口貼左")
+	HOHO += @"8頬創口貼左\[白\]+"
+SIF STRCOUNT(CSTR:ARG:頬, "頬創口貼右")
+	HOHO += @"8頬創口貼右\[白\]+"
+SIF STRCOUNT(CSTR:ARG:頬, "頬創口貼鼻")
+	HOHO += @"8頬創口貼鼻\[白\]+"
+
+;口
+IF COND("種族：獣人", ARG)
+	FANG = 牙１
+ELSEIF COND("種族：吸血鬼", ARG) + COND("種族：竜人", ARG)
+	FANG = 牙２
+ENDIF
+SELECTCASE CONDS("嘴形の種類", ARG)
+CASE "大口", "ワ", "半開", "ヮ"
+	MOUTH = 9%CONDS("嘴形", ARG)%%FANG%+
+CASEELSE
+	MOUTH = 9%CONDS("嘴形", ARG)%+
+ENDSELECT
+
+;目
+SELECTCASE NONUM(CONDS("左眼形", ARG) )
+;色が関係ない目
+CASE "ほんわか", "〇〇", "＞＜", "涙目〇〇", "涙目＞＜", "号泣", "婴儿哭"
+	LEYE = 11%CONDS("左眼形", ARG)%左+
+CASE "笑颜"
+	LEYE = 11笑颜%ONLYNUM(CONDS("左眼形", ARG) )%左\[%CONDS("睫毛の色", ARG)%\]+
+CASE "眯眯眼", "闭眼"
+	LEYE = 11%NONUM(CONDS("左眼形", ARG) )%%CONDS("閉じた目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+CASE "陰"
+	FACE_EFFECT = 22目陰\[%CONDS("顔の色晒痕有", ARG)%\]+
+CASEELSE
+	LEYE = 11%CONDS("左眼形", ARG)%左\[%CONDS("左瞳色", ARG)%\]+
+ENDSELECT
+SELECTCASE NONUM(CONDS("右眼形", ARG) )
+;色が関係ない目
+CASE "ほんわか", "〇〇", "＞＜", "涙目〇〇", "涙目＞＜", "号泣", "婴儿哭"
+	REYE = 11%CONDS("右眼形", ARG)%右+
+CASE "笑颜"
+	REYE = 11笑颜%ONLYNUM(CONDS("右眼形", ARG) )%右\[%CONDS("睫毛の色", ARG)%\]+
+CASE "眯眯眼", "闭眼"
+	REYE = 11%NONUM(CONDS("右眼形", ARG) )%%CONDS("閉じた目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+CASE "陰"
+	SIF CONDS("左眼形", ARG) != "陰"
+		FACE_EFFECT = 22目陰\[%CONDS("顔の色晒痕有", ARG)%\]+
+CASEELSE
+	REYE = 11%CONDS("右眼形", ARG)%右\[%CONDS("右瞳色", ARG)%\]+
+ENDSELECT
+SELECTCASE CONDS("顔効果", ARG)
+CASE "目陰"
+	FACE_EFFECT = 22目陰\[%CONDS("顔の色晒痕有", ARG)%\]+
+CASE "脸色苍白"
+	FACE_EFFECT = 22脸色苍白+
+ENDSELECT
+
+;高光の有無（実際にどの高光を使うかは後に本決定する）
+SIF CONDS("左高光", ARG) != "无"
+	IS_LEYE_HIGHLIGHT = 1
+SIF CONDS("右高光", ARG) != "无"
+	IS_REYE_HIGHLIGHT = 1
+
+;眉
+MAYU = 18%CONDS("眉形", ARG)%\[%CONDS("眉の色", ARG)%\]+
+
+IF TALENT:ARG:動物耳
+	ANIMAL_EARS = 12%CONDS("動物耳の形", ARG)%\[%CONDS("髪色の種類", ARG)%\]+
+
+	;内耳があるか判定
+	SELECTCASE NONUM(CONDS("動物耳の形", ARG) )
+	CASE "人鱼耳"
+	CASEELSE
+		ANIMAL_EARS += @"12%CONDS("動物耳の形", ARG)%内耳\[%CONDS("髪色の種類", ARG)%\]+"
+	ENDSELECT
+ENDIF
+
+;頭戴式耳机系
+IF CHECK_OTHER("頭戴式耳机", ARG)
+	EAR = 12頭戴式耳机+
+	EAR_BACK = 
+ELSEIF CHECK_OTHER("机器耳", ARG)
+	EAR = 12机器耳+
+	EAR_BACK = 
+ELSEIF TALENT:ARG:動物耳 == 0 || CEVENT("四つ耳", ARG)
+	IF TALENT:ARG:精灵耳
+		EAR = 12%CONDS("普通耳の形", ARG)%\[%CONDS("顔の色晒痕有", ARG)%\]+
+		EAR_BACK = 12%CONDS("普通耳の形", ARG)%左\[%CONDS("顔の色晒痕有", ARG)%\]+
+	ELSE
+		;髪型次第では人类耳は隠れる
+		SELECTCASE CONDS("髪長", ARG)
+		CASE "披肩", "長", "超長"
+			SELECTCASE NONUM(CONDS("前髪", ARG) )
+			;短系なので耳を隠さない前髪
+			CASE "撩刘海", "編髪", "外八刘海", "露额頭", "齐刘海", "不对称", "Ｍ字刘海", "後梳", "短刘海", "短前发", "前髪分け"
+				EAR = 12%CONDS("普通耳の形", ARG)%\[%CONDS("顔の色晒痕有", ARG)%\]+
+			CASEELSE
+				SELECTCASE NONUM(CONDS("改髪", ARG) )
+				CASE "编起来", "盘頭", "高侧盘頭", "双马尾", "短双马尾", "長双马尾", "卷双马尾", "钻頭双马尾ール", "团子頭双马尾", "細双马尾", "马尾辫", "单辫", "三股辫双马尾", "三股辫编发"
+					EAR = 12%CONDS("普通耳の形", ARG)%\[%CONDS("顔の色晒痕有", ARG)%\]+
+				ENDSELECT
+			ENDSELECT
+		CASEELSE
+			EAR = 12%CONDS("普通耳の形", ARG)%\[%CONDS("顔の色晒痕有", ARG)%\]+
+		ENDSELECT
+		EAR_BACK = 12%CONDS("普通耳の形", ARG)%左\[%CONDS("顔の色晒痕有", ARG)%\]+
+	ENDIF
+	;耳環判定
+	IF TALENT:ARG:耳朵穿環
+		SIF EAR != "" && CEVENT("耳朵穿環：耳環", ARG)
+			EAR += @"12耳環%CONDS("普通耳の形", ARG)%+"
+		SIF EAR != "" && CEVENT("耳朵穿環：夾子耳環右", ARG) + CEVENT("耳朵穿環：夾子耳環", ARG)
+			EAR += @"12イヤーカフ%CONDS("普通耳の形", ARG)%+"
+
+		SIF EAR_BACK != "" && CEVENT("耳朵穿環：夾子耳環左", ARG) + CEVENT("耳朵穿環：夾子耳環", ARG)
+			EAR_BACK += @"12夾子耳環左%CONDS("普通耳の形", ARG)%+"
+	ENDIF
+ENDIF
+
+;会話中は吹き出しON
+SIF TFLAG:交流中 || CFLAG:ARG:交流中
+	EMOTE = 21对话框兴奋+
+
+;精神状態で少し変化
+SELECTCASE CONDS("颜绘コンディション", ARG)
+CASE "睡眠"
+	LEYE = 11闭眼%CONDS("閉じた目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+	REYE = 11闭眼%CONDS("閉じた目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "へ字", "大口", "ワ", "嘟嘴"
+		MOUTH = 9半開%FANG%+
+	CASE "ヮ"
+		MOUTH = 9無口系+
+	CASE "嘲笑", "いー"
+		MOUTH = 9へ字+
+	CASE "笑顔"
+		MOUTH = 9微笑+
+	ENDSELECT
+
+	SIF EXP_GAIN("睡眠姦経験", ARG)
+		CHEEK = 8赤面\[赤面]+
+
+	SELECTCASE CONDS("眉形", ARG)
+	CASE "憤怒眉", "憤怒眉短"
+		MAYU = 18通常眉%CONDS("眉の長さ", ARG)%\[%CONDS("眉の色", ARG)%\]+
+	ENDSELECT
+
+	EMOTE = 21对话框睡眠+
+CASE "刚睡醒"
+	SELECTCASE CONDS("眼形", ARG)
+	CASE "眯眯眼"
+	CASEELSE
+		LEYE = 11斜眼%CONDS("眼形の番号", ARG)%左\[%CONDS("左瞳色", ARG)%\]+
+		REYE = 11斜眼%CONDS("眼形の番号", ARG)%右\[%CONDS("右瞳色", ARG)%\]+
+	ENDSELECT
+
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "へ字", "大口", "ワ", "笑顔", "嘟嘴"
+		MOUTH = 9半開%FANG%+
+	CASE "ヮ"
+		MOUTH = 9無口系+
+	CASE "微笑", "へ字", "嘲笑", "いー"
+		MOUTH = 9△+
+	ENDSELECT
+
+	EMOTE = 21对话框困倦+
+	;萌え袖
+	SIF CHECK_SHIRT("萌え袖", ARG)
+		IS_MOESODE = 1
+CASE "心情差"
+	SELECTCASE CONDS("眼形", ARG)
+	CASE "三白眼", "重度三白眼"
+		LEYE = 11重度三白眼左\[%CONDS("左瞳色", ARG)%\]+
+		REYE = 11重度三白眼右\[%CONDS("右瞳色", ARG)%\]+
+	CASEELSE
+		LEYE = 11斜眼%CONDS("眼形の番号", ARG)%左\[%CONDS("左瞳色", ARG)%\]+
+		REYE = 11斜眼%CONDS("眼形の番号", ARG)%右\[%CONDS("右瞳色", ARG)%\]+
+	ENDSELECT
+
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "微笑", "笑顔", "大口", "ワ", "無口系", "ヮ"
+		MOUTH = 9△+
+	CASE "△", "ω", "嘲笑", "いー"
+		MOUTH = 9無口系+
+	ENDSELECT
+	CHEEK = 
+	;会話エモートは消す
+	SIF CFLAG:ARG:交流中 == 0
+		EMOTE = 
+	;EMOTE = 21对话框憤怒+
+CASE "憤怒"
+	SELECTCASE CONDS("眼形", ARG)
+	CASE "重度三白眼"
+		LEYE = 11三白眼左\[%CONDS("左瞳色", ARG)%\]+
+		REYE = 11三白眼右\[%CONDS("右瞳色", ARG)%\]+
+	ENDSELECT
+
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "ω", "ワ"
+		MOUTH = 9嘟嘴+
+	CASEELSE
+		MOUTH = 9△+
+	ENDSELECT
+
+	SELECTCASE CONDS("眉形", ARG)
+	CASE "麻呂眉"
+	CASEELSE
+		MAYU = 18憤怒眉%CONDS("眉の長さ", ARG)%\[%CONDS("眉の色", ARG)%\]+
+	ENDSELECT
+	CHEEK = 
+	EMOTE = 21对话框憤怒+
+CASE "欣喜"
+	IF TALENT:ARG:高贵 + TALENT:ARG:冷静 + TALENT:ARG:清楚
+		LEYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+		REYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+
+		SELECTCASE CONDS("嘴形の種類", ARG)
+		CASE "大口", "半開"
+			MOUTH = 9ω+
+		CASE "笑顔"
+			MOUTH = 9ワ%FANG%+
+		CASE "△", "へ字", "無口系", "嘲笑", "いー", "ヮ"
+			MOUTH = 9微笑+
+		ENDSELECT
+	ELSE
+		LEYE = 11笑颜%CONDS("笑颜目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+		REYE = 11笑颜%CONDS("笑颜目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+
+		SELECTCASE CONDS("嘴形の種類", ARG)
+		CASE "半開", "嘲笑"
+			MOUTH = 9ω+
+		CASE "△", "へ字", "無口系", "ヮ"
+			MOUTH = 9微笑+
+		ENDSELECT
+	ENDIF
+	CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+	IF TALENT:ARG:叛逆 == 0 && (TALENT:ARG:恋慕 || CFLAG:ARG:躁动难忍) && TFLAG:交流中 == 0 && CFLAG:ARG:交流中 == 0
+		EMOTE = 21对话框爱心+
+		;恋慕or淫乱＆躁动难忍なら爱心眼に
+		SIF TALENT:ARG:恋慕 + TALENT:ARG:淫乱 && CFLAG:ARG:躁动难忍 && STRCOUNT(CSTR:ARG:颜绘変化, "爱心眼") == 0
+			CSTR:ARG:颜绘変化 += "/爱心眼"
+	ENDIF
+CASE "甜言蜜语"
+	IF TALENT:ARG:高贵 + TALENT:ARG:冷静 + TALENT:ARG:清楚
+		SELECTCASE CONDS("嘴形の種類", ARG)
+		CASE "大口", "半開"
+			MOUTH = 9ω+
+		CASE "笑顔"
+			MOUTH = 9ワ%FANG%+
+		CASE "△", "へ字", "無口系", "嘲笑", "いー", "ヮ"
+			MOUTH = 9微笑+
+		ENDSELECT
+	ELSE
+		SELECTCASE CONDS("嘴形の種類", ARG)
+		CASE "半開", "嘲笑"
+			MOUTH = 9ω+
+		CASE "△", "へ字", "無口系", "ヮ"
+			MOUTH = 9微笑+
+		ENDSELECT
+	ENDIF
+	CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+	IF TALENT:ARG:叛逆 == 0 && (TALENT:ARG:恋慕 || CFLAG:ARG:心情好 || CFLAG:ARG:躁动难忍) && TFLAG:交流中 == 0 && CFLAG:ARG:交流中 == 0
+		EMOTE = 21对话框爱心+
+		;恋慕or淫乱＆躁动难忍なら爱心眼に
+		SIF TALENT:ARG:恋慕 + TALENT:ARG:淫乱 && CFLAG:ARG:躁动难忍 && STRCOUNT(CSTR:ARG:颜绘変化, "爱心眼") == 0
+			CSTR:ARG:颜绘変化 += "/爱心眼"
+	ENDIF
+CASE "心情好"
+	SELECTCASE CONDS("眉形", ARG)
+	CASE "困扰眉", "困扰眉短"
+		MAYU = 18斜眉%CONDS("眉の長さ", ARG)%\[%CONDS("眉の色", ARG)%\]+
+	ENDSELECT
+
+	IF TALENT:ARG:高贵 + TALENT:ARG:冷静 + TALENT:ARG:清楚
+		LEYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+		REYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+
+		SELECTCASE CONDS("嘴形の種類", ARG)
+		CASE "大口", "半開"
+			MOUTH = 9ω+
+		CASE "笑顔"
+			MOUTH = 9ワ%FANG%+
+		CASE "△", "へ字", "無口系", "ヮ"
+			MOUTH = 9微笑+
+		ENDSELECT
+	ELSE
+		LEYE = 11笑颜%CONDS("笑颜目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+		REYE = 11笑颜%CONDS("笑颜目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+
+		SELECTCASE CONDS("嘴形の種類", ARG)
+		CASE "半開"
+			MOUTH = 9ω+
+		CASE "△", "へ字", "無口系", "ヮ"
+			MOUTH = 9微笑+
+		ENDSELECT
+	ENDIF
+	SIF TALENT:ARG:冷静 + TALENT:ARG:感情缺乏 == 0
+		CHEEK = 8红晕\[%CONDS("脸颊カラー", ARG)%\]+
+	SIF TFLAG:交流中 == 0 && CFLAG:ARG:交流中 == 0
+		EMOTE = 21对话框開心+
+CASE "叛逆"
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "微笑", "笑顔", "大口", "ω", "ワ"
+		MOUTH = 9へ字+
+	ENDSELECT
+	MAYU = 18憤怒眉%CONDS("眉の長さ", ARG)%\[%CONDS("眉の色", ARG)%\]+
+	CHEEK = 
+CASE "躁动难忍"
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "笑顔"
+		MOUTH = 9△+
+	ENDSELECT
+	CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+	IF TALENT:ARG:叛逆 == 0 && COND("発情中", ARG)
+		SELECTCASE CONDS("眉形", ARG)
+		CASE "麻呂眉"
+		CASEELSE
+			MAYU = 18困扰眉%CONDS("眉の長さ", ARG)%\[%CONDS("眉の色", ARG)%\]+
+		ENDSELECT
+		MOUTH = 9半開%FANG%+
+		;EMOTE = 21对话框爱心+
+	ENDIF
+CASE "害羞"
+	SELECTCASE CONDS("眉形", ARG)
+	CASE "麻呂眉", "憤怒眉", "憤怒眉短"
+	CASEELSE
+		MAYU = 18困扰眉%CONDS("眉の長さ", ARG)%\[%CONDS("眉の色", ARG)%\]+
+	ENDSELECT
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "嘲笑"
+		MOUTH = 9嘲笑２+
+	CASE "へ字"
+		MOUTH = 9小口+
+	ENDSELECT
+	CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+	;萌え袖
+	SIF CHECK_SHIRT("萌え袖", ARG)
+		IS_MOESODE = 1
+CASE "惊嚇"
+	LEYE = 11〇〇左+
+	REYE = 11〇〇右+
+
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "微笑", "へ字", "笑顔", "大口", "ω", "ワ", "嘲笑", "いー"
+		MOUTH = 9△+
+	ENDSELECT
+
+	CHEEK = 
+	EMOTE = 21对话框惊讶+
+CASE "小悪魔"
+	SELECTCASE CONDS("眼形", ARG)
+	CASE "三白眼"
+		LEYE = 11重度三白眼左\[%CONDS("左瞳色", ARG)%\]+
+		REYE = 11重度三白眼右\[%CONDS("右瞳色", ARG)%\]+
+	ENDSELECT
+
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "ω", "嘲笑", "いー"
+	CASEELSE
+		MOUTH = 9微笑+
+	ENDSELECT
+
+	CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+	;萌え袖
+	SIF CHECK_SHIRT("萌え袖", ARG)
+		IS_MOESODE = 1
+CASE "闲"
+	EYE_COND = 半目
+	SELECTCASE CONDS("嘴形の種類", ARG)
+	CASE "微笑", "ω", "猫口", "笑顔", "呀哒", "ワ", "ヮ", "大口", "嘲笑", "ڡ", "会話口", "いー", "ni↘", "流口水", "呀！", "抿嘴", "吐舌"
+		MOUTH = 9無口系+
+	ENDSELECT
+	;EMOTE = 21对话框・・・+
+CASE "红潮恍惚"
+	SELECTCASE CONDS("眼形", ARG)
+	CASE "三白眼", "重度三白眼"
+		LEYE = 11重度三白眼左\[%CONDS("左瞳色", ARG)%\]+
+		REYE = 11重度三白眼右\[%CONDS("右瞳色", ARG)%\]+
+	CASEELSE
+		LEYE = 11斜眼%CONDS("眼形の番号", ARG)%左\[%CONDS("左瞳色", ARG)%\]+
+		REYE = 11斜眼%CONDS("眼形の番号", ARG)%右\[%CONDS("右瞳色", ARG)%\]+
+	ENDSELECT
+
+	MOUTH = 9△+
+	CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+CASE "目陰"
+	FACE_EFFECT = 22目陰\[%CONDS("顔の色晒痕有", ARG)%\]+
+	LEYE = 
+	REYE = 
+CASE "目陰効果"
+	FACE_EFFECT = 22目陰\[%CONDS("顔の色晒痕有", ARG)%\]+
+CASE "脸色苍白効果"
+	FACE_EFFECT = 22脸色苍白+
+CASE "空洞"
+	CHEEK = 
+	IS_LEYE_HIGHLIGHT = 0
+	IS_REYE_HIGHLIGHT = 0
+CASE "过电"
+	BG = 0过电+
+CASE "王様游戏"
+	MOUTH = 9ワ+
+	EMOTE = 21对话框兴奋+
+CASE "酔酒"
+	CHEEK = 8紅潮２\[%CONDS("脸颊カラー", ARG)%\]+
+ENDSELECT
+
+
+;角は髪とかの色で色が変わる
+IF CONDS("角の形", ARG) != ""
+	SELECTCASE TALENT:ARG:角
+	;横にデンとある領帯プの角
+	CASE 1 TO 9
+		TUNO_SIDE = 14角%CONDS("角の形", ARG)%\[%CONDS("角の色", ARG)%\]+
+	;耳にかかる感じの角
+	CASE 10 TO 19
+		TUNO_BACK = 14角%CONDS("角の形", ARG)%左\[%CONDS("角の色", ARG)%\]+
+		TUNO_MID = 14角%CONDS("角の形", ARG)%\[%CONDS("角の色", ARG)%\]+
+	;額から前向きに延びる角
+	CASE 20 TO 29
+		TUNO = 19角%CONDS("角の形", ARG)%\[%CONDS("角の色", ARG)%\]+
+	ENDSELECT
+ENDIF
+SIF CONDS("頭羽の形", ARG) != ""
+	TUNO_SIDE += @"14%CONDS("頭羽の形", ARG)%\[%CONDS("頭羽の色", ARG)%\]+"
+
+;服の下につける
+IF CHECK_OTHER("铃铛项圈", ARG)
+	FACE_ACCE += @"20铃铛项圈%CLOCOLOR_MAIDFACE("铃铛项圈", CHECK_CLOCOLOR(OTHER(ARG, "首") ), ARG)%+"
+ELSEIF CHECK_OTHER("黒色颈環", ARG)
+	FACE_ACCE += "20黒色颈環+"
+ENDIF
+
+;これは消すべきか迷う
+;SIF CFLAG:ARG:電源BOX
+;	CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+
+SELECTCASE CLO("颜绘衣装", ARG)
+CASE "", "裸体"
+	SIF CFLAG:ARG:睡眠 + CFLAG:ARG:刚睡醒 + TALENT:ARG:不知羞恥 == 0 && ARG != MASTER && COND("颜绘シミュ中") == 0
+		CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+CASEELSE
+	IF CFLAG:ARG:睡眠 + CFLAG:ARG:刚睡醒 + TALENT:ARG:不知羞恥 == 0 && ARG != MASTER && COND("颜绘シミュ中") == 0
+		SIF CHECK_CLO("恥ずかしい恰好", ARG)
+			CHEEK = 8紅潮\[%CONDS("脸颊カラー", ARG)%\]+
+	ENDIF
+
+	;衣领颜色するもの
+	IF CHECK_CLO("インナー衣领颜色表示", ARG)
+		SIF CLO("颜绘衣装：内衣と泳装", ARG) != ""
+			CLOBASE += @"13%CLO("颜绘衣装：内衣と泳装", ARG)%+"
+		SIF SHIRT(ARG, "インナー") != ""
+			CLOBASE += @"13%SHIRT(ARG, "インナー")%+"
+	ENDIF
+	CLOBASE += @"13%CLO("颜绘衣装", ARG)%+"
+ENDSELECT
+
+;怪图案Ｔ恤
+SIF CHECK_SHIRT("怪图案Ｔ恤", ARG)
+	CLOBASE += @"13%CONDS("変Ｔの文字", ARG)%+"
+
+;休闲褲がメインな装扮
+IF CHECK_BOTTOM("工装裤", ARG)
+	KASANEGI += @"13工装裤%CLOCOLOR_MAIDFACE("工装裤", CHECK_CLOCOLOR(CSTR:ARG:下衣), ARG)%+"
+;飾品の外套による衣领颜色
+ELSEIF CHECK_OTHER("休闲衫", ARG)
+	KASANEGI += @"13休闲衫+"
+
+;外套のみはカバー範囲が大きいので上書き
+ELSEIF CHECK_OTHER("粗呢外套", ARG)
+ELSEIF CHECK_OTHER("外套", ARG)
+	IF EQUIP:ARG:服 == 0 || CLOBASE == ""
+		CLOBASE = 13裸外套%CLOCOLOR_MAIDFACE("外套", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG )%+
+	ELSE
+		CLOBASE = 13外套%CLOCOLOR_MAIDFACE("外套", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG )%+
+	ENDIF
+
+ELSEIF CHECK_OTHER("前開的衬衫", ARG)
+	KASANEGI += @"13前開的衬衫%CLOCOLOR_MAIDFACE("恤", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+ELSEIF CHECK_OTHER("前開連帽風衣", ARG)
+	KASANEGI += @"13前開連帽風衣%CLOCOLOR_MAIDFACE("連帽風衣", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+ELSEIF CHECK_OTHER("前開无袖連帽風衣", ARG)
+	KASANEGI += @"13前開无袖連帽風衣%CLOCOLOR_MAIDFACE("連帽風衣", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+
+ELSEIF CHECK_OTHER("前開运动衫", ARG)
+	KASANEGI += @"13前開运动衫%CLOCOLOR_MAIDFACE("运动衫", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+ELSEIF CHECK_OTHER("露肩夹克", ARG)
+	KASANEGI += @"13露肩夹克%CLOCOLOR_MAIDFACE("露肩夹克", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+ELSEIF CHECK_OTHER("前開V领毛衣", ARG)
+	KASANEGI += @"13前開V领毛衣%CLOCOLOR_MAIDFACE("前開V领毛衣", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+
+ELSEIF CHECK_OTHER("褞袍", ARG)
+	KASANEGI += @"13褞袍%CLOCOLOR_MAIDFACE("褞袍", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+
+ELSEIF CHECK_OTHER("工作围裙", ARG)
+	KASANEGI += @"13工作围裙%CLOCOLOR_MAIDFACE("工作围裙", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+ELSEIF CHECK_OTHER("厨房围裙", ARG)
+	KASANEGI += @"13厨房围裙+"
+ELSEIF CHECK_OTHER("打工围裙", ARG)
+	KASANEGI += @"13打工围裙+"
+ELSEIF CHECK_OTHER("圍裙", ARG)
+	KASANEGI += @"13圍裙+"
+ELSEIF CHECK_OTHER("白金披风", ARG)
+	KASANEGI += @"13白金披风+"
+ELSEIF CHECK_OTHER("脏披风", ARG)
+	KASANEGI += @"13脏披风+"
+ENDIF
+IF CHECK_OTHER("牛铃", ARG)
+	KASANEGI += @"20牛铃%CLOCOLOR_MAIDFACE("牛铃", CHECK_CLOCOLOR(OTHER(ARG, "首") ), ARG)%+"
+ELSEIF CHECK_OTHER("项圈", ARG) && CHECK_OTHER("铃铛项圈", ARG) == 0
+	KASANEGI += @"20项圈%CLOCOLOR_MAIDFACE("项圈", CHECK_CLOCOLOR(OTHER(ARG, "首") ), ARG)%+"
+ENDIF
+
+;裤吊帯
+IF CHECK_CLO("褶边裙吊帯", ARG)
+	KASANEGI += @"13褶边裙吊帯%CLOCOLOR_MAIDFACE("褶边裙吊帯", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+ELSEIF CHECK_CLO("裤吊帯", ARG)
+	KASANEGI += @"13裤吊帯%CLOCOLOR_MAIDFACE("裤吊帯", CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+ENDIF
+
+IF CHECK_OTHER("蝶形領帯", ARG)
+	SELECTCASE CHECK_CLOCOLOR(OTHER(ARG, "首") )
+	CASE "黒", "紫", "赤", "青", "白"
+		KASANEGI += @"13蝶形領帯%CHECK_CLOCOLOR(OTHER(ARG, "首") )%+"
+	;特に色指定が無い場合には衣装の色に合わせる
+	CASEELSE
+		SELECTCASE CHECK_CLOCOLOR(OTHER(ARG, "饰耳") )
+		CASE "黒", "紫", "赤", "青", "白"
+			KASANEGI += @"13蝶形領帯%CHECK_CLOCOLOR(OTHER(ARG, "饰耳") )%+"
+		CASEELSE
+			SELECTCASE CLO("颜绘衣装の色", ARG)
+			CASE "黒", "紫", "赤", "青", "白"
+				KASANEGI = 13蝶形領帯%CLO("颜绘衣装の色", ARG)%+
+			CASEELSE
+				KASANEGI = 13蝶形領帯赤+
+			ENDSELECT
+		ENDSELECT
+	ENDSELECT
+ENDIF
+
+IF CHECK_OTHER("围巾", ARG) && PLACE("野外") + COND("颜绘シミュ中")
+	IF STRCOUNT(OTHER(ARG, "首"), "Ｃ")
+		KASANEGI += @"20围巾Ｃ%CLOCOLOR_MAIDFACE("围巾", CHECK_CLOCOLOR(OTHER(ARG, "首") ), ARG)%+"
+	ELSEIF STRCOUNT(OTHER(ARG, "首"), "Ｂ")
+		KASANEGI += @"20围巾Ｂ%CLOCOLOR_MAIDFACE("围巾", CHECK_CLOCOLOR(OTHER(ARG, "首") ), ARG)%+"
+	ELSE
+		KASANEGI += @"20围巾%CLOCOLOR_MAIDFACE("围巾", CHECK_CLOCOLOR(OTHER(ARG, "首") ), ARG)%+"
+	ENDIF
+ENDIF
+IF CHECK_OTHER("顎口罩", ARG)
+	FACE_MASK = 20顎口罩%CLOCOLOR_MAIDFACE("顎口罩", CHECK_CLOCOLOR(OTHER(ARG, "顔") ), ARG)%+
+ELSEIF CHECK_OTHER("口罩", ARG)
+	FACE_MASK = 20口罩%CLOCOLOR_MAIDFACE("口罩", CHECK_CLOCOLOR(OTHER(ARG, "顔") ), ARG)%+
+ENDIF
+
+SELECTCASE CONDS("眼鏡", ARG)
+CASE "", "无眼鏡"
+CASE "眼罩黒", "眼罩白"
+	CLOBASE += @"20%CONDS("眼鏡", ARG)%+"
+CASE "太阳鏡", "瓶底眼鏡", "瓶底胡须眼鏡", "圈圈眼鏡", "圈圈胡须眼鏡"
+	MEGANE = 20%CONDS("眼鏡", ARG)%+
+CASEELSE
+	MEGANE = 20%CONDS("眼鏡", ARG)%%CLOCOLOR_MAIDFACE("眼鏡", CHECK_CLOCOLOR(OTHER(ARG, "眼鏡") ), ARG)%+
+ENDSELECT
+
+;帽子系。上から順にHUGE,LARGE,SMALL
+IF CHECK_OTHER("南瓜頭", ARG)
+	HAIRACCE_HEAD = 15南瓜頭
+ELSEIF CHECK_OTHER("修女帽", ARG)
+    HAIRACCE_HUGE = 15修女帽+
+ELSEIF CHECK_OTHER("頭纱", ARG)
+	HAIRACCE_HUGE = 15頭纱+
+ELSEIF CHECK_OTHER("青将校", ARG)
+	HAIRACCE_HEAD = 将校青
+ELSEIF CHECK_OTHER("緑将校", ARG)
+	HAIRACCE_HEAD = 将校緑
+ELSEIF CHECK_OTHER("黒将校", ARG)
+	HAIRACCE_HEAD = 将校黒
+ELSEIF CHECK_OTHER("茶兵士", ARG)
+	HAIRACCE_HEAD = 兵士茶
+ELSEIF CHECK_OTHER("緑兵士", ARG)
+	HAIRACCE_HEAD = 兵士緑
+ELSEIF CHECK_OTHER( "黒制服", ARG)
+	HAIRACCE_HEAD = 制服黒
+ELSEIF CHECK_OTHER("青制服", ARG)
+	HAIRACCE_HEAD = 制服青
+ELSEIF CHECK_OTHER("茶制服", ARG)
+	HAIRACCE_HEAD = 制服茶
+
+;ここからLARGE
+ELSEIF CHECK_OTHER("白と金の薄紗", ARG)
+	HAIRACCE_LARGE = 15白と金の薄紗+
+ELSEIF CHECK_OTHER("魔女の帽子", ARG)
+	HAIRACCE_LARGE = 5魔女の帽子+
+ELSEIF CHECK_OTHER("鸭舌帽", ARG)
+	HAIRACCE_LARGE = 5鸭舌帽%CLOCOLOR_MAIDFACE("鸭舌帽", CHECK_CLOCOLOR(OTHER(ARG, "帽子") ), ARG)%+
+ELSEIF CHECK_OTHER("草帽", ARG)
+	HAIRACCE_LARGE = 5草帽+
+ELSEIF CHECK_OTHER("聖誕帽", ARG)
+	HAIRACCE_LARGE = 5聖誕帽+
+ELSEIF CHECK_OTHER("水兵帽", ARG)
+	HAIRACCE_LARGE = 5水兵帽%CLOCOLOR_MAIDFACE("水兵帽", CHECK_CLOCOLOR(OTHER(ARG, "帽子") ), ARG)%+
+ELSEIF CHECK_OTHER("贝雷帽", ARG)
+	HAIRACCE_LARGE = 5贝雷帽%CLOCOLOR_MAIDFACE("贝雷帽", CHECK_CLOCOLOR(OTHER(ARG, "帽子") ), ARG)%+
+ELSEIF CHECK_OTHER("女仆帽", ARG)
+	HAIRACCE_ZUN = 15女仆帽+
+ELSEIF CHECK_OTHER("护士帽", ARG)
+    HAIRACCE_ZUN = 15护士帽+
+ELSEIF CHECK_OTHER("胖次帽", ARG)
+	HAIRACCE_ZUN = 5胖次帽%CLOCOLOR_MAIDFACE("胖次帽", CHECK_CLOCOLOR(OTHER(ARG, "帽子") ), ARG)%+
+;ここからSMALL
+ELSEIF CHECK_OTHER("兔耳", ARG)
+	IF TALENT:ARG:動物耳 == 0
+		SELECTCASE CHECK_CLOCOLOR(OTHER(ARG, "饰耳") )
+		CASE "黒", "紫", "赤", "青", "白"
+			HAIRACCE_SMALL = 15兔耳%CHECK_CLOCOLOR(OTHER(ARG, "饰耳") )%+
+		CASEELSE
+			;特に色指定が無い場合には衣装の色に合わせる
+			SELECTCASE CLO("颜绘衣装の色", ARG)
+			CASE "黒", "紫", "赤", "青", "白"
+				HAIRACCE_SMALL = 15兔耳%CLO("颜绘衣装の色", ARG)%+
+			CASEELSE
+				HAIRACCE_SMALL = 15兔耳赤+
+			ENDSELECT
+		ENDSELECT
+	ENDIF
+ELSEIF CHECK_OTHER("猫耳", ARG)
+	SIF TALENT:ARG:動物耳 == 0
+		HAIRACCE_SMALL = 15猫耳%CHECK_CLOCOLOR(OTHER(ARG, "饰耳") )%+
+ELSEIF CHECK_OTHER("牛耳", ARG)
+	IF TALENT:ARG:動物耳 == 0
+		HAIRACCE_SMALL = 15牛耳+
+	ENDIF
+ELSEIF CHECK_OTHER("頭冠", ARG)
+    HAIRACCE_SMALL = 15頭冠+
+ELSEIF CHECK_OTHER("礼服頭花", ARG)
+	IF CLOCOLOR_MAIDFACE("礼服頭花", CHECK_CLOCOLOR(OTHER(ARG, "帽子") ), ARG) == "黒"
+		HAIRACCE_SMALL = 15礼服頭花黒+
+	ELSE
+		HAIRACCE_SMALL = 15礼服頭花白+
+	ENDIF
+ELSEIF CHECK_OTHER("頭上太阳鏡", ARG)
+	HAIRACCE_SMALL = 15頭上太阳鏡+
+ELSEIF CHECK_OTHER("髮箍", ARG)
+	HAIRACCE_SMALL = 15髮箍赤+
+ENDIF
+
+;精液
+SIF CHECK_STAIN(STAIN:ARG:顔, "精液")
+	BUKKAKE += "22精液右頬+22精液左頬+"
+SIF CHECK_STAIN(STAIN:ARG:髪, "精液")
+	BUKKAKE += "22精液髪+"
+SIF CHECK_STAIN(STAIN:ARG:Ｂ, "精液")
+	BUKKAKE += "22精液Ｂ+"
+;汗
+SIF COND("浑身是汗", ARG)
+	SWEAT = 8頬汗\[水色\]+
+
+;颜绘変化有？
+IF CSTR:ARG:颜绘変化 != ""
+	VARSET LOCALS
+	SPLIT CSTR:ARG:颜绘変化, "/", LOCALS
+	FOR LCOUNT, 0, 10
+		SELECTCASE NONUM(LOCALS:LCOUNT)
+		;CASE ""
+		;	BREAK
+		CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+			LEYE = 11%LOCALS:LCOUNT%左\[%CONDS("左瞳色", ARG)%\]+
+			REYE = 11%LOCALS:LCOUNT%右\[%CONDS("右瞳色", ARG)%\]+
+		CASE "眯眯眼", "闭眼", "笑颜"
+			LEYE = 11%NONUM(LOCALS:LCOUNT)%%ONLYNUM(LOCALS:LCOUNT)%左\[%CONDS("睫毛の色", ARG)%\]+
+			REYE = 11%NONUM(LOCALS:LCOUNT)%%ONLYNUM(LOCALS:LCOUNT)%右\[%CONDS("睫毛の色", ARG)%\]+
+		CASE "ほんわか", "〇〇", "＞＜", "涙目〇〇", "涙目＞＜", "号泣", "婴儿哭"
+			LEYE = 11%LOCALS:LCOUNT%左+
+			REYE = 11%LOCALS:LCOUNT%右+
+		CASE "左普通眼", "左吊眼", "左垂眼", "左斜眼", "左水灵眼", "左縦長目", "左三白眼", "左重度三白眼", "左Ｘ目"
+			LOCALS:LCOUNT = %SUBSTRINGU(LOCALS:LCOUNT, 1, -1)%
+			LEYE = 11%LOCALS:LCOUNT%左\[%CONDS("左瞳色", ARG)%\]+
+		CASE "左眯眯眼", "左闭眼", "左笑颜"
+			LOCALS:LCOUNT = %SUBSTRINGU(LOCALS:LCOUNT, 1, -1)%
+			LEYE = 11%NONUM(LOCALS:LCOUNT)%%ONLYNUM(LOCALS:LCOUNT)%左\[%CONDS("睫毛の色", ARG)%\]+
+		CASE "左ほんわか", "左〇〇", "左＞＜", "左涙目〇〇", "左涙目＞＜", "左号泣", "左婴儿哭"
+			LOCALS:LCOUNT = %SUBSTRINGU(LOCALS:LCOUNT, 1, -1)%
+			LEYE = 11%LOCALS:LCOUNT%左+
+		CASE "右普通眼", "右吊眼", "右垂眼", "右斜眼", "右水灵眼", "右縦長目", "右三白眼", "右重度三白眼", "右Ｘ目"
+			LOCALS:LCOUNT = %SUBSTRINGU(LOCALS:LCOUNT, 1, -1)%
+			REYE = 11%LOCALS:LCOUNT%右\[%CONDS("右瞳色", ARG)%\]+
+		CASE "右眯眯眼", "右闭眼", "右笑颜"
+			LOCALS:LCOUNT = %SUBSTRINGU(LOCALS:LCOUNT, 1, -1)%
+			REYE = 11%NONUM(LOCALS:LCOUNT)%%ONLYNUM(LOCALS:LCOUNT)%右\[%CONDS("睫毛の色", ARG)%\]+
+		CASE "右ほんわか", "右〇〇", "右＞＜", "右涙目〇〇", "右涙目＞＜", "右号泣", "右婴儿哭"
+			LOCALS:LCOUNT = %SUBSTRINGU(LOCALS:LCOUNT, 1, -1)%
+			REYE = 11%LOCALS:LCOUNT%右+
+		CASE "普通眼飘忽", "吊眼飘忽", "垂眼飘忽", "斜眼飘忽", "水灵眼飘忽", "縦長目飘忽", "三白眼飘忽", "重度三白眼飘忽", "Ｘ目飘忽"
+			LEYE = 11%LOCALS:LCOUNT%左\[%CONDS("左瞳色", ARG)%\]+
+			REYE = 11%LOCALS:LCOUNT%右\[%CONDS("右瞳色", ARG)%\]+
+			EYE_COND += "飘忽"
+		CASE "普通眼半目", "吊眼半目", "垂眼半目", "斜眼半目", "水灵眼半目", "縦長目半目", "三白眼半目", "重度三白眼半目", "Ｘ目半目"
+			LEYE = 11%LOCALS:LCOUNT%左\[%CONDS("左瞳色", ARG)%\]+
+			REYE = 11%LOCALS:LCOUNT%右\[%CONDS("右瞳色", ARG)%\]+
+			EYE_COND += "半目"
+		CASE "半目", "飘忽", "睁開"
+			EYE_COND += @"%LOCALS:LCOUNT%"
+
+		CASE "目陰効果"
+			FACE_EFFECT = 22目陰\[%CONDS("顔の色晒痕有", ARG)%\]+
+		CASE "脸色苍白効果", "脸色苍白"
+			FACE_EFFECT = 22脸色苍白+
+		CASE "顔効果无"
+			FACE_EFFECT = 
+		CASE "目陰"
+			FACE_EFFECT = 22目陰\[%CONDS("顔の色晒痕有", ARG)%\]+
+			LEYE = 
+			REYE = 
+
+		CASE "爱心眼"
+			SELECTCASE CHECK_TYPE(REYE)
+			CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+				REYE_OVER = 11%CONDS("右爱心眼の色", ARG)%爱心%CHECK_TYPE(REYE)%右+
+			ENDSELECT
+
+			SELECTCASE CHECK_TYPE(LEYE)
+			CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+				LEYE_OVER = 11%CONDS("左爱心眼の色", ARG)%爱心%CHECK_TYPE(LEYE)%左+
+			ENDSELECT
+
+		;これは眼形を縦長に强行変える
+		CASE "混乱"
+			REYE_OVER = 11混乱右+
+			LEYE_OVER = 11混乱左+
+			LEYE = 11縦長目左\[%CONDS("左瞳色", ARG)%\]+
+			REYE = 11縦長目右\[%CONDS("右瞳色", ARG)%\]+
+		CASE "高光有"
+			IS_LEYE_HIGHLIGHT = 1
+			IS_REYE_HIGHLIGHT = 1
+		CASE "高光无"
+			IS_LEYE_HIGHLIGHT = 0
+			IS_REYE_HIGHLIGHT = 0
+		CASE "左高光有"
+			IS_LEYE_HIGHLIGHT = 1
+		CASE "左高光无"
+			IS_LEYE_HIGHLIGHT = 0
+		CASE "右高光有"
+			IS_REYE_HIGHLIGHT = 1
+		CASE "右高光无"
+			IS_REYE_HIGHLIGHT = 0
+
+		CASE "无眼白", "白眼", "黒目"
+			LEYE_SIROME = %LOCALS:LCOUNT%
+			REYE_SIROME = %LOCALS:LCOUNT%
+
+		;眉の長さは基本固定
+		CASE "通常眉", "憤怒眉", "斜眉", "困扰眉", "麻呂眉", "蹙眉", "困惑眉"
+			MAYU = 18%NONUM(LOCALS:LCOUNT)%%CONDS("眉の長さ", ARG)%%ONLYNUM(LOCALS:LCOUNT)%\[%CONDS("眉の色", ARG)%\]+
+		CASE "通常眉短", "憤怒眉短", "斜眉短", "困扰眉短", "蹙眉短", "困惑眉短"
+			MAYU = 18%LOCALS:LCOUNT%\[%CONDS("眉の色", ARG)%\]+
+		CASE "大口", "ワ", "半開"
+			MOUTH = 9%LOCALS:LCOUNT%%FANG%+
+		CASE "微笑", "へ字", "△", "ω", "嘟嘴", "猫口", "笑顔", "ワ", "ヮ", "半開", "大口", "無口系", "嘲笑", "小口", "一文字", "～", "いー", "呀哒", "哈欠大", "哈欠小", "会話口", "ni↘", "栗口", "ڡ", "流口水", "呀！", "抿嘴", "口哨", "吐舌", "小夫", "叉叉", "うにうに", "にんまり"
+			MOUTH = 9%LOCALS:LCOUNT%+
+		CASE "脸谱赤",
+			MAKEUP = 8脸谱\[赤\]+
+		CASE "脸谱青"
+			MAKEUP = 8脸谱\[青\]+
+		CASE "战妆"
+			MAKEUP = 8战妆\[灰\]+
+		CASE "光滑"
+			MAKEUP = 8%LOCALS:LCOUNT%+
+		CASE "赤面"
+			CHEEK = 8%LOCALS:LCOUNT%\[%LOCALS:LCOUNT%\]+
+		CASE "楕円", "红晕", "婴儿红晕", "紅潮"
+			CHEEK = 8%LOCALS:LCOUNT%\[%CONDS("脸颊カラー", ARG)%\]+
+		CASE "頬傷左", "頬傷鼻", "頬傷右"
+			HOHO += @"8%LOCALS:LCOUNT%\[%CONDS("顔の色", ARG)%\]+"
+		CASE "頬創口貼左", "頬創口貼鼻", "頬創口貼右"
+			HOHO += @"8%LOCALS:LCOUNT%\[白\]+"
+		CASE "血迹"
+			CHEEK = 8血迹+
+		CASE "精液右頬", "精液左頬", "精液髪", "精液Ｂ"
+			BUKKAKE += @"22%LOCALS:LCOUNT%+"
+		CASE "頬汗"
+			SWEAT = 8頬汗\[水色\]+
+
+		CASE "无眼鏡"
+			MEGANE = 
+		CASE "眼罩黒", "眼罩白", "太阳鏡", "瓶底眼鏡", "瓶底胡须眼鏡", "圈圈眼鏡", "圈圈胡须眼鏡"
+			MEGANE = 20%LOCALS:LCOUNT%+
+		CASE "眼鏡", "专家眼鏡", "黑框眼鏡", "金丝眼鏡", "玳瑁眼鏡"
+			MEGANE = 20%LOCALS:LCOUNT%黒+
+
+		CASE "口罩", "顎口罩"
+			FACE_MASK = 20%LOCALS:LCOUNT%白+
+		CASE "口罩黒", "顎口罩黒", "口罩白", "顎口罩白"
+			FACE_MASK = 20%LOCALS:LCOUNT%+
+		CASE "口罩没有"
+			FACE_MASK = 
+
+		;鞄
+		CASE "挎包"
+			KASANEGI += @"22%LOCALS:LCOUNT%+"
+		;小物
+		CASE "茶", "咖啡", "紅茶", "橘子", "本", "帯洞乳酪", "圆形奶酪", "扇子赤", "扇子富士山", "扇子桜", "扇子白", "菜刀", "帯血菜刀", "啤酒", "短冊", "送禮"
+			OTHER += @"22%LOCALS:LCOUNT%+"
+		CASE "オーフェス", "オーフェス兴奋", "オーフェス汗", "オーフェス爱心", "オーフェス！", "22オーフェス？", "オーフェス！？", "オーフェス電球"
+			OTHER = 22%LOCALS:LCOUNT%+
+		CASE "頭上橘子"
+			HAIRACCE_SMALL = 22頭上橘子+%HAIRACCE_SMALL%
+		CASE "頭上太阳鏡"
+			SIF CHECK_OTHER("頭上太阳鏡", ARG) == 0
+				HAIRACCE_SMALL = 15頭上太阳鏡+
+		;口に咥えるもの
+		CASE "烟", "沒點燃的煙", "冰", "pocky", "面包", "法棍", "ストロー"
+			MOUTH = 9無口系+
+			OTHER += @"22%LOCALS:LCOUNT%+"
+		CASE "避孕套"
+			SELECTCASE CONDS("嘴形の種類", ARG)
+			CASE "微笑", "無口系"
+			CASEELSE
+				MOUTH = 9無口系+
+			ENDSELECT
+			OTHER += @"22%LOCALS:LCOUNT%+"
+		;手机。22手机画面点灯効果+は少なくとも明るい部屋だと不要だなと
+		CASE "手机", "手机白", "手机黒", "手机粉紅"
+			SELECTCASE NONUM(LOCALS:LCOUNT)
+			CASE "手机白"
+				OTHER += "22手机[白]+"
+			CASE "手机黒"
+				OTHER += "22手机[黒]+"
+			CASEELSE
+				OTHER += "22手机[粉紅]+"
+			ENDSELECT
+		CASE "托下巴", "唇边手", "頬手", "对指", "不可以", "石頭", "剪刀", "布", "石頭右", "剪刀右", "布右"
+			OTHER += @"22手首%LOCALS:LCOUNT%\[%CONDS("手の色", ARG)%\]+"
+		CASE "Ｗ剪刀手"
+			OTHER += @"22手首剪刀\[%CONDS("手の色", ARG)%\]+22手首剪刀右\[%CONDS("手の色", ARG)%\]+"
+		CASE "頬杖", "頬杖左"
+			OTHER += @"22手首%LOCALS:LCOUNT%\[%CONDS("前腕から先の色", ARG)%\]+"
+			SIF CONDS("手首から先の色", ARG) != "" && CONDS("前腕から先の色", ARG) == CONDS("顔の色晒痕有", ARG)
+				OTHER += @"22手首手套%LOCALS:LCOUNT%\[%CONDS("手首から先の色", ARG)%\]+"
+		CASE "Ｗ頬杖"
+			OTHER += @"22手首頬杖左\[%CONDS("前腕から先の色", ARG)%\]+22手首頬杖\[%CONDS("前腕から先の色", ARG)%\]+"
+			SIF CONDS("手首から先の色", ARG) != "" && CONDS("前腕から先の色", ARG) == CONDS("顔の色晒痕有", ARG)
+				OTHER += @"22手首手套頬杖左\[%CONDS("手首から先の色", ARG)%\]+22手首手套頬杖\[%CONDS("手首から先の色", ARG)%\]+"
+		CASE "胖次花绳", "胖次花绳湿", "胖次花绳变化"
+			OTHER += @"22手首展示内褲手\[%CONDS("手の色", ARG)%\]+"
+			;あやとり可能な胖次を穿いている？
+			IF CHECK_PANTIES("胖次花绳可能", ARG)
+				IF CONFIG("裆部颜色：白")
+					OTHER += @"22胖次花绳%CLOCOLOR(CSTR:ARG:胖次, "色のみ")%+"
+					IF CHECK_PANTIES("湿的", ARG) || NONUM(LOCALS:LCOUNT) == "胖次花绳湿"
+						OTHER += @"22胖次開洞白湿的+"
+					ELSE
+						OTHER += @"22胖次開洞白+"
+					ENDIF
+				ELSEIF CONFIG("裆部颜色：稍微帯些变化")
+					IF CHECK_PANTIES("湿的", ARG) || NONUM(LOCALS:LCOUNT) == "胖次花绳湿"
+						OTHER += @"22胖次花绳変化湿的%CLOCOLOR(CSTR:ARG:胖次, "色のみ")%+"
+					ELSE
+						OTHER += @"22胖次花绳変化%CLOCOLOR(CSTR:ARG:胖次, "色のみ")%+"
+					ENDIF
+				;默认
+				ELSE
+					IF CHECK_PANTIES("湿的", ARG) || NONUM(LOCALS:LCOUNT) == "胖次花绳湿"
+						OTHER += @"22胖次花绳湿%CLOCOLOR(CSTR:ARG:胖次, "色のみ")%+"
+					ELSE
+						OTHER += @"22胖次花绳%CLOCOLOR(CSTR:ARG:胖次, "色のみ")%+"
+					ENDIF
+				ENDIF
+				SIF CHECK_PANTIES("開洞帯污迹的", ARG)
+					OTHER += @"22胖次開洞帯污迹的+"
+				SIF NONUM(LOCALS:LCOUNT) == "胖次花绳变化"
+					OTHER += @"22胖次開洞精液+"
+			ENDIF
+		CASE "扇子"
+			OTHER += "22扇子富士山+"
+		CASE "萌え袖"
+			IS_MOESODE = 1
+		CASE "对话框憤怒", "对话框汗", "对话框爱心", "对话框兴奋", "对话框惊讶", "对话框睡眠", "对话框困倦", "对话框開心", "对话框・・・", "对话框？", "对话框！", "对话框尷尬", "对话框乱", "对话框電球", "对话框！？", "对话框圆圈", "对话框叉叉", "对话框／／／"
+			EMOTE = 21%LOCALS:LCOUNT%+
+		CASE "爱心大量", "对话框爱心大量"
+			EMOTE = 21对话框爱心+21爱心大量+
+		CASE "圓圈", "对话框圓圈"
+			EMOTE = 21圓圈+
+		CASE "抖抖"
+			EMOTE = 21%LOCALS:LCOUNT%+%EMOTE%
+		CASE "会話中", "叹气"
+			EMOTE += @"21%LOCALS:LCOUNT%+"
+		CASE "南瓜頭"
+			HAIRACCE_HEAD = 15南瓜頭
+		ENDSELECT
+
+		IF STRCOUNT(LOCALS:LCOUNT, "BG=")
+			LOCALS:LCOUNT = %EXTSTR(LOCALS:LCOUNT, "BG=", "")%
+			IF LOCALS:LCOUNT == "无"
+				BG = 
+			ELSE
+				BG = %LOCALS:LCOUNT%+
+			ENDIF
+		ENDIF
+	NEXT
+ENDIF
+
+;萌え袖
+IF OTHER == ""
+	IF IS_MOESODE && CLO("萌え袖可能", ARG) != ""
+		OTHER = 22%CLO("萌え袖可能", ARG)%+
+	ELSEIF CHECK_SHIRT("啦啦队制服", ARG)
+		OTHER = 22ポンポン+
+	ENDIF
+ENDIF
+
+;圓圈中？
+IF COND("圓圈中")
+	EMOTE = 21圓圈+
+	BG = 0背景黄色+
+ELSEIF PLACE("映画館")
+	EMOTE += "21映画館効果+"
+ENDIF
+
+IF HAIRACCE_HUGE != ""
+	HAIRACCE_OVER = %HAIRACCE_HUGE%
+
+	;改髪、蝴蝶結、呆毛、動物耳、角、翼などはおかしなことになるので無くす
+	TUNO = 
+	TUNO_SIDE = 
+	TUNO_BACK = 
+	ANIMAL_EARS = 
+	RIBBON = 
+
+	HAIR_BACK = 
+	HAIR_AHOGE = 
+	HAIR_SIDE = 
+	HAIR_SIDE_L = 
+	HAIR_SIDE_L_BACK = 
+	HAIR_SIDE_FRONT = 
+	HAIR_PLAIT = 
+	HAIR_PLAIT_L = 
+
+ELSEIF HAIRACCE_LARGE != ""
+	HAIRACCE_OVER = %HAIRACCE_LARGE%
+
+	TUNO = 
+	TUNO_SIDE = 
+	TUNO_BACK = 
+	ANIMAL_EARS = 
+	RIBBON = 
+	HAIR_AHOGE = 
+	HAIR_SIDE = 
+	HAIR_SIDE_L = 
+	HAIR_SIDE_L_BACK = 
+	HAIR_SIDE_FRONT = 
+
+ELSEIF HAIRACCE_ZUN != ""
+	HAIRACCE_FRONT = %HAIRACCE_ZUN%
+
+	;TUNO = 
+	;TUNO_SIDE = 
+	;TUNO_BACK = 
+	ANIMAL_EARS = 
+	RIBBON = 
+
+ELSEIF HAIRACCE_SMALL != ""
+	HAIRACCE_OVER = %HAIRACCE_SMALL%
+
+	HAIR_AHOGE = 
+ENDIF
+
+;天使の輪など
+IF COND("種族：死神", ARG)
+	BG += "2死神の輪+"
+ELSEIF COND("種族：堕天使", ARG) || COND("種族：アルサバーニ", ARG)
+	BG += "2堕天使の輪+"
+ELSEIF COND("種族：天使", ARG)
+	BG += "2天使の輪+"
+ENDIF
+
+;三白眼などはメガネ形状に合わせる
+IF MEGANE != ""
+	IF STRCOUNT(MEGANE, "眼罩")
+		LEYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+		REYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+	ELSEIF STRCOUNTS(MEGANE, "ブロー", "フルリム", "太阳鏡")
+		SELECTCASE CHECK_TYPE(REYE)
+		CASE "三白眼"
+			IF CHECK_TYPE(LEYE) == "三白眼"
+				LEYE = 11重度三白眼左\[%CONDS("左瞳色", ARG)%\]+
+				REYE = 11重度三白眼右\[%CONDS("右瞳色", ARG)%\]+
+			ENDIF
+		ENDSELECT
+	ENDIF
+ENDIF
+
+;眼形に２とかをその都度付けるのがバグの元なので最後に一回だけ見る
+;ここで白眼が必要かも判断する
+SIF LEYE_SIROME == ""
+	LEYE_SIROME = %CONDS("左白瞳色", ARG)%
+SIF REYE_SIROME == ""
+	REYE_SIROME = %CONDS("右白瞳色", ARG)%
+
+IF STRCOUNT(EYE_COND, "睁開")
+	EYE_COND = 
+ELSE
+	IF STRCOUNT(EYE_COND, "飘忽") || (STRCOUNT(CONDS("右眼形", ARG), "飘忽") + STRCOUNT(CONDS("左眼形", ARG), "飘忽") && EYE_COND == "")
+		EYE_COND += "飘忽"
+		EYE_COND = %REPLACE(EYE_COND, "飘忽", "")%飘忽
+	ENDIF
+	IF STRCOUNT(EYE_COND, "半目") || (STRCOUNT(CONDS("右眼形", ARG), "半目") + STRCOUNT(CONDS("左眼形", ARG), "半目") && EYE_COND == "")
+		EYE_COND += "半目"
+		EYE_COND = %REPLACE(EYE_COND, "半目", "")%半目
+	ENDIF
+ENDIF
+
+
+SELECTCASE CHECK_TYPE(REYE)
+CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+	REYE = 11%CHECK_TYPE(REYE)%%CHECK_NUM(CONDS("右眼形", ARG), REYE)%%EYE_COND%右\[%CONDS("右瞳色", ARG)%\]+
+
+	SIF REYE_SIROME != "无眼白" && REYE_SIROME != ""
+		REYE_UNDER = 11%CHECK_TYPE(REYE)%%CHECK_NUM(CONDS("右眼形", ARG), REYE)%%EYE_COND%右白眼\[%REYE_SIROME%\]+
+	REYE_EYELASH = 11%CHECK_TYPE(REYE)%%CHECK_NUM(CONDS("右眼形", ARG), REYE)%%EYE_COND%右睫毛\[%CONDS("睫毛の色", ARG)%\]+
+	;睫毛と白眼は飘忽が関係ない
+	REYE_UNDER = %REPLACE(REYE_UNDER, "飘忽", "")%
+	REYE_EYELASH = %REPLACE(REYE_EYELASH, "飘忽", "")%
+ENDSELECT
+
+SELECTCASE CHECK_TYPE(LEYE)
+CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+	LEYE = 11%CHECK_TYPE(LEYE)%%CHECK_NUM(CONDS("左眼形", ARG), LEYE)%%EYE_COND%左\[%CONDS("左瞳色", ARG)%\]+
+
+	SIF LEYE_SIROME != "无眼白" && LEYE_SIROME != ""
+		LEYE_UNDER = 11%CHECK_TYPE(LEYE)%%CHECK_NUM(CONDS("左眼形", ARG), LEYE)%%EYE_COND%左白眼\[%LEYE_SIROME%]\+
+	LEYE_EYELASH = 11%CHECK_TYPE(LEYE)%%CHECK_NUM(CONDS("左眼形", ARG), LEYE)%%EYE_COND%左睫毛\[%CONDS("睫毛の色", ARG)%\]+
+	;睫毛と白眼は飘忽が関係ない
+	LEYE_UNDER = %REPLACE(LEYE_UNDER, "飘忽", "")%
+	LEYE_EYELASH = %REPLACE(LEYE_EYELASH, "飘忽", "")%
+ENDSELECT
+
+;目に対応する高光が存在するかの確認
+SIF IS_REYE_HIGHLIGHT
+	REYE_HIGHLIGHT = %CHECK_HIGHLIGHT("右", REYE, ARG)%
+SIF IS_LEYE_HIGHLIGHT
+	LEYE_HIGHLIGHT = %CHECK_HIGHLIGHT("左", LEYE, ARG)%
+
+;単眼か見る
+IF COND("種族：一目", ARG)
+	;単眼は全て右目として扱う
+	LEYE = 
+	LEYE_UNDER = 
+	LEYE_OVER = 
+	LEYE_HIGHLIGHT = 
+	LEYE_SIROME = 
+	LEYE_EYELASH = 
+
+	REYE = %REPLACE(REYE, "11", "11単眼")%
+	REYE_UNDER = %REPLACE(REYE_UNDER, "11", "11単眼")%
+	REYE_OVER = %REPLACE(REYE_OVER, "11", "11単眼")%
+	REYE_HIGHLIGHT = %REPLACE(REYE_HIGHLIGHT, "11", "11単眼")%
+	REYE_SIROME = %REPLACE(REYE_SIROME, "11", "11単眼")%
+	REYE_EYELASH = %REPLACE(REYE_EYELASH, "11", "11単眼")%
+	MAYU = %REPLACE(MAYU, "18", "18単眼")%
+ENDIF
+
+SIF CHECK_OTHER("藤の髪飾", ARG)
+    HAIR_FRONT += "20藤の髪飾+"
+SIF CHECK_OTHER("橘子の发卡", ARG)
+    HAIRACCE_OVER += "20橘子の发卡+"
+SIF CHECK_OTHER("花飾り", ARG)
+    HAIRACCE_OVER += "15花飾り+"
+SIF CHECK_OTHER("狐面", ARG)
+    HAIRACCE_OVER += "5狐面+"
+SIF CHECK_OTHER("カボチャ面", ARG)
+    HAIRACCE_OVER += "5カボチャ面+"
+
+;南瓜頭は例外中の例外
+IF HAIRACCE_HEAD != ""
+	HAIRACCE_OVER = %HAIRACCE_HEAD%
+
+	;改髪、蝴蝶結、呆毛、動物耳、角、翼などはおかしなことになるので無くす
+	TUNO = 
+	TUNO_SIDE = 
+	TUNO_BACK = 
+	ANIMAL_EARS = 
+	EAR = 
+	EAR_BACK = 
+	RIBBON = 
+
+	HAIR_LENGTH = 
+	HAIR_LENGTH_ACCE = 
+	HAIR_BACK = 
+	HAIR_SIDE = 
+	HAIR_SIDE_L = 
+	HAIR_SIDE_L_BACK = 
+	HAIR_SIDE_FRONT = 
+	HAIR_PLAIT = 
+	HAIR_PLAIT_L = 
+	HAIR_FRONT = 
+	HAIR_AHOGE = 
+	HAIR_MESH = 
+	HAIR_INNER = 
+	HAIR_PLAIT_INNER = 
+	HAIR_PLAIT_L_INNER = 
+ENDIF
+
+;痣は目によって要調整
+SELECTCASE CONDS("痣", ARG)
+CASE "", "痣无"
+CASEELSE
+	SELECTCASE CONDS("痣", ARG)
+	CASE "泪痣左"
+	;泪痣左は、左目が縦長目,番号が４or６,なら調整版
+		IF STRCOUNTS(LEYE, "縦長目", "４", "６")
+			HOKURO = 10%CONDS("痣", ARG)%調整+
+		ELSE
+			HOKURO = 10%CONDS("痣", ARG)%+
+		ENDIF
+	CASEELSE
+		HOKURO = 10%CONDS("痣", ARG)%+
+	ENDSELECT
+ENDSELECT
+
+;渐变颜色が設定されている場合は用意する
+IF HAIR_LENGTH != "" && CONDS("渐变颜色", ARG) != ""
+	SELECTCASE EXTSTR(HAIR_LENGTH, "4", "\[")
+	;渐变颜色が無い髪型
+	CASE "直髪短", "外八短", "液状後髪"
+	CASEELSE
+		HAIR_INNER = 17%EXTSTR(HAIR_LENGTH, "4", "\[")%\[%CONDS("渐变颜色", ARG)%\]+
+	ENDSELECT
+ENDIF
+
+
+;CSTR:颜绘変化 を元に戻す
+CSTR:ARG:颜绘変化 = %MEMO_CSTR%
+
+;动画ーション用の変数に記録(_BACKは左耳と左双马尾など。画像的には右側のやつ)
+SAVEFACE_BACK:NUM_MAIDFACE = %BG%%RIBBON%%HAIR_BACK%%HAIR_SIDE_L_BACK%%HAIR_LENGTH%%HAIR_INNER%%HAIR_LENGTH_ACCE%%TUNO_BACK%%EAR_BACK%%HAIR_SIDE_L%%HAIR_PLAIT_L%%HAIR_PLAIT_L_INNER%%MAIDFACE_SKIN%%SUNTAN%%FACE_ACCE%%FACE_EFFECT%%HAIR_SIDE%%HAIR_PLAIT%%HAIR_PLAIT_INNER%%TUNO_MID%%EAR%%MAKEUP%%HOHO%%HOKURO%%CHEEK%%ANIMAL_EARS%
+SAVEFACE_MOUTH:NUM_MAIDFACE = %MOUTH%
+
+SAVEFACE_EYES:NUM_MAIDFACE = %LEYE_UNDER%%REYE_UNDER%%LEYE%%REYE%
+SAVEFACE_EYES_LIGHT:NUM_MAIDFACE = %LEYE_HIGHLIGHT%%REYE_HIGHLIGHT%
+SAVEFACE_EYES_OVER:NUM_MAIDFACE = %LEYE_OVER%%REYE_OVER%
+SAVEFACE_EYES_EYELASH:NUM_MAIDFACE = %LEYE_EYELASH%%REYE_EYELASH%
+
+SAVEFACE_FRONT:NUM_MAIDFACE = %CLOBASE%%KASANEGI%%FACE_MASK%%HAIRACCE_FRONT%%TUNO_SIDE%%MEGANE%%SWEAT%%HAIR_FRONT%%HAIR_SIDE_FRONT%%HAIR_MESH%
+SAVEFACE_MAYU:NUM_MAIDFACE = %MAYU%
+SAVEFACE_OVER:NUM_MAIDFACE = %HAIRACCE_OVER%%HAIR_AHOGE%%BUKKAKE%%OTHER%%TUNO%%EMOTE%,{FPOS},{FSIZE},{FSIZE},{0},{MEMO_value},%MEMO_title%/
+
+RETURNF @"%SAVEFACE_BACK:NUM_MAIDFACE%%SAVEFACE_MOUTH:NUM_MAIDFACE%%SAVEFACE_EYES:NUM_MAIDFACE%%SAVEFACE_EYES_LIGHT:NUM_MAIDFACE%%SAVEFACE_EYES_OVER:NUM_MAIDFACE%%SAVEFACE_EYES_EYELASH:NUM_MAIDFACE%%SAVEFACE_FRONT:NUM_MAIDFACE%%SAVEFACE_MAYU:NUM_MAIDFACE%%SAVEFACE_OVER:NUM_MAIDFACE%"
+;RETURNF @"%SAVEFACE_BACK:NUM_MAIDFACE%%SAVEFACE_MOUTH:NUM_MAIDFACE%%SAVEFACE_FRONT:NUM_MAIDFACE%%SAVEFACE_EYES:NUM_MAIDFACE%%SAVEFACE_EYES_LIGHT:NUM_MAIDFACE%%SAVEFACE_EYES_OVER:NUM_MAIDFACE%%SAVEFACE_EYES_EYELASH:NUM_MAIDFACE%%SAVEFACE_MAYU:NUM_MAIDFACE%%SAVEFACE_OVER:NUM_MAIDFACE%"
+

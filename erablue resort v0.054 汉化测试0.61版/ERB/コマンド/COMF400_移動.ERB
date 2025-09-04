@@ -1,0 +1,308 @@
+﻿
+@COMNAME400
+#FUNCTIONS
+TSTR:コマンド名受渡 = 移动
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_400
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+
+@COM_TOOLTIP_400
+LOCALS = <br>■移动<br>
+LOCALS += "在度假村内进行位置转移的指令。<br>需消耗少量时间。"
+LOCALS += "<br>指令类型：可单独执行<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+;-------------------------------------------------
+;移動
+;-------------------------------------------------
+@COM400
+#DIMS AA, 40
+#DIMS 出会ったキャラ記録
+
+;移動した瞬間隠密解除
+CFLAG:MASTER:隠密 = 0
+CFLAG:TARGET:隠密 = 0
+
+CALL 移動時モード消去(PLAYER)
+
+;表示マップ種類を代入
+TFLAG:マップ種別 = 派生マップ番号取得(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+
+;エリア切り替え時の処理
+IF TFLAG:エリア切り替え時_目的地格納
+	CALLFORM エリア情報登録_{CFLAG:PLAYER:現在マップ種別}("エリア移動可能場所")
+	IF CFLAG:PLAYER:現在位置 == RESULT
+		CFLAG:PLAYER:現在マップ種別 = TFLAG:エリア切り替え時_目的地格納 - 100
+		CALLFORM エリア情報登録_{TFLAG:エリア切り替え時_目的地格納 - 100}("エリア移動可能場所")
+		CFLAG:PLAYER:現在位置 = RESULT
+		TFLAG:マップ種別 = 派生マップ番号取得(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		TFLAG:エリア切り替え時_目的地格納 = 0
+		TRYCALLFORM エリア来訪時イベント_{CFLAG:PLAYER:現在マップ種別}
+		TFLAG:長距離移動時_目的地格納 = 0
+		IF あなた特殊能力:縦横無尽 && あなた単独()
+			TIME += 4
+		ELSE
+			TIME += 15
+		ENDIF
+		RETURN 0
+	ELSE
+		TFLAG:長距離移動時_目的地格納 = RESULT
+		CALL SKIP_MOVE(CFLAG:PLAYER:現在マップ種別, TFLAG:長距離移動時_目的地格納)
+		;現在位置を更新し、次も移動の扱いにする
+		CFLAG:PLAYER:現在位置 = RESULT
+	ENDIF
+ENDIF
+
+;遠距離移動中の処理
+IF TFLAG:長距離移動時_目的地格納
+	TIME += 1
+	IF TFLAG:長距離移動時_目的地格納 == CFLAG:MASTER:現在位置
+		TFLAG:長距離移動時_目的地格納 = 0
+		IF !TFLAG:エリア切り替え時_目的地格納
+			RETURN 0
+		ELSE
+			RESTART
+		ENDIF
+	ELSEIF 同一場所判定(TFLAG:長距離移動時_目的地格納, CFLAG:MASTER:現在位置)
+		TFLAG:長距離移動時_目的地格納 = 0
+		IF !TFLAG:エリア切り替え時_目的地格納
+			RETURN 0
+		ELSE
+			RESTART
+		ENDIF
+	ENDIF
+	CALL CHARA_MOVEMENT
+	TFLAG:行動前時刻 = TIME + 1440 * DAY
+	;キャラをTARGET配列に突っ込む
+	CALL TARGET_SET()
+	
+	出会ったキャラ記録 = 
+	;誰かいないかチェック
+	FOR LOCAL,1,CHARANUM
+		SIF TARGET:LOCAL <= 0
+			BREAK
+		SIF 追従中キャラ(TARGET:LOCAL)
+			CONTINUE
+		SIF 出会ったキャラ記録 != ""
+			出会ったキャラ記録 += "、"
+		出会ったキャラ記録 += @"%CALLNAME:(TARGET:LOCAL)%"
+	NEXT
+	IF 出会ったキャラ記録 != ""
+		IF MODE_存在判定_プレイヤー側("全裸散歩", PLAYER)
+			VARSET RESULTS
+			SPLIT 出会ったキャラ記録, "、", RESULTS
+			DRAWLINE
+			PRINTFORML %RESULTS:0%正在向此处接近！
+			PRINTFORMW %CALLNAME:PLAYER%一行在被发现前匆忙离开了现场……
+			CALL 全裸散歩終了処理()
+			TFLAG:長距離移動時_目的地格納 = 0
+			TFLAG:エリア切り替え時_目的地格納 = 0
+			;エリアまたぎ移動キャンセル用にフラグを突っ込む
+			RFLAG:立ち止まらないフラグ = -1
+			RETURN -1
+		ENDIF
+		PRINTFORML 在%GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:MASTER:現在位置)%与%出会ったキャラ記録%相遇
+		;パンツは一旦封印
+		; IF STRLENS(CSTR:MASTER:12) && RAND:2 && !CFLAG:(LOCAL:2):睡眠
+		; 	PRINTL 
+		; 	PRINTFORMW %CALLNAME:(LOCAL:2)%に見とがめられ身体検査をされた…
+		; 	PRINTFORMW 
+		; 	PRINTFORMW 
+		; 	PRINTFORMW 
+		; 	PRINTFORMW くすねたパンティを没収された
+		; 	SIF GETBIT (CFLAG:(LOCAL:2):10,0)
+		; 		PRINTFORMW %CALLNAME:(LOCAL:2)%に弱みを握られた
+		; 	CALL KOJO_EVENT(11, LOCAL:2, 0)
+		; 	SETBIT CFLAG:(LOCAL:2):10 ,0
+		; 	CSTR:MASTER:12 =
+		; 	TFLAG:長距離移動時_目的地格納 = 0
+		; 	RETURN 0
+		; ELSE
+			IF RFLAG:立ち止まらないフラグ > 0
+				PRINTL
+			ELSE
+				PRINTL ……请选择操作
+				PRINTL [0] 继续移动
+				PRINTL [1] 暂停行动
+				PRINTL 
+				PRINTL [9] 持续移动至目的地
+				INPUT
+				
+				IF RESULT == 0
+					;無視する場合
+				ELSEIF RESULT == 9
+					;もう立ち止まらないフラグを立てとく
+					RFLAG:立ち止まらないフラグ = 1
+				ELSE
+					TFLAG:長距離移動時_目的地格納 = 0
+					TFLAG:エリア切り替え時_目的地格納 = 0
+					;エリアまたぎ移動キャンセル用にフラグを突っ込む
+					RFLAG:立ち止まらないフラグ = -1
+					RETURN 0
+				ENDIF
+			ENDIF
+		; ENDIF
+	ENDIF
+	
+		LOCAL:1 = IN_ROOM("MIN", 18, "CFLAG", 6)
+	;遠距離移動
+	IF CAN_MOVE(CFLAG:PLAYER:現在マップ種別, CFLAG:MASTER:現在位置, TFLAG:長距離移動時_目的地格納) & 1
+		CFLAG:MASTER:現在位置 = (TFLAG:長距離移動時_目的地格納)
+		TFLAG:マップ種別 = 派生マップ番号取得(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		;遠距離移動フラグ消去
+		TFLAG:長距離移動時_目的地格納 = 0
+		SIF !TFLAG:エリア切り替え時_目的地格納
+			RETURN 0
+		; FOR LOCAL,1,CHARANUM
+		; 	SIF CFLAG:LOCAL:同行
+		; 		CFLAG:LOCAL:現在位置 = CFLAG:MASTER:現在位置
+		; NEXT
+	ELSE
+		CALL SKIP_MOVE(CFLAG:PLAYER:現在マップ種別, TFLAG:長距離移動時_目的地格納)
+		;現在位置を更新し、次も移動の扱いにする
+		CFLAG:MASTER:現在位置 = RESULT
+		TFLAG:マップ種別 = 派生マップ番号取得(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	ENDIF
+	RESTART
+ENDIF
+
+$DRAW_LOOP
+CALL DRAW_MAP
+HTML_PRINT RESULTS
+
+PRINTL 
+DRAWLINE
+PRINTL 
+PRINTFORML 当前位于{CFLAG:MASTER:現在位置}:%GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:MASTER:現在位置)%
+
+FOR LOCAL,0,2100
+	SIF CFLAG:PLAYER:現在マップ種別 != 0 && LOCAL >= 1000
+		BREAK
+	SIF 存在しない移動先(CFLAG:PLAYER:現在マップ種別, LOCAL)
+		CONTINUE
+	SIF CAN_MOVE(CFLAG:PLAYER:現在マップ種別, CFLAG:MASTER:現在位置, LOCAL) & 1
+		PRINTBUTTONLC @"[{LOCAL}] - %GETPLACENAME(CFLAG:PLAYER:現在マップ種別, LOCAL)%", LOCAL
+NEXT
+PRINTL
+PRINTL 
+PRINTBUTTON "[99] - 前往其他区域", 99
+IF DAY == 開催予定日取り
+	CALLFORM MOVE_ROUTINE_%開催予定祭り名%(0, "特設マップ")
+	IF RESULT
+		;日程が今日 + 特設マップがある祭りなら特設マップあるよ！　と強調表示
+		SETCOLOR カラーパレット("黄")
+		PRINT 　　　特殊地图已开启！
+		RESETCOLOR
+	ENDIF
+ELSEIF エリアNEW表示判定()
+	;存在するけど訪れたことのないエリアがあるなら強調表示
+	SETCOLOR カラーパレット("黄")
+	PRINT 　NEW！
+	RESETCOLOR
+ENDIF
+PRINTL 
+IF CFLAG:MASTER:現在マップ種別 == 0
+	IF 施設改造度:20:0
+		PRINTBUTTON "[2020] 返回个人房间", 2020
+	ELSE
+		PRINTBUTTON "[20] 返回个人房间", 20
+	ENDIF
+	PRINTL 
+ENDIF
+PRINTBUTTON @"[999] - 返回", 999
+$INPUT_LOOP
+INPUTS
+
+SIF RESULTS == ""
+	GOTO INPUT_LOOP
+LOCAL:10 = TOINT(RESULTS) - (TOINT(RESULTS) == 0 && RESULTS != "0")
+IF LOCAL:10 == -1
+	REPLACE RESULTS, CALLNAME:MASTER, "%CALLNAME:MASTER%"
+	FOR LOCAL, 1, 18
+		SIF GETPLACENAME(CFLAG:PLAYER:現在マップ種別, LOCAL) == RESULTS
+			LOCAL:10 = LOCAL
+	NEXT
+ENDIF
+CALL 表示マップ切り替え判定(LOCAL:10)
+LOCAL = RESULT
+IF LOCAL:10 == 999
+	RETURN -1
+ELSEIF LOCAL:10 == 99
+	;エリア移動選択
+	CALL エリア移動選択画面表示
+	IF RESULT == -1
+		;移動しない場合
+		GOTO DRAW_LOOP
+	ELSEIF RESULT == 1
+		;移動処理
+		サイド描画横スクロール保存 = 0
+		RESTART
+	ENDIF
+ELSEIF CFLAG:MASTER:現在位置 == LOCAL:10
+	RETURN 0
+ELSEIF LOCAL
+	サイド描画横スクロール保存 = 0
+	GOTO DRAW_LOOP
+ELSEIF 存在しない移動先(CFLAG:PLAYER:現在マップ種別, LOCAL:10)
+	CLEARLINE 1
+	REUSELASTLINE 
+	GOTO INPUT_LOOP
+ELSE
+	;目的地が離れているので、最終目的地として設定
+	TFLAG:長距離移動時_目的地格納 = LOCAL:10
+	CALL SKIP_MOVE(CFLAG:PLAYER:現在マップ種別, LOCAL:10)
+	;現在位置を更新し、次も移動の扱いにする
+	CFLAG:MASTER:現在位置 = RESULT
+	TFLAG:マップ種別 = 派生マップ番号取得(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	TIME += 1
+	RESTART
+ENDIF
+TIME += 1
+PREVCOM = 400
+STR:0 = 移動
+
+RETURN 0
+
+
+
+; @HAS_DUPLICATE_KEY, ARG
+; #FUNCTION
+; 	FOR LOCAL, 1, CHARANUM
+; 		IF CFLAG:LOCAL:311 == ARG
+; 			SIF TALENT:LOCAL:恋慕
+; 				RETURNF 1
+; 		ENDIF
+; 	NEXT
+
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@COM_ABLE400
+;移動実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(400)
+	RETURN RESULT
+SIF CFLAG:うふふ == 2
+	RETURN 0
+SIF CFLAG:PLAYER:うふふ
+	RETURN 0
+;宿泊エリアでは見えない
+SIF CFLAG:PLAYER:現在マップ種別 == 999
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+
+

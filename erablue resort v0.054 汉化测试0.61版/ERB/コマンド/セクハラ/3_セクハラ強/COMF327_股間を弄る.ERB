@@ -1,0 +1,201 @@
+﻿
+@COMNAME327
+#FUNCTIONS
+IF 月算出() == "冬の月" && ITEM:被炉 != 0 && GETPLACENAME(CFLAG:MASTER:現在マップ種別, CFLAG:MASTER:現在位置) == "和室"
+	TSTR:コマンド名受渡 = 在被炉里玩弄股间
+ELSE
+	TSTR:コマンド名受渡 = 把玩股间
+ENDIF
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_327
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("セクハラ強")
+弱点コマンドカテゴリ = C
+睡眠中許可 = 1
+
+@COM_TOOLTIP_327
+LOCALS = <br>■把玩股间<br>
+LOCALS += "隔着衣物轻抚对方股间敏感部位的指令。<br>目标下半身着装护甲时不可执行。"
+LOCALS += "<br>指令类型：性骚扰<br>获取来源：接触・暴露・快Ｃ"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+@COM327
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 1
+
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 150)
+SIF TALENT:PLAYER:器用な指
+	CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 50)
+
+TIME += 10
+SIF CFLAG:TARGET:睡眠
+	RETURN 1
+
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 150)
+IF GETBIT(TALENT:TARGET:性別, 1)
+	;男性器付きの場合、好感度が更にUP
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+ENDIF
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 1
+
+
+CALL セクハラ反応タイプ判定(TARGET)
+;RFLAG:コマンド結果受渡し変数２
+;1:無知  2:無反応  3:嫌悪  4:拒否  5:余裕  6:羞恥  7:愉悦  8:汎用
+
+SELECTCASE RFLAG:コマンド結果受渡し変数２
+	CASE 1
+		;無知
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 50)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+	CASE 2
+		;無反応
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 50)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 30)
+	CASE 6
+		;羞恥
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 200)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+	CASEELSE
+		;他
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 100)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+ENDSELECT
+RETURN 1
+
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE327
+;実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(327) && !RFLAG:罰ゲーム中
+	RETURN RESULT
+SIF TEQUIP:下腹部前鎧あり
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM327
+
+
+IF 月算出() == "冬の月" && ITEM:被炉 != 0 && GETPLACENAME(CFLAG:MASTER:現在マップ種別, CFLAG:MASTER:現在位置) == "和室"
+	PRINTFORM %CALLNAME:PLAYER%
+	SIF GET_TARGETNUM() > 1
+		PRINTFORM 趁着其他人没注意%TEXTR("轻轻/偷偷")%
+	PRINTFORML 将手伸进被炉里对
+	PRINTFORM 隔着衣服玩弄%CALLNAME:TARGET%的
+	IF GETBIT(TALENT:TARGET:性別, 1)
+		IF BASE:TARGET:勃起 < 500
+			PRINT 尚未完全硬挺的
+		ENDIF
+		PRINT 阴茎
+	ELSE
+		IF PALAM:欲情 >= PALAMLV:3
+			PRINT 充血挺立的
+		ENDIF
+		PRINT 阴蒂
+	ENDIF
+	PRINTFORML  %TEXTR("用手轻柔地爱抚揉搓/用指尖轻轻搔弄/用指腹温柔揉捏")%。
+
+	IF CUP:TARGET:快Ｃ > 3000
+		IF CFLAG:TARGET:睡眠
+		;今後被炉処理で寝ちゃってる場合もあるかもしれないので
+			PRINTFORM %CALLNAME:TARGET%在睡梦中依然对快感产生了反应，
+			CALL PRINT_STR(@"_H_")
+			PRINTFORML 身体微微颤抖着…
+		ELSEIF GET_TARGETNUM() > 1
+			PRINTFORML %CALLNAME:TARGET%虽然羞红了脸，%TEXTR("努力地/楚楚可怜地/惹人怜爱地")%忍耐着不让人发现被炉里的情事…
+		ELSE
+			PRINTFORML %CALLNAME:TARGET%发出娇喘声沉溺于快感漩涡…
+		ENDIF
+		PRINTL
+	ELSEIF CUP:TARGET:快Ｃ > 1000
+		;一定以上の快楽が発生した時にちょっと声が出る
+		IF CFLAG:TARGET:睡眠
+			PRINTFORML 突如其来的快感让%CALLNAME:TARGET%在睡梦中发出细微呻吟…
+		ELSE
+			PRINTFORML 突如其来的快感让%CALLNAME:TARGET%不禁漏出些许声音…
+		ENDIF
+		PRINTL
+	ENDIF
+ELSE
+	PRINTFORM %CALLNAME:PLAYER%
+	SIF 体格差計算(PLAYER, TARGET) <= -3 && !CFLAG:睡眠
+		PRINT 蹲下身
+	PRINTFORM 将手探向%CALLNAME:TARGET%的股间，隔着衣物
+	IF GETBIT(TALENT:TARGET:性別, 1)
+		IF BASE:TARGET:勃起 < 500
+			PRINT 尚未完全硬挺的
+		ENDIF
+		PRINT 阴茎
+	ELSE
+		IF PALAM:欲情 >= PALAMLV:3
+			PRINT 充血挺立的
+		ENDIF
+		PRINT 阴蒂
+	ENDIF
+	PRINTFORML %TEXTR("用手轻柔地爱抚揉搓/用指尖轻轻搔弄/用指腹温柔揉捏")%。
+
+	IF CUP:TARGET:快Ｃ > 3000
+		IF CFLAG:TARGET:睡眠
+			PRINTFORML %CALLNAME:TARGET%即便在睡梦中身体也产生强烈反应…
+		ELSE
+			PRINTFORML %CALLNAME:TARGET%发出娇喘声沉溺于快感漩涡…
+		ENDIF
+		PRINTL
+	ELSEIF CUP:TARGET:快Ｃ > 1000
+		;一定以上の快楽が発生した時にちょっと声が出る
+		IF CFLAG:TARGET:睡眠
+			PRINTFORML 突如其来的快感让%CALLNAME:TARGET%在睡梦中发出细微呻吟…
+		ELSE
+			PRINTFORML 突如其来的快感让%CALLNAME:TARGET%不禁漏出些许声音…
+		ENDIF
+		PRINTL
+	ENDIF
+ENDIF
+
+@MESSAGE_COM327_非口上時
+
+IF CFLAG:TARGET:睡眠
+	PRINTFORML %CALLNAME:TARGET%仍在安稳沉睡……
+	RETURN 0
+ENDIF
+;基本喜びだけのはずなので一旦分類せずに直接喜びパターンの文章を書く
+
+SELECTCASE RFLAG:コマンド結果受渡し変数２
+	CASE 1
+		;無知
+		PRINTFORML %CALLNAME:TARGET%虽不明所以却因%CALLNAME:PLAYER%的愉悦而展露笑颜
+	CASE 2
+		;無反応
+		PRINTFORML %CALLNAME:TARGET%看似镇定，却红着脸将身体贴近%CALLNAME:PLAYER%…
+	CASE 3
+		;嫌悪
+		PRINTFORML %CALLNAME:TARGET%露出[真拿你没办法]的表情任由%CALLNAME:PLAYER%摆布…
+	CASE 4
+		;拒否
+		PRINTFORML %CALLNAME:TARGET%似乎并不讨厌，放任%CALLNAME:PLAYER%继续动作…
+	CASE 5
+		;余裕
+		PRINTFORML %CALLNAME:TARGET%悄悄提醒%CALLNAME:PLAYER%注意避开旁人视线…
+	CASE 6
+		;羞恥
+		PRINTFORML %CALLNAME:TARGET%红着脸凝视%CALLNAME:PLAYER%，轻轻依偎过来…
+	CASE 7
+		;愉悦
+		PRINTFORML %CALLNAME:TARGET%红着脸凝视%CALLNAME:PLAYER%，轻轻依偎过来…
+	CASE 8
+		PRINTFORML %CALLNAME:TARGET%似乎对%CALLNAME:PLAYER%的触碰感到欣喜…
+ENDSELECT

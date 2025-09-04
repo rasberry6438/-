@@ -1,0 +1,571 @@
+﻿;-------------------------------------------------
+;性処理してもらう。Ｈではないので、你の躁动难忍の解消だけが目的です
+;場所を移ってして要のも考えたけど、通常の性処理と駄々被りなので没有！
+;-------------------------------------------------
+@MESSAGE_DAILY_SELECT6
+#DIM LCOUNT
+;起きうるイベントの判定に使う
+#DIMS EVENT_TABLE
+;ちょっとした地の文追加
+#DIMS EXTRA_PLAY
+#DIM CHOICE
+#DIM MEMO_LINECOUNT
+#DIM ACTOR
+
+EVENT_TABLE = 
+EXTRA_PLAY = 
+SAVESTR:夢中 = 
+STR:日常イベント名 = 
+STR:PLAY内容 = 
+STR:进行性処理 = 
+TFLAG:进行性処理 = 0
+VARSET ACTOR
+
+;まずは出来る事の判定。何をやって貰えるかな？
+CALL CHECK_COM_ABLE, TARGET
+CALL SETFLAG, "性処理でのPLAY内容：計算のみ", TARGET
+
+STR:選択肢 = 
+;みんな大好き、进行性処理モード
+IF COND("进行性処理")
+	SIF CANSS("手淫")
+		STR:選択肢 += "手淫/"
+	SIF CANSS("正常位")
+		STR:選択肢 += "Ｖ性交/"
+	SIF CANSS("肛門後背位")
+		STR:選択肢 += "Ａ性交/"
+	SIF CANSS("尿道正常位")
+		STR:選択肢 += "尿道性交/"
+	SIF CANSS("騎乗位侵犯")
+		STR:選択肢 += "Ｖ性交する/"
+
+;こっちは口or騎乗位限定にしようかな
+ELSEIF COND("干劲性処理")
+	SIF CANSS("騎乗位")
+		STR:選択肢 += "Ｖ性交/"
+	SIF CANSS("肛門騎乗位")
+		STR:選択肢 += "Ａ性交/"
+	SIF CANSS("尿道騎乗位")
+		STR:選択肢 += "尿道性交/"
+
+	;性欲を持て余している時には快楽優先
+	IF STR:選択肢 != "" && (COND("発情期") || CHOSE_DEVENT("清洁口交") || COND("欲求不満") >= 2)
+	ELSE
+		SIF CANSS("口交")
+			STR:選択肢 += "口交/"
+		SIF CANSS("乳交")
+			STR:選択肢 += "乳交/"
+		SIF CANSS("乳頭奸")
+			STR:選択肢 += "乳頭奸/"
+	ENDIF
+ENDIF
+
+STR:PLAY内容 = %TEXTR(STR:選択肢)%
+
+IF PLACE("野外") && COND("合意：露出PLAY") == 0
+	;これは現在だと死に分岐だけどいつか使うかもしれないので消さずにおいておく
+	IF PLACE("Ｈ目的")
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW 看起来没有单纯的只进行性処理就能了事的自信……%CALLNAME:TARGET%用余光瞟了一眼%NAMES("床")%。
+	ELSE
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了……看起来好像没有兴致的様子。
+		CALL PRINT_STRW, "黄色_(※没有[露出PLAY]的合意的对象不能在外面的地方进行性処理)"
+	ENDIF
+	RETURN 0
+;他に人がいると普通は嫌がる
+ELSEIF FLAG:二人きり == 0 && COND("合意：露出PLAY") == 0
+	PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+	CALL PRINT_STRW, "黄色_(※在有别人的情况下没有合意[露出PLAY]是不行的)"
+	RETURN 0
+ELSEIF CFLAG:性処理済
+	PRINTFORMW 被%CALLNAME:TARGET%拒绝了……看起来好像没有兴致的様子。
+	CALL PRINT_STRW, "黄色_(※性処理每段时间只能进行一次)"
+	RETURN 0
+;ELSEIF CHARA_NUM("性処理合意没有")
+;	PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+;	CALL PRINT_STRW, "黄色_(※没有獲得[性処理]的合意的对象不能在有他人在的地方进行性処理)"
+;	RETURN 0
+;干劲がしない
+ELSEIF STR:PLAY内容 == "" || COND("性処理意欲") == 0
+	IF COND("性処理意欲") == 2 && STR:PLAY内容 == ""
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW 看起来没有单纯的只进行性処理就能了事的自信……%CALLNAME:TARGET%用余光瞟了一眼%NAMES("床")%。
+	ELSE
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了……看起来好像没有兴致的様子。
+		CALL PRINT_STRW, "黄色_(※表扬一下让对方心情好起来、或者说点甜言蜜语什么的、可能就会愿意做了)"
+	ENDIF
+	RETURN 0
+ENDIF
+
+;进行性処理なら何をしてるところなのかを台詞の前に決定させる
+SIF COND("进行性処理")
+	SAVESTR:夢中 = %TEXTR("手机/游戏/読書/漫画本/勉強/SNS/WEB配信")%
+
+MEMO_LINECOUNT = LINECOUNT
+CALL KOJO_DAILYCOM, "性処理を頼んだ際の反応", "改行没有"
+IF LINECOUNT == MEMO_LINECOUNT
+	IF TALENT:害羞 && COND("干劲性処理")
+		CALL PRINT_STRW, "「……_／／／_」"
+	ELSE
+		PRINTFORMW 「…………」
+	ENDIF
+ENDIF
+CALL BLANKLINE
+
+;进行性処理ならしてくれる
+IF COND("进行性処理")
+	PRINTFORM %CALLNAME:TARGET%
+	SELECTCASE SAVESTR:夢中
+	CASE "手机"
+		PRINTFORM %TEXTR("看着手机/一边看着手机一边做着些什么/用手机在做着什么")%
+		STR:进行性処理 = %TEXTR("一边看着手机/用一只手操作着手机/一边注视着手机画面")%
+	CASE "游戏"
+		PRINTFORM %TEXTR("正在玩着手机游戏/的游戏正玩到関键部分/用游戏消磨着时间")%
+		STR:进行性処理 = %TEXTR("一边哒哒哒地玩着手机游戏/的意識完全在游戏那边/一边用单手灵巧地进行着游戏")%
+	CASE "読書"
+		PRINTFORM %TEXTR("沉浸在读书中/忙于读书/沉浸在书的世界")%
+		STR:进行性処理 = %TEXTR("一边翻着书本/一边看着紙面/一边用单手灵巧地翻着书页")%
+	CASE "漫画本"
+		PRINTFORM %TEXTR("正读到漫画最精彩的地方/读着漫画開頭的部分/沉浸在漫画的世界")%
+		STR:进行性処理 = %TEXTR("一边翻着书本/一边看着紙面/一边用单手灵巧地翻着书页")%
+	CASE "勉強"
+		PRINTFORM %TEXTR("正在学习/正在读教科書/正在想着课上的题目")%
+		STR:进行性処理 = %TEXTR("一边翻阅着教科書/一边看参考書/一边用单手灵巧地翻着书页")%
+	CASE "SNS"
+		PRINTFORM %TEXTR("和友人在SNS上聊天/在SNS上输入文字/在浏览SNS未读信息")%
+		STR:进行性処理 = %TEXTR("笑顔看着手机画面/一边地单手打字/一边注视着手机画面")%
+	CASE "WEB配信"
+		PRINTFORM %TEXTR("正在看配信/正在检查作品的配信時間/在呆呆地看着WEB配信")%
+		STR:进行性処理 = %TEXTR("一边沉迷于故事展開/做出看倦了无聊故事的表情/一直循環看着同一个配信视频")%
+	ENDSELECT
+	PRINTFORMW 的时候、%TEXTR("随随便便地回答道/心不在焉地回答道/伸出一只手回答道")%。
+	SELECTCASE STR:PLAY内容
+	CASE "手淫"
+		PRINTFORM ……%TEXTR("考虑到我现在有其他事要做/如果不会打搅到我/如果心不在焉也可以的话")%、那么
+		PRINTFORMW 就用手来解决、怎么样？
+	;挿入系
+	CASEELSE
+		PRINTFORM ……%TEXTR("考虑到我现在有其他事要做/如果不会打搅到我/如果不会太激烈的话")%、
+		SELECTCASE STR:PLAY内容
+		CASE "Ｖ性交"
+			PRINTFORM 前穴
+		CASE "Ａ性交"
+			PRINTFORM 尻穴
+		CASE "尿道性交"
+			PRINTFORM 尿道の穴
+		CASE "Ｖ性交する"
+			PRINTFORM 阴茎
+		ENDSELECT
+		PRINTFORMW 就先%TEXTR("借给你/让你使用")%、如何？
+	ENDSELECT
+
+	EVENT_TABLE = 拜托了/还是算了/
+	SIF STR:PLAY内容 != "手淫" && STRCOUNT(STR:選択肢, "手淫")
+		EVENT_TABLE += "希望用手/"
+	SIF STR:PLAY内容 != "Ｖ性交" && STRCOUNT(STR:選択肢, "Ｖ性交") && COND("性処理回数：Ｖ性交") > MAX(COND("性処理回数：Ａ性交"), COND("性処理回数：尿道性交") )
+		EVENT_TABLE += "希望用前穴/"
+	SIF STR:PLAY内容 != "Ａ性交" && STRCOUNT(STR:選択肢, "Ａ性交") && COND("性処理回数：Ａ性交") > MAX(COND("性処理回数：Ｖ性交"), COND("性処理回数：尿道性交") )
+		EVENT_TABLE += "希望用尻穴/"
+	SIF STR:PLAY内容 != "尿道性交" && STRCOUNT(STR:選択肢, "尿道性交") && COND("性処理回数：尿道性交") > MAX(COND("性処理回数：Ａ性交"), COND("性処理回数：Ｖ性交") )
+		EVENT_TABLE += "希望用尿道穴/"
+
+	;見抜きルート(格好により分岐予定)
+	IF COND("見抜きＯＫ")
+		;SIF CHECK_CLO("泳装姿")
+		;	EVENT_TABLE += "泳装姿をオカズにさせて欲しい/"
+		;SIF CHECK_CLO("布鲁马露出")
+		;	EVENT_TABLE += "布鲁马をオカズにさせて欲しい/"
+
+		SIF CHECK_CLO("胖次露出") && CHECK_PANTIES("開洞") && CHECK_PANTIES("泳装") == 0
+			EVENT_TABLE += @"想要用%PANTIES(TARGET, "胖次")%/"
+
+		;SIF PENIS(TARGET) == 0 && (CHECK_CLO("股間露出") || CSTR:PREV_DAILYCOM == "检查阴部")
+		;	EVENT_TABLE += "阴部を眺めながらシコりたい/"
+	ENDIF
+;他の人の前で性処理をしてくれる
+ELSE
+	SIF COND("阴茎接吻可能") && COND("欲求不満") >= 2 && CHOSE_DEVENT("ちん接吻") == 0
+		EXTRA_PLAY += "阴茎接吻/"
+	EXTRA_PLAY = %TEXTR(EXTRA_PLAY)%
+
+	SELECTCASE EXTRA_PLAY
+	CASE ""
+		PRINTFORM 询问之后、%CALLNAME:TARGET%
+	CASE "阴茎接吻"
+		PRINTFORM 接受了性处理请求的%CALLNAME:TARGET%
+		;あんまり慣れてない
+		IF TALENT:献身 + TALENT:好色 + TALENT:小悪魔 == 0 && (MARK:屈服刻印 <= 1 || EXP:口交経験 < 20)
+			PRINTFORMW 把脸埋进了%CALLNAME:MASTER%的股间%TEXTR("羞耻地亲吻阴茎/犹豫着叼起阴茎/犹豫着亲吻阴茎")%。
+		ELSE
+			PRINTFORM 開心地把脸埋进%CALLNAME:MASTER%的股间、
+			IF COND("種族：悪魔") + COND("種族：天使") + COND("種族：淫魔") && MARK:屈服刻印 && RAND:2
+				PRINTFORMW %TEXTR("露出恍惚的表情亲吻阴茎/恭敬地用嘴唇叼起阴茎/像是等不及了一样热切地与阴茎亲吻")%。
+			ELSE
+				PRINTFORMW %TEXTR("嘴唇像是雨点一样落在阴茎上/開心地用嘴叼起阴茎/热情地与阴茎亲吻")%。
+			ENDIF
+		ENDIF
+	ENDSELECT
+	SIF EXTRA_PLAY != ""
+		PRINTFORM どうやら、
+
+	SIF CHOSE_DEVENT("清洁口交")
+		PRINTFORM 先做了一遍清洁口交、打算继续
+	SELECTCASE STR:PLAY内容
+	CASE "手淫"
+		PRINTFORM 用手
+	CASE "口交"
+		PRINTFORM 用嘴巴
+	CASE "乳交"
+		PRINTFORM 用胸部
+	CASE "Ｖ性交"
+		PRINTFORM 用前穴
+	CASE "Ａ性交"
+		PRINTFORM 用尻穴
+	CASE "尿道性交"
+		PRINTFORM 用尿道
+	CASE "乳頭奸"
+		PRINTFORM 用胸部
+	ENDSELECT
+	PRINTFORMW 进行性処理。
+
+	EVENT_TABLE = 拜托了/还是算了/
+
+	$CHINKISS_LOOP
+
+	SIF STR:PLAY内容 != "手淫" && STRCOUNT(STR:選択肢, "手淫")
+		EVENT_TABLE += "希望用手/"
+	SIF STR:PLAY内容 != "口交" && STRCOUNT(STR:選択肢, "口交")
+		EVENT_TABLE += "希望用口/"
+	SIF STR:PLAY内容 != "Ｖ性交" && STRCOUNT(STR:選択肢, "Ｖ性交") && COND("性処理回数：Ｖ性交") > MAX(COND("性処理回数：Ａ性交"), COND("性処理回数：尿道性交") )
+		EVENT_TABLE += "希望用前穴/"
+	SIF STR:PLAY内容 != "Ａ性交" && STRCOUNT(STR:選択肢, "Ａ性交") && COND("性処理回数：Ａ性交") > MAX(COND("性処理回数：Ｖ性交"), COND("性処理回数：尿道性交") )
+		EVENT_TABLE += "希望用尻穴/"
+	SIF STR:PLAY内容 != "尿道性交" && STRCOUNT(STR:選択肢, "尿道性交") && COND("性処理回数：尿道性交") > MAX(COND("性処理回数：Ａ性交"), COND("性処理回数：Ｖ性交") )
+		EVENT_TABLE += "希望用尿道穴/"
+	SIF EXTRA_PLAY != "阴茎接吻" && COND("阴茎接吻可能") && CHOSE_DEVENT("ちん接吻") == 0
+		EVENT_TABLE += "希望陰莖親吻/"
+ENDIF
+
+;選択肢の一括処理
+VARSET LOCALS
+SPLIT EVENT_TABLE, "/", LOCALS
+CALL PRINT_SELECT, EVENT_TABLE
+
+SELECTCASE LOCALS:RESULT
+;性処理のお願いを取り下げる選択
+CASE "还是算了", "果然还是算了"
+	RETURN 0
+CASE "拜托了", "最初のを拜托了"
+
+CASE "希望陰莖親吻"
+	MEMO_LINECOUNT = LINECOUNT
+	CALL KOJO_DAILYCOM, "ちん接吻を頼んだ際の反応", "改行没有"
+	SIF LINECOUNT == MEMO_LINECOUNT
+		PRINTFORMW 「…………」
+	PRINTFORM 被拜託了的%CALLNAME:TARGET%
+	;あんまり慣れてない
+	IF TALENT:献身 + TALENT:好色 + TALENT:小悪魔 == 0 && (MARK:屈服刻印 <= 1 || EXP:口交経験 < 20)
+		PRINTFORMW 把脸埋进了%CALLNAME:MASTER%的股间%TEXTR("羞耻地亲吻阴茎/犹豫着叼起阴茎/犹豫着亲吻阴茎")%。
+	ELSE
+		PRINTFORM 開心地把脸埋进%CALLNAME:MASTER%的股间、
+		IF COND("種族：悪魔") + COND("種族：天使") + COND("種族：淫魔") && MARK:屈服刻印 && RAND:2
+			PRINTFORMW %TEXTR("露出恍惚的表情亲吻阴茎/恭敬地用嘴唇叼起阴茎/像是等不及了一样热切地与阴茎亲吻")%。
+		ELSE
+			PRINTFORMW %TEXTR("嘴唇像是雨点一样落在阴茎上/開心地用嘴叼起阴茎/热情地与阴茎亲吻")%。
+		ENDIF
+		PRINTFORMW %CALLNAME:TARGET%%TEXTR("向上仰望著/看著/用魅惑的表情盯著")%%CALLNAME:MASTER%的同時、%TEXTR("用嘴含住亀頭/用舌尖欺負肉杆/沿著尿道用舌頭舔舐著")%%TEXTR("確認氣味/將唾液塗滿陰莖")%…
+	ENDIF
+	CALL BLANKLINE
+	PRINTFORMW ……之後、做什麼好呢？
+	CSTR:DAILYCOM履歴 += @"＠ちん接吻/"
+
+	EVENT_TABLE = 再進行一次請求/就到這裡/
+
+	GOTO CHINKISS_LOOP
+
+;見抜き系
+CASE @"%PANTIES(TARGET, "胖次")%をオカズにさせて欲しい"
+	STR:PLAY内容 = 胖次見抜き
+
+	MEMO_LINECOUNT = LINECOUNT
+	CALL KOJO_DAILYCOM, "見抜きを頼んだ際の反応", "改行没有"
+	SIF LINECOUNT == MEMO_LINECOUNT
+		PRINTFORMW 「…………」
+;それ以外は你の要求
+CASEELSE
+	SELECTCASE LOCALS:RESULT
+	CASE "希望用手"
+		STR:PLAY内容 = 手淫
+	CASE "希望用口"
+		STR:PLAY内容 = 口交
+	CASE "希望用前穴", "希望用前穴"
+		STR:PLAY内容 = Ｖ性交
+	CASE "希望用尻穴", "希望用尻穴"
+		STR:PLAY内容 = Ａ性交
+	CASE "希望用尿道穴", "希望用尿道穴"
+		STR:PLAY内容 = 尿道性交
+	ENDSELECT
+	MEMO_LINECOUNT = LINECOUNT
+	CALL KOJO_DAILYCOM, "性処理の内容変更を頼んだ際の反応", "改行没有"
+	SIF LINECOUNT == MEMO_LINECOUNT
+		PRINTFORMW 「…………」
+ENDSELECT
+CALL BLANKLINE
+
+;性処理実行中フラグON
+SETBIT FLAG:状況判定, 37
+
+;フラグ建て＆履歴に行為を残す
+IF COND("进行性処理")
+	TFLAG:进行性処理 = 1
+	CSTR:DAILYCOM履歴 = %CSTR:DAILYCOM履歴%＠ながら%STR:PLAY内容%性処理\/
+ELSE
+	CSTR:DAILYCOM履歴 = %CSTR:DAILYCOM履歴%＠干劲%STR:PLAY内容%性処理\/
+ENDIF
+STR:日常イベント名 = %DAILYCOMNAME(6)%
+
+;何をするか決定
+SELECTCASE STR:PLAY内容
+CASE "胖次見抜き"
+	SELECTCOM = GETNUM(TRAINNAME, "自慰")
+CASE "Ｖ性交"
+	IF TFLAG:进行性処理
+		SELECTCOM = GETNUM(TRAINNAME, "正常位")
+	ELSE
+		SELECTCOM = GETNUM(TRAINNAME, "騎乗位")
+	ENDIF
+	;避孕套付けたり
+	SIF COND("女性主導生性交") + COND("合意：危険日生性交") == 0
+		TEQUIP:PLAYER:避孕套 = 1
+CASE "Ａ性交"
+	IF TFLAG:进行性処理
+		SELECTCOM = GETNUM(TRAINNAME, "肛門後背位")
+	ELSE
+		SELECTCOM = GETNUM(TRAINNAME, "肛門騎乗位")
+	ENDIF
+CASE "尿道性交"
+	IF TFLAG:进行性処理
+		SELECTCOM = GETNUM(TRAINNAME, "尿道正常位")
+	ELSE
+		SELECTCOM = GETNUM(TRAINNAME, "尿道騎乗位")
+	ENDIF
+;指令名=PLAY内容の物
+CASEELSE
+	SELECTCOM = GETNUM(TRAINNAME, STR:PLAY内容)
+ENDSELECT
+
+;推倒？
+SELECTCASE SELECTCOM
+CASE 65, 75, 88
+	SIF TALENT:強気 + TALENT:高慢 + TALENT:粗野 + MIN(ABL:施虐属性, 5) > RAND:10
+		TEQUIP:推倒 = 1
+ENDSELECT
+
+;-------------------------------------------------
+;ここにはセリフのみを置く
+;-------------------------------------------------
+@MESSAGE_DAILY6
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+
+SELECTCASE NAMES("性処理")
+;複数参加イベントは特殊処理
+CASE "胖次見抜き"
+	;partnerを重置(他の部員が参加するイベントの際に必要になる)
+	CALL RESET_PARTNER
+	CALL EVENT_ACADEMY, "見抜き性処理"
+	RETURN 1
+ENDSELECT
+
+IF TFLAG:地の文スキップ == 0
+	IF TFLAG:进行性処理
+		CALL DAILY_MESSAGE, "进行性処理"
+	ELSE
+		CALL DAILY_MESSAGE, "性処理"
+	ENDIF
+ENDIF
+
+;それでは行為開始
+;絶頂度合いを重置
+VARSET EX
+VARSET NOWEX
+VARSET EX:PLAYER:0
+VARSET NOWEX:PLAYER:0
+
+;前準備開始
+CALL SIMULATE_TRAIN_FIRST
+
+;性処理なので一回出したら終わり
+FOR LCOUNT, 0, 100
+	CALL SIMULATE_TRAIN_COM, SELECTCOM, 1
+
+	;射精済みならここでおしまい
+	SIF NOWEX:PLAYER:射精
+		BREAK
+NEXT
+
+;経験や珠などの獲得量計算
+CALL SIMULATE_TRAIN_CALC
+
+;結果発表
+CALL SIMULATE_TRAIN_SHOW
+;受精確率の変動を確認
+SIF BASE:胎内精液量 > 0
+	CALL CHECK_NINSHIN_ALLACTOR
+
+;流石に目に見えるほど的污垢は拭く
+CALL RESET_STAIN_EX, "Ｐ", PLAYER
+
+;フラグの変化＆履歴に行為を残す
+SELECTCASE NAMES("性処理")
+CASE "口交"
+	CALL RESET_STAIN_EX, "Ｐ", MASTER
+CASE "Ｖ性交", "Ａ性交", "尿道性交"
+	IF TEQUIP:PLAYER:避孕套
+		CSTR:DAILYCOM履歴 += @"＠性処理%SUBSTRING(NAMES("性処理"), 0, STRLENS(NAMES("性処理")) - 8)%避孕套射精\/"
+	ELSE
+		CSTR:DAILYCOM履歴 += @"＠性処理%SUBSTRING(NAMES("性処理"), 0, STRLENS(NAMES("性処理")) - 8)%中出し\/"
+	ENDIF
+	;Ｐ汚れを設定
+	SELECTCASE NAMES("性処理")
+	CASE "Ｖ性交"
+		CALL SETFLAG, "Ｐ汚れ：Ｖ"
+	CASE "Ａ性交"
+		CALL SETFLAG, "Ｐ汚れ：Ａ"
+	CASE "尿道性交"
+		CALL SETFLAG, "Ｐ汚れ：尿"
+	ENDSELECT
+ENDSELECT
+
+SIF TFLAG:地の文スキップ
+	RETURN 0
+
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE NAMES("性処理")
+CASE "手淫"
+	IF TFLAG:进行性処理
+		PRINTFORM %CALLNAME:TARGET%%TEXTR("的手不意间紧握/的手条件反射般的增大了力/动作中的手停了下来")%、
+		PRINTFORMW %CALLNAME:PLAYER%在%CALLNAME:TARGET%的手上舒服地射精了。
+	ELSE
+
+	ENDIF
+CASE "口交"
+
+CASE "乳交"
+
+CASE "Ｖ性交", "Ａ性交", "尿道性交"
+	IF TFLAG:进行性処理
+		PRINTFORM %TEXTR("比平时花了更长时间/因过于的心不在焉而错过了最好的时机/和往常相比、效果的确不算太好")%、
+		PRINTFORM %CALLNAME:PLAYER%将
+		IF CHECK_COM("完全挿入可能", INSERT("対応指令") )
+			IF TALENT:PLAYER:男性 == 0
+				PRINTFORM 弯下腰让阴茎全根插入的同时
+			ELSEIF TALENT:男性
+				PRINTFORM %TEXTR("直到睾丸紧紧地贴到了股间上深深地插入/扭腰撞叩击着将整根阴茎埋入其中/用体重将玉袋紧紧地压上来")%
+			ELSE
+				PRINTFORM 一边%TEXTR("直到将睾丸紧紧地贴在阴唇上深深地插入/扭腰撞击着将整根阴茎埋入其中/用体重将玉袋紧紧地压在大阴唇上")%
+			ENDIF
+		ELSE
+			PRINTFORM %TEXTR("为了更加舒服地在浅浅的私处取乐而扭腰/连续地扭腰撞叩击着用阴茎为最深处止痒/用体重剐蹭着阴茎")%的同时
+		ENDIF
+
+		IF COND("絶頂")
+			PRINTFORMW %CALLNAME:TARGET%在%TEXTR("因为絶頂而轻微地颤抖着的/因为絶頂而更加紧致地缠住的/因为抽插而达到了高潮的")%穴内舒服的射精了。
+		ELSE
+			PRINTFORMW %CALLNAME:PLAYER%在%CALLNAME:TARGET%的穴里舒服地射精了。
+		ENDIF
+	ELSE
+
+	ENDIF
+CASE "乳頭奸"
+
+ENDSELECT
+
+SIF LINECOUNT == MEMO_LINECOUNT
+	CALL SAMEN_SHOOT_MESSAGE
+CALL BLANKLINE
+
+;-------------------------------------------------
+;主に性処理後の描写などをする。STR:日常イベント名 は決定後。
+;-------------------------------------------------
+@AFTERMESSAGE_DAILY6
+#DIM MEMO_LINECOUNT
+
+MEMO_LINECOUNT = LINECOUNT
+SELECTCASE NAMES("性処理")
+CASE "胖次見抜き"
+	;最後は中出しされた
+	IF STRCOUNT(CSTR:DAILYCOM履歴, "性処理Ｖ中出し")
+		IF COND("性処理回数：Ｖ性交") >= 10 && RAND:3 && TALENT:不知羞恥 && TALENT:粗野 + TALENT:高慢 + TALENT:強気
+			PRINTFORM %TEXTR("用纸巾将膣周围的脏东西擦拭干净的后扔进纸篓里的/不是很在意中出这件事的/斜眼确认完射精已经结束的")%%CALLNAME:TARGET%将错開的%PANTIES(TARGET, "胖次")%整理好、
+			PRINTFORMW %TEXTR("也不介意从中漏出的精液弄脏衣物这件事/保持大腿张開的姿势/保持着股間看起来的样子")%重新開始了埋頭工作……
+		ELSE
+			PRINTFORM %CALLNAME:TARGET%%STR:进行性処理%一边用重叠的纸巾擦了擦从膣口垂下来的精液、
+			IF TALENT:不知羞恥 && TALENT:粗野 + TALENT:高慢 + TALENT:強気
+				PRINTFORM 对%CALLNAME:PLAYER%说着%TEXTR("『掃除』/『不乾淨の場所の掃除』/『要把原来的街道打扫干净』")%、保持大腿张開的姿势
+			ELSE
+				PRINTFORM 面对整理完轻微凌乱的衣服的%CALLNAME:PLAYER%的掃除请求、
+			ENDIF
+			PRINTFORMW 再一次開始了埋頭工作……
+		ENDIF
+	;最後は胖次にかけた
+	ELSEIF STRCOUNT(CSTR:DAILYCOM履歴, "性処理胖次ぶっかけ")
+		PRINTFORM %CALLNAME:TARGET%用%STR:进行性処理%湿巾擦了擦開始浸染%PANTIES(TARGET, "胖次")%的精液、
+		IF TALENT:不知羞恥 && TALENT:粗野 + TALENT:高慢 + TALENT:強気
+			PRINTFORM 用向着%CALLNAME:PLAYER%\@ PARTNER() ? 们 # \@保持大腿张開的姿势
+		ELSE
+			PRINTFORM 整理完轻微凌乱的衣服后
+		ENDIF
+		PRINTFORMW 再一次開始了埋頭工作……
+	;最後はティッシュに出した
+	ELSE
+		PRINTFORMW 用肌肤感受到%CALLNAME:PLAYER%\@ PARTNER() ? 们 # \@的热度消退的%CALLNAME:TARGET%、以好像什么都没有发生的態度埋頭于工作……
+	ENDIF
+CASE "手淫"
+	IF TFLAG:进行性処理
+		IF RAND:2
+			PRINTFORM %CALLNAME:TARGET%拿起附近的湿纸巾擦干净手、
+			PRINTFORMW %CALLNAME:PLAYER%表示「把飛散的精液也擦干净」并把纸巾递了过去……
+		ELSE
+			PRINTFORM 因为附近没有纸巾于是%CALLNAME:TARGET%将手指上粘精液舔净作为应急处理、
+			PRINTFORMW %CALLNAME:PLAYER%留下「自己没接住的精液要自己处理」一句话便開始做自己的事……
+		ENDIF
+	ELSE
+
+	ENDIF
+CASE "口交"
+
+CASE "乳交"
+
+CASE "Ｖ性交", "Ａ性交", "尿道性交"
+	IF TFLAG:进行性処理
+		IF COND("絶頂")
+			PRINTFORM 沉溺在绝顶的余韵中满是汗水的%CALLNAME:TARGET%
+		ELSE
+			PRINTFORM %CALLNAME:TARGET%%STR:进行性処理%
+		ENDIF
+		IF CFLAG:創口貼装着 && (NAMES("性処理") == "Ｖ性交" || NAMES("性処理") == "尿道性交")
+			PRINTFORM 将卷起的創口貼在股間貼了回去、
+		ELSEIF TEQUIP:PLAYER:避孕套
+			PRINTFORM 用纸巾迅速擦干净被弄脏的股間、
+		ELSEIF ABL:精液中毒 > RAND:10 && RAND:2 && TALENT:不知羞恥 && TALENT:粗野 + TALENT:高慢 + TALENT:強気
+			PRINTFORM 把中出的精液用手指掻出、%TEXTR("轻轻地/很自然地/看上去很美味地")%吞了下去、
+		ELSE
+			PRINTFORM 用叠好的纸巾把中出的精液快速地擦干净、
+		ENDIF
+		IF TALENT:不知羞恥 && TALENT:粗野 + TALENT:高慢 + TALENT:強気
+			PRINTFORM 对%CALLNAME:PLAYER%说着%TEXTR("『掃除』/『不乾淨の場所の掃除』/『要把原来的街道打扫干净』")%、保持大腿张開的姿势
+		ELSE
+			PRINTFORM 迅速整理了凌乱的衣装后请%CALLNAME:PLAYER%收拾残局、
+		ENDIF
+		PRINTFORMW 再一次開始了埋頭工作……
+	ELSE
+
+	ENDIF
+CASE "乳頭奸"
+
+ENDSELECT
+
+SIF LINECOUNT > MEMO_LINECOUNT
+	CALL BLANKLINE

@@ -1,0 +1,349 @@
+﻿;-------------------------------------------------
+;展示私处
+;愛撫系コマンド，レベル2
+;-------------------------------------------------
+@COMNAME8
+#FUNCTIONS
+TSTR:コマンド名受渡 = 展示私处
+SIF GETBIT(FLAG:モード管理, モードビット_同時)
+	TSTR:コマンド名受渡 = 同时展示私处
+
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_8
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ")
+弱点コマンドカテゴリ = C_女
+同時モード許可 = 999
+
+
+@COM_TOOLTIP_8
+LOCALS = <br>■展示私处<br>
+LOCALS += "强制对方暴露私处的指令。"
+LOCALS += "<br>指令类型：嘿咻<br>获取来源：快Ｃ・暴露"
+LOCALS += "<br>专属经验值：自慰经验(TARGET・特定条件时)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM8
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+;処女，貞操観念
+IF TALENT:処女 == 1
+	CALL SOURCE_CALC_露出(TARGET, PLAYER, 500)
+ELSE
+	CALL SOURCE_CALC_露出(TARGET, PLAYER, 300)
+ENDIF
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 40)
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;露出癖Lv3以上で自慰経験加算
+SIF ABL:露出癖 >= 3
+	EXP:自慰経験 ++
+
+;同性愛
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 1
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 1
+
+RETURN 1
+
+
+@CAN_COM8(ARG)
+#DIM CONST 必要実行値 = 18
+#DIM 実行値
+#DIM ＋表示フラグ
+
+SKIPDISP ARG
+PRINTFORML 私处展示(%CALLNAME:TARGET%)
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+実行値 = 0
+＋表示フラグ = 0
+
+;すべての命令に共通の要素を考慮
+CALL COM_ORDER
+実行値 = RESULT
+＋表示フラグ = RESULT:1
+
+;ABL:欲望
+IF ABL:欲望
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:欲望 * 3
+	PRINTFORM 欲望LV{ABL:欲望}({ABL:欲望 * 3})
+	＋表示フラグ = 1
+ENDIF
+;ABL:Ｖ感覚
+IF ABL:Ｖ感覚
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:Ｖ感覚 * 2
+	PRINTFORM Ｖ感觉LV{ABL:Ｖ感覚}({ABL:Ｖ感覚 * 2})
+	＋表示フラグ = 1
+ENDIF
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:奉仕精神 * 4
+	PRINTFORM 侍奉精神LV{ABL:奉仕精神}({ABL:奉仕精神 * 4})
+	＋表示フラグ = 1
+ENDIF
+;ABL:露出癖
+IF ABL:8
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:露出癖 * 3
+	PRINTFORM 暴露癖LV{ABL:露出癖}({ABL:露出癖 * 3})
+	＋表示フラグ = 1
+ENDIF
+;ABL:自慰中毒
+IF ABL:自慰中毒
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:自慰中毒 * 3
+	PRINTFORM 自慰成瘾LV{ABL:自慰中毒}({ABL:自慰中毒 * 3})
+	＋表示フラグ = 1
+ENDIF
+
+IF MARK:快楽刻印
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += MARK:快楽刻印 * 3
+	PRINTFORM 快乐刻印LV{MARK:快楽刻印}({MARK:快楽刻印 * 3})
+	＋表示フラグ = 1
+ENDIF
+
+;PALAM:潤滑（の不足）
+IF PALAM:潤滑 < PALAMLV:3
+	PRINT  - 
+	実行値 -= 5
+	PRINT 润滑不足(5)
+	＋表示フラグ = 1
+ENDIF
+;PALAM:欲情
+IF GETPALAMLV(PALAM:欲情, 5)
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += GETPALAMLV(PALAM:欲情, 5) * 3
+	PRINTFORM 情欲LV{GETPALAMLV(PALAM:欲情, 5)}({GETPALAMLV(PALAM:欲情, 5) * 3})
+	＋表示フラグ = 1
+ENDIF
+
+;恥じらい
+IF TALENT:羞恥心 > 0
+	PRINT  - 
+	実行値 -= 2
+	PRINT 害羞(2)
+	＋表示フラグ = 1
+ENDIF
+;快感の否定（淫乱，娼婦で無効）
+IF TALENT:快感応答 < 0 && !TALENT:淫乱
+	PRINT  - 
+	実行値 -= 5
+	PRINT 否定快感(5)
+	＋表示フラグ = 1
+ENDIF
+;男嫌い（恋慕，親愛で無効）
+IF TALENT:性別嗜好 & 1 && !(TALENT:PLAYER:性別 & 1) && ((!TALENT:恋慕) || PLAYER != MASTER)
+	PRINT  - 
+	実行値 -= 12
+	PRINT 厌男(12)
+	＋表示フラグ = 1
+ENDIF
+
+;処女
+IF TALENT:処女 == 1
+	PRINT  - 
+	実行値 -= 20
+	PRINT 处女(20)
+	＋表示フラグ = 1
+ELSEIF EXP:Ｖ経験 < EXPLV:2
+	PRINT  - 
+	実行値 -= 5
+	PRINT Ｖ经验不足(5)
+	＋表示フラグ = 1
+ENDIF
+
+;調教者がふたなり
+IF (TALENT:PLAYER:性別 & 3) == 3
+	PRINT  + 
+	実行値 += 4
+	PRINT 扶她(4)
+	＋表示フラグ = 1
+ENDIF
+
+;媚薬
+IF TEQUIP:媚薬
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 6
+	PRINT 春药(6)
+	＋表示フラグ = 1
+ENDIF
+
+;言いなり
+IF TCVAR:言いなり
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 999
+	PRINT 绝对服从(999)
+	＋表示フラグ = 1
+ENDIF
+
+;合計を表示(18以上で実行)
+PRINTFORM  = {実行値}
+
+SIF 実行値 < 必要実行値
+	PRINT  < 
+SIF 実行値 == 必要実行値
+	PRINT  = 
+SIF 実行値 > 必要実行値
+	PRINT  > 
+PRINTFORM 执行值{必要実行値}
+
+WAIT
+SKIPDISP 0
+
+;実行できない
+SIF 実行値 < 必要実行値
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE8
+;展示私处実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(8)
+	RETURN RESULT
+;Vがない場合駄目
+SIF TALENT:TARGET:Ｖ感度 == -2
+	RETURN 0
+SIF GETBIT(TALENT:TARGET:性別, 0) == 0
+	RETURN 0
+;露出癖が2未満だとダメ
+SIF ABL:露出癖< 2
+	RETURN 0
+;処女の場合，露出癖3以上ないとダメ
+SIF TALENT:処女 && ABL:露出癖 < 3
+	RETURN 0
+;縄使用中は不可
+; SIF TEQUIP:縄
+; 	RETURN 0
+
+;下半身着衣
+;前鎧，めくれない服，タイツ，下着があると無理
+SIF TEQUIP:下腹部前鎧あり
+	RETURN 0
+SIF TEQUIP:下半身服あり && (!TEQUIP:スカートめくり可 && !TEQUIP:ずらし可)
+	RETURN 0
+SIF TEQUIP:下タイツあり && !TEQUIP:下タイツ破れ
+	RETURN 0
+SIF TEQUIP:下半身下着あり
+	RETURN 0
+
+;オトコだとダメ
+SIF !(TALENT:性別 & 1)
+	RETURN 0
+;お風呂場プレイ中は游戏垫が無いとダメ
+IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ENDIF
+;指を何かに使ってるなら無理
+SIF TEQUIP:TARGET:指
+	RETURN 0
+;膣を何かに使ってるなら無理
+SIF TEQUIP:TARGET:膣
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM8
+#DIM 同時キャラ番号
+PRINTFORM 在%CALLNAME:PLAYER%的命令下，
+IF GETBIT(FLAG:モード管理, モードビット_同時)
+	FOR 同時キャラ番号, 0, 同時モード_選択数
+		SIF 同時キャラ番号 > 0
+			PRINT ，
+		PRINTFORM %CALLNAME:(同時モード_選択キャラ:同時キャラ番号)%
+	NEXT
+	PRINT 们整齐划一地张开性器展示…
+	RETURN 0
+ENDIF
+
+PRINTFORM %CALLNAME:TARGET%
+;露出癖
+IF ABL:露出癖 == 0
+	PRINTFORM 含着泪水瞪视这边，不情愿地将手指探入自己
+	;小柄体型
+	IF TALENT:種族 < 0
+		PRINT 幼嫩的花蕊
+	ELSE
+		PRINT 隐秘的沟壑
+	ENDIF
+	PRINTL 向两侧掰开展示
+	; SIF TCVAR:102
+	; 	PRINTFORML さらけ出された膣口からは，さきほど射精した精液が，こぽこぽとこぼれてくる…
+ELSEIF ABL:露出癖 == 1
+	PRINTFORML 面红耳赤地怯生生张开性器
+	; SIF TCVAR:102
+	; 	PRINTFORML さらけ出された膣口からは，さきほど射精した精液が，こぽこぽとこぼれてくる…
+ELSEIF ABL:露出癖 == 2
+	PRINTFORML 将手置于下腹部，用食指与中指比出V字手势将私处暴露给%CALLNAME:PLAYER%
+	; IF TCVAR:102
+	; 	PRINTFORML さらけ出された膣口からは，さきほど射精した精液が，こぽこぽとこぼれてくる…
+	; ELSE
+		PRINTFORML 张开的阴唇间，濡湿的阴道口正渴望被填满般淫靡颤动…
+	; ENDIF
+ELSEIF ABL:露出癖 == 3
+	PRINTFORML 带着愉悦表情单手掰开阴唇，另一只手开始玩弄阴蒂
+	; IF TCVAR:102
+	; 	PRINTFORML さらけ出された膣口は，さきほど射精したばかりの精液を，淫らに垂れ流している…
+	; ELSE
+		PRINTFORML 每当%CALLNAME:TARGET%的手指刺激阴蒂，阴道口便渗出晶莹爱液…
+	; ENDIF
+ELSEIF ABL:露出癖 == 4
+	PRINTFORML 用双手手指同时撑开阴唇和阴道口
+	; IF TCVAR:102
+	; 	PRINTFORML %CALLNAME:TARGET%の手が膣口をさらに左右に拡げると，さきほど射精した精液を垂れ流している…
+	; ELSE
+		PRINTFORML 或许因暴露阴道内部感到羞耻，%CALLNAME:TARGET%脸颊泛起淡淡红晕
+	; ENDIF
+ELSEIF ABL:露出癖 >= 5 && TALENT:淫乱 == 0
+	PRINTFORML 用手指勾住阴唇，将整个阴道口向%CALLNAME:PLAYER%展示
+	; IF TCVAR:102
+	; 	PRINTFORML 大きく拡げられた膣口は，さきほど射精した精液を垂れ流している…
+	; ELSE
+		PRINTFORML 当%CALLNAME:TARGET%的手撑开阴道内部时，湿润的膣肉正饥渴地翕动着…
+	; ENDIF
+;露出癖LV5以上＋淫乱or娼婦
+ELSEIF ABL:露出癖 >= 5 && TALENT:淫乱
+	PRINTFORML 用手指勾住阴唇，将整个阴道口向%CALLNAME:PLAYER%展示
+	; IF TCVAR:102
+	; 	PRINTFORML うごめく膣内からは，さきほど射精した精液が，どろりと，だらしなくこぼれてきた…
+	; ELSE
+		PRINTFORML 柔软湿润的膣内正分泌着大量黏液，如同邀请般诱人地蠕动着…
+	; ENDIF
+ENDIF
+;調教者が恥じらい＋調教経験200以下
+IF TALENT:PLAYER:羞恥心 > 0 && EXP:PLAYER:調教経験 < 200
+	PRINTFORML 虽然是自己下达的命令，但目睹%CALLNAME:TARGET%淫态的%CALLNAME:PLAYER%
+	PRINTL 仍被罪恶感和羞耻心冲击，绯红着脸微微侧开头
+ENDIF
+

@@ -1,0 +1,174 @@
+﻿;-------------------------------------------------
+;外阴部敏感按摩
+;-------------------------------------------------
+@MASSAGE_COMNAME26
+#FUNCTIONS
+TSTR:コマンド名受渡 = 外阴部敏感按摩
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_26
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("エロマッサージ")
+
+@MASSAGE_COM_TOOLTIP_26
+LOCALS = <br>■外阴部敏感按摩<br>
+LOCALS += "使用沾满精油的双手对外阴部进行按摩"
+LOCALS += "<br>对象存在男性器官时实施手交，无则进行阴蒂爱抚"
+LOCALS += "<br>指令类型：情色按摩<br>获取来源：快Ｃ・暴露・接触・欢乐・液体"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@MASSAGE_COM26
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+
+;まだかろうじてマッサージのていを保っているのでちょっとだけ歓楽。
+;性器がどちらでも与えるのはＣ感
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 150)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 75)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 100)
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 50)
+
+;润滑液は別のコマンドになるっぽいので気持ち程度
+CALL SOURCE_CALC_液体(TARGET, PLAYER, 1000)
+
+;下半身下着がある場合は脱がす。
+IF TEQUIP:下半身下着あり == 1
+	TEQUIP:下半身下着あり = 0
+	TEQUIP:下半身服あり = 0
+	SIF TEQUIP:上下一体服
+		TEQUIP:上半身服あり = 0
+	RFLAG:コマンド結果受渡し変数 = 1
+ENDIF
+
+IF BASE:TARGET:理性 <= 1
+;理性がおしまいになってしまった場合、快楽に流されて警戒が下がっていく。
+	BASE:TARGET:性欲 += 200
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -40)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSEIF 知識素質:TARGET:性知識 <= -1
+;性知識がない場合でも「流石にこれはダメなやつなのでは？」と思いはじめる。が、時既に遅し。
+;警戒80で理性が40上がり、そこから理性が200下がるイメージでこの数値。
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -110)
+	BASE:TARGET:性欲 += 200
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 80)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSEIF (BASE:TARGET:理性 + BASE:TARGET:警戒) < 470
+;実行に際し十分な理性・警戒削りがなされている場合。
+;警戒220で理性が110回復するも、煽られる性欲と与えられる刺激で理性が200削られて理性変動は-90。
+;……というのが平常時における挙動だが、ここまで削られていると与えられる快感に警戒心が塗りつぶされてしまう。
+;よって警戒88で理性44回復、そこから理性200低下でこの数字となる。理性と警戒の合計値は少しだけ下がり、そのまま次のコマンドへ。
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -156)
+	BASE:TARGET:性欲 += 200
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 88)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSE
+;実行に際し十分な理性・警戒削りがなされていない場合。
+;性欲は煽れるが、警戒と理性が跳ねる。警戒心がビンっ！ってなるので、煽られる性欲の理性低下を撥ね退けてしまう。
+	BASE:TARGET:理性 +=理性変動値算出(TARGET, 110)
+	BASE:TARGET:性欲 += 100
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 220)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+ENDIF
+
+BASE:TARGET:ちんイラ = MAX(0, BASE:TARGET:ちんイラ - 150)
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE26
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(26)
+	RETURN RESULT
+
+;うつ伏せだとダメ
+SIF TCVAR:TARGET:マッサージ_うつ伏せフラグ == 1
+	RETURN 0
+
+;理性警戒の合計が900以下じゃないとダメ
+;実行自体はできるが、この時点だと警戒と理性が跳ねる。されるがままになっちゃうのは合計値500以下くらいを想定。
+SIF (BASE:TARGET:理性 + BASE:TARGET:警戒) > 900
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM26
+
+PRINTFORM %CALLNAME:PLAYER%把
+
+	IF RFLAG:コマンド結果受渡し変数 == 1
+		PRINTFORM %CALLNAME:TARGET%的
+			;Ｖがあり欲情している場合
+			SIF TALENT:TARGET:Ｖ感度 >= -1 && PALAM:欲情  >= PALAMLV:3 && GETBIT(TALENT:TARGET:性別, 0)
+				PRINTFORM 吸饱爱液的
+		PRINTFORM 理疗服褪去后，
+	ENDIF
+	
+PRINTFORM %CALLNAME:TARGET%的
+
+	IF GETBIT(TALENT:TARGET:性別, 1)
+	;ちんぽにゃ！
+		;巨根以上
+		IF TALENT:TARGET:男性器サイズ >= 1
+				IF BASE:TARGET:勃起 >= 1000
+					PRINTFORM 完全勃起的
+				ELSEIF BASE:TARGET:勃起 >= 500
+					PRINTFORM 逐渐硬化的
+				ELSE
+					PRINTFORM 尚未勃起的
+				ENDIF
+			PRINTFORM %TEXTR("大鸡巴/巨根")%
+		ELSEIF TALENT:TARGET:男性器サイズ <= -1
+		;短小以下
+				IF BASE:TARGET:勃起 >= 1000
+					PRINTFORM 完全硬化的
+				ELSEIF BASE:TARGET:勃起 >= 500
+					PRINTFORM 逐渐硬化的
+				ELSE
+					PRINTFORM 仍柔软的
+				ENDIF
+			PRINTFORM 小巧的%TEXTR("鸡鸡/小鸡鸡/阴茎")%
+		ELSE
+		;普通サイズ
+				IF BASE:TARGET:勃起 >= 1000
+					PRINTFORM 完全坚挺的
+				ELSEIF BASE:TARGET:勃起 >= 500
+					PRINTFORM 逐渐硬化的
+				ELSE
+					PRINTFORM 尚未完全硬挺的
+				ENDIF
+			PRINTFORM %TEXTR("肉棒/鸡巴")%
+		ENDIF
+		PRINTFORML 被%TEXTR("沾满精油的双手上下撸动/油滑的掌心包裹揉捏")%进行按摩。
+	ELSE
+	;クリ愛撫
+		PRINTFORML %TEXTR("阴蒂/敏感豆/阴核")%被%TEXTR("精油浸润的指腹温柔揉捏/指尖画圆式按压/指腹碾压式深压")%按摩。
+	ENDIF
+
+;削りが十分な時は追加のメッセージ
+IF (BASE:TARGET:理性 + BASE:TARGET:警戒) < 470
+	PRINTW 
+	SELECTCASE RAND:2
+	CASE 0
+		PRINTFORM %CALLNAME:TARGET%%TEXTR("双眸迷离地/满脸陶醉地张着樱唇/神情恍惚地")%
+	CASE 1
+		PRINTFORM %CALLNAME:TARGET%从微张的唇间%TEXTR("溢出甜腻呻吟/发出愉悦娇喘/漏出淫靡声响")%
+	ENDSELECT
+	PRINTFORML 彻底沉溺于%CALLNAME:PLAYER%%TEXTR("的『按摩』/的技法/带来的快感")%%TEXTR("之中/的支配/的冲击")%…
+ENDIF

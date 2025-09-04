@@ -1,0 +1,359 @@
+﻿@COM5
+;胸愛撫
+;TEQUIP:胸愛撫で行為を記録する
+;0bitで胸を揉む 1bitで乳頭を弄る 2bitで穿環をいじめる 10bitで乳頭を舐める
+;乳頭が陥没状態かどうかはCALCF("Ｂ発情") == 0 かどうかで判定可能
+;基本的には胸愛撫→胸舐め（可能なら揉みながら）となる
+
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+;乳頭を舐めると、ながら接吻フラグは消滅する
+SIF CHECK_COM("舔乳頭に変化")
+	TEQUIP:接吻 = 0
+
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+RETURN 1
+
+@FLAG_COM5, ARG
+;口で愛撫起来場合（対象のＢ⇔調教者の口的污垢が移動）
+SIF CHECK_COM("舔乳頭")
+	CALL EQ_STAIN, TARGET, "Ｂ", PLAYER, "Ｍ"
+;指で愛撫起来場合（対象のＢ⇔調教者の指的污垢が移動）
+SIF CHECK_COM("胸指愛撫")
+	CALL EQ_STAIN, TARGET, "Ｂ", PLAYER, "手"
+
+@SOURCE_COM5, ARG
+CALL VARSET_COMF
+
+CALL SOURCE_DOWNBASE_HP, 5
+
+SOURCE:0:性行動 = 60
+SOURCE:0:不潔 = 20
+SOURCE:0:情愛 = 200
+SOURCE:0:露出 = 200
+
+
+;ABL:Ｂ感覚をみる
+SOURCE:0:Ｂ快楽 = CALCF("Ｂ刺激", 1)
+SOURCE:0:情愛 += ABL:Ｂ感覚*100
+
+;潤滑液の使用をみる
+SIF TEQUIP:潤滑液
+	TIMES SOURCE:0:Ｂ快楽, 1.30
+
+;口で愛撫起来場合
+IF CHECK_COM("舔乳頭") || COND("喝母乳フラグ", PLAYER)
+	SOURCE:0:Ｂ快楽 = SOURCE_EXABL(SOURCE:0:Ｂ快楽, "舌靈活", PLAYER)
+;指で愛撫起来場合
+ELSE
+	SOURCE:0:Ｂ快楽 = SOURCE_EXABL(SOURCE:0:Ｂ快楽, "指靈活", PLAYER)
+ENDIF
+
+;鎧を着けたりしてると快Ｂ激減
+IF CHECK_SHIRT("鎧") && CHECK_CLO("谷間露出") == 0 && CHECK_CLO("乳頭露出") == 0
+	TIMES SOURCE:0:Ｂ快楽, 0.10
+	TIMES SOURCE:0:露出, 0.10
+ENDIF
+
+;乳頭を責めている時に陥没乳頭だと色々修正
+IF CHECK_COM("乳頭弄り") && COND("陥没乳頭")
+	;乳頭が露出した
+	IF CALCF("Ｂ発情")
+		TIMES SOURCE:0:Ｂ快楽, 1.50
+	ELSE
+		TIMES SOURCE:0:Ｂ快楽, 0.50
+	ENDIF
+ENDIF
+
+SIF TALENT:Ｂ性向
+	CALL CALC, "好みのPLAY", SOURCE:0:Ｂ快楽
+
+CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM5
+#DIMS TEXT_TITS
+;TEQUIP:胸愛撫で行為を記録する
+;0bitで胸を揉む 1bitで乳頭を弄る 2bitで穿環をいじめる 10bitで乳頭を舐める 11bitで胸部を飲む
+
+PRINTFORM %CALLNAME:PLAYER%将
+IF INSERT("合体中")
+	PRINTFORM %TEXTS("合体中", PLAYER)%%TEXTS("電話中の")%%CALLNAME:TARGET%の
+ELSE
+	IF TEQUIP:接吻
+		PRINTFORM %TEXTS("接吻継続")%、
+		CALL SETFLAG, "追加接吻フラグ", TARGET
+	ELSEIF TEQUIP:電話中
+		PRINTFORM %TEXTS("電話中の")%
+	ENDIF
+	PRINTFORM %CALLNAME:TARGET%的
+	;胸が露出している服
+	IF CHECK_CLO("谷間露出") && CHECK_CLO("乳頭露出") == 0 && RANDF(3)
+		IF TALENT:巨乳
+			PRINTFORM 大膽地彰顯著的
+		ELSEIF TALENT:貧乳
+			PRINTFORM 保守的
+		ENDIF
+		PRINTFORM 胸口
+		SIF TALENT:男性 == 0 && TALENT:貧乳 == 0
+			PRINTFORM 的谷間
+		PRINTFORM 用雙手伸入其中、將
+	;胸元を半脱る
+	ELSEIF CHECK_CLO("半脱可")
+		PRINTFORM 胸前的衣服拉下、對著暴露出來的胸口、將
+		CALL SETFLAG, "胸を半脱る", TARGET
+	ENDIF
+ENDIF
+
+;IF TALENT:巨乳
+;	PRINTFORM %TEXTR("揉みごたえのある/手の平から零れ落ちるほどの/軟かな弾力を持った/手に収まりきらないほどの")%%TEXTR("充分した重量の/類まれな尺寸/想像を絶するほど大号的/動くだけで弾力を感じさせる/歩くたびに揺れてしまう")%
+;ENDIF
+
+IF TALENT:巨乳 && RAND:3 == 0
+	TEXT_TITS = %TOFULL(CONDS("罩杯サイズ") )%杯的%TALENT_NAME(GETNUM(TALENT, "巨乳"), TALENT:巨乳)%
+ELSEIF TALENT:男性
+	TEXT_TITS = 胸板
+ELSEIF RAND:2
+	TEXT_TITS = 乳房
+ELSE
+	TEXT_TITS = 胸
+ENDIF
+
+;乳頭を舐める
+IF CHECK_COM("舔乳頭に変化")
+	;TEQUIP:胸愛撫 で行動を記録…するまえに、不要なフラグを消去する
+	TEQUIP:胸愛撫 = 0
+
+	;乳頭フラグ
+	SETBIT TEQUIP:胸愛撫, 1
+	;舔乳頭フラグ
+	SETBIT TEQUIP:胸愛撫, 10
+
+	;揉胸も同時にするか？（主に連続選択時）
+	IF CHECK_COM("揉胸") && CHECK_COM("舔乳頭")
+		;揉胸フラグ
+		SETBIT TEQUIP:胸愛撫, 0
+
+		IF CALCF("Ｂ発情")
+			PRINTFORM %TEXTS("乳頭：描写")%%TEXTR("乳頭/突起")%用%TEXTR("舌頭溫柔地舔舐著/舌尖執拗地挑弄著/雙唇吮吸著/口腔緊緊包裹著/貝齒輕輕嚙咬著")%、
+		ELSE
+			PRINTFORM %TEXTS("乳頭：描写")%乳頭用%TEXTR("舌頭溫柔地舔舐著/舌尖執拗地挑弄著/雙唇吮吸著/口腔緊緊包裹著")%、
+		ENDIF
+		SIF TALENT:男性 == 0
+			PRINTFORM %TEXTS("胸部：描写")%、
+		;直接
+		IF CHECK_CLO("谷間露出") && TALENT:貧乳 == 0 && RAND:2
+			IF RAND:2 == 0
+				IF TALENT:巨乳 && RAND:2
+					PRINTFORMW 將柔軟的乳肉更加用力地揉搓著……
+				ELSE
+					PRINTFORMW 將柔軟的乳肉那滑膩地手感盡情享受著……
+				ENDIF
+			ELSE
+				PRINTFORMW 充分地享受著乳房那柔軟到能讓手指整個陷入其中的美妙手感……
+			ENDIF
+		ELSE
+			IF TALENT:貧乳 == 0 && RAND:2
+				IF RAND:2
+					PRINTFORMW 乳房輕輕托起、來回撫摸起來……
+				ELSE
+					PRINTFORMW 將乳房的柔軟盡情享受著……
+				ENDIF
+			ELSE
+				IF RAND:2
+					PRINTFORMW 將乳房整個用雙手握住、用掌心來回撫摸著……
+				ELSE
+					PRINTFORMW 揉搓著%TEXT_TITS%……
+				ENDIF
+			ENDIF
+		ENDIF
+	ELSE
+		PRINTFORM 胸部前端的
+		IF TALENT:母乳体質 && RAND:3 == 0
+			IF CALCF("Ｂ発情")
+				PRINTFORM %TEXTR("滲透出牛奶的突起/被母乳浸透的乳頭")%
+			ELSE
+				PRINTFORM %TEXTR("滲透出牛奶的地方/被母乳浸透的陷沒著的乳頭")%
+			ENDIF
+		ELSE
+			PRINTFORM %TEXTS("乳頭：描写")%%TEXTR("乳頭/突起")%
+		ENDIF
+		;穿環をいじめる
+		IF TALENT:乳環 && RAND:2
+			;穿環弄りフラグ
+			SETBIT TEQUIP:胸愛撫, 2
+			PRINTFORM 連同装飾著它的%TEXTS("乳環")%一併
+			IF RAND:2
+				PRINTFORMW 用舌頭舔舐著轉動起來……
+			ELSE
+				PRINTFORMW 用口腔含住、輕輕地拉扯著金屬穿環……
+			ENDIF
+		ELSE
+			;においフェチ分岐
+			IF TALENT:母乳体質 && PLAYER == MASTER && COND("气味弱点", MASTER) + TALENT:相思相愛 && (CHOSECOM(SELECTCOM) == 0 || RAND:3 == 0)
+				IF RAND:2 && CALCF("Ｂ発情")
+					PRINTFORMW 用口腔含住、盡情地享受著母乳所散發的甘甜氣息……
+				ELSE
+					PRINTFORMW 小力吮吸著、在盡情嗅聞著母乳所散發的甘甜氣息的同時、將被含住的尖端用舌頭輕輕挑弄著……
+				ENDIF
+			ELSEIF RAND:4 == 0
+				PRINTFORMW 用牙齒輕輕地嚙咬並擼動著……
+			ELSEIF RAND:3 == 0
+				PRINTFORMW \@ CALCF("Ｂ発情") ? 輕輕含住 # 不斷啄吻著 \@、在發出啾、啾的水音的同時、不斷向上輕輕吮吸著……
+			ELSEIF RAND:2
+				PRINTFORMW 隨心所欲地啄吻著每一處角落、將挺立的尖端用舌頭\@ CALCF("Ｂ発情") ? 挑逗著 # 舔舐著 \@……
+			ELSE
+				PRINTFORMW 整個用口腔含住、將乳輪著週邊部分挑逗性質地輕輕舔舐著……
+			ENDIF
+		ENDIF
+	ENDIF
+	;母乳体質だと母乳を飲めるかも
+	CALL TEXT, "喝母乳"
+
+;乳頭を弄る…貧乳はこっちメイン。陥没乳頭だとここには来ない
+ELSEIF CALCF("Ｂ発情") && (TALENT:男性 || (CHECK_CLO("乳頭露出") && RAND:(2 + TALENT:貧乳) ) )
+	;TEQUIP:胸愛撫 で行動を記録…するまえに、不要なフラグを消去する
+	TEQUIP:胸愛撫 = 0
+
+	;乳頭フラグ
+	SETBIT TEQUIP:胸愛撫, 1
+
+	PRINTFORM 胸部前端的
+	IF TALENT:母乳体質 && RAND:3 == 0
+		PRINTFORM 滲透出牛奶的突起
+	ELSE
+		PRINTFORM %TEXTS("乳頭：描写")%%TEXTR("乳頭/突起")%
+	ENDIF
+	;穿環をいじめる
+	IF TALENT:乳環 && RAND:2
+		;穿環弄りフラグ
+		SETBIT TEQUIP:胸愛撫, 2
+		PRINTFORM 連同装飾著它的%TEXTS("乳環")%一併
+		IF RAND:3 == 0
+			PRINTFORMW 用指尖輕輕彈擊著……
+		ELSEIF RAND:2 == 0
+			PRINTFORMW 逗弄著……
+		ELSE
+			PRINTFORMW 用手指穿過穿環、然後輕輕地拉扯起來……
+		ENDIF
+	ELSE
+		IF RAND:7 == 0
+			PRINTFORMW 像是採摘花草一樣輕輕扭轉著……
+		ELSEIF RAND:6 == 0
+			PRINTFORMW 稍加力道的壓迫著、然後啪呲啪呲地摩擦起來……
+		ELSEIF RAND:5 == 0
+			PRINTFORMW 輕輕捻動著……
+		ELSEIF RAND:4 == 0
+			PRINTFORMW 不斷變化著強弱程度地刺激著……
+		ELSEIF RAND:3 == 0
+			PRINTFORMW 連同乳輪一併用指腹輕輕摩挲著……
+		ELSEIF RAND:2 == 0
+			PRINTFORMW 稍稍拉起、揉捏起來……
+		ELSE
+			PRINTFORMW 稍稍拉起、輕輕地擼動起來……
+		ENDIF
+	ENDIF
+
+	SIF TALENT:母乳体質 && (CHOSECOM(SELECTCOM) == 0 || RAND:4 == 0)
+		PRINTFORMW 在乳頭被溫柔挑逗著的刺激下、%CALLNAME:TARGET%的乳房緩緩地滲透出了一縷縷潔白的母乳……
+;胸を揉む
+ELSE
+	;TEQUIP:胸愛撫 で行動を記録…するまえに、不要なフラグを消去する
+	TEQUIP:胸愛撫 = 0
+
+	SIF TALENT:男性 == 0
+		PRINTFORM %TEXTS("胸部：描写")%、
+	;揉胸フラグ
+	SETBIT TEQUIP:胸愛撫, 0
+
+	;においフェチ分岐
+	IF PLAYER == MASTER && COND("气味弱点", MASTER) + TALENT:相思相愛 && (CHOSECOM(SELECTCOM) == 0 || RAND:3 == 0) && INSERT("後背位") + INSERT("背面座位") == 0
+		;胸に手を差し入れたかどうか
+		IF RANDF(3)
+			IF RAND:2 || INSERT("後背位") || INSERT("背面座位") || INSERT("騎乗位")
+				PRINTFORMW 表面附著晶瑩汗珠的乳肉的質感盡情地享受著的同時、用雙手將這珍寶輕輕地揉搓著……
+			ELSE
+				PRINTFORMW 胸前的谷間所散發出的微妙的汗味深深嗅聞著、同時也用自己的臉頰切身體會著乳肉的柔軟滑膩……
+			ENDIF
+		ELSE
+			PRINTFORMW 蒸騰著溫熱汗汽的山谷用自己的臉頰填滿、在放任她那充滿雌性氣息的體臭將肺臟充滿的同時、也從兩側用柔軟的乳肉壓迫起自己的腦袋……
+		ENDIF
+	;直接
+	ELSEIF CHECK_CLO("谷間露出") && TALENT:貧乳 == 0 && RAND:2
+		IF EX:Ｂ絶頂 * 10000 + PALAM:快Ｂ >= 10000 && RAND:4 == 0
+			PRINTFORM 從下方撑着%TEXT_TITS%的同時、
+			IF COND("真性陥没乳頭")
+				PRINTFORMW 從根部緊緊握住、用就像是想把深陷在乳肉中的乳頭擠出來一樣的動作反復擼動著……
+			ELSEIF CALCF("Ｂ発情")
+				PRINTFORMW 將昂揚的挺立著的乳頭輕柔緩慢地擼動著……
+			ELSE
+				PRINTFORMW 將連同羞澀的面孔一併被遮掩著的乳頭強硬地擼動著……
+			ENDIF
+		ELSEIF RAND:3 == 0 && ABL:Ｂ感覚 >= 3
+			PRINTFORMW 把%TEXT_TITS%揉搓到快要改变形状的程度…
+		ELSEIF RAND:2 == 0
+			PRINTFORM 柔軟乳肉用讓手指深陷其中的力道緊緊握住、
+			IF TALENT:巨乳 && RAND:2
+				PRINTFORMW 更加的增大揉搓的力道……
+			ELSE
+				PRINTFORMW 盡情地享受著那柔軟滑膩的觸感……
+			ENDIF
+		ELSE
+			PRINTFORMW 充分地享受著乳房那柔軟到能讓手指整個陷入其中的美妙手感……
+		ENDIF
+	ELSE
+		IF TALENT:貧乳 == 0 && RAND:2
+			IF RAND:4 == 0
+				PRINTFORMW 乳房輕輕托起、來回撫摸起來……
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 用力握住%TEXT_TITS%、來回揉捏著……
+			ELSEIF RAND:2 == 0
+				PRINTFORM %TEXT_TITS%を
+				SIF RAND:2
+					PRINTFORM 富有彈性的美妙手感盡情享受著的同時、
+				PRINTFORMW 充分地揉搓著……
+			ELSE
+				PRINTFORMW 將乳房的柔軟盡情享受著……
+			ENDIF
+		ELSE
+			IF RAND:2
+				PRINTFORMW 將乳房整個用雙手握住、用掌心來回撫摸著……
+			ELSE
+				PRINTFORMW 揉搓著%TEXT_TITS%……
+			ENDIF
+		ENDIF
+	ENDIF
+	IF TALENT:母乳体質 && (CHOSECOM(SELECTCOM) == 0 || RAND:4 == 0)
+		IF TALENT:貧乳 == 0 && RAND:2
+			PRINTFORMW 當%CALLNAME:PLAYER%將手沉入乳房那柔軟的乳肉之中的時候、那可愛的尖端就會微微滲出甘甜的母乳……
+		ELSE
+			PRINTFORMW 當%CALLNAME:PLAYER%用手揉搓乳房讓那柔軟的乳肉形變的時候、那可愛的尖端就會微微滲出甘甜的母乳……
+		ENDIF
+	ENDIF
+ENDIF
+
+
+;胸愛撫ではなく豊穣の記述
+@EQUIP_COM5_2
+#DIM LCOUNT
+SIF TEQUIP:豊穣 == 0
+	RETURN 0
+
+VARSET LOCALS
+FOR LCOUNT, 0, 5
+	SELECTCASE LCOUNT
+	CASE IS < TEQUIP:豊穣
+		LOCALS += "★"
+	CASEELSE
+		LOCALS:1 += "★"
+	ENDSELECT
+NEXT
+
+CALL PRINT_STRL, @"＜豊穣_黄色_%LOCALS%_\@ LOCALS:1 != "" ? 灰色_%LOCALS:1%_ # \@＞"
+

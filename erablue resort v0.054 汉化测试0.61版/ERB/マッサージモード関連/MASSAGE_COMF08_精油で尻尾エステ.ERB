@@ -1,0 +1,88 @@
+﻿;-------------------------------------------------
+;尾巴精油护理
+;-------------------------------------------------
+@MASSAGE_COMNAME8
+#FUNCTIONS
+TSTR:コマンド名受渡 = 尾巴精油护理
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_8
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("通常マッサージ")
+
+@MASSAGE_COM_TOOLTIP_8
+LOCALS = <br>■尾巴精油护理<br>
+LOCALS += "使用精油进行尾部特殊护理"
+LOCALS += "<br>对蓬松绒毛尾实施精油刷毛护理"
+LOCALS += "<br>针对龙族鳞片尾进行深层清洁保养"
+LOCALS += "<br>指令类型：常规按摩<br>获取来源：快Ｓ・接触・欢乐・暴露"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@MASSAGE_COM8
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+RCVAR:TARGET:尻尾開発フラグ = 3
+;尻尾のケアがうまいオトコは加点対象のため、全体的に効果強め。
+CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 100)
+CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 60)
+CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 60)
+BASE:TARGET:理性 += 理性変動値算出(TARGET, -40)
+BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -55)
+
+;尻尾あり限定コマンドなので効果をちょい高めに。Ｓ快高め、歓楽強め。リラックス効果も強め。
+;根元までしっかり見ることになるからセクハラの尻尾撫でより露出は高く
+CALL SOURCE_CALC_快Ｓ(TARGET, PLAYER, 200)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 75)
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 200)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 75)
+
+
+
+IF TARGET == MASTER
+	CALL ちんイラ増加処理(PLAYER, 15)
+ELSE
+	CALL ちんイラ増加処理(TARGET, 30)
+ENDIF
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE8
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(8)
+	RETURN RESULT
+
+;尻尾必須
+SIF !TALENT:TARGET:尻尾あり
+	RETURN 0
+
+;仰向けだとダメ
+SIF TCVAR:TARGET:マッサージ_うつ伏せフラグ == 0
+	RETURN 0
+
+
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM8
+
+PRINTFORML %CALLNAME:PLAYER%使用特制精油对%CALLNAME:TARGET%的尾巴进行细致护理。
+

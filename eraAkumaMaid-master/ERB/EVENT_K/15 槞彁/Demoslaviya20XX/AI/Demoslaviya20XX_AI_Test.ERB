@@ -1,0 +1,172 @@
+﻿;;;とりあえずのテスト用AI
+;;;動き方：動かない
+;;;攻撃：隣に居る、最も指揮統制率の低いユ针织
+@D20XX_AI_Test
+	#DIM DYNAMIC LCount
+	#DIM DYNAMIC TargetSelectLoopCount
+	#DIM DYNAMIC TargetUnitID
+	#DIM DYNAMIC Y_SelectUnit
+	#DIM DYNAMIC X_SelectUnit
+	#DIMS DYNAMIC WeaponList
+
+
+	FOR LCount,1,10000
+		SIF D20XX_Unit:LCount:0 == "None"
+			BREAK
+		IF D20XX_Unit:LCount:0 == "敵"
+			CALL D20XX_UnitSearch(LCount) 
+			IF RESULT:0 == 1
+				Y_SelectUnit = RESULT:1
+				X_SelectUnit = RESULT:2
+
+				D20XX_SelectWeapon = None
+				
+				;まず、ユ针织を選択する
+				D20XX_SelectUnit = LCount
+				D20XX_SelectCommandMode = 
+				CALL D20XX_EnemyTarnViewer
+
+
+				;#region Astar
+					CALL D20XX_AstarMap_Constructor
+					D20XX_SelectCommandMode = 最短経路計算
+					FOR TargetSelectLoopCount,0,10000
+						CALL D20XX_UnitSearch(TargetSelectLoopCount)
+						IF RESULT:0 == 1
+							IF D20XX_Unit:TargetSelectLoopCount:0 == "自軍"
+								TargetUnitID = TargetSelectLoopCount
+								BREAK
+							ENDIF
+						ENDIF
+					NEXT
+					CALL D20XX_AI_AsterByUnit(D20XX_SelectUnit, TargetUnitID)
+					CALL D20XX_EnemyTarnViewer
+					TWAIT 500,1
+				;#endregion
+
+				;#region 移動を行う
+					CALL D20XX_EnemyMove(TargetUnitID)
+					CALL D20XX_EnemyTarnViewer
+					TWAIT 500,1
+				;#endregion
+				
+				;#region 初期化
+					TargetUnitID = 1
+					;D20XX_SelectCommandMode = 
+					;CALL D20XX_EnemyTarnViewer
+					CALL D20XX_UnitSearch(LCount) 
+					Y_SelectUnit = RESULT:1
+					X_SelectUnit = RESULT:2
+					D20XX_SelectUnit = LCount
+					D20XX_SelectCommandMode = 攻撃
+					;武器を選択する
+					;とりあえず今回はテスト用なので射撃対象の事を考えず1番目の武器を使う
+					VARSET WeaponList:0 ,"None"
+					SPLIT D20XX_Unit:D20XX_SelectUnit:6,",",WeaponList
+					D20XX_SelectWeapon = %WeaponList:0%
+				;#endregion
+
+				CALL D20XX_EnemyTarnViewer
+
+				;攻撃対象ユ针织を選ぶわよ
+				D20XX_SelectCommandMode = 攻撃
+				CALL D20XX_EnemyWithinRangeSearch
+				;#region 攻撃対象選択 (多分これ別メソッドとして独立させるべきな気がするワ...)
+					TargetUnitID = 0
+					FOR TargetSelectLoopCount,0,10000
+						IF D20XX_CandidateList:TargetSelectLoopCount:0 > 0
+							IF D20XX_Unit:(D20XX_CandidateList:TargetSelectLoopCount:0):0 == "自軍" || D20XX_Unit:(D20XX_CandidateList:TargetSelectLoopCount:0):0 == "友軍"
+								IF TargetUnitID == 0
+									TargetUnitID = D20XX_CandidateList:TargetSelectLoopCount:0
+								ENDIF
+								;指揮統制率が低い方のユ针织を優先的に攻撃するわよ
+								IF TOINT(D20XX_Unit:TargetUnitID:4) > TOINT(D20XX_Unit:(D20XX_CandidateList:TargetSelectLoopCount:0):4)
+									TargetUnitID = TOINT(D20XX_Unit:(D20XX_CandidateList:TargetSelectLoopCount:0):4)
+								ENDIF
+							ENDIF
+						ENDIF
+					NEXT
+				;#endregion 
+
+				;#region攻撃対象を表示する
+					IF TargetUnitID > 0
+						Demoslaviya20SXX_EnemyTargetMode = True
+						CALL D20XX_EnemyMoveSelectMap_Constructor
+						CALL D20XX_EnemyTargetSelectMap_Constructor
+						CALL D20XX_UnitSearch(TargetUnitID) 
+						D20XX_EnemyTargetSelectMap:(RESULT:1):(RESULT:2) = 0
+						D20XX_SelectCommandMode = 攻撃
+						CALL D20XX_EnemyTarnViewer
+					ENDIF
+				;#endregion
+
+				;#region 
+					IF TargetUnitID > 0
+						CALL D20XX_UnitSearch(TargetUnitID)
+						CALL D20XX_EnemyHitCalc(RESULT:1,RESULT:2)
+					ENDIF
+				;#endregion
+			ENDIF
+		ENDIF
+	D20XX_SelectWeapon = None
+	D20XX_SelectUnit = 0
+	D20XX_SelectCommandMode = 移動
+	Demoslaviya20SXX_EnemyTargetMode = False
+	NEXT
+;;;射程内の敵を尋找わよ
+@D20XX_EnemyWithinRangeSearch
+	#DIM DYNAMIC X_Range
+	#DIM DYNAMIC Y_Range
+	#DIM DYNAMIC LCount
+
+	CALL D20XX_CandidateList_Constructor
+	FOR Y_Range,0,200
+		FOR X_Range,0,200
+			;射程内かつ、ユ针织が居るヘクスをCandidateListに追加するわよ
+			IF D20XX_AttackRangeMap:Y_Range:X_Range >= 0 && TOINT(D20XX_MAP:Y_Range:X_Range:1) >= 1
+				FOR LCount,0,10000
+					IF D20XX_CandidateList:LCount:0 < 0
+						D20XX_CandidateList:LCount:0 = TOINT(D20XX_MAP:Y_Range:X_Range:1)
+						D20XX_CandidateList:LCount:1 = Y_Range
+						D20XX_CandidateList:LCount:2 = X_Range
+						BREAK
+					ENDIF
+					IF LCount == 10000
+						PRINTFORML デバッグメッセージ：エラー！
+						PRINTFORML 発生メソッド : D20XX_EnemyWithinRangeSearch
+						PRINTFORML 射程内の敵リストに入りきらなかったわよ
+						PRINTFORMW でも射程内に10000もユ针织が居る事って無いはずだから多分バグだと思うわ
+					ENDIF
+				NEXT
+			ENDIF
+		NEXT
+	NEXT
+
+@D20XX_EnemyTarnViewer
+	#DIM CONST TWaitTimer = 500
+	#DIM DYNAMIC Y_ViewPoint
+	#DIM DYNAMIC X_ViewPoint
+
+		CALL D20XX_UnitSearch(D20XX_SelectUnit)
+		IF RESULT == 1
+			IF RESULT:1 < 8
+				Y_ViewPoint = 0
+			ELSE
+				Y_ViewPoint = RESULT:1 -8
+			ENDIF
+
+			IF RESULT:2 < 18
+				X_ViewPoint = 0
+			ELSE
+				X_ViewPoint = RESULT:2 - 18
+			ENDIF
+		ENDIF
+		IF MESSKIP()
+			CALL D20XX_GenerateHTML(X_ViewPoint,Y_ViewPoint)
+			CALL D20XX_ViewHTML_Enemy
+			WAIT
+		ELSE
+			CALL D20XX_GenerateHTML(X_ViewPoint,Y_ViewPoint)
+			CALL D20XX_ViewHTML_Enemy
+			TWAIT TWaitTimer,1
+		ENDIF

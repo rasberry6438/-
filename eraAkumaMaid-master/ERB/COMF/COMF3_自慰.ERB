@@ -1,0 +1,926 @@
+﻿@COM3
+;自慰
+;振動棒、肛用振動棒、尿道振動棒、视频拍摄の時に内容変化
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+CALL SHOW_COM_ORDER_COM, 3
+
+;実行できない
+SIF TCVAR:干劲 == 0
+	RETURN 0
+;-------------------------------------------------
+;実行決定
+;-------------------------------------------------
+;６９自慰は口交
+IF CHECK_COM("６９自慰")
+	TEQUIP:六九式 = 91
+	;TEQUIP:PLAYER:六九式 = 0
+ENDIF
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+;-------------------------------------------------
+;射精格子
+;-------------------------------------------------
+IF CHECK_COM("口交自慰")
+	SELECTCOM = 91
+	CALL SAMEN_CHECK, 10
+	SELECTCOM = 3
+ENDIF
+
+RETURN 1
+
+@FLAG_COM3, ARG
+#DIMS PLAY_ONANIE
+PLAY_ONANIE = %CHECK_ONANIE(SELECTCOM)%
+
+SIF CHECK_COM("口交自慰", 3)
+	CALL FLAG_COM91, 10
+CALL SETFLAG, "自慰フラグ", TARGET
+IF STRCOUNT(PLAY_ONANIE, "Ｃ")
+	SIF TALENT:男性 == 0
+		CALL EQ_STAIN, TARGET, "手", TARGET, "Ｖ"
+	SIF PENIS(TARGET)
+		CALL EQ_STAIN, TARGET, "手", TARGET, "Ｐ"
+ENDIF
+IF STRCOUNT(PLAY_ONANIE, "Ｖ")
+	SIF TEQUIP:振動棒
+		CALL FLAG_COM31, 30
+	CALL EQ_STAIN, TARGET, "手", TARGET, "Ｖ"
+ENDIF
+IF STRCOUNT(PLAY_ONANIE, "Ａ")
+	SIF TEQUIP:肛用振動棒
+		CALL SOURCE_COM33, 30
+	CALL EQ_STAIN, TARGET, "手", TARGET, "Ａ"
+ENDIF
+SIF STRCOUNT(PLAY_ONANIE, "Ｂ")
+	CALL EQ_STAIN, TARGET, "手", TARGET, "Ｂ"
+IF STRCOUNT(PLAY_ONANIE, "尿")
+	SIF TEQUIP:尿道振動棒
+		CALL FLAG_COM152, 30
+	STAIN:手 = SET_STAIN(STAIN:TARGET:手, "尿")
+ENDIF
+
+@SOURCE_COM3, ARG
+#DIMS PLAY_ONANIE
+PLAY_ONANIE = %CHECK_ONANIE(SELECTCOM)%
+
+SIF CHECK_COM("口交自慰", 3)
+	CALL SOURCE_COM91, 10
+IF STRCOUNT(PLAY_ONANIE, "Ｃ")
+	;飞机杯自慰
+	SIF STRCOUNT(PLAY_ONANIE, "飞机杯")
+		CALL SOURCE_COM37, 30
+ENDIF
+IF STRCOUNT(PLAY_ONANIE, "Ｖ")
+	SIF TEQUIP:振動棒
+		CALL SOURCE_COM31, 30
+ENDIF
+IF STRCOUNT(PLAY_ONANIE, "Ａ")
+	SIF TEQUIP:肛用振動棒
+		CALL SOURCE_COM33, 30
+ENDIF
+IF STRCOUNT(PLAY_ONANIE, "尿")
+	SIF TEQUIP:尿道振動棒
+		CALL SOURCE_COM152, 30
+ENDIF
+
+CALL VARSET_COMF
+
+CALL SOURCE_DOWNBASE_HP, 3
+
+;ABL:技巧をみる
+SOURCE:0:性行動 = 100 + ABL:技巧*100
+
+;ABL:露出癖をみる
+SELECTCASE ABL:露出癖
+CASE 0 TO 5
+	SOURCE:0:露出 = 2000 + ABL:露出癖*200
+	SOURCE:0:屈従 = 500 + ABL:露出癖*300
+	SOURCE:0:逸脱 = 800 - ABL:露出癖*100
+CASE 6 TO 10
+	SOURCE:0:露出 = 3000 + (ABL:露出癖 - 5)*100
+	SOURCE:0:屈従 = 2000 + (ABL:露出癖 - 5)*200
+	SOURCE:0:逸脱 = 300 - (ABL:露出癖 - 5)*50
+CASEELSE
+	SOURCE:0:露出 = 3500 + (ABL:露出癖 - 10)*50
+	SOURCE:0:屈従 = 3000 + (ABL:露出癖 - 10)*100
+	SOURCE:0:逸脱 = 0
+ENDSELECT
+
+;公開のときは露出のSOURCE増加
+SIF TEQUIP:攝像機
+	TIMES SOURCE:0:露出, 1.50
+
+SIF STRCOUNT(PLAY_ONANIE, "Ｃ")
+	SOURCE:0:Ｃ快楽 = CALCF("Ｃ刺激", 1)
+SIF STRCOUNT(PLAY_ONANIE, "Ｂ")
+	SOURCE:0:Ｂ快楽 = CALCF("Ｂ刺激", 1)
+SIF STRCOUNT(PLAY_ONANIE, "Ｖ")
+	SOURCE:0:Ｖ快楽 = CALCF("Ｖ刺激", 1)
+IF STRCOUNT(PLAY_ONANIE, "Ａ")
+	SOURCE:0:Ａ快楽 = CALCF("Ａ刺激", 1)
+	;肛門PLAYなら腸液分泌
+	SOURCE:0:Ａ液体追加 = 100 * ABL:自慰中毒
+ENDIF
+IF STRCOUNT(PLAY_ONANIE, "尿")
+	SOURCE:0:尿道快楽 = CALCF("尿道刺激", 1)
+	CALL SETFLAG, "尿道性感フラグ", TARGET
+ENDIF
+
+;ABL:自慰中毒をみる
+SOURCE:0:充足 = ABL:自慰中毒*300 + ABL:露出癖*200
+
+;TARGETの指靈活をみる
+IF ABL:指靈活
+	SIF SOURCE:0:Ｃ快楽
+		SOURCE:0:Ｃ快楽 = SOURCE_EXABL(SOURCE:0:Ｃ快楽, "指靈活", TARGET)
+	SIF SOURCE:0:Ｖ快楽
+		SOURCE:0:Ｖ快楽 = SOURCE_EXABL(SOURCE:0:Ｖ快楽, "指靈活", TARGET)
+	SIF SOURCE:0:Ａ快楽
+		SOURCE:0:Ａ快楽 = SOURCE_EXABL(SOURCE:0:Ａ快楽, "指靈活", TARGET)
+	SIF SOURCE:0:Ｂ快楽
+		SOURCE:0:Ｂ快楽 = SOURCE_EXABL(SOURCE:0:Ｂ快楽, "指靈活", TARGET)
+ENDIF
+
+;ここから下は快ＣＶＡＢに対する補正が大量的来るので、それをLOCALに代入して短く表す
+LOCAL = 0
+SELECTCASE ABL:自慰中毒
+CASE 0
+	LOCAL += -30
+CASEELSE
+	LOCAL += MIN(ABL:自慰中毒, 5)*10
+ENDSELECT
+SELECTCASE ABL:露出癖
+CASE 0
+	LOCAL += -30
+CASEELSE
+	LOCAL += MIN(ABL:露出癖, 5)*10
+ENDSELECT
+
+SOURCE:0:Ｃ快楽 = SOURCE:0:Ｃ快楽*(100 + LOCAL)/100
+SOURCE:0:Ｖ快楽 = SOURCE:0:Ｖ快楽*(100 + LOCAL)/100
+SOURCE:0:Ａ快楽 = SOURCE:0:Ａ快楽*(100 + LOCAL)/100
+SOURCE:0:Ｂ快楽 = SOURCE:0:Ｂ快楽*(100 + LOCAL)/100
+SOURCE:0:尿道快楽 = SOURCE:0:尿道快楽*(100 + LOCAL)/100
+
+;自慰中毒が無いなら、自慰で得た充足のSOURCEは０にする
+SIF ABL:自慰中毒 == 0
+	SOURCE:0:充足 = 0
+
+IF TEQUIP:单人玩家
+	TIMES SOURCE:0:屈従, 1.50
+	TIMES SOURCE:0:逸脱, 0.50
+	TIMES SOURCE:0:露出, 1.50
+	TIMES SOURCE:0:充足, 1.50
+	TIMES SOURCE:0:Ｃ快楽, 1.50
+	TIMES SOURCE:0:Ｖ快楽, 1.50
+	TIMES SOURCE:0:Ａ快楽, 1.50
+	TIMES SOURCE:0:Ｂ快楽, 1.50
+	TIMES SOURCE:0:尿道快楽, 1.50
+ENDIF
+SIF CHECK_COM("６９自慰", 3)
+	TIMES SOURCE:0:露出, 2.00
+
+CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM3
+#DIMS PLAY_ONANIE
+
+PLAY_ONANIE = %CHECK_ONANIE(SELECTCOM)%
+
+;連続実行
+IF PREVCOM == SELECTCOM
+	SIF TEQUIP:室内露出PLAY
+		PRINTFORM 被大家看着、
+	IF TEQUIP:振動棒 && TEQUIP:肛用振動棒 && TEQUIP:尿道振動棒 && COND("絶頂") >= 2
+		PRINTFORML %CALLNAME:TARGET%在無法抑制地灑落眼淚以及涎水的同時、身體也在不斷地筋攣著、毫無間斷的喊出嘶啞而不成聲的嘶吼。
+		PRINTFORMW 身下的淫亂肉窟在劇烈筋攣的同時也將振動棒無意識地緊緊糾纏著、顯然在那些激烈抽插的淫具震動的同時也在同步的絕頂著……
+	ELSEIF TEQUIP:尿道振動棒 && TEQUIP:肛用振動棒 && COND("絶頂") >= 2
+		PRINTFORML %CALLNAME:TARGET%因絕頂而鬆弛下來的股間的淫靡肉窟中、濁黃的尿液與透明的腸液混合著溢出。在戰戰兢兢的嬌軀無法抑制的顫抖著的同時、也飄蕩出無法言喻的污臭……
+		PRINTFORMW 顯然、對於排泄器官所帶來的異常快感、已經痴迷到成癮的程度了……
+	ELSEIF TEQUIP:振動棒 && TEQUIP:尿道振動棒 && COND("絶頂") >= 2
+		PRINTFORML %CALLNAME:TARGET%用淫靡膣道中激烈震動的兩根振動棒將Ｇ點夾住、並不斷猛力的插拔著、讓完全沉浸於快樂之中的身體痙攣著發出格外淫靡的呻吟。
+		PRINTFORMW 大腦早已被過於強烈的快感而沖壞、已經到了根本不可能停手的地步……
+	ELSEIF TEQUIP:振動棒 && TEQUIP:肛用振動棒 && COND("絶頂") >= 2
+		PRINTFORML %CALLNAME:TARGET%的唇角不斷灑落出晶瑩的涎水、顫抖不已的嬌軀無法抑制的痙攣著、而高昂而淫靡的呻吟聲也毫無間斷地從口腔中發出……
+		PRINTFORMW 就好像根本沒能從絕頂中解脫、一直是被快感的浪潮不斷地推上頂峰一樣……
+	ELSEIF TEQUIP:振動棒 && COND("絶頂") >= 2
+		PRINTFORML %CALLNAME:TARGET%對自己那四溢飛濺的愛液毫不在意、將猛烈振動著的振動棒激烈地反復抽插著、
+		PRINTFORMW 看來已經沒有去擔心其他事情的余裕了……
+	ELSEIF TEQUIP:肛用振動棒 && COND("肛門拉珠") == 0 && COND("絶頂") >= 2
+		PRINTFORML %CALLNAME:TARGET%在不斷搖晃著自己那顫抖著的身體的同時、也將深入尻穴的振動棒激烈地插拔著、
+		PRINTFORMW 似乎每次被撫平肉棒的褶皺都會引起無以計數的絕頂的樣子……
+	ELSEIF TEQUIP:尿道振動棒 && COND("絶頂") >= 2
+		PRINTFORM %CALLNAME:TARGET%
+		SIF EXP_GAIN("膀胱精液経験")
+			PRINT 混雜著灼熱白濁的
+		PRINTFORML 濁黃尿液隨著堵塞物的肆意進出而掏出的同時、將被尿道的肉襞緊緊糾纏著的振動棒激烈地抽插著、
+		PRINTFORMW 即使混亂的大腦能夠理解這放蕩行為的異常之處、也完全無法停住不斷揮舞的手……
+	ELSEIF ABL:自慰中毒 >= 3 || COND("絶頂") || CHECK_COM("６９自慰") || CHECK_COM("口交自慰") || TCVAR:干劲 >= 40
+		IF TALENT:男性 || (TALENT:扶她 && RAND:2 == 0)
+			PRINTFORML %CALLNAME:TARGET%一直用格外粗暴的手法將堅硬地勃起著的陰莖持續擼動著、
+		ELSE
+			PRINTFORML %CALLNAME:TARGET%在不断發出嬌柔的呻吟声的同時也一直一心不亂地持續愛撫著自己的私處、
+		ENDIF
+		PRINTFORMW 看來即使想要停下、手指也會繼續蹂躏私處的樣子……
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%死死壓抑住呼之欲出的呻吟聲的同時、也將自己最敏感的地方緩慢地愛撫著、
+		PRINTFORMW ……也許是不適應被人看著做這種事的緣故、似乎沒辦法專注於此……
+	ENDIF
+ELSE
+	;手下留情は終了
+	IF TEQUIP:手下留情
+		PRINTW （手下留情を止めます）
+		PRINTL 
+		TEQUIP:手下留情 = 0
+	ENDIF
+	;いつも出すとくどい
+	;SIF TEQUIP:室内露出PLAY
+	;	PRINTFORM 被大家看着、
+	PRINTFORM %CALLNAME:TARGET%
+	IF INSERT("挿入")
+		IF INSERT("Ｖ挿入")
+			LOCALS = 膣
+		ELSEIF INSERT("Ａ挿入")
+			LOCALS = 肛門
+		ELSEIF INSERT("尿道挿入")
+			LOCALS = 尿道
+		ENDIF
+		IF INSERT("騎乗位")
+			PRINTFORM 將%CALLNAME:PLAYER%跨越著、用%LOCALS%將%NAMES("阴茎", PLAYER)%吞入體內的同時、
+		ELSEIF INSERT("背面座位")
+			PRINTFORM 用%LOCALS%將%NAMES("阴茎", PLAYER)%緊緊包裹著並整個倚靠在%CALLNAME:PLAYER%身上的同時、
+		ELSEIF INSERT("屈曲位")
+			PRINTFORM 將%LOCALS%被%NAMES("阴茎", PLAYER)%深入體內並被緊緊禁錮住的姿勢保持著的同時、
+		ELSE
+			PRINTFORM 將%LOCALS%被抽插著的姿勢保持著、停止腰肢的扭動、完全倚靠在%CALLNAME:PLAYER%身上的同時、
+		ENDIF
+	ELSEIF CHECK_COM("６９自慰")
+		PRINTFORM 將眼前挺立的陰莖
+		IF COND("絶頂") && RAND:3 == 0
+			PRINTFORM 激烈地舔舐並吮吸著的同時、
+		ELSEIF ABL:奉仕精神 >= 3 && RAND:3 == 0
+			PRINTFORM 熱切地侍奉著的同時、
+		ELSE
+			PRINTFORM %TEXTR("舔舐並吮吸著/反復啄吻著/呸嘍呸嘍地舔舐著")%的同時、
+		ENDIF
+		PRINTFORM 保持著跨坐在%CALLNAME:PLAYER%臉頰上的姿勢、
+	ELSEIF CHECK_COM("口交自慰")
+		PRINTFORM 將%CALLNAME:PLAYER%的陰莖%TEXTR("反復地啄吻著/呸嘍呸嘍地舔舐著")%的同時、
+	ELSE
+		SELECTCASE TCVAR:干劲
+		;干劲満々
+		CASE IS >= 40
+			IF TEQUIP:攝像機 && RANDIF(3, ABL:露出癖 >= 3, TEQUIP:媚薬)
+				PRINTFORM 不斷向攝像機投出視線的同時、
+			ELSEIF TEQUIP:媚薬 && RANDIF(2, ABL:露出癖 >= 3)
+				PRINTFORM 因媚藥而使身體無法抑制的興奮起來、
+				SIF ABL:自慰中毒 >= 3
+					PRINTFORM 格外貪婪的
+			ELSEIF ABL:露出癖 >= 3 && RAND:2
+				PRINTFORM 像是在特地向%CALLNAME:PLAYER%展示一樣、
+			ELSEIF RAND:2
+				PRINTFORM 完全沒有反抗之意地、
+			ELSE
+				PRINTFORM 的臉頰染上薄薄的一層紅暈、
+			ENDIF
+		;抵抗无
+		CASE IS >= 20
+			PRINTFORM 將%CALLNAME:PLAYER%的命令勉強地服從著、
+		;仕方なく
+		CASEELSE
+			IF TALENT:高慢 && RANDIF(1, TALENT:叛逆)
+				PRINTFORM 因為高傲與自尊心而不快地瞪視著、但還是不情願地、
+			ELSEIF TALENT:叛逆
+				PRINTFORM 用蘊含著叛逆之意的眼神瞪視著、但還是不情願地、
+			ENDIF
+		ENDSELECT
+	ENDIF
+
+	;飞机杯自慰
+	IF STRCOUNT(PLAY_ONANIE, "飞机杯")
+		PRINTFORM 將激烈地勃起著的陰莖用潤滑充分的飛機杯激烈地擼動著、
+	ELSEIF STRCOUNT(PLAY_ONANIE, "両穴振動棒")
+		IF COND("肛門拉珠")
+			PRINTFORM 將深入體內的%NAMES("振動棒", TARGET)%以及肛門拉珠主動地不斷抽插著
+		ELSEIF SIZE("振動棒", TARGET) >= 2 && SIZE("Ａ振動棒", TARGET) >= 2
+			PRINTFORM 將深入體內的兩根粗大無比的振動棒激烈地插拔著
+		ELSE
+			PRINTFORM 將深入體內的兩根振動棒激烈地插拔著
+		ENDIF
+		IF NOWEX:絶頂数合計 && RAND:2
+			PRINTFORM 、在格外濃烈的淫靡%TEXTS("气味")%漂浮在空氣中的同時、
+		ELSE
+			PRINTFORM 、
+		ENDIF
+	ELSEIF STRCOUNT(PLAY_ONANIE, "Ｖ振動棒")
+		PRINTFORM 將深深插入膣道的%NAMES("振動棒", TARGET)%主動地不斷抽插著、
+	ELSEIF STRCOUNT(PLAY_ONANIE, "Ａ振動棒")
+		IF COND("肛門拉珠")
+			PRINTFORM 將深入肛門的肛門拉珠隨著腸道的蠕動激烈地插拔著、
+		ELSE
+			PRINTFORM 將深深刺入尻穴的%NAMES("Ａ振動棒", TARGET)%激烈地插拔著、
+		ENDIF
+	ELSEIF STRCOUNT(PLAY_ONANIE, "尿道振動棒")
+		PRINTFORM 將深深地貫穿了尿道的%NAMES("尿道振動棒", TARGET)%主動地不斷抽插著、
+	ELSE
+		;2020/02/1　別人加筆
+		SELECTCASE FAV_ONANIE(SELECTCOM, "一番")
+		CASE "Ｃ"
+			IF PENIS(TARGET)
+				IF PALAM:欲情 >= 3000
+					PRINTFORM %TEXTS("阴茎：視覚", TARGET)%
+				ENDIF
+				PRINTFORM 陰莖激烈地擼動著、
+			ELSE
+				IF TALENT:陰蒂環
+					IF COND("陰核肥大")
+						PRINTFORM %TEXTR("肥大的/大号的")%
+					ENDIF
+					PRINTFORM %TEXTR("陰核上貫穿的/陰核上作為装飾的")%%TEXTS("陰蒂環")%を
+				ELSE
+					IF TEQUIP:創口貼 || CFLAG:創口貼装着
+						PRINTFORM 隔着創口貼
+					ENDIF
+					PRINTFORM \@ COND("陰核肥大") ? 大栗子 # 阴蒂 \@
+				ENDIF
+				PRINTFORM 用自己的手指%TEXTR("摩擦著/玩弄著/揉搓著")%
+			ENDIF
+		CASE "Ｖ"
+			IF TALENT:陰唇環 && (AGE(TARGET) < 3 || RAND:2)
+				PRINTFORM %TEXTS("陰唇環")%%TEXTR("装饰着的/在反光的")%
+				SELECTCASE AGE(TARGET)
+					CASE IS >= 4
+						PRINTFORM %TEXTR("肉厚的/成熟大人样的/发黑的")%
+					CASEELSE
+						PRINTFORM %TEXTR("大人样的/色彩鲜明的")%
+				ENDSELECT
+			ENDIF
+			PRINTFORM %TEXTR("阴部/秘所")%
+			PRINTFORM %TEXTR("用自己的手指激烈地玩弄著/用自己的手指反復的翻攪著/用自己的手指不斷地抽插著")%、
+		CASE "Ａ"
+			PRINTFORM 將不斷張合著的%TEXTR("肛門/尻穴")%
+			IF RAND:3 == 0 || !CHECK_CLO("Ａ露出")
+				PRINTFORM 用自己的手指激烈地玩弄著、
+			ELSE
+				PRINTFORM %TEXTR("用自己的手指反復的翻攪著/用自己的手指不斷地抽插著")%、
+			ENDIF
+		CASE "Ｂ"
+			IF TALENT:陰唇環
+				IF RAND:2 && CALCF("Ｂ発情")
+					IF COND("陥没乳頭")
+						PRINTFORM %TEXTR("陥没的乳頭的先端/只是稍微伸出的乳頭/乳輪中央微微探出的乳頭")%
+					ELSE
+						IF COND("乳頭肥大")
+							PRINTFORM %TEXTR("大/肥大化的")% 
+						ENDIF
+						PRINTFORM 乳頭
+					ENDIF
+				ELSE
+					PRINTFORM 胸の先端
+				ENDIF
+				IF CEVENT("乳環") && RAND:3
+					PRINTFORM 被安装的%CEVENTS("乳環")%の穿環
+				ELSE
+					PRINTFORM 的%TEXTR("装飾性/反光")%%TEXTR("穿環/金属環")%
+				ENDIF
+				PRINTFORM 用自己的手指%TEXTR("弾弄着/玩弄着/轻拉着")%
+			ELSE
+				IF RAND:2 && CALCF("Ｂ発情")
+					IF COND("陥没乳頭")
+						PRINTFORM %TEXTR("陥没的乳頭的先端/只是稍微伸出的乳頭/乳輪中央微微探出的乳頭")%
+					ELSE
+						PRINTFORM 乳頭
+					ENDIF
+				ELSE
+					PRINTFORM 胸
+				ENDIF
+				PRINTFORM 用自己的手指%TEXTR("反復地揉搓著/不斷地玩弄著/激烈地揉捏著")%、
+			ENDIF
+		CASE "尿"
+			;指插入可能
+			IF CALCF("尿道径") > SIZE("指の直径", PLAYER)
+				PRINTFORM 將%TEXTR("已經足夠鬆弛的尿道/被充分開發過的排尿口")%
+				PRINTFORM %TEXTR("用自己的手指激烈地玩弄著/用自己的手指反復的翻攪著/用自己的手指不斷地抽插著")%、
+			ELSE
+				PRINTFORM 將%TEXTR("尿道口/尿道淺層的粘膜")%用自己的手指%TEXTR("反復的摩擦著/激烈地玩弄著/不斷地揉搓著")%、
+			ENDIF
+		ENDSELECT
+	ENDIF
+	IF CHECK_COM("６９自慰")
+		PRINTW 全心地沉迷於自慰行為之中……
+	ELSE
+		PRINTW 盡情地品味著快樂……
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;どの種類の自慰をしているかを決定する
+;ARGにはどのSELECTCOMの時かを代入する。省略した場合にはSELECTCOMが代入されるが非推奨
+;内容が複雑かつ#FUNCTIONを多数用いるため独立
+;-------------------------------------------------
+@CHECK_ONANIE(ARG)
+#FUNCTIONS
+;自慰に使える手の本数
+#DIM USE_HAND
+;自慰ＯＫな部位
+#DIMS FAVPLAY
+
+VARSET LOCALS
+
+;指令選択時の表示ではARG == 3となっている
+USE_HAND = CALCF("自由な手", ARG)
+SIF USE_HAND == 0
+	RETURNF LOCALS
+
+;ＣＶＢＡ尿のうち、自慰で使える文字が代入される
+FAVPLAY = %FAV_ONANIE(ARG)%
+
+SIF ARG == 0
+	ARG = SELECTCOM
+
+IF INSERT("挿入") && CHECK_COM("挿入自慰")
+	LOCALS = %FAV_ONANIE(ARG, "一番")%
+ELSEIF USE_HAND >= 2
+	IF CHECK_COM("飞机杯自慰")
+		LOCALS += "Ｃ"
+	ELSEIF TEQUIP:振動棒 && TEQUIP:肛用振動棒 && COND("肛門拉珠") == 0 && TEQUIP:尿道振動棒
+		;ＶＡ尿道ともに行けるなら三穴振動棒自慰
+		IF STRCOUNT(FAVPLAY, "Ｖ") && STRCOUNT(FAVPLAY, "Ａ") && STRCOUNT(FAVPLAY, "尿")
+			LOCALS += "ＶＡ尿"
+		ELSEIF STRCOUNT(FAVPLAY, "Ｖ") && (ABL:Ｖ感覚 >= ABL:Ａ感覚 || ABL:Ａ感覚 < 3) && (ABL:Ｖ感覚 >= ABL:尿道感覚 || ABL:尿道感覚 < 3)
+			LOCALS += "Ｖ"
+		ELSEIF STRCOUNT(FAVPLAY, "Ａ") && (ABL:Ａ感覚 >= ABL:Ｖ感覚 || ABL:Ｖ感覚 < 3) && (ABL:Ａ感覚 >= ABL:尿道感覚 || ABL:尿道感覚 < 3)
+			LOCALS += "Ａ"
+		ELSE
+			LOCALS += "尿"
+		ENDIF
+	ELSEIF TEQUIP:振動棒 && TEQUIP:肛用振動棒 && COND("肛門拉珠") == 0
+		;ＶＡともに行けるなら両穴振動棒自慰
+		IF STRCOUNT(FAVPLAY, "Ｖ") && STRCOUNT(FAVPLAY, "Ａ")
+			LOCALS += "ＶＡ"
+		ELSEIF STRCOUNT(FAVPLAY, "Ｖ") && (ABL:Ｖ感覚 >= ABL:Ａ感覚 || ABL:Ａ感覚 < 3)
+			LOCALS += "Ｖ"
+		ELSE
+			LOCALS += "Ａ"
+		ENDIF
+	ELSEIF TEQUIP:尿道振動棒 && TEQUIP:肛用振動棒 && COND("肛門拉珠") == 0
+		;Ａ尿道ともに行けるなら両穴振動棒自慰
+		IF STRCOUNT(FAVPLAY, "尿") && STRCOUNT(FAVPLAY, "Ａ")
+			LOCALS += "Ａ尿"
+		ELSEIF STRCOUNT(FAVPLAY, "尿") && (ABL:尿道感覚 >= ABL:Ａ感覚 || ABL:Ａ感覚 < 3)
+			LOCALS += "尿"
+		ELSE
+			LOCALS += "Ａ"
+		ENDIF
+	ELSEIF TEQUIP:振動棒 && TEQUIP:尿道振動棒
+		;Ｖ尿道ともに行けるなら両穴振動棒自慰
+		IF STRCOUNT(FAVPLAY, "Ｖ") && STRCOUNT(FAVPLAY, "尿")
+			LOCALS += "Ｖ尿"
+		ELSEIF STRCOUNT(FAVPLAY, "Ｖ") && (ABL:Ｖ感覚 >= ABL:尿道感覚 || ABL:尿道感覚 < 3)
+			LOCALS += "Ｖ"
+		ELSE
+			LOCALS += "尿"
+		ENDIF
+	ELSEIF ARG == 3
+		IF TEQUIP:振動棒 && STRCOUNT(FAVPLAY, "Ｖ")
+			LOCALS += "Ｖ"
+		ELSEIF TEQUIP:肛用振動棒 && COND("肛門拉珠") == 0 && STRCOUNT(FAVPLAY, "Ａ")
+			LOCALS += "Ａ"
+		ELSEIF TEQUIP:尿道振動棒 && STRCOUNT(FAVPLAY, "尿")
+			LOCALS += "尿"
+		ELSE
+			LOCALS = %FAV_ONANIE(ARG, "一番")%
+		ENDIF
+	ENDIF
+ENDIF
+IF CHECK_COM("飞机杯自慰") && STRCOUNT(FAVPLAY, "Ｃ")
+	LOCALS += "飞机杯"
+ELSEIF TEQUIP:振動棒 && TEQUIP:肛用振動棒 && COND("肛門拉珠") == 0 && STRCOUNT(FAVPLAY, "Ｖ") && STRCOUNT(FAVPLAY, "Ａ")
+	LOCALS += "Ｖ振動棒Ａ振動棒両穴振動棒"
+ELSEIF TEQUIP:振動棒 && STRCOUNT(FAVPLAY, "Ｖ")
+	LOCALS += "Ｖ振動棒"
+ELSEIF TEQUIP:肛用振動棒 && COND("肛門拉珠") == 0 && STRCOUNT(FAVPLAY, "Ａ")
+	LOCALS += "Ａ振動棒"
+ELSEIF TEQUIP:尿道振動棒 && STRCOUNT(FAVPLAY, "尿")
+	LOCALS += "尿道振動棒"
+ELSEIF USE_HAND && LOCALS == ""
+	LOCALS = %FAV_ONANIE(ARG, "一番")%
+ENDIF
+
+RETURNF LOCALS
+
+
+
+@FAV_ONANIE(ARG, ARGS)
+#FUNCTIONS
+#DIM LCOUNT
+;自慰に使える手の本数
+#DIM USE_HAND
+;自慰ＯＫな部位
+#DIMS FAVPLAY
+;自慰する部位
+#DIMS IS_ONANIES, 5
+;好きな自慰場所
+#DIMS FAV_ONANIES, 5
+
+;好きな場所決定(優先度はＣ＞Ｖ＞Ｂ＞Ａ＞尿道)
+;ARGは実行中のSEELCTCOMに相当する値が代入されている（指令選択時ではARG == 3）
+;ただし、挿入されている時に弄れないであろう場所等は選べない
+LOCAL:0 = ABL:Ｃ感覚 + TALENT:Ｃ性向*3 + TALENT:淫核*5 + PENIS(TARGET)*3
+LOCAL:1 = ABL:Ｖ感覚 + TALENT:Ｖ性向*3 + TALENT:淫壷*5
+LOCAL:2 = ABL:Ｂ感覚 + TALENT:Ｂ性向*3 + TALENT:淫乳*5
+LOCAL:3 = ABL:Ａ感覚 + TALENT:Ａ性向*3 + TALENT:尻穴狂い*5
+LOCAL:4 = ABL:尿道感覚 + TALENT:尿道性感*3 + TALENT:尿道狂*5
+
+VARSET IS_ONANIES
+VARSET FAV_ONANIES
+
+IS_ONANIES:0 = Ｃ
+SIF ABL:Ｖ感覚 >= 2 && TALENT:男性 == 0 && TALENT:処女 == 0 && EXP:Ｖ経験 >= 5
+	IS_ONANIES:1 = Ｖ
+SIF ABL:Ｂ感覚 >= 2 && TALENT:Ｂ性向 + TALENT:淫乳
+	IS_ONANIES:2 = Ｂ
+SIF ABL:Ａ感覚 >= 2 && TALENT:Ａ性向 + TALENT:尻穴狂い && EXP:Ａ経験 >= 5
+	IS_ONANIES:3 = Ａ
+SIF ABL:尿道感覚 >= 2 && TALENT:尿道性感 + TALENT:尿道狂 && EXP:尿道経験 >= 5
+	IS_ONANIES:4 = 尿
+
+;Ｈ中にこの関数を呼んだなら現在可能かを見る
+IF COND("調教中")
+	SIF USE_V(TARGET, "振動棒") == 0
+		IS_ONANIES:1 = 
+	SIF ARG == 92 || ARG == 104 || CHECK_COM("乳夾口交", ARG) || CHECK_COM("洗面奶手交", ARG) || CHECK_COM("６９自慰", ARG)
+		IS_ONANIES:2 = 
+	SIF CHECK_SHIRT("鎧") && CHECK_CLO("谷間露出") + CHECK_CLO("乳頭露出") + CHECK_CLO("半脱可") == 0
+		IS_ONANIES:2 = 
+	SIF USE_A(TARGET, "肛用振動棒") == 0
+		IS_ONANIES:3 = 
+	SIF TEQUIP:創口貼 || CFLAG:創口貼装着
+		IS_ONANIES:4 = 
+
+	;Ｖと尿道
+	SELECTCASE ARG
+	CASE 60 TO 69, 70, 73, 83 TO 88
+		IS_ONANIES:1 = 
+		SIF PENIS(TARGET) == 0
+			IS_ONANIES:4 = 
+	CASE IS >= 0
+		IF INSERT("Ｖ挿入") || INSERT("正常位") || INSERT("対面座位")
+			IS_ONANIES:1 = 
+			SIF PENIS(TARGET) == 0
+				IS_ONANIES:4 = 
+		ENDIF
+	ENDSELECT
+
+	;Ａ
+	SELECTCASE ARG
+	CASE 60 TO 62, 64, 70 TO 79
+		IS_ONANIES:3 = 
+	CASEELSE
+		SIF INSERT("Ａ挿入") || INSERT("正常位") || INSERT("後背位") || INSERT("屈曲位") || INSERT("背面座位")
+			IS_ONANIES:3 = 
+	ENDSELECT
+ENDIF
+
+FOR LCOUNT, 0, 5
+	;PRINTFORML LOCAL:{LCOUNT} = {LOCAL:LCOUNT}
+	SIF LOCAL:LCOUNT == 0 || IS_ONANIES:LCOUNT == ""
+		CONTINUE
+	;好きな場所決定(優先度はＣ＞Ｖ＞Ｂ＞Ａ＞尿道)
+	IF FAV_ONANIES:0 == "" && LOCAL:LCOUNT >= MAX(LOCAL:0, LOCAL:1, LOCAL:2, LOCAL:3, LOCAL:4)
+		FAV_ONANIES:0 = %IS_ONANIES:LCOUNT%
+	ELSEIF FAV_ONANIES:1 == "" && LOCAL:LCOUNT >= MAX(LOCAL:1, LOCAL:2, LOCAL:3, LOCAL:4)
+		FAV_ONANIES:1 = %IS_ONANIES:LCOUNT%
+	ELSEIF FAV_ONANIES:2 == "" && LOCAL:LCOUNT >= MAX(LOCAL:2, LOCAL:3, LOCAL:4)
+		FAV_ONANIES:2 = %IS_ONANIES:LCOUNT%
+	ELSEIF FAV_ONANIES:3 == "" && LOCAL:LCOUNT >= MAX(LOCAL:3, LOCAL:4)
+		FAV_ONANIES:3 = %IS_ONANIES:LCOUNT%
+	ELSEIF FAV_ONANIES:4 == ""
+		FAV_ONANIES:4 = %IS_ONANIES:LCOUNT%
+	ENDIF
+NEXT
+
+;指令選択時の表示ではARG == 3となっている
+USE_HAND = CALCF("自由な手", ARG)
+
+FAVPLAY = 
+FOR LCOUNT, 0, USE_HAND
+	FAVPLAY += @"%FAV_ONANIES:LCOUNT%"
+NEXT
+SIF FAVPLAY == ""
+	FAVPLAY = Ｃ
+
+SELECTCASE ARGS
+CASE "一番"
+	RETURNF SUBSTRINGU(FAVPLAY, 0, 1)
+CASEELSE
+	RETURNF FAVPLAY
+ENDSELECT
+
+
+@EQUIP_COM3
+;自慰中毒0LV
+SIF ABL:自慰中毒 == 0
+	RETURN 0
+
+SELECTCASE SELECTCOM
+;性交系、奉仕系、什麼也不做 選択時に行う
+CASE 60 TO 89, 139
+CASEELSE
+	RETURN 0
+ENDSELECT
+
+;調教中でないor自慰を禁止されてるorTARGETが挿入してる側だとしない
+SIF COND("調教中") == 0 || COND("身嗜み：自慰禁止") || INSERT("挿入中")
+	RETURN 0
+;苦痛有、性欲満足、Ｗ推倒中、手が余ってない
+SIF TEQUIP:Ｗ推倒 || CUP:苦痛 > PALAM_LV(ABL:受虐属性) || BASE:性欲 >= MAXBASE:性欲 || CALCF("自由な手") <= 0
+	RETURN 0
+
+;欲望、信頼、奉仕精神も判定に使用
+;前のターンに自慰しているorこのターンに什麼也不做なら高確率で自慰しちゃう
+IF PREVCOM == 3 && ABL:自慰中毒 >= RAND:4
+ELSEIF SELECTCOM == 139 && ABL:自慰中毒 >= RAND:5
+ELSEIF ABL:自慰中毒 <= RAND:8 || ABL:自慰中毒*3 + ABL:欲望 + RAND:5 < ABL:信頼 + ABL:奉仕精神*2
+	RETURN 0
+ENDIF
+
+;振動棒に余裕が無い時はダメ
+SIF TEQUIP:振動棒 && CHECK("振動棒") == 0
+	RETURN 0
+SIF TEQUIP:肛用振動棒 && CHECK("Ａ振動棒") == 0
+	RETURN 0
+
+CALL SETFLAG, "ながら自慰フラグ", TARGET
+
+;SOURCEの増加
+CALL SOURCE_COM3,30
+CALL FLAG_COM3, 30
+
+@EQUIP_COM3_2
+;自慰中毒0LV
+SIF ABL:自慰中毒 == 0
+	RETURN 0
+SIF COND("ながら自慰フラグ") == 0
+	RETURN 0
+
+SELECTCASE SELECTCOM
+CASE 60 TO 79, 83 TO 88
+	PRINTL ＜自慰中毒＞
+	IF SELECTCOM == 65 || SELECTCOM == 75 || SELECTCOM == 88 || TEQUIP:推倒
+		PRINTFORM %CALLNAME:TARGET%在毫無間歇地揮舞著腰肢的同時也將指尖向
+	ELSE
+		PRINTFORM %CALLNAME:TARGET%在快樂地接受著侵犯的同時也將指尖向
+	ENDIF
+	LOCALS = 伸出
+;什麼也不做
+CASE 139
+	PRINTL ＜自慰中毒＞
+	PRINTFORM %CALLNAME:TARGET%的指尖\@ ABL:自慰中毒 >= 3 ? 無意識地 # \@向
+	LOCALS = 伸出
+CASEELSE
+	PRINTFORM 她的指尖向
+	LOCALS = 伸出
+ENDSELECT
+
+SELECTCASE FAV_ONANIE(SELECTCOM, "一番")
+CASE "Ｃ"
+	IF PENIS(TARGET)
+		IF CHECK_COM("飞机杯自慰")
+			PRINTFORMW 股間%LOCALS%、將%TEXTR("陰莖用飛機杯激烈地上下擼動著/陰莖用飛機杯盡情地擼動著")%……
+		ELSE
+			PRINTFORMW 陰莖%LOCALS%、將%TEXTR("敏感的龜頭仔細地撫摸著/莖身激烈地擼動著")%……
+		ENDIF
+		CALL EQ_STAIN, TARGET, "手", TARGET, "Ｐ"
+	ELSE
+		PRINTFORM 胯股之间%LOCALS%、將
+		IF RAND:2 == 0 || (SELECTCOM >= 60 && SELECTCOM <= 79)
+			IF CALCF("Ｃ発情") >= 3
+				PRINTFORM 將因興奮而充血膨脹的
+			ELSE
+				SIF CALCF("Ｃ発情") <= 1
+					PRINTFORM 被包皮包裹著的
+				PRINTFORM 敏感的
+			ENDIF
+			PRINTFORM 淫豆
+			IF TALENT:陰蒂環 && RAND:2 == 0
+				PRINTW 借著將其貫穿的穿環玩弄起來……
+			ELSE
+				PRINTW 反復地揉搓扭轉著……
+			ENDIF
+		ELSE
+			IF TALENT:陰蒂環 && RAND:2 == 0
+				IF RAND:2
+					PRINTFORMW 反光的金屬圓環捻動、拉扯著、將陰蒂盡情的蹂躪著……
+				ELSE
+					PRINTFORMW 装飾著淫核的金屬圓環拉扯著玩弄起來……
+				ENDIF
+			ELSEIF CALCF("Ｃ発情") < 3 && RAND:2
+				PRINTW 慢慢勃起的陰蒂輕輕地揉搓著……
+			ELSE
+				PRINTW 將秘部輕輕搓弄著、帶起咕啾咕啾的淫靡水聲……
+			ENDIF
+		ENDIF
+		CALL EQ_STAIN, TARGET, "手", TARGET, "Ｖ"
+	ENDIF
+CASE "Ｖ"
+	PRINTFORM 胯股之间%LOCALS%、將
+	IF TEQUIP:振動棒
+		IF SIZE("振動棒", TARGET) >= 2
+			PRINTFORM 將把膣道內部的每一處褶皺拉扯的展開的
+		ELSE
+			PRINTFORM 將深深插入膣道之中的
+		ENDIF
+		SIF SIZE("振動棒", TARGET) == 2
+			PRINTFORM 巨大的
+		SIF SIZE("振動棒", TARGET) >= 3
+			PRINTFORM 兇惡的
+		PRINTW 振動棒反復地抽插著享受快感……
+	ELSEIF INSERT("正常位") + INSERT("屈曲位") && ABL:露出癖 >= 3 && RAND:2
+		PRINTFORMW 不時地將秘部推開享受著自慰的快樂……
+	ELSE
+		PRINTW 將秘部輕輕搓弄著、帶起咕啾咕啾的淫靡水聲……
+		CALL EQ_STAIN, TARGET, "手", TARGET, "Ｖ"
+	ENDIF
+	EXP:Ｖ経験 += 1
+CASE "Ａ"
+	PRINTFORM 胯股之间%LOCALS%、將
+	IF TEQUIP:肛用振動棒
+		PRINTW 深深插入肛門的淫亂玩具反復地插拔著、享受著自慰的快感……
+	ELSE
+		PRINTW 柔軟緊致的尻穴盡情地玩弄著……
+		CALL EQ_STAIN, TARGET, "手", TARGET, "Ａ"
+	ENDIF
+	EXP:Ａ経験 += 1
+CASE "Ｂ"
+	IF TALENT:巨乳
+		IF RAND:2
+			PRINTFORM 豐腴飽滿的
+		ELSE
+			PRINTFORM 柔软的
+		ENDIF
+	ELSEIF TALENT:貧乳
+		PRINTFORM 小小的
+	ENDIF
+	PRINTFORM 胸部%LOCALS%、
+	IF RAND:2 == 0 && TALENT:巨乳
+		SIF ABL:Ｂ感覚 >= 4 && RAND:2
+			PRINTFORM 在手指深陷乳肉之中的同時、
+		PRINTW 將乳房盡情地揉搓起來……
+	ELSE
+		LOCAL = 0
+		IF TALENT:乳環 && RAND:2 == 0
+			PRINTFORM 將被%TEXTS("乳環")%装飾著的
+			LOCAL = 1
+		ELSEIF CALCF("Ｂ発情") >= 3
+			PRINTFORM 將因快感而鼓脹起來的
+		ELSEIF CALCF("Ｂ発情") >= 2
+			PRINTFORM 將興奮的膨脹起來的
+		ELSEIF CALCF("Ｂ発情")
+			PRINTFORM 將漸漸勃起的
+		ELSE
+			PRINTFORM 將粉嫩的
+		ENDIF
+		PRINTFORM 突起
+		IF TALENT:乳環 && RAND:3 == 0 && LOCAL == 0
+			PRINTW 上貫穿而過的乳環拉扯著玩弄起來……
+		ELSE
+			IF RAND:2
+				PRINTW 激烈地擼動起來……
+			ELSE
+				PRINTW 來回地揉搓扭動著……
+			ENDIF
+		ENDIF
+	ENDIF
+	CALL EQ_STAIN, TARGET, "手", TARGET, "Ｂ"
+CASE "尿"
+	PRINTFORM 胯股之间%LOCALS%、將
+	IF TEQUIP:尿道振動棒
+		PRINTFORM 將%TEXTR("已經足夠鬆弛的尿道/被充分開發過的排尿口")%
+		IF SIZE("尿道振動棒", TARGET) >= 2 && RAND:2
+			PRINTFORM 強行侵入內部的
+		ELSE
+			PRINTFORM 被輕易吞入體內的
+		ENDIF
+		SELECTCASE SIZE("尿道振動棒", TARGET)
+		CASE 2
+			PRINTFORM 巨大的
+		CASE IS >= 3
+			PRINTFORM 兇惡的
+		ENDSELECT
+		PRINTFORM 振動棒反復地抽插著享受著異常的快感……
+	ELSE
+		;指插入可能
+		IF CALCF("尿道径") > SIZE("指の直径", PLAYER)
+			PRINTFORM 已經被開發的足夠鬆弛的%TEXTR("尿道/排尿口")%
+			PRINTFORM %TEXTR("激烈地翻攪著/不斷地抽插著")%……
+		ELSE
+			PRINTFORM 格外喜愛異常快感的%TEXTR("尿道口/尿道淺層的粘膜")%%TEXTR("反復地摩擦著/激烈地玩弄著/不斷地揉搓著")%享受起來……
+		ENDIF
+	ENDIF
+	PRINTFORMW 
+	STAIN:手 = SET_STAIN(STAIN:TARGET:手, "尿")
+	EXP:尿道経験 += 1
+ENDSELECT
+
+EXP:自慰経験 += 1
+
+
+@COM_ORDER_COM3, ARG
+VARSET LOCAL
+LOCALS = 
+
+;すべての命令に共通の要素を考慮
+;(信頼が高いと命令に従いやすいなど)
+CALL COM_ORDER, ARG
+
+LOCAL = RESULT
+
+;ABL:露出癖
+IF ABL:露出癖
+	LOCAL += MIN(ABL:露出癖, 10) * 2
+	LOCALS = %LOCALS% + 露出癖LV{ABL:露出癖}({MIN(ABL:露出癖, 10) * 2})
+ENDIF
+;ABL:自慰中毒
+IF ABL:自慰中毒
+	LOCAL += MIN(ABL:自慰中毒, 5) * 3
+	LOCALS = %LOCALS% + 自慰中毒LV{ABL:自慰中毒}({MIN(ABL:自慰中毒, 5) * 3})
+ENDIF
+
+;強気
+IF TALENT:強気
+	LOCAL -= 5
+	LOCALS = %LOCALS% - 強気(5)
+ENDIF
+;冷静
+IF TALENT:冷静
+	LOCAL -= 5
+	LOCALS = %LOCALS% - 冷静(5)
+ENDIF
+;害羞
+IF TALENT:害羞
+	LOCAL -= 15
+	LOCALS = %LOCALS% - 害羞(15)
+ENDIF
+;不知羞恥
+IF TALENT:不知羞恥
+	LOCAL += 2
+	LOCALS = %LOCALS% + 不知羞恥(2)
+ENDIF
+;接受快感
+IF TALENT:接受快感
+	LOCAL += 5
+	LOCALS = %LOCALS% + 接受快感(5)
+ENDIF
+;否定快感
+IF TALENT:否定快感
+	LOCAL -= 5
+	LOCALS = %LOCALS% - 否定快感(5)
+ENDIF
+;６９中
+IF TEQUIP:六九式
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 六九式中(10)
+ENDIF
+IF COND("陶酔")
+	LOCAL += 10
+	LOCALS = %LOCALS% + 陶酔(10)
+ENDIF
+IF TEQUIP:媚薬
+	LOCAL += 6
+	LOCALS = %LOCALS% + 媚薬(6)
+ENDIF
+;振動棒
+IF TEQUIP:振動棒
+	LOCAL -= 5
+	LOCALS = %LOCALS% - 振動棒(5)
+ENDIF
+;Ａ振動棒
+IF TEQUIP:肛用振動棒 && COND("肛門拉珠") == 0
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 肛用振動棒(10)
+ENDIF
+;视频拍摄
+IF TEQUIP:攝像機
+	LOCAL -= 20
+	LOCALS = %LOCALS% - 撮影中(20)
+ENDIF
+IF TEQUIP:野外PLAY
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 野外PLAY(10)
+ENDIF
+
+;合計を表示(33以上で実行)
+CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 33
+
+RETURN RESULT

@@ -1,0 +1,162 @@
+﻿;-------------------------------------------------
+;勃起口部护理
+;-------------------------------------------------
+@MASSAGE_COMNAME31
+#FUNCTIONS
+TSTR:コマンド名受渡 = 勃起口部护理
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_31
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("エロマッサージ")
+
+@MASSAGE_COM_TOOLTIP_31
+LOCALS = <br>■勃起口部护理<br>
+LOCALS += "不进入口交模式的单次指令"
+LOCALS += "<br>对按摩中『紧绷』的勃起阴茎进行口腔理疗"
+LOCALS += "<br>指令类型：情色按摩<br>获取来源：快Ｃ・暴露・接触・侍奉(PLAYER)・不洁(PLAYER)"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@MASSAGE_COM31
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+;基盤ができたあとで理性を削る処理を入れる
+
+;フェラからだいたいそのまま持ってきた
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 200)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 30)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 120)
+
+;舌使いによって、快感のソース増加
+IF TALENT:PLAYER:舌使い
+	CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 150)
+ENDIF
+
+;猫舌では苦痛ちょいある
+SIF TALENT:PLAYER:猫舌
+	CALL SOURCE_CALC_苦痛(TARGET, PLAYER, 20)
+
+CALL SOURCE_CALC_奉仕(PLAYER, TARGET, 300)
+CALL SOURCE_CALC_不潔(PLAYER, TARGET, 250)
+
+
+;下半身下着がある場合は脱がす。
+IF TEQUIP:下半身下着あり == 1
+	TEQUIP:下半身下着あり = 0
+	TEQUIP:下半身服あり = 0
+	SIF TEQUIP:上下一体服
+		TEQUIP:上半身服あり = 0
+	RFLAG:コマンド結果受渡し変数 = 1
+ENDIF
+IF BASE:TARGET:理性 <= 1
+;理性がおしまいになってしまった場合、快楽に流されて警戒が下がっていく。
+	BASE:TARGET:性欲 += 300
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -80)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSEIF 知識素質:TARGET:性知識 <= -1
+;性知識がない場合でも「流石にこれはダメだろ！」と思う。が、時既に遅し。
+;ようやく100上げることができた警戒で理性が50上がるが、気持ちよすぎてそこから理性が500下がるイメージでこの数値。シヴァ……
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -450)
+	BASE:TARGET:性欲 += 400
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 100)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSE
+;実行に際し十分な理性・警戒削りがなされている場合。
+;警戒300で理性が150回復するも、煽られる性欲と与えられる刺激で理性が300削られて理性変動は-150。
+;……というのが平常時における挙動だが、ちんぽをしゃぶられる快感に警戒心が塗りつぶされてしまう。
+;フェラを許しちゃった時点で『終わり』。ここまで来ちゃったらそらそうよ。
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -240)
+	BASE:TARGET:性欲 += 300
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 10)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 150)
+ENDIF
+
+BASE:TARGET:ちんイラ = MAX(0, BASE:TARGET:ちんイラ - 350)
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE31
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(31)
+	RETURN RESULT
+
+;相手がオトコか半人半妖かふたなりじゃないとダメ
+SIF !(TALENT:TARGET:性別 & 2)
+	RETURN 0
+;相手にちんこがない場合駄目
+SIF TALENT:TARGET:Ｃ感度 == -2
+	RETURN 0
+
+;相手のちんぽが『凝って』ないとダメ
+SIF BASE:TARGET:勃起 < 1000
+	RETURN 0
+
+;うつ伏せだとダメ
+SIF TCVAR:TARGET:マッサージ_うつ伏せフラグ == 1
+	RETURN 0
+
+;理性警戒の合計が400以下じゃないとダメ
+;実行できる時点で、十分な理性・警戒削りがなされている状態。
+SIF (BASE:TARGET:理性 + BASE:TARGET:警戒) > 400
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM31
+
+PRINTFORM %CALLNAME:PLAYER%把
+
+	IF RFLAG:コマンド結果受渡し変数 == 1
+		PRINTFORM %CALLNAME:TARGET%的
+			;Ｖがあり欲情している場合
+			IF TALENT:TARGET:Ｖ感度 >= -1 && PALAM:欲情  >= PALAMLV:3
+				PRINTFORM 吸饱爱液的
+			ELSE
+				PRINTFORM 被勃起鸡巴顶起帐篷的
+			ENDIF
+		PRINTFORM 理疗服褪去后，
+	ENDIF
+	
+PRINTFORM %CALLNAME:TARGET%的
+
+	;巨根以上
+	IF TALENT:TARGET:男性器サイズ >= 1
+			PRINTFORM 完全勃起的%TEXTR("大鸡巴/巨根")%
+		ELSEIF TALENT:TARGET:男性器サイズ <= -1
+		;短小以下
+			PRINTFORM 完全硬化的一口尺寸的%TEXTR("鸡鸡/小鸡鸡/阴茎")%
+		ELSE
+		;普通サイズ
+			PRINTFORM 完全坚挺的%TEXTR("肉棒/鸡巴")%
+		ENDIF
+		PRINTFORML 用%TEXTR("沾满唾液的口腔/涂抹唾液的灵舌")%进行『深度护理』。
+
+;削りが十分な時は追加のメッセージ
+IF (BASE:TARGET:理性 + BASE:TARGET:警戒) < 400
+	PRINTW 
+	SELECTCASE RAND:2
+	CASE 0
+		PRINTFORM %CALLNAME:TARGET%%TEXTR("双眸迷离地/满脸陶醉地张着樱唇/神情恍惚地")%
+	CASE 1
+		PRINTFORM %CALLNAME:TARGET%从微张的唇间%TEXTR("溢出甜腻呻吟/发出愉悦娇喘/漏出淫靡声响")%
+	ENDSELECT
+	PRINTFORML 彻底沉溺于%CALLNAME:PLAYER%%TEXTR("的『护理』/的口技/的深喉服务")%%TEXTR("之中/的支配/的冲击")%…
+ENDIF

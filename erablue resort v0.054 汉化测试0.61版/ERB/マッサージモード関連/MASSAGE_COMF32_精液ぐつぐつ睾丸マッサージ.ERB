@@ -1,0 +1,168 @@
+﻿;-------------------------------------------------
+;勃起おしゃぶりエステ
+;-------------------------------------------------
+@MASSAGE_COMNAME32
+#FUNCTIONS
+TSTR:コマンド名受渡 = 睾丸精液活化按摩
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_32
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("エロマッサージ")
+
+@MASSAGE_COM_TOOLTIP_32
+LOCALS = <br>■睾丸精液活化按摩<br>
+LOCALS += "用手掌温柔揉捏按摩睾丸"
+LOCALS += "<br>按摩后可暂时提升精子活力，提高受孕概率"
+LOCALS += "<br>指令类型：情色按摩<br>获取来源：快Ｃ・暴露・接触・侍奉(PLAYER)・不洁(PLAYER)"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@MASSAGE_COM32
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+;基盤ができたあとで理性を削る処理を入れる
+
+;快感はフェラの6割くらいにしとく
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 120)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 30)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 120)
+
+;舌使いによって、快感のソース増加
+IF TALENT:PLAYER:舌使い
+	CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 150)
+ENDIF
+
+;猫舌では苦痛ちょいある
+SIF TALENT:PLAYER:猫舌
+	CALL SOURCE_CALC_苦痛(TARGET, PLAYER, 20)
+
+CALL SOURCE_CALC_奉仕(PLAYER, TARGET, 300)
+CALL SOURCE_CALC_不潔(PLAYER, TARGET, 250)
+
+;精力を少しだけ回復する。連打可能なコマンドなので気持ち少なめ
+BASE:TARGET:精力 += 50
+;妊娠率……もとい孕ませパワーが10%上昇する
+RCVAR:TARGET:妊娠率補正_加算値 += 10
+
+;下半身下着がある場合は脱がす。
+IF TEQUIP:下半身下着あり == 1
+	TEQUIP:下半身下着あり = 0
+	TEQUIP:下半身服あり = 0
+	SIF TEQUIP:上下一体服
+		TEQUIP:上半身服あり = 0
+	RFLAG:コマンド結果受渡し変数 = 1
+ENDIF
+
+;理性削りはおしゃぶりエステ
+IF BASE:TARGET:理性 <= 1
+;理性がおしまいになってしまった場合、快楽に流されて警戒が下がっていく。
+	BASE:TARGET:性欲 += 300
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -80)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSEIF 知識素質:TARGET:性知識 <= -1
+;性知識がない場合、ギリマッサージと言えなくもないので丸め込まれる
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -300)
+	BASE:TARGET:性欲 += 300
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 20)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSE
+;実行に際し十分な理性・警戒削りがなされている場合。
+;警戒300で理性が150回復するも、煽られる性欲と与えられる刺激で理性が300削られて理性変動は-150。
+;……というのが平常時における挙動だが、ちんぽをしゃぶられる快感に警戒心が塗りつぶされてしまう。
+;フェラを許しちゃった時点で『終わり』。ここまで来ちゃったらそらそうよ。
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -240)
+	BASE:TARGET:性欲 += 300
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 10)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 150)
+ENDIF
+
+
+IF TARGET == MASTER
+	CALL ちんイラ増加処理(PLAYER, 150)
+ELSE
+	CALL ちんイラ増加処理(TARGET, 300)
+ENDIF
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE32
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(32)
+	RETURN RESULT
+
+;相手がオトコか玉ありふたなりじゃなきゃダメ。
+SIF TALENT:TARGET:性別 <= 1 || (TALENT:TARGET:性別 == 3 && (フレーバー素質:TARGET:ふたなり時_玉ありなし != 2 && OPTION変数:ふたなり玉設定 != 2))
+	RETURN 0
+;相手にちんこがない場合駄目
+SIF TALENT:TARGET:Ｃ感度 == -2
+	RETURN 0
+
+;うつ伏せだとダメ
+SIF TCVAR:TARGET:マッサージ_うつ伏せフラグ == 1
+	RETURN 0
+
+;理性警戒の合計が600以下じゃないとダメ
+;実行できる時点で、十分な理性・警戒削りがなされている状態。
+SIF (BASE:TARGET:理性 + BASE:TARGET:警戒) > 600
+	RETURN 0
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM32
+
+PRINTFORM %CALLNAME:PLAYER%把
+
+	IF RFLAG:コマンド結果受渡し変数 == 1
+		SIF BASE:TARGET:勃起 < 1000
+			PRINTFORM 被勃起鸡巴顶起帐篷的
+		PRINTFORM %CALLNAME:TARGET%的理疗服褪去后，
+	ENDIF
+	
+PRINTFORML 用手掌包裹住%CALLNAME:TARGET%的%TEXTR("阴囊/蛋蛋")%
+
+CALL PRINT_STR(@"「加油_H_ 加油_H_」")
+PRINTFORM 边说着激励话语边温柔按摩……
+PRINTL
+PRINTFORM %CALLNAME:TARGET%
+IF BASE:TARGET:勃起 < 1000
+	;巨根以上
+	IF TALENT:TARGET:男性器サイズ >= 1
+		PRINTFORML 让%TEXTR("大鸡巴/巨根")%完全勃起
+	ELSEIF TALENT:TARGET:男性器サイズ <= -1
+		;短小以下
+		PRINTFORML 将拇指大小的%TEXTR("鸡鸡/小鸡鸡/阴茎")%努力硬挺
+	ELSE
+	;普通サイズ
+		PRINTFORML 使%TEXTR("肉棒/鸡巴")%完全坚挺
+	ENDIF
+ENDIF
+
+	SELECTCASE RAND:2
+	CASE 0
+		PRINTFORM %TEXTR("眼神迷离地/满脸潮红地张着樱唇/神情恍惚地")%
+	CASE 1
+		PRINTFORM 从微启的唇间%TEXTR("溢出甜腻呻吟/发出羞耻声响/漏出少女般可爱的娇喘")%
+	ENDSELECT
+	PRINTFORML 沉醉于%CALLNAME:PLAYER%%TEXTR("的『按摩』/的技法")%%TEXTR("之中/的支配/的冲击")%…
+
+PRINTW 
+PRINTFORML %CALLNAME:TARGET%的睾丸经%CALLNAME:PLAYER%按摩后活性提升，充盈着%TEXTR("活力充沛的/生机勃勃的/强劲有力")%的精子！

@@ -1,0 +1,89 @@
+﻿
+@アイテム個別文章表示_大份薯条(ARGS)
+;ポテトフライＬ
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 3980
+ENDIF
+
+LOCALS = 
+LOCALS += @"■大份薯条　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "大份薯条")}<br>"
+LOCALS += "油炸马铃薯制成的罪恶美食Ｌ号套餐。<br>"
+LOCALS += "基本推荐多人分享的餐品。<br>"
+LOCALS += "食用后可恢复体力和魔力。<br>"
+LOCALS += "无法在战斗中使用。<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "我方全体HP恢复［２０００÷人数］，<br>"
+LOCALS += "ＭＰ恢复［２００÷人数］。<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_大份薯条
+;戦闘時使用不可
+CALL 汎用使用先表示("味方全体", -1)
+
+@アイテム効果処理_大份薯条(隊列番号)
+#DIM CONST 基礎HP回復量 = 2000
+#DIM CONST 基礎MP回復量 = 200
+#DIM 人数
+#DIM 隊列番号
+#DIM HP回復量
+#DIM MP回復量
+;ARG = 隊列の何番目か
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "大份薯条") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+人数 = 0
+;人数取得
+FOR 隊列番号, 0, 14
+	SIF 隊列番号 > 3 && 隊列番号 < 10
+		CONTINUE
+	SIF !BATTLE_STATE:隊列番号:キャラ登録番号
+		CONTINUE
+	SIF BATTLE_STATE:隊列番号:ＨＰ < 1
+		CONTINUE
+	人数 ++
+NEXT
+
+HP回復量 = 基礎HP回復量 / 人数
+MP回復量 = 基礎MP回復量 / 人数
+
+人数 = 0
+FOR 隊列番号, 0, 14
+	SIF 隊列番号 > 3 && 隊列番号 < 10
+		CONTINUE
+	SIF !BATTLE_STATE:隊列番号:キャラ登録番号
+		CONTINUE
+	SIF BATTLE_STATE:隊列番号:最大ＨＰ == BATTLE_STATE:隊列番号:ＨＰ && BATTLE_STATE:隊列番号:最大ＭＰ == BATTLE_STATE:隊列番号:ＭＰ
+		CONTINUE
+	SIF BATTLE_STATE:隊列番号:ＨＰ < 1
+		CONTINUE
+
+	IF BATTLE_STATE:隊列番号:最大ＨＰ - BATTLE_STATE:隊列番号:ＨＰ < HP回復量
+		PRINTFORMW %CALLNAME:(BATTLE_STATE:隊列番号:キャラ登録番号)%的ＨＰ恢复了{BATTLE_STATE:隊列番号:最大ＨＰ - BATTLE_STATE:隊列番号:ＨＰ}
+	ELSE
+		PRINTFORMW %CALLNAME:(BATTLE_STATE:隊列番号:キャラ登録番号)%的ＨＰ恢复了{HP回復量}
+	ENDIF
+	IF BATTLE_STATE:隊列番号:最大ＭＰ - BATTLE_STATE:隊列番号:ＭＰ < MP回復量
+		PRINTFORMW %CALLNAME:(BATTLE_STATE:隊列番号:キャラ登録番号)%的ＭＰ恢复了{BATTLE_STATE:隊列番号:最大ＭＰ - BATTLE_STATE:隊列番号:ＭＰ}
+	ELSE
+		PRINTFORMW %CALLNAME:(BATTLE_STATE:隊列番号:キャラ登録番号)%的ＭＰ恢复了{MP回復量}
+	ENDIF
+
+	BATTLE_STATE:隊列番号:ＨＰ = MIN(BATTLE_STATE:隊列番号:ＨＰ + HP回復量, BATTLE_STATE:隊列番号:最大ＨＰ)
+	BATTLE_STATE:隊列番号:ＭＰ = MIN(BATTLE_STATE:隊列番号:ＭＰ + MP回復量, BATTLE_STATE:隊列番号:最大ＭＰ)
+	人数 ++
+NEXT
+
+IF 人数 > 0
+	WAIT
+ELSE
+	PRINTW 没有可恢复对象。
+	RETURN 0
+ENDIF
+
+RETURN 1

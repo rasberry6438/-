@@ -1,0 +1,997 @@
+﻿
+
+@ダンジョン初期処理_沿岸部の森
+;ダンジョン構造の読み込み
+;0でない時、そのマスは存在する
+#DIM 深度
+#DIM 分岐
+
+ダンジョンサブタイトル = FOREST OF COAST
+ダンジョンマス画像URL_伏せ状態 = 壁_森
+ダンジョン現在位置:0 = 0
+ダンジョン現在位置:1 = 0
+ダンジョン背景画像 = 背景_森
+
+;スタート地点は必ず存在
+;初期からオープン済みなので3を入れる
+;ビット0：存在するか　ビット1：移動できるか　ビット2：そこから通路を伸ばすか　ビット3：入れないが表示する場合に使用
+;ビット4以降：自由枠フラグ
+
+IF GETVAR(@"ダンジョン構造配列_%ダンジョン名%:0:0") == 0
+	SETVAR @"ダンジョン構造配列_%ダンジョン名%:0:0", 3
+ENDIF
+
+FOR 深度, 1, 100
+	LOCAL = 0
+	FOR 分岐, 0, 9
+		IF ダンジョン構造配列_沿岸部の森:深度:分岐
+			;既にマス情報が入ってるなら飛ばす
+			LOCAL = 1
+			CONTINUE
+		ELSEIF ENUMFUNCBEGINSWITH(@"ダンジョンマス情報_沿岸部の森_{深度}_{分岐}")
+			LOCAL = 1
+			ダンジョン構造配列_沿岸部の森:深度:分岐 = 1
+		ENDIF
+	NEXT
+	IF LOCAL
+		ダンジョン最大深度 = 深度
+	ENDIF
+NEXT
+
+@ダンジョン解説文_沿岸部の森
+
+詳細文文字列受け渡し変数 = 
+詳細文文字列受け渡し変数 += "度假岛沿岸的小型森林。<br>"
+詳細文文字列受け渡し変数 += "没有强大魔物栖息，遍布祥和景色。<br>"
+詳細文文字列受け渡し変数 += "可获取蔬菜、木材、杂粮等常见素材。<br>"
+
+;推奨レベルを返す
+RETURN 1
+
+@敵討伐後処理_ダンジョン固有_沿岸部の森(討伐エネミー数)
+;ダンジョン内で戦闘した後に呼ばれる関数、主にダンジョンごとのドロップアイテム取得に使用
+;まだ敵データはリセットしていないので敵BATTLE_STATEで色々情報は取得可能
+#DIM 討伐エネミー数
+#DIM ドロップ確率
+#DIMS ドロップアイテム
+
+ドロップ確率 = 10 * 討伐エネミー数
+ドロップアイテム = 普通木材
+CALL ドロップ判定処理(ドロップ確率, ドロップアイテム)
+
+ドロップ確率 = 10 * 討伐エネミー数
+ドロップアイテム = 普通蔬菜
+CALL ドロップ判定処理(ドロップ確率, ドロップアイテム)
+
+ドロップ確率 = 10 * 討伐エネミー数
+ドロップアイテム = 杂粮
+CALL ドロップ判定処理(ドロップ確率, ドロップアイテム)
+
+ドロップ確率 = 5 * 討伐エネミー数
+ドロップアイテム = 星晶碎片
+CALL ドロップ判定処理(ドロップ確率, ドロップアイテム)
+
+ドロップ確率 = 1 * 討伐エネミー数
+ドロップアイテム = 赤铜古纹
+CALL ドロップ判定処理(ドロップ確率, ドロップアイテム)
+
+
+
+@ダンジョンマス情報_沿岸部の森_0_0(ARGS)
+#DIM マス深度
+#DIM マス分岐
+マス深度 = 0
+マス分岐 = 0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(@"{マス深度}_{マス分岐}", "1_0")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ
+			;最初に訪れた時
+			WSTR:(K++) = %CALLNAME:PLAYER%初次踏入迷宫。
+			KSTR:(K++) = %CALLNAME:PLAYER%回想起星晶兽艾拉的注意事项……
+			CALL メッセージ欄表示用関数()
+			CALL 接続ルート全開放処理(マス深度, マス分岐)
+			CALL 口上変数初期化
+			WSTR:(K++) = 「注意看，左上角能看到_IMAGE_自機アイコン_吧？」
+			WSTR:(K++) = 「那就是你当前的位置」
+			KSTR:(K++) = 「点击不同格子即可移动。试着移动到相邻格子」
+			CALL メッセージ欄表示用関数("顔エラ","星晶兽艾拉",,0)
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_1_0(ARGS)
+#DIMS マス番号
+マス番号 = 1_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = エネミーアイコン
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "2_0")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			LOCAL:1 = 0
+			FOR LOCAL, 0, 4
+				SIF BATTLE_STATE:LOCAL:キャラ登録番号 > 0
+					LOCAL:1 ++
+			NEXT
+			IF LOCAL:1 < 2
+				敵BATTLE_STATE_STR:1:エネミー名 = Lv2_哥布林
+			ELSE
+				敵BATTLE_STATE_STR:0:エネミー名 = Lv2_哥布林
+				敵BATTLE_STATE_STR:1:エネミー名 = Lv2_哥布林
+			ENDIF
+			CALL 雑魚敵繰り返し戦闘処理
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 「未探索的格子最初无法知晓内容」
+			WSTR:(K++) = 「可能有敌人或宝箱……」
+			KSTR:(K++) = 「看，刚说完敌人就出现了」
+			CALL メッセージ欄表示用関数("顔エラ","星晶兽艾拉")
+			
+			LOCAL:1 = 0
+			FOR LOCAL, 0, 4
+				SIF BATTLE_STATE:LOCAL:キャラ登録番号 > 0
+					LOCAL:1 ++
+			NEXT
+			IF LOCAL:1 < 2
+				敵BATTLE_STATE_STR:1:エネミー名 = Lv2_哥布林
+			ELSE
+				敵BATTLE_STATE_STR:0:エネミー名 = Lv2_哥布林
+				敵BATTLE_STATE_STR:1:エネミー名 = Lv2_哥布林
+			ENDIF
+			CALL 雑魚敵遭遇汎用処理
+
+			CALL 口上変数初期化
+			WSTR:(K++) = 「有杂兵的格子，重复访问可再次搜索敌人」
+			WSTR:(K++) = 「最适合提升同伴熟练度与收集卢比」
+			KSTR:(K++) = 「前提是你能击败他们」
+			CALL メッセージ欄表示用関数("顔エラ","星晶兽艾拉")
+			SETBIT ダンジョン構造配列_沿岸部の森:2:0, 1
+			CALL 口上変数初期化
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+
+@ダンジョンマス情報_沿岸部の森_2_0(ARGS)
+#DIMS マス番号
+マス番号 = 2_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		IF GETBIT(ダンジョン構造配列_沿岸部の森:3:0, 1)
+			ダンジョンマス画像URL_重ね表示 = 宝箱アイコン_木箱_開
+		ELSE
+			ダンジョンマス画像URL_重ね表示 = 宝箱アイコン_木箱
+		ENDIF
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "3_0")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			KSTR:(K++) = 宝箱是空的。
+			CALL メッセージ欄表示用関数(,,,0)
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 「这次是宝箱，里面应该装着道具」
+			WSTR:(K++) = 「更高难度的迷宫可能会有陷阱」
+			KSTR:(K++) = 「不过这个地牢不存在那种机制，放心打开吧」
+			CALL メッセージ欄表示用関数("顔エラ","星晶兽艾拉")
+			CALL 口上変数初期化
+			SETBIT ダンジョン構造配列_沿岸部の森:3:0, 1
+			WSTR:(K++) = %CALLNAME:PLAYER%打开了宝箱。
+			KSTR:(K++) = 里面装着10个药草！！
+			CALL メッセージ欄表示用関数()
+
+			CALL 口上変数初期化
+			CALL アイテム増減汎用処理("药草", 10)
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_3_0(ARGS)
+#DIMS マス番号
+マス番号 = 3_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		IF ダンジョン内一時変数:0 == 0
+			ダンジョンマス画像URL_重ね表示 = えっちハート
+		ENDIF
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "7_0")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			IF ダンジョン内一時変数:0 == 0
+				CALL ダンジョンハプニング基本処理()
+				IF RESULT
+					ダンジョン内一時変数:0 = 1
+				ENDIF
+				CALL 口上変数初期化
+			ENDIF
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 「在地牢中行走时，偶尔会遭遇突发事件」
+			WSTR:(K++) = 「当然是指你最喜欢的色色事件」
+			KSTR:(K++) = 「看，要开始了」
+			CALL メッセージ欄表示用関数("顔エラ","星晶兽艾拉")
+			CALL ダンジョンハプニング基本処理()
+			IF RESULT
+				CALL 口上変数初期化
+				WSTR:(K++) = 「这类事件有多个种类」
+				WSTR:(K++) = 「多数情况下会随机决定对象和事件内容」
+				KSTR:(K++) = 「离开地牢后事件会重置。记着这点下次再来体验吧」
+				CALL メッセージ欄表示用関数("顔エラ","星晶兽艾拉")
+				ダンジョン内一時変数:0 = 1
+			ELSE
+				CALL 口上変数初期化
+				WSTR:(K++) = 「……偶尔也会遇到这种情况」
+				WSTR:(K++) = 「这时不妨再踩一次格子，或许会有新变化」
+				CALL メッセージ欄表示用関数("顔エラ","星晶兽艾拉")
+			ENDIF
+			CALL 口上変数初期化
+			
+			SETBIT ダンジョン構造配列_沿岸部の森:7:0, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_7_0(ARGS)
+#DIMS マス番号
+マス番号 = 7_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = 右アイコン
+	CASE "接続先"
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 「带有箭头图标的格子可通往地牢其他区域」
+			KSTR:(K++) = 「继续深入将能获得新道具与强敌交锋」_PAGE
+			WSTR:(K++) = 「地牢内值得注意的图标大致就这四种」
+			KSTR:(K++) = 「当然也有例外……不过那要等更深入后才能见到」_PAGE
+			KSTR:(K++) = 「请继续探索吧我的契约者，我会为你加油」
+			CALL メッセージ欄表示用関数("顔エラ","星晶兽艾拉")
+			CALL 口上変数初期化
+			SETBIT ダンジョン構造配列_沿岸部の森:8:0, 1
+			SETBIT ダンジョン構造配列_沿岸部の森:8:0, 2
+			SETBIT ダンジョン構造配列_沿岸部の森:9:0, 1
+			SETBIT ダンジョン構造配列_沿岸部の森:9:3, 1
+		ENDIF
+		ダンジョン現在位置:0 = 8
+		ダンジョン現在位置:1 = 0
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_8_0(ARGS)
+#DIMS マス番号
+マス番号 = 8_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = 左アイコン
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "9_0")
+		CALL ダンジョン分岐線描画(マス番号, "9_3")
+	CASE "マスイベント"
+		ダンジョン現在位置:0 = 7
+		ダンジョン現在位置:1 = 0
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_9_0(ARGS)
+#DIMS マス番号
+マス番号 = 9_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "10_0")
+		CALL ダンジョン分岐線描画(マス番号, "10_1")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			KSTR:(K++) = 沿着兽径直行时，前方道路分岔为两条。
+			KSTR:(K++) = 能感受到微风持续向深处流动。
+			CALL メッセージ欄表示用関数(,,,0)
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 沿着兽径直行时，前方道路分岔为两条。
+			WSTR:(K++) = 能感受到微风持续向深处流动。
+			KSTR:(K++) = 或许深处有风属性敌人，需谨慎前行。
+			CALL メッセージ欄表示用関数()
+			CALL 口上変数初期化
+			SETBIT ダンジョン構造配列_沿岸部の森:10:0, 1
+			SETBIT ダンジョン構造配列_沿岸部の森:10:1, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_10_0(ARGS)
+#DIMS マス番号
+マス番号 = 10_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = エネミーアイコン
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "11_0")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv2_风元素
+			敵BATTLE_STATE_STR:1:エネミー名 = Lv2_风元素
+			CALL 雑魚敵繰り返し戦闘処理
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 每前进一步，都感到风力在增强……
+			KSTR:(K++) = ……不，这种强度绝非自然风！是精灵系敌人！
+			CALL メッセージ欄表示用関数()
+			
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv2_风元素
+			敵BATTLE_STATE_STR:1:エネミー名 = Lv2_风元素
+			CALL 雑魚敵遭遇汎用処理
+			SETBIT ダンジョン構造配列_沿岸部の森:11:0, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+
+@ダンジョンマス情報_沿岸部の森_11_0(ARGS)
+#DIMS マス番号
+マス番号 = 11_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		IF GETBIT(ダンジョン構造配列_沿岸部の森:11:0, 4)
+			ダンジョンマス画像URL_重ね表示 = 宝箱アイコン_木箱_開
+		ELSE
+			ダンジョンマス画像URL_重ね表示 = 宝箱アイコン_木箱
+		ENDIF
+	CASE "接続先"
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			KSTR:(K++) = 宝箱是空的。
+			CALL メッセージ欄表示用関数(,,,0)
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 在道路尽头发现了精灵魔力凝结的矿石。
+			WSTR:(K++) = 虽然大多是废石，但其中混有可用魔石。
+			KSTR:(K++) = %CALLNAME:PLAYER%获得了２颗魔石！
+			CALL メッセージ欄表示用関数()
+
+			CALL 口上変数初期化
+			CALL アイテム増減汎用処理("魔石", 2)
+			SETBIT ダンジョン構造配列_沿岸部の森:11:0, 4
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_10_1(ARGS)
+#DIMS マス番号
+マス番号 = 10_1
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		IF GETBIT(ダンジョン構造配列_沿岸部の森:11:1, 1) || GETBIT(ダンジョン構造配列_沿岸部の森:11:2, 1)
+		ELSE
+			ダンジョンマス画像URL_重ね表示 = 会話アイコン
+		ENDIF
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "11_1")
+		CALL ダンジョン分岐線描画(マス番号, "11_2")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF GETBIT(ダンジョン構造配列_沿岸部の森:11:1, 1) || GETBIT(ダンジョン構造配列_沿岸部の森:11:2, 1)
+			KSTR:(K++) = 没看到之前的野兽，看来它去了别的地方。
+			CALL メッセージ欄表示用関数(,,,0)
+		ELSE
+			;最初に訪れた時
+			IF 初来訪マス判定用フラグ
+				WSTR:(K++) = 深入地牢时，一头猫型野兽拦在你们面前。
+				WSTR:(K++) = 野兽负伤严重，右前肢有狰狞伤口。
+				KSTR:(K++) = 似乎为阻止深入而在威吓你们。_PAGE
+			ELSE
+				WSTR:(K++) = 野兽仍在持续威吓，阻止你们深入。
+			ENDIF
+			WSTR:(K++) = 并非敌人只是普通野兽，强行突破并不难……
+			KSTR:(K++) = BUTTON_[无视并继续前进]
+			KSTR:(K++) = BUTTON_[对野兽使用药草]
+			KSTR:(K++) = BUTTON_[原路折返]
+			CALL メッセージ欄表示用関数(,,,0)
+			$LOOP_MESSAGE
+			INPUTS
+			SELECTCASE RESULTS
+				CASE "[无视并继续前进]"
+					CALL 口上変数初期化
+					WSTR:(K++) = 推开野兽强行深入。
+					WSTR:(K++) = 途中瞥见数只幼崽，看来野兽在守护它们。
+					KSTR:(K++) = 但这与你们无关，继续向深处进发。
+					CALL メッセージ欄表示用関数()
+					SETBIT ダンジョン構造配列_沿岸部の森:11:1, 1
+				CASE "[对野兽使用药草]"
+					CALL 口上変数初期化
+					CALL アイテム増減汎用処理("药草", -1)
+					IF RESULT
+						WSTR:(K++) = 缓缓靠近野兽，展示持有的药草。
+						WSTR:(K++) = 嗅到气味的野兽停止威吓，静静注视着你们。
+						KSTR:(K++) = %CALLNAME:(BATTLE_STATE:0:キャラ登録番号)%迅速将药草敷在野兽伤口。_PAGE
+						WSTR:(K++) = 野兽温顺地低鸣一声，退入草丛。
+						WSTR:(K++) = 跟随野兽踪迹，发现树影掩藏的捷径。
+						KSTR:(K++) = 这条近路可直通森林深处。_PAGE
+						KSTR:(K++) = 道谢时野兽再次低鸣，消失在密林深处。
+						CALL メッセージ欄表示用関数()
+						SETBIT ダンジョン構造配列_沿岸部の森:11:1, 1
+						SETBIT ダンジョン構造配列_沿岸部の森:11:2, 1
+					ENDIF
+				CASE "[原路折返]"
+				CASEELSE
+					CLEARLINE 1
+					REUSELASTLINE  
+					GOTO LOOP_MESSAGE
+			ENDSELECT
+			CALL 口上変数初期化
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_11_1(ARGS)
+#DIMS マス番号
+マス番号 = 11_1
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = エネミーアイコン
+	CASE "接続先"
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv2_风元素
+			敵BATTLE_STATE_STR:1:エネミー名 = Lv2_风元素
+			敵BATTLE_STATE_STR:2:エネミー名 = Lv2_风元素
+			CALL 雑魚敵繰り返し戦闘処理
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 道路尽头肆虐着龙卷般的暴风气流。
+			WSTR:(K++) = 精灵系魔物聚集在此，正用风刃肆虐周边。
+			KSTR:(K++) = 它们无差别地暴动，向你们发起袭击！
+			CALL メッセージ欄表示用関数()
+			
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv2_风元素
+			敵BATTLE_STATE_STR:1:エネミー名 = Lv2_风元素
+			敵BATTLE_STATE_STR:2:エネミー名 = Lv2_风元素
+			CALL 雑魚敵遭遇汎用処理
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_11_2(ARGS)
+#DIMS マス番号
+マス番号 = 11_2
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "14_2")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+		ELSE
+			;最初に訪れた時
+			SETBIT ダンジョン構造配列_沿岸部の森:14:2, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_9_3(ARGS)
+#DIMS マス番号
+マス番号 = 9_3
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "11_3")
+		CALL ダンジョン分岐線描画(マス番号, "10_4")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			KSTR:(K++) = 散落着数块破碎岩石。
+			CALL メッセージ欄表示用関数(,,,0)
+		ELSE
+			;最初に訪れた時
+			KSTR:(K++) = 在森林探索时发现多处碎裂岩石。
+			WSTR:(K++) = 这必是噬石兽的进食痕迹。
+			KSTR:(K++) = 前进路线正确，需谨慎前行。
+			CALL メッセージ欄表示用関数()
+			CALL 口上変数初期化
+			SETBIT ダンジョン構造配列_沿岸部の森:11:3, 1
+			SETBIT ダンジョン構造配列_沿岸部の森:10:4, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_11_3(ARGS)
+#DIMS マス番号
+マス番号 = 11_3
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		IF GETBIT(ダンジョン構造配列_沿岸部の森:11:3, 2)
+			ダンジョンマス画像URL_重ね表示 = 宝箱アイコン_木箱_開
+		ELSE
+			ダンジョンマス画像URL_重ね表示 = 宝箱アイコン_木箱
+		ENDIF
+	CASE "接続先"
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			KSTR:(K++) = 宝箱是空的。
+			CALL メッセージ欄表示用関数(,,,0)
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 碎裂岩石中闪耀着微光。
+			WSTR:(K++) = 发现蕴含魔力的金属，稍作加工可制成耳饰。
+			KSTR:(K++) = 耳饰能改变个人属性，或许有助于击败噬石兽。_PAGE
+			KSTR:(K++) = %CALLNAME:PLAYER%获得了风之耳饰！
+			CALL メッセージ欄表示用関数()
+			CALL 汎用耳飾り取得処理("风之耳饰")
+			CALL 口上変数初期化
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_10_4(ARGS)
+#DIMS マス番号
+マス番号 = 10_4
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = エネミーアイコン
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "11_5")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv2_哥布林
+			敵BATTLE_STATE_STR:2:エネミー名 = Lv2_风元素
+			敵BATTLE_STATE_STR:4:エネミー名 = Lv2_哥布林
+			CALL 雑魚敵繰り返し戦闘処理
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 前进途中遭魔物群阻拦。
+			KSTR:(K++) = 虽是未开发区域，但度假岛魔物过多实属困扰。击败尽可能多的魔物并继续前进。
+			CALL メッセージ欄表示用関数()
+			
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv2_哥布林
+			敵BATTLE_STATE_STR:2:エネミー名 = Lv2_风元素
+			敵BATTLE_STATE_STR:4:エネミー名 = Lv2_哥布林
+			CALL 雑魚敵遭遇汎用処理
+			SETBIT ダンジョン構造配列_沿岸部の森:11:5, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_11_5(ARGS)
+#DIMS マス番号
+マス番号 = 11_5
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "12_5")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		KSTR:(K++) = 微风拂叶，沙沙声悦耳动听。
+		CALL メッセージ欄表示用関数(,,,0)
+		IF 初来訪マス判定用フラグ
+			SETBIT ダンジョン構造配列_沿岸部の森:12:5, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_12_5(ARGS)
+#DIMS マス番号
+マス番号 = 12_5
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "13_4")
+		CALL ダンジョン分岐線描画(マス番号, "13_6")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+		ELSE
+			SETBIT ダンジョン構造配列_沿岸部の森:13:4, 1
+			SETBIT ダンジョン構造配列_沿岸部の森:13:6, 1
+			WSTR:(K++) = 道路分岔为二。
+			WSTR:(K++) = 上道散落零星碎岩，噬石兽应在此处。
+			KSTR:(K++) = 下道传来流水声，似有溪流经过。
+			CALL メッセージ欄表示用関数()
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_13_6(ARGS)
+#DIMS マス番号
+マス番号 = 13_6
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		IF GETBIT(ダンジョン構造配列_沿岸部の森:13:6, 5)
+			ダンジョンマス画像URL_重ね表示 = エネミーアイコン
+		ELSE
+			ダンジョンマス画像URL_重ね表示 = 会話アイコン
+		ENDIF
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "14_6")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv3_螃蟹
+			敵BATTLE_STATE_STR:1:エネミー名 = Lv3_螃蟹
+			CALL 雑魚敵繰り返し戦闘処理
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 稍行片刻遇林间溪流。
+			WSTR:(K++) = 水质清澈，偶见鱼跃。
+			KSTR:(K++) = 噬石兽不近此处，恰有数块适坐岩石。_PAGE
+			KSTR:(K++) = 要稍作休整吗？
+			KSTR:(K++) = BUTTON_[确定]
+			KSTR:(K++) = BUTTON_[取消]
+			CALL メッセージ欄表示用関数(,,,0)
+			$LOOP_MESSAGE_2
+			INPUTS
+			SELECTCASE RESULTS
+				CASE "[确定]"
+					CALL 口上変数初期化
+					WSTR:(K++) = 恰值行路疲惫，%CALLNAME:PLAYER%提议休憩。
+					KSTR:(K++) = 大家坐在石头上进食休息。
+					CALL メッセージ欄表示用関数()
+					CALL 口上変数初期化
+					KSTR:(K++) = 全员HP恢复５０点，MP恢复３０点。
+					FOR LOCAL, 0, 4
+						IF BATTLE_STATE:LOCAL:キャラ登録番号 < 1
+							BREAK
+						ENDIF
+						BATTLE_STATE:LOCAL:ＨＰ = MIN(BATTLE_STATE:LOCAL:ＨＰ + 50, BATTLE_STATE:LOCAL:最大ＨＰ)
+						BATTLE_STATE:LOCAL:ＭＰ = MIN(BATTLE_STATE:LOCAL:ＭＰ + 30, BATTLE_STATE:LOCAL:最大ＭＰ)
+					NEXT
+					CALL メッセージ欄表示用関数()
+					CALL 口上変数初期化
+					WSTR:(K++) = ……稍歇片刻察觉异动。
+					WSTR:(K++) = 栖息此地的魔物群悄然形成包围！
+					KSTR:(K++) = 大量魔物向你们袭来！
+					CALL メッセージ欄表示用関数()
+					敵BATTLE_STATE_STR:4:エネミー名 = Lv3_螃蟹
+					敵BATTLE_STATE_STR:7:エネミー名 = Lv3_螃蟹
+				CASE "[取消]"
+					CALL 口上変数初期化
+					WSTR:(K++) = 水域是魔物容易聚集的地方，在没有防护的情况下休息很危险。
+					WSTR:(K++) = %CALLNAME:PLAYER%侦查后发现潜伏魔物。
+					KSTR:(K++) = 消灭完怪物再做休整吧。
+					CALL メッセージ欄表示用関数()
+					SETBIT ダンジョン構造配列_沿岸部の森:13:6, 4
+				CASEELSE
+					CLEARLINE 1
+					REUSELASTLINE  
+					GOTO LOOP_MESSAGE_2
+			ENDSELECT
+			
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv3_螃蟹
+			敵BATTLE_STATE_STR:1:エネミー名 = Lv3_螃蟹
+			CALL 雑魚敵遭遇汎用処理
+			IF RESULT == 0 && GETBIT(ダンジョン構造配列_沿岸部の森:13:6, 4)
+				CALL 口上変数初期化
+				KSTR:(K++) = 在击退魔物确保安全后，你们取出干粮稍作休憩。
+				CALL メッセージ欄表示用関数()
+				CALL 口上変数初期化
+				KSTR:(K++) = 全员HP恢复５０点，MP恢复３０点。
+				FOR LOCAL, 0, 4
+					IF BATTLE_STATE:LOCAL:キャラ登録番号 < 1
+						BREAK
+					ENDIF
+					BATTLE_STATE:LOCAL:ＨＰ = MIN(BATTLE_STATE:LOCAL:ＨＰ + 50, BATTLE_STATE:LOCAL:最大ＨＰ)
+					BATTLE_STATE:LOCAL:ＭＰ = MIN(BATTLE_STATE:LOCAL:ＭＰ + 30, BATTLE_STATE:LOCAL:最大ＭＰ)
+				NEXT
+				CALL メッセージ欄表示用関数()
+			ENDIF
+			SETBIT ダンジョン構造配列_沿岸部の森:13:6, 5
+			SETBIT ダンジョン構造配列_沿岸部の森:14:6, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_14_6(ARGS)
+#DIMS マス番号
+マス番号 = 14_6
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		IF GETBIT(ダンジョン構造配列_沿岸部の森:14:6, 4)
+			ダンジョンマス画像URL_重ね表示 = 宝箱アイコン_木箱_開
+		ELSE
+			ダンジョンマス画像URL_重ね表示 = 宝箱アイコン_木箱
+		ENDIF
+	CASE "接続先"
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF GETBIT(ダンジョン構造配列_沿岸部の森:14:6, 4)
+			KSTR:(K++) = 没什么值得注意的东西。
+			CALL メッセージ欄表示用関数(,,,0)
+		ELSE
+			WSTR:(K++) = 沿着河岸前行时，发现了用树枝和泥土搭建的巢穴状物体。
+			WSTR:(K++) = 大概是刚才那些蟹型魔物的巢穴，巢穴主人似乎外出未归。
+			KSTR:(K++) = ……在巢中发现有东西在微微发亮_PAGE
+			WSTR:(K++) = 似乎是凝聚着魔力的戒指。
+			WSTR:(K++) = 装备这枚戒指应该能大幅提升状态数值。
+			KSTR:(K++) = 讨伐噬石兽时会派上用场。螃蟹用不上这玩意，我们拿走好了。_PAGE
+			KSTR:(K++) = 获得了「荣冠之戒・力」！_PAGE
+			CALL メッセージ欄表示用関数()
+			CALL 汎用指輪取得処理("荣冠之戒・力", 0)
+			SETBIT ダンジョン構造配列_沿岸部の森:14:6, 4
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_13_4(ARGS)
+#DIMS マス番号
+マス番号 = 13_4
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = エネミーアイコン
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "14_2")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv2_哥布林
+			敵BATTLE_STATE_STR:3:エネミー名 = Lv2_哥布林
+			敵BATTLE_STATE_STR:4:エネミー名 = Lv2_哥布林
+			敵BATTLE_STATE_STR:7:エネミー名 = Lv2_哥布林
+			CALL 雑魚敵繰り返し戦闘処理
+		ELSE
+			;最初に訪れた時
+			KSTR:(K++) = 魔物群出现了！
+			CALL メッセージ欄表示用関数()
+			
+			敵BATTLE_STATE_STR:0:エネミー名 = Lv2_哥布林
+			敵BATTLE_STATE_STR:3:エネミー名 = Lv2_哥布林
+			敵BATTLE_STATE_STR:4:エネミー名 = Lv2_哥布林
+			敵BATTLE_STATE_STR:7:エネミー名 = Lv2_哥布林
+			CALL 雑魚敵遭遇汎用処理
+			SETBIT ダンジョン構造配列_沿岸部の森:14:2, 1
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_14_2(ARGS)
+#DIMS マス番号
+マス番号 = 14_2
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "15_0")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF 初来訪マス判定用フラグ == 0
+			KSTR:(K++) = 前方可见树木的间隙。
+			CALL メッセージ欄表示用関数(,,,0)
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = 前方树木逐渐稀疏，看来快要走出森林了。
+			WSTR:(K++) = 地面散落的碎石明显增多，噬石兽应该就在附近。
+			KSTR:(K++) = 如果队伍有受伤的话，最好先恢复状态再继续前进。
+			CALL メッセージ欄表示用関数()
+			
+			SETBIT ダンジョン構造配列_沿岸部の森:15:0, 1
+			SETBIT ダンジョン構造配列_沿岸部の森:15:0, 2
+		ENDIF
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_15_0(ARGS)
+#DIMS マス番号
+マス番号 = 15_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = 右アイコン
+	CASE "接続先"
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		ダンジョン現在位置:0 = 16
+		ダンジョン現在位置:1 = 0
+		SETBIT ダンジョン構造配列_沿岸部の森:16:0, 1
+		SETBIT ダンジョン構造配列_沿岸部の森:16:0, 2
+		SETBIT ダンジョン構造配列_沿岸部の森:17:0, 1
+		CALL 画面再描画
+ENDSELECT
+
+
+@ダンジョンマス情報_沿岸部の森_16_0(ARGS)
+#DIMS マス番号
+マス番号 = 16_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		ダンジョンマス画像URL_重ね表示 = 左アイコン
+	CASE "接続先"
+		CALL ダンジョン分岐線描画(マス番号, "17_0")
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		ダンジョン現在位置:0 = 15
+		ダンジョン現在位置:1 = 0
+		CALL 画面再描画
+ENDSELECT
+
+@ダンジョンマス情報_沿岸部の森_17_0(ARGS)
+#DIMS マス番号
+マス番号 = 17_0
+
+SELECTCASE ARGS
+	CASE "マス画像"
+		ダンジョンマス画像URL = 床_草原
+		IF ダンジョン内一時変数:1 == 0
+			ダンジョンマス画像URL_重ね表示 = エネミーアイコン_赤
+		ENDIF
+	CASE "接続先"
+	CASE "マスイベント"
+		CALL 口上変数初期化
+		IF ダンジョンクリアフラグ_沿岸部の森
+			IF ダンジョン内一時変数:1 == 0
+				KSTR:(K++) = 要重温与噬石兽交战的记忆吗？
+				KSTR:(K++) = （与BOSS再战）
+				KSTR:(K++) = BUTTON_[确定]
+				KSTR:(K++) = BUTTON_[取消]
+				CALL メッセージ欄表示用関数(,,,0)
+				$LOOP_MESSAGE
+				INPUTS
+				SELECTCASE RESULTS
+					CASE "[确定]"
+						敵BATTLE_STATE_STR:0:エネミー名 = Lv6_噬石兽
+						CALL 雑魚敵遭遇汎用処理
+						IF RESULT == 0
+							CALL 口上変数初期化
+							LOCAL = RAND:5
+							SELECTCASE LOCAL
+								CASE 0
+									WSTR:(K++) = 从噬石兽处获得「荣冠之戒・重」！
+									CALL 汎用指輪取得処理("荣冠之戒・重", 1)
+								CASE 1
+									WSTR:(K++) = 从噬石兽处获得「荣冠之戒・速」！
+									CALL 汎用指輪取得処理("荣冠之戒・速", 1)
+								CASE 2
+									WSTR:(K++) = 从噬石兽处获得「荣冠之戒・壁」！
+									CALL 汎用指輪取得処理("荣冠之戒・壁", 1)
+								CASE 3
+									WSTR:(K++) = 从噬石兽处获得「荣冠之戒・愈」！
+									CALL 汎用指輪取得処理("荣冠之戒・愈", 1)
+								CASE 4
+									WSTR:(K++) = 从噬石兽处获得「荣冠之戒・力」！
+									CALL 汎用指輪取得処理("荣冠之戒・力", 1)
+							ENDSELECT
+							KSTR:(K++) = 从噬石兽处获得「火之耳饰」！
+							CALL 汎用耳飾り取得処理("火之耳饰")
+							CALL メッセージ欄表示用関数()
+							ダンジョン内一時変数:1 = 1
+						ENDIF
+					CASE "[取消]"
+						CALL 口上変数初期化
+					CASEELSE
+						CLEARLINE 1
+						REUSELASTLINE  
+						GOTO LOOP_MESSAGE
+				ENDSELECT
+			ENDIF
+		ELSE
+			;最初に訪れた時
+			WSTR:(K++) = %CALLNAME:PLAYER%们深入森林腹地时，发现正在刨食岩石的蜥蜴型魔物。
+			WSTR:(K++) = 这家伙无疑就是目标「噬石兽」。
+			WSTR:(K++) = 做好战斗准备了吗？
+			KSTR:(K++) = BUTTON_[确定]
+			KSTR:(K++) = BUTTON_[取消]
+			CALL メッセージ欄表示用関数(,,,0)
+			$LOOP_MESSAGE_BOSS
+			INPUTS
+			SELECTCASE RESULTS
+				CASE "[确定]"
+					CALL 口上変数初期化
+					KSTR:(K++) = 你们拿起武器，向噬石兽发起挑战！
+					CALL メッセージ欄表示用関数()
+					敵BATTLE_STATE_STR:0:エネミー名 = Lv6_噬石兽
+					CALL BATTLE_MAIN_LOOP
+
+					IF RESULT == 0
+						;勝利時
+						ダンジョン表示モード = マップ画面
+						CALL 口上変数初期化
+						WSTR:(K++) = %CALLNAME:PLAYER%成功讨伐了噬石兽！！
+						KSTR:(K++) = 现在可以召唤工程队了。立刻返回向万事屋寄送信件吧…_PAGE
+						WSTR:(K++) = ・［设施改造］功能已解锁！
+						WSTR:(K++) = ・［员工设定］功能已解锁！
+						WSTR:(K++) = ・［空艇港］地图已解锁！
+						WSTR:(K++) = ・[400] 移动　指令内「前往其他区域」功能已解锁！
+						WSTR:(K++) = ・从噬石兽处获得「荣冠之戒・力」！
+						WSTR:(K++) = ・从噬石兽处获得「火之耳饰」！
+						CALL 汎用指輪取得処理("荣冠之戒・力", 2)
+						CALL 汎用耳飾り取得処理("火之耳饰")
+						WSTR:(K++) = 已通关沿岸森林区域，即将返回。
+						CALL メッセージ欄表示用関数()
+						探索中全体カウント:追加信頼度 += 500
+						ダンジョン終了状況 = 討伐達成
+						ダンジョンクリアフラグ_沿岸部の森 = 1
+					ELSEIF RESULT == 1
+						;全滅時
+						ダンジョン表示モード = マップ画面
+						CALL 口上変数初期化
+						KSTR:(K++) = %CALLNAME:PLAYER%带着力竭的同伴们艰难脱险…
+						CALL メッセージ欄表示用関数()
+						ダンジョン終了状況 = 全滅
+					ELSEIF RESULT == -1
+						;逃走時
+						ダンジョン表示モード = マップ画面
+					ENDIF
+					VARSET 敵BATTLE_STATE:0:0
+					VARSET 敵BATTLE_STATE_STR:0:0
+				CASE "[取消]"
+					CALL 口上変数初期化
+					KSTR:(K++) = 你们为重整旗鼓，暂时撤离了现场……
+					CALL メッセージ欄表示用関数()
+				CASEELSE
+					CLEARLINE 1
+					REUSELASTLINE  
+					GOTO LOOP_MESSAGE_BOSS
+			ENDSELECT
+			CALL 口上変数初期化
+		ENDIF
+		CALL 画面再描画
+ENDSELECT

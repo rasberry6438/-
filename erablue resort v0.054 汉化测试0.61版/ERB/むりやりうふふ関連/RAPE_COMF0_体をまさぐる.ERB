@@ -1,0 +1,165 @@
+﻿;-------------------------------------------------
+;体の触感味わう
+;愛撫系コマンド　レベル2
+;-------------------------------------------------
+@RAPE_COMNAME0
+#FUNCTIONS
+TSTR:コマンド名受渡 = 爱抚身体
+
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@RAPE_COMTYPE_0
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = RAPE_COMTYPE("うふふ")
+
+
+@RAPE_COM_TOOLTIP_0
+LOCALS = <br>■爱抚身体<br>
+LOCALS += "肆意抚摸对方身体，享受触感体验"
+LOCALS += "<br>若执行者持有[舌头灵巧][手指灵巧][猫舌]特质，效果将产生增减"
+LOCALS += "<br>强奸指令类型：嘿咻<br>获取来源：快Ｃ・快Ｂ・快Ｓ・暴露・接触"
+LOCALS += "<br>专属经验值：接吻经验(你・TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@RAPE_COM0
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+;舌を使う調教では、舌使い,猫舌によって、快感のソース増減
+LOCAL = 80
+SIF TALENT:PLAYER:舌使い
+	TIMES LOCAL , 1.50
+SIF TALENT:PLAYER:器用な指
+	TIMES LOCAL , 1.50
+SIF TALENT:PLAYER:猫舌
+	TIMES LOCAL , 0.75
+
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, LOCAL)
+CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, LOCAL)
+CALL SOURCE_CALC_快Ｓ(TARGET, PLAYER, LOCAL / 2)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 100)
+
+;IF TEQUIP:20
+; ;ボールギャグ使用中もなし
+; 	CALL SOURCE_CALC_接触(TARGET, PLAYER, 40)
+; ELSE
+	CALL SOURCE_CALC_接触(TARGET, PLAYER, 80)
+; ENDIF
+
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;同性愛　レズなら戻り値1ゲイなら戻り値2
+IF HETEROSEX(TARGET,PLAYER)
+	EXP:同性愛経験 += 5
+	EXP:PLAYER:同性愛経験 += 5
+ENDIF
+
+;調教者が猫舌持ちの場合は、調教者に嗜虐快楽経験を追加
+SIF TALENT:PLAYER:猫舌
+	EXP:PLAYER:嗜虐快楽経験 += 1
+
+RETURN 1
+
+;-------------------------------------------------
+;愛撫実行判定
+;-------------------------------------------------
+@RAPE_COM_ABLE0
+
+;上か下に鎧があると無理
+SIF TEQUIP:TARGET:上半身鎧あり
+	RETURN 0
+SIF TEQUIP:TARGET:下腹部前鎧あり
+	RETURN 0
+
+;一括管理
+SIF GLOBAL_RAPE_COMABLE(0)
+	RETURN RESULT
+;指を何かに使ってる・届かないなら無理
+SIF TEQUIP:PLAYER:指
+	RETURN 0
+;パイズリ、フェラ系は体勢的に無理
+SIF MODE_確認_完全一致("フェラチオ系", TARGET, PLAYER) > -1
+	RETURN 0
+SIF MODE_確認_完全一致("パイズリ系", TARGET, PLAYER)> -1
+	RETURN 0
+RETURN 1
+
+
+
+
+;-------------------------------------------------
+;愛撫時メッセージ
+;-------------------------------------------------
+@RAPE_MESSAGE_COM0
+
+PRINTFORM %CALLNAME:PLAYER%在
+
+;膣とアナルに入れてるのがあれば持ち主を特定
+SIF MODE_確認_完全一致("Ｖ挿入系", PLAYER, TARGET) > -1 || MODE_確認_完全一致("Ａ挿入系", PLAYER, TARGET) > -1 || MODE_確認_完全一致("Ｖ挿入系", TARGET, PLAYER) > -1 || MODE_確認_完全一致("Ａ挿入系", TARGET, PLAYER) > -1
+	PRINTFORM 与%CALLNAME:TARGET%保持插入的状态下，在
+
+IF CFLAG:TARGET:睡眠
+	IF TCVAR:TARGET:泥酔眠姦
+		PRINTFORM 醉倒了
+	ELSE
+		PRINTFORM 睡着了
+	ENDIF
+ELSEIF CFLAG:TARGET:発情期フラグ < 0
+	PRINTFORM %TEXTR("完全发情的/情欲高涨的")%
+ELSEIF BASE:性欲 > 1000
+	PRINTFORM %TEXTR("欲火焚身的/情热难耐的")%
+ENDIF
+PRINTFORM %CALLNAME:TARGET%的
+
+IF 知識素質:TARGET:高貴 >= 1
+	PRINTFORM %TEXTR("高贵的/尊贵的")%玉体
+ELSE
+	;小柄体型
+	IF TALENT:体格 <= -1
+		PRINTFORM %TEXTR("娇小的身躯/柔软的矮躯")%
+	ELSE
+		PRINTFORM %TEXTR("身体/胴体")%
+	ENDIF
+ENDIF
+PRINTFORM 来回抚弄着，%TEXTR("掌心满满地/")%
+IF アイドル判定(TARGET)
+	PRINTFORM 偶像的%TEXTR("拥抱感/触碰感")%
+ELSE
+	PRINTFORM 触感
+ENDIF
+PRINTFORML %TEXTR("尽数享受/细细品味")%…
+
+PRINTL
+
+SIF MODE_確認_完全一致("Ｖ挿入系", PLAYER, TARGET) > -1 || MODE_確認_完全一致("Ａ挿入系", PLAYER, TARGET) > -1
+	PRINTFORM %TEXTR("含住的/插入的")%肉棒被紧紧绞缠着，
+
+IF CFLAG:TARGET:睡眠
+	SELECTCASE MAX(CUP:TARGET:快Ｃ, CUP:TARGET:快Ｂ)
+	;各部位の累積が10000で絶頂、場合分けの数値は参考数値なのでイメージで変えてもらってOK
+	CASE IS > 10000
+	;絶頂
+		PRINTFORML %CALLNAME:TARGET%的身体即便在沉睡中也对施加的快感产生敏感反应，因甜美的高潮快感而颤抖…
+	CASEELSE
+		PRINTFORML 陷入沉睡的%CALLNAME:TARGET%虽然扭动身体抗拒，但肉体却诚实地回应着被给予的快感…
+	ENDSELECT
+ELSE
+	SELECTCASE MAX(CUP:TARGET:快Ｃ, CUP:TARGET:快Ｂ)
+	;各部位の累積が10000で絶頂、場合分けの数値は参考数値なのでイメージで変えてもらってOK
+	CASE IS > 10000
+	;絶頂
+		PRINTFORML %CALLNAME:TARGET%的身体对施加的快感产生敏感反应，因甜美的高潮快感而颤抖…
+	CASE IS > 4000
+	;感じている
+		PRINTFORML %CALLNAME:TARGET%虽扭动身体试图逃离，但肉体却诚实地回应着施加的快感…
+	CASEELSE
+		;あまり感じていない
+		PRINTFORML 抗拒的%CALLNAME:TARGET%在%CALLNAME:PLAYER%怀中挣扎，无力的抵抗反而助长了%CALLNAME:PLAYER%的%TEXTR("征服欲/施虐心")%…
+	ENDSELECT
+ENDIF

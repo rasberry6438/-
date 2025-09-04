@@ -1,0 +1,968 @@
+﻿;-------------------------------------------------
+;画像を特写する関数群。製作者　金吉獣料理
+;-------------------------------------------------
+;特写する画像の種類ARGSをARG:0～ARG:{X-1}のX人分並べて表示する関数。横長なので3人まで。
+;画像のピクセル数はとりあえず自動的に縦100が選択される。
+;ARGSには "淫紋", "兔チップ"の2種の他、[胖次or見たまま][正面or背面or前後]の組み合わせが入る。
+;例）"胖次正面"、"見たまま背面" など
+;前後 を使った場合は表示を２個使うので一人だけにすること。
+;-------------------------------------------------
+@PRINT_CUTIN, ARGS, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+#DIM LCOUNT
+#DIM ACTOR, 6
+#DIM NUM_ACTOR
+#DIM MEMO_REDRAW
+#DIM ypos
+#DIMS MEMO_PANTIES, 6
+
+ypos = 0
+
+MEMO_REDRAW = CURRENTREDRAW()
+REDRAW 0
+
+NUM_ACTOR = 0
+VARSET ACTOR
+VARSET MEMO_PANTIES
+
+FOR LCOUNT, 0, 6
+	SIF LCOUNT >= 1 && ARG:LCOUNT <= 0
+		BREAK
+
+	ACTOR:NUM_ACTOR = ARG:LCOUNT
+	NUM_ACTOR += 1
+	CFLAG:(ARG:LCOUNT):CIP発生済 = 1
+NEXT
+
+VARSET LATESTCUTINCHARA
+VARSET LATESTCUTINID
+STR:参照用MAIDFACE文字列 = 
+
+;淫紋の动画ーションに使う
+VARSET SAVEINMON_BOTTOM
+VARSET SAVEINMON_TOP
+
+SELECTCASE ARGS
+;特殊な分岐
+CASE "受精"
+	CALL PRINT_CUTIN_SUB, "受精"
+CASE "胖次前後"
+	CALL PRINT_CUTIN_SUB, "胖次正面", ACTOR, 0
+	CALL PRINT_CUTIN_SUB, "胖次背面", ACTOR, 1
+CASE "掀起裙子"
+	CALL PRINT_CUTIN_SUB, "見たまま正面/掀起裙子", ACTOR, 0
+CASE "見たまま前後"
+	CALL PRINT_CUTIN_SUB, "見たまま正面", ACTOR, 0
+	SIF STRCOUNT(STR:参照用MAIDFACE文字列, "CIP背面") == 0
+		CALL PRINT_CUTIN_SUB, "見たまま背面", ACTOR, 1
+CASE "見たまま遠近"
+	CALL PRINT_CUTIN_SUB, "見たまま正面", ACTOR, 0
+	SIF STRCOUNT(STR:参照用MAIDFACE文字列, "CIP贴身") == 0
+		CALL PRINT_CUTIN_SUB, "贴身", ACTOR, 1
+CASE "属性与外表"
+	;この中で STR:参照用MAIDFACE文字列 を用いて計算する
+	CALL PRINT_MAIDFACE_SUB, ACTOR, 0
+	CALL PRINT_CUTIN_SUB, "腹部", ACTOR, 1
+CASE "腹部"
+	FOR LCOUNT, 0, 6
+		SIF ACTOR:LCOUNT <= 0
+			BREAK
+
+		CALL PRINT_CUTIN_SUB, "腹部", ACTOR:LCOUNT, LCOUNT
+	NEXT
+CASE "兔チップ"
+	FOR LCOUNT, 0, 6
+		SIF ACTOR:LCOUNT <= 0
+			BREAK
+
+		CALL PRINT_CUTIN_SUB, "胸部", ACTOR:LCOUNT, LCOUNT
+	NEXT
+CASE "縮小", "胖次花绳", "縮小背面"
+	;CIP縮小中フラグON
+	SETBIT FLAG:メイン画面, 10
+
+	;胖次花绳フラグON
+	SIF ARGS == "胖次花绳"
+		SETBIT FLAG:状況判定, 52
+
+	FOR LCOUNT, 0, 6
+		SIF ACTOR:LCOUNT <= 0
+			BREAK
+		SIF CEVENT("颜绘没有", ACTOR:LCOUNT)
+			CONTINUE
+
+		;SIF COND("阴蒂ック指令表示中")
+		;	CALL PRINT_CUTIN_SUB, "縮小ボタン", ACTOR:LCOUNT, LCOUNT
+
+		SELECTCASE ARGS
+		CASE "縮小背面"
+			CALL PRINT_CUTIN_SUB, "見たまま背面", ACTOR:LCOUNT, LCOUNT
+		CASEELSE
+			IF COND("胖次花绳中") && CHECK_PANTIES("胖次花绳可能", ACTOR:LCOUNT)
+				MEMO_PANTIES:LCOUNT = %CSTR:(ACTOR:LCOUNT):胖次%
+				CALL SET_PANTIES, "", ACTOR:LCOUNT
+			ENDIF
+			IF EQUIP:(ACTOR:LCOUNT):裙
+				;掀起裙子前かつ裙画像がない場合には出力しない
+				SIF CFLAG:(ACTOR:LCOUNT):掀起裙子 == 0 && SKIRT(ACTOR:LCOUNT, "CIP正面") == ""
+					CONTINUE
+			ENDIF
+
+			CALL PRINT_CUTIN_SUB, "見たまま正面", ACTOR:LCOUNT, LCOUNT
+		ENDSELECT
+
+		IF COND("胖次花绳中") && MEMO_PANTIES:LCOUNT != ""
+			STR:換装衣装 = %MEMO_PANTIES:LCOUNT%
+			CALL SETFLAG, "胖次の換装", ACTOR:LCOUNT
+		ENDIF
+	NEXT
+
+	;CIP縮小中フラグOFF
+	CLEARBIT FLAG:メイン画面, 10
+	;胖次花绳フラグOFF
+	CLEARBIT FLAG:状況判定, 52
+CASEELSE
+	FOR LCOUNT, 0, 6
+		SIF ACTOR:LCOUNT <= 0
+			BREAK
+
+		CALL PRINT_CUTIN_SUB, ARGS, ACTOR:LCOUNT, LCOUNT
+	NEXT
+ENDSELECT
+
+TFLAG:MAX_height = 0
+STR:CIP再現文字列 = 
+IF STR:参照用MAIDFACE文字列 != ""
+	STR:CIP再現文字列 = %STR:参照用MAIDFACE文字列%
+
+	SELECTCASE ARGS
+	CASE "縮小"
+		;阴蒂ック指令表示中では無い場合に縮小画像が無いなら表示させない
+		IF COND("阴蒂ック指令表示中") == 0 && SUBSTRING(STR:CIP再現文字列, 0, STRLENS("CIP背景没有") ) == "CIP背景没有"
+
+		ELSE
+			HTML_PRINT CONVERTSTR(STR:CIP再現文字列)
+			CALL MULTILINE, TFLAG:MAX_height
+		ENDIF
+	CASEELSE
+		HTML_PRINT CONVERTSTR(STR:CIP再現文字列)
+		CALL MULTILINE, TFLAG:MAX_height
+	ENDSELECT
+	TFLAG:CIP表示中 = LINECOUNT
+	STR:直近CIP種別 = %ARGS%
+ENDIF
+REDRAW MEMO_REDRAW
+
+;-------------------------------------------------
+;角色ARGの特写ARGSに対応する文字列を生成する関数。
+;ARG:1には何人目の位置かが入っている。ARG:2はyposの位置。
+;STR:参照用MAIDFACE文字列 を用いて颜绘の文字列を受け渡すので、これを呼ぶ前に初期化する事
+;ARGSには[胖次or見たまま][正面or背面or前後]の組み合わせが入っている
+;ARGSは / で区切って表示注文 掀起裙子,下衣OFF,连褲襪OFF,裙OFF,服OFF,贴身制服OFF 等を付けられる。
+;-------------------------------------------------
+@PRINT_CUTIN_SUB, ARGS, ARG, ARG:1, ARG:2
+#DIM LCOUNT
+#DIMS MEMO_CUTIN
+#DIM NUM_CUTIN
+#DIMS DYNAMIC MEMO_CSTR, 10
+#DIM DYNAMIC MEMO_EQUIP, 10
+#DIM DYNAMIC MEMO_CFLAG
+
+;衣服を記録
+FOR LCOUNT, 0, 10
+	MEMO_CSTR:LCOUNT = %CSTR:ARG:(40 + LCOUNT)%
+	MEMO_EQUIP:LCOUNT = EQUIP:ARG:(40 + LCOUNT)
+NEXT
+MEMO_CFLAG = CFLAG:ARG:掀起裙子
+
+VARSET LOCALS
+SPLIT ARGS, "/", LOCALS
+
+FOR LCOUNT, 0 ,10
+	SELECTCASE ARGS
+	CASE ""
+		BREAK
+	CASE "掀起裙子"
+		CFLAG:ARG:掀起裙子 = 1
+	CASE "裙OFF"
+		CALL SET_SKIRT, "", ARG
+	CASE "服OFF"
+		CALL SET_SHIRT, "", ARG
+	;現状だと指すものは一緒
+	CASE "下衣OFF", "连褲襪OFF"
+		CALL SET_BOTTOM, "", ARG
+	CASE "贴身制服OFF"
+		CALL SET_BODYS, "", ARG
+	CASE "襪子OFF"
+		CALL SET_SOCKS, "", ARG
+	ENDSELECT
+NEXT
+
+NUM_CUTIN = ARG:1
+MEMO_CUTIN = %CUTIN(ARGS, ARG, NUM_CUTIN, ARG:2)%
+
+CALL CREATE_SPRITE_CUTIN, ARG, NUM_CUTIN, MEMO_CUTIN
+
+;衣服を復元
+FOR LCOUNT, 0, 10
+	CSTR:ARG:(40 + LCOUNT) = %MEMO_CSTR:LCOUNT%
+	EQUIP:ARG:(40 + LCOUNT) = MEMO_EQUIP:LCOUNT
+NEXT
+CFLAG:ARG:掀起裙子 = MEMO_CFLAG
+
+
+@CREATE_SPRITE_CUTIN, ARG, ARG:1, ARGS
+#DIMS MEMO_CUTIN
+#DIM NUM_CUTIN
+;スプライトに対応する颜绘文字列
+#DIMS STR_SPRITE
+;スプライトのサイズや表示場所
+#DIMS POS_SPRITE
+
+NUM_CUTIN = ARG:1
+MEMO_CUTIN = %ARGS%
+
+SIF MEMO_CUTIN == ""
+	RETURN 0
+
+STR_SPRITE = %EXTSTR(MEMO_CUTIN, "", ",")%
+POS_SPRITE = %EXTSTR(MEMO_CUTIN, ",")%
+
+;この特写が既に作られている場合
+IF CHECK_CREATED_CUTIN(STR_SPRITE)
+	STR:参照用MAIDFACE文字列 += @"CUTIN{CHECK_CREATED_CUTIN(STR_SPRITE)},%POS_SPRITE%"
+	;作成した特写とIDをメモ
+	LATESTCUTINCHARA:NUM_CUTIN = ARG
+	LATESTCUTINID:NUM_CUTIN = CHECK_CREATED_CUTIN(STR_SPRITE)
+ELSE
+	CALL OVERLAY_GCREATE, CUTINID, STR_SPRITE
+
+	SIF SPRITECREATED(@"CUTIN{CUTINID}")
+		SPRITEDISPOSE @"CUTIN{CUTINID}"
+
+	;スプライト名をつける
+	IF STRCOUNT(MEMO_CUTIN, "CIP背景口罩")
+		IF SPRITECREATE(@"CUTIN{CUTINID}", CUTINID, 60, 0, 180, 100)
+			;PRINTFORML 縮小スプライト作成成功：CUTIN{CUTINID}
+		ELSE
+			;PRINTFORML 縮小スプライト作成失敗：CUTIN{CUTINID}
+		ENDIF
+	ELSE
+		IF SPRITECREATE(@"CUTIN{CUTINID}", CUTINID)
+			;PRINTFORML 通常スプライト作成成功：CUTIN{CUTINID}
+		ELSE
+			;PRINTFORML 通常スプライト作成失敗：CUTIN{CUTINID}
+		ENDIF
+	ENDIF
+
+	;STRにこのスプライトに対応する颜绘文字列を記録
+	STR:CUTINID = %STR_SPRITE%
+
+	STR:参照用MAIDFACE文字列 += @"CUTIN{CUTINID},%POS_SPRITE%"
+
+	;作成した特写とIDをメモ
+	LATESTCUTINCHARA:NUM_CUTIN = ARG
+	LATESTCUTINID:NUM_CUTIN = CUTINID
+
+	;CUTINIDを次のものにする
+	CUTINID += 1
+	SIF CUTINID >= 2500		;CUTINIDの保存数を変える場合はここを変える
+		CUTINID = 2000
+ENDIF
+
+;颜绘のGraphicsIDは2000～2499で順番に詰められていく
+@CHECK_CREATED_CUTIN(ARGS)
+#FUNCTION
+#DIM LCOUNT
+
+FOR LCOUNT, 2000, 2500
+	SELECTCASE STR:LCOUNT
+	CASE ""
+		RETURNF 0
+	CASE ARGS
+		SIF STRCOUNT(ARGS, "カスタム")
+			RETURNF 0
+		RETURNF LCOUNT
+	ENDSELECT
+NEXT
+RETURNF 0
+
+;-------------------------------------------------
+;出してしまった特写を消す関数
+;突然出現した100は、このバリアントだと特写のサイズが縦100ピクセルのため
+;もしも前提が異なる場合は数字を変える事
+;-------------------------------------------------
+@CLEAR_CUTIN
+CLEARLINE CUTINSIZE()/100
+
+
+@CUTINSIZE()
+#FUNCTION
+RETURNF PICSIZE(5)
+
+;-------------------------------------------------
+;角色ARGの特写ARGSを描画する関数。ARG:1には何人目の位置かが入っている。ARG:2はyposの位置。
+;ピクセル数は選べるようにしようと思ったが胖次特写は300*100固定。
+;-------------------------------------------------
+@CUTIN(ARGS, ARG, ARG:1, ARG:2)
+#FUNCTIONS
+#DIM LCOUNT
+#DIM NUM_CUTIN
+#DIM FSIZE
+#DIM FSIZE2
+#DIM FPOS
+#DIM FPOS_FACE
+#DIM MEMO_value
+;BG ～ SKIRTはこの順番で上に重ねていく
+#DIMS BG
+#DIMS BG_MASK
+;これは肌
+#DIMS CUTIN_SKIN
+#DIMS CUTIN_SUNTAN
+#DIMS CUTIN_PIERCE
+#DIMS CUTIN_INMON
+#DIMS CUTIN_PANTIES
+#DIMS CUTIN_PANTIES_OVER
+;CUTIN_BOTTOM ～ CUTIN_SKIRTは正面のみ
+#DIMS CUTIN_BOTTOM
+#DIMS CUTIN_PANST
+#DIMS CUTIN_BODYS
+#DIMS CUTIN_SKIRT
+#DIMS CUTIN_SKIRT_OVER
+#DIMS CUTIN_SKIRT_BACK
+#DIMS CUTIN_SHIRT
+#DIMS CUTIN_SOCKS
+#DIMS CUTIN_SOCKS2
+#DIMS CIPTYPE
+#DIMS SKINTYPE
+#DIMS INMONTYPE
+#DIMS CUTIN_PUBES
+#DIMS CUTIN_PUBES_UNDER
+#DIMS BOTTOM_BODYS
+#DIMS CUTIN_MASK_PANST
+#DIMS CUTIN_MASK_BOTTOM
+#DIMS CUTIN_ROTOR
+#DIMS CUTIN_ROTOR_PANST
+#DIMS CUTIN_ROTOR_OVER
+
+NUM_CUTIN = ARG:1
+MEMO_value = 0
+BG_MASK = 
+CUTIN_SKIN = 
+CUTIN_SUNTAN = 
+CUTIN_PIERCE = 
+CUTIN_INMON = 
+CUTIN_PANTIES = 
+CUTIN_PANTIES_OVER = 
+CUTIN_BOTTOM = 
+CUTIN_MASK_BOTTOM = 
+CUTIN_PANST = 
+CUTIN_BODYS = 
+CUTIN_SHIRT = 
+CUTIN_SKIRT = 
+CUTIN_SKIRT_OVER = 
+CUTIN_SKIRT_BACK = 
+CUTIN_SOCKS = 
+CUTIN_SOCKS2 = 
+CUTIN_ROTOR = 
+
+;開放型连褲襪を履いている場合はこっちを使う
+CUTIN_ROTOR_PANST = 
+;裙がある＆掀起裙子状態ならコード部分をこっちに移す
+CUTIN_ROTOR_OVER = 
+
+CUTIN_PUBES = 
+CUTIN_PUBES_UNDER = 
+INMONTYPE = 
+BOTTOM_BODYS = 
+
+;表示位置
+FSIZE = CUTINSIZE()
+FSIZE2 = 3*FSIZE
+FPOS = NUM_CUTIN * FSIZE2 + (NUM_CUTIN >= 1)*50
+
+;これは縮小画像の際に使う
+FPOS_FACE = NUM_CUTIN * NUMC_MAIDFACE()*50
+
+;基本は下半身なので、それ以外の派生はここで処理する
+SELECTCASE ARGS
+CASE "腹部"
+	FSIZE = MAIDFACESIZE()
+	FPOS = NUM_CUTIN * (FSIZE + 30)
+
+	BG = CIP背景粉紅+
+	CUTIN_SKIN = CIP腹%CONDS("CIP肤色", ARG)%%CONDS("お腹の見た目", ARG)%+
+
+	SIF COND("晒痕", ARG)
+		CUTIN_SUNTAN = CIP腹晒痕%CONDS("晒痕下衣", ARG)%%CONDS("お腹の見た目", ARG)%+
+	IF TALENT:ARG:肚脐環
+		SELECTCASE CEVENTS("肚脐環", ARG)
+		CASE "棒型", "♂型", "♀型", "十字架型", "心型"
+			CUTIN_PIERCE = CIP肚脐環%CEVENTS("肚脐環", ARG)%+
+		CASEELSE
+			CUTIN_PIERCE = CIP肚脐環H型+
+		ENDSELECT
+	ENDIF
+	IF TALENT:ARG:恥丘穿環
+		SELECTCASE CEVENTS("恥丘穿環", ARG)
+		CASE "金色", "赤", "緑", "紫", "青"
+			CUTIN_PIERCE += @"CIP恥丘穿環%CEVENTS("恥丘穿環", ARG)%+"
+		CASEELSE
+			CUTIN_PIERCE += @"CIP恥丘穿環+"
+		ENDSELECT
+	ENDIF
+	IF MARK:ARG:淫紋
+		CUTIN_INMON = CIP淫紋%CONDS("淫紋の種類", ARG)%%CONDS("淫紋の色", ARG)%%CONDS("淫紋の段階", ARG)%+
+		SIF CONDS("淫紋の様子", ARG) == "欲求不満" || COND("受精確認フラグ", ARG)
+			CUTIN_INMON += @"CIP淫紋%CONDS("淫紋の種類", ARG)%粉紅1+"
+	ENDIF
+
+	;腹部画像はアップなのでUNDER判定部分を很多にする
+	SELECTCASE COND("陰毛年齢", ARG)
+	CASE 1
+		SELECTCASE CONDS("陰毛", ARG)
+		CASE "剃过留痕", "还没長出来"
+			CUTIN_PUBES_UNDER = CIP腹陰毛%CONDS("陰毛", ARG)%１\[%CONDS("陰毛の色", ARG)%\]+
+		ENDSELECT
+	CASE 2
+		SELECTCASE CONDS("陰毛", ARG)
+		CASE "剃过留痕", "还没長出来", "無髭"
+			CUTIN_PUBES_UNDER = CIP腹陰毛%CONDS("陰毛", ARG)%２\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "自然", "随意生長"
+			CUTIN_PUBES = CIP腹陰毛%CONDS("陰毛", ARG)%２\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "保养完毕"
+			SELECTCASE CEVENTS("陰毛の名称", ARG)
+			CASE "小三角形", "長方形", "心型"
+				CUTIN_PUBES_UNDER = CIP腹陰毛%CEVENTS("陰毛の名称", ARG)%２\[%CONDS("陰毛の色", ARG)%\]+
+			CASEELSE
+				CUTIN_PUBES_UNDER = CIP腹陰毛%CONDS("陰毛", ARG)%２\[%CONDS("陰毛の色", ARG)%\]+
+			ENDSELECT
+			IF COND("还没長出来露出", ARG)
+				CUTIN_PUBES_UNDER = CIP腹陰毛还没長出来２\[%CONDS("陰毛の色", ARG)%\]+%CUTIN_PUBES_UNDER%
+			ELSEIF COND("剃过留痕露出", ARG)
+				CUTIN_PUBES_UNDER = CIP腹陰毛剃过留痕２\[%CONDS("陰毛の色", ARG)%\]+%CUTIN_PUBES_UNDER%
+			ENDIF
+		ENDSELECT
+	CASE IS >= 3
+		SELECTCASE CONDS("陰毛", ARG)
+		CASE "剃过留痕", "还没長出来", "無髭"
+			CUTIN_PUBES_UNDER = CIP腹陰毛%CONDS("陰毛", ARG)%\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "自然", "随意生長"
+			CUTIN_PUBES = CIP腹陰毛%CONDS("陰毛", ARG)%\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "保养完毕"
+			SELECTCASE CEVENTS("陰毛の名称", ARG)
+			CASE "小三角形", "逆三角形", "卵型", "長方形", "四角形", "心型"
+				CUTIN_PUBES_UNDER = CIP腹陰毛%CEVENTS("陰毛の名称", ARG)%\[%CONDS("陰毛の色", ARG)%\]+
+			CASEELSE
+				CUTIN_PUBES_UNDER = CIP腹陰毛%CONDS("陰毛", ARG)%\[%CONDS("陰毛の色", ARG)%\]+
+			ENDSELECT
+			IF COND("还没長出来露出", ARG)
+				CUTIN_PUBES_UNDER = CIP腹陰毛还没長出来\[%CONDS("陰毛の色", ARG)%\]+%CUTIN_PUBES_UNDER%
+			ELSEIF COND("剃过留痕露出", ARG)
+				CUTIN_PUBES_UNDER = CIP腹陰毛剃过留痕\[%CONDS("陰毛の色", ARG)%\]+%CUTIN_PUBES_UNDER%
+			ENDIF
+		ENDSELECT
+	ENDSELECT
+
+	;动画ーションのための記録
+	SAVEINMON_BOTTOM:NUM_CUTIN = %BG%%CUTIN_SKIN%%CUTIN_SUNTAN%
+	SAVEINMON_TOP:NUM_CUTIN = %CUTIN_INMON%%CUTIN_PUBES_UNDER%%CUTIN_PIERCE%%CUTIN_PUBES%
+
+	LOCALS = %BG%%CUTIN_SKIN%%CUTIN_SUNTAN%%CUTIN_INMON%%CUTIN_PUBES_UNDER%%CUTIN_PIERCE%%CUTIN_PUBES%,{FPOS},{FSIZE},{FSIZE},{ARG:2}/
+	RETURNF LOCALS
+CASE "胸部"
+	FPOS = NUM_CUTIN * (FSIZE*3 + 30)
+	BG = CIP背景粉紅+
+	CUTIN_SKIN = CIO兔%CONDS("胸部", ARG)%+
+	LOCALS = %BG%%CUTIN_SKIN%,{FPOS},{FSIZE},{FSIZE*3},{ARG:2}/
+	RETURNF LOCALS
+CASE "受精"
+	BG = CIP背景粉紅+
+	LOCALS = %BG%CIP受精,{0},{FSIZE},{FSIZE*3},{0}/
+	RETURNF LOCALS
+
+CASE "縮小ボタン"
+	;FPOS = FPOS_FACE
+	;横幅を本来のFSIZE2からMAIDFACESIZE()にする
+	;FSIZE2 = MAIDFACESIZE()
+
+	;MEMO_value = CFLAG:ARG:優先順位 + 30
+
+	;BG = CIP背景没有+
+	;LOCALS = %BG%,{FPOS},{FSIZE},{FSIZE2},{ARG:2},{MEMO_value}/
+	RETURNF LOCALS
+ENDSELECT
+
+;背景
+BG = CIP背景粉紅+
+
+;CIPTYPEはこの３種しかない。あとで変更も起きない
+IF STRCOUNT(ARGS, "正面")
+	CIPTYPE = CIP正面
+ELSEIF STRCOUNT(ARGS, "贴身")
+	CIPTYPE = CIP贴身
+ELSE
+	CIPTYPE = CIP背面
+ENDIF
+;肌領帯プの默认を代入しておく。SKINTYPEは胖次形状によりCIPMicroやCIP蕾丝等に変化する
+SKINTYPE = %CIPTYPE%
+
+;胖次描画やそもそも特写が発生するかの格子に使う
+SIF STRCOUNT(ARGS, "見たまま")
+	BOTTOM_BODYS = %BOTTOM(ARG, CIPTYPE)%%BODYS(ARG, CIPTYPE)%
+
+;胖次描写に限定していない場合(=見たまま)で、CIPが表示されない下衣or贴身制服を着ている場合はここで終わり
+SIF EQUIP:ARG:下衣 + EQUIP:ARG:贴身制服 && BOTTOM_BODYS == "" && STRCOUNT(ARGS, "見たまま")
+	RETURNF ""
+
+;ここでCASE ""以外はSTRCOUNT(ARGS, "見たまま")で画像が出る状態
+SELECTCASE BOTTOM_BODYS
+;紧身短褲はここで終わり
+CASE "紧身短褲"
+	SKINTYPE = CIP紧身短褲
+	CUTIN_BOTTOM = CIP%BOTTOM(ARG, SKINTYPE)%%BOTTOM(ARG, @"%CIPTYPE%カラー")%+
+
+	IF COND("CIP縮小中", ARG)
+		FSIZE2 = MAIDFACESIZE()
+		FPOS = NUM_CUTIN * NUMC_MAIDFACE()*50
+		BG = CIP背景粉紅2+
+		BG_MASK = CIP背景口罩+
+		SIF COND("阴蒂ック指令表示中")
+			MEMO_value = CFLAG:ARG:優先順位 + 30
+	ENDIF
+
+	LOCALS = %BG%%CUTIN_BOTTOM%%BG_MASK%,{FPOS},{FSIZE},{FSIZE2},{ARG:2},{MEMO_value}/
+	RETURNF LOCALS
+
+;CIP正面休闲褲系は可能な限り衣领颜色する
+CASE "正面迷你热褲", "正面热褲", "正面牛仔热褲", "正面前開热褲", "正面長褲", "正面前開長褲", "正面開裆皮裤", "正面运动衫休闲褲", "正面五分褲"
+	SELECTCASE PANTIES(ARG, CIPTYPE)
+	CASE ""
+	;CIP淚珠泳衣は専用画像有
+	CASE "淚珠泳衣"
+		;肌の変化が起きるか見る
+		SELECTCASE BOTTOM_BODYS
+		CASE "正面迷你热褲", "正面前開热褲"
+			SKINTYPE = CIP淚珠泳衣
+			CUTIN_BOTTOM = %REPLACE(CUTIN_BOTTOM, "正面", "淚珠泳衣")%
+			CUTIN_PANTIES = CIP%PANTIES(ARG, CIPTYPE)%%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+		CASEELSE
+			SKINTYPE = CIP正面
+			CUTIN_PANTIES = CIP正面紐丁字褲%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+		ENDSELECT
+	CASEELSE
+		IF EQUIP:ARG:胖次
+			CUTIN_PANTIES = CIP%PANTIES(ARG, CIPTYPE)%%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+			SIF PANTIES(ARG, "蝴蝶結") != ""
+				CUTIN_PANTIES += @"CIP正面三角胖次蝴蝶結%PANTIES(ARG, "蝴蝶結")%+"
+
+			;胖次衣领颜色描写の具合を見る
+			SELECTCASE PANTIES(ARG, CIPTYPE)
+			;胖次を無視するもの
+			CASE "贴身前貼", "贴身創口貼", "贴身心形前貼", "贴身Ｃ胖次", "正面襯褲"
+				CUTIN_PANTIES = 
+			;SKINTYPEとCUTIN_PANTIES変更
+			CASE "贴身開放型開洞胖次"
+				SKINTYPE = CIP正面
+				CUTIN_PANTIES = %REPLACE(CUTIN_PANTIES, "贴身", "正面")%
+				CUTIN_PANTIES = CIP正面開放型開洞胖次%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+			CASE "Micro"
+				SKINTYPE = CIP正面
+				CUTIN_PANTIES = CIP正面Micro內褲%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+			ENDSELECT
+
+			;特殊処理
+			IF STRCOUNT(PANTIES(ARG, CIPTYPE), "正面紐")
+				SELECTCASE BOTTOM_BODYS
+				CASE "正面迷你热褲"
+					CUTIN_PANTIES_OVER = CIP正面繩系胖次の紐%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+				ENDSELECT
+			ENDIF
+		ENDIF
+	ENDSELECT
+;连褲襪,网纹裤襪,裤襪の場合には胖次優先（胖次特写がCIP正面でない場合は连褲襪描写を無くして胖次特写に変更）
+CASE "", "正面连褲襪", "正面网纹裤襪", "正面裤襪", "正面開放型连褲襪", "正面開放型网纹裤襪", "正面開放型裤襪"
+	;裙を履いていて、めくっていない場合は裙優先
+	IF CIPTYPE == "CIP正面" && SKIRT(ARG, CIPTYPE) != "" && CFLAG:ARG:掀起裙子 == 0
+		IF EQUIP:ARG:胖次
+			CUTIN_PANTIES = CIP%PANTIES(ARG, CIPTYPE)%%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+			SIF PANTIES(ARG, "蝴蝶結") != ""
+				CUTIN_PANTIES += @"CIP正面三角胖次蝴蝶結%PANTIES(ARG, "蝴蝶結")%+"
+
+			;胖次衣领颜色描写の具合を見る
+			SELECTCASE PANTIES(ARG, CIPTYPE)
+			;胖次を無視するもの
+			CASE "贴身前貼", "贴身創口貼", "贴身心形前貼", "贴身Ｃ胖次", "正面襯褲"
+				CUTIN_PANTIES = 
+			;SKINTYPEとCUTIN_PANTIES変更
+			CASE "淚珠泳衣"
+				SELECTCASE SKIRT(ARG, SKINTYPE)
+				;掀起裙子前のみ
+				CASE "正面荷葉邊", "正面花柄荷葉邊"
+					SKINTYPE = CIP淚珠泳衣
+				CASEELSE
+					SKINTYPE = CIP正面
+					CUTIN_PANTIES = CIP正面Micro內褲%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+				ENDSELECT
+			CASE "贴身開放型開洞胖次"
+				SKINTYPE = CIP正面
+				CUTIN_PANTIES = %REPLACE(CUTIN_PANTIES, "贴身", "正面")%
+			CASE "Micro"
+				SKINTYPE = CIP正面
+				CUTIN_PANTIES = CIP正面Micro內褲%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+			ENDSELECT
+		ENDIF
+	;背面は裙有＆掀起裙子无だと描写没有
+	ELSEIF CIPTYPE == "CIP背面" && SKIRT(ARG, CIPTYPE) != "" && CFLAG:ARG:掀起裙子 == 0
+
+	ELSE
+		;没穿内褲＆ちんこ没有なら贴身描写
+		IF EQUIP:ARG:胖次 == 0
+			IF BOTTOM_BODYS != ""
+
+			ELSEIF SKINTYPE == "CIP背面"
+
+			ELSEIF PENIS(ARG) == 0
+				SKINTYPE = CIP贴身
+			ELSE
+				RETURNF ""
+			ENDIF
+		ELSEIF PANTIES(ARG, CIPTYPE) != ""
+			CUTIN_PANTIES = CIP%PANTIES(ARG, CIPTYPE)%%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+
+			SIF PANTIES(ARG, "蝴蝶結") != ""
+				CUTIN_PANTIES += @"CIP正面三角胖次蝴蝶結%PANTIES(ARG, "蝴蝶結")%+"
+
+			;肌の変化が起きるか見る
+			SELECTCASE PANTIES(ARG, CIPTYPE)
+			CASE "淚珠泳衣", "Micro", "蕾丝", "縞胖次", "儿童胖次", "背面Ｔ字褲", "背面紐Ｔ字褲", "背面Micro"
+				SKINTYPE = CIP%PANTIES(ARG, CIPTYPE)%
+			CASEELSE
+				SIF STRCOUNT(PANTIES(ARG, CIPTYPE), "贴身")
+					SKINTYPE = CIP贴身
+			ENDSELECT
+		ELSEIF CIPTYPE == "CIP贴身"
+
+		ELSE
+			RETURNF ""
+		ENDIF
+	ENDIF
+ENDSELECT
+
+;表示するボディ領帯プの決定＆淫紋表示
+SELECTCASE SKINTYPE
+CASE ""
+CASE "CIP背面", "CIP背面Micro"
+	SKINTYPE = CIP背面
+	CUTIN_SKIN = CIP背面%CONDS("CIP肤色", ARG)%+
+CASE "CIP縞胖次", "CIP儿童胖次", "CIP背面紐Ｔ字褲", "CIP背面Ｔ字褲"
+	CUTIN_SKIN = %SKINTYPE%%CONDS("CIP肤色", ARG)%+
+CASE "CIP贴身"
+	;ちんこあったら不顯示
+	SIF PENIS(ARG)
+		RETURNF ""
+
+	CUTIN_SKIN = %SKINTYPE%%CONDS("CIP肤色", ARG)%+
+	INMONTYPE = 贴身
+	;没穿内褲かつCIP正面での裙や短襪画像がある場合にはSKINTYPEをCIP正面に変更する
+	IF CIPTYPE == "CIP正面" && STRCOUNT(ARGS, "見たまま") && COND("阴蒂ック指令表示中") == 0 && PANTIES(ARG, "CIP正面") == ""
+		IF SKIRT(ARG, "CIP正面") != "" || SOCKS(ARG, "CIP正面") != "" || BOTTOM(ARG, "CIP正面") != ""
+			SKINTYPE = CIP正面
+			CUTIN_SKIN = %SKINTYPE%%CONDS("CIP肤色", ARG)%+
+			INMONTYPE = 正面
+		ENDIF
+	ENDIF
+CASE "CIP正面"
+	CUTIN_SKIN = %SKINTYPE%%CONDS("CIP肤色", ARG)%+
+	INMONTYPE = 正面
+CASE "CIPMicro"
+	;裙あったらCIP正面に変更
+	IF CUTIN_SKIRT != ""
+		SKINTYPE = CIP正面
+		CUTIN_SKIN = %SKINTYPE%%CONDS("CIP肤色", ARG)%+
+		INMONTYPE = 正面
+		CUTIN_PANTIES = CIP正面Micro內褲%PANTIES(ARG, @"%CIPTYPE%カラー")%+
+	ELSE
+		CUTIN_SKIN = %SKINTYPE%%CONDS("CIP肤色", ARG)%+
+		INMONTYPE = %PANTIES(ARG, CIPTYPE)%
+	ENDIF
+CASEELSE
+	CUTIN_SKIN = %SKINTYPE%%CONDS("CIP肤色", ARG)%+
+	INMONTYPE = %PANTIES(ARG, CIPTYPE)%
+ENDSELECT
+
+;晒痕
+IF COND("晒痕", ARG)
+	SELECTCASE SKINTYPE
+	CASE "CIP正面", "CIP贴身", "CIPMicro", "CIP背面", "CIP背面紐Ｔ字褲", "CIP背面Ｔ字褲"
+		CUTIN_SUNTAN = %SKINTYPE%晒痕%CONDS("晒痕下衣", ARG)%+
+	CASE "CIP淚珠泳衣", "CIP蕾丝", "CIP儿童胖次", "CIP縞胖次"
+		CUTIN_SUNTAN = %SKINTYPE%晒痕+
+	ENDSELECT
+ENDIF
+
+;SKINTYPEが本決定したので画像を合わせる
+;ARGSが見たままでないならSKIRT～BODYSまでは没有
+IF STRCOUNT(ARGS, "見たまま")
+	;裙
+ 	IF SKIRT(ARG, SKINTYPE) != ""
+		IF CFLAG:ARG:掀起裙子
+			CUTIN_SKIRT = CIP%SKIRT(ARG, SKINTYPE)%%SKIRT(ARG, @"%CIPTYPE%カラー")%捲り+
+			CUTIN_SKIRT_OVER = CIP%SKIRT(ARG, SKINTYPE)%%SKIRT(ARG, @"%CIPTYPE%カラー")%捲り前面+
+		ELSE
+			CUTIN_SKIRT = CIP%SKIRT(ARG, SKINTYPE)%%SKIRT(ARG, @"%CIPTYPE%カラー")%+
+		ENDIF
+		CUTIN_SKIRT_BACK = CIP%SKIRT(ARG, SKINTYPE)%%SKIRT(ARG, @"%CIPTYPE%カラー")%背面+
+	ENDIF
+
+	;外衣
+	SIF SHIRT(ARG, SKINTYPE) != ""
+		CUTIN_SHIRT = CIP%SHIRT(ARG, SKINTYPE)%%SHIRT(ARG, @"%CIPTYPE%カラー")%+
+	SIF SHIRT(ARG, @"%SKINTYPE%衣领颜色") != ""
+		CUTIN_SHIRT += @"CIP%SHIRT(ARG, @"%SKINTYPE%衣领颜色")%%CLOCOLOR_MAIDFACE(SHIRT(ARG, @"%SKINTYPE%衣领颜色"), CHECK_CLOCOLOR(OTHER(ARG, "外套") ), ARG)%+"
+	SIF CFLAG:ARG:掀起裙子 && CUTIN_SKIRT != ""
+		CUTIN_SHIRT = %REPLACE(CUTIN_SHIRT, "\\+", "捲り+")%
+
+	;休闲褲や连褲襪
+	IF CHECK_BOTTOM("连褲襪", ARG) || CHECK_BOTTOM("裤襪", ARG)
+		CUTIN_PANST = CIP%BOTTOM(ARG, SKINTYPE)%%BOTTOM(ARG, @"%CIPTYPE%カラー")%+
+	ELSEIF BOTTOM(ARG, SKINTYPE) != ""
+		CUTIN_BOTTOM = CIP%BOTTOM(ARG, SKINTYPE)%%BOTTOM(ARG, @"%CIPTYPE%カラー")%+
+	ENDIF
+
+	SIF SOCKS(ARG, SKINTYPE) != ""
+		CUTIN_SOCKS = CIP%SOCKS(ARG, SKINTYPE)%%SOCKS(ARG, @"%CIPTYPE%カラー")%+
+	SIF BODYS(ARG, SKINTYPE) != ""
+		CUTIN_BODYS = CIP%BODYS(ARG, SKINTYPE)%%BODYS(ARG, @"%CIPTYPE%カラー")%+
+ENDIF
+
+
+;跳蛋や創口貼など。跳蛋の条件もっと緩くしたい
+SIF CFLAG:ARG:電源BOX
+	CUTIN_ROTOR = CIP跳蛋+
+
+SELECTCASE SKINTYPE
+CASE "CIP正面"
+	IF CUTIN_ROTOR != ""
+		IF BOTTOM(ARG, SKINTYPE) == "正面迷你热褲" || PANTIES(ARG, CIPTYPE) == "正面四角内褲"
+			CUTIN_ROTOR = CIP正面短褲跳蛋BOX+CIP正面短褲跳蛋コード+
+		ELSEIF CUTIN_BODYS != ""
+			IF CHECK_BODYS("休闲褲型", ARG)
+				CUTIN_ROTOR = CIP正面短褲跳蛋BOX+CIP正面短褲跳蛋コード+
+			ELSE
+				CUTIN_ROTOR = CIP正面贴身制服跳蛋BOX+CIP正面贴身制服跳蛋コード+
+			ENDIF
+		ELSE
+			CUTIN_ROTOR = CIP正面跳蛋BOX+
+
+			SELECTCASE PANTIES(ARG, CIPTYPE)
+			CASE "正面胖次下拉半遮"
+				CUTIN_ROTOR += "CIP正面跳蛋コード+"
+			CASEELSE
+				;裙がある？
+				IF CUTIN_SKIRT != ""
+					SIF CFLAG:ARG:掀起裙子 || CHECK_SKIRT("Micro", ARG)
+						CUTIN_ROTOR_OVER = CIP正面跳蛋コード+
+				ELSE
+					CUTIN_ROTOR_OVER = CIP正面跳蛋コード+
+				ENDIF
+			ENDSELECT
+		ENDIF
+	ENDIF
+	IF CUTIN_BOTTOM != ""
+		CUTIN_MASK_BOTTOM = CIP正面口罩+
+	ELSEIF CUTIN_PANST != ""
+		IF STRCOUNT(CUTIN_PANST, "開放型")
+			CUTIN_MASK_PANST = CIP正面口罩外側+
+		ELSE
+			CUTIN_MASK_PANST = CIP正面口罩+
+		ENDIF
+	ELSEIF CUTIN_SKIRT != ""
+		CUTIN_MASK_BOTTOM = CIP正面口罩外側+
+	ENDIF
+	;CIP正面以外のすべての胖次を消す
+	SIF STRCOUNT(CUTIN_PANTIES, SKINTYPE) == 0
+		CUTIN_PANTIES = 
+
+CASEELSE
+	SELECTCASE SKINTYPE
+	CASE "CIP正面"
+		SIF CFLAG:ARG:創口貼装着
+			CUTIN_PANTIES = CIP正面創口貼+%CUTIN_PANTIES%
+	CASE "CIP背面"
+
+	CASE "CIP淚珠泳衣"
+		SELECTCASE SKIRT(ARG, SKINTYPE)
+		CASE "淚珠泳衣荷葉邊", "淚珠泳衣花柄荷葉邊"
+			SIF CFLAG:ARG:掀起裙子 == 0
+				CUTIN_SKIRT = CIP%SKIRT(ARG, SKINTYPE)%%SKIRT(ARG, @"%CIPTYPE%カラー")%+
+		CASEELSE
+			CUTIN_SKIRT = 
+		ENDSELECT
+	CASE "CIP贴身"
+		SIF CFLAG:ARG:創口貼装着
+			CUTIN_PANTIES = CIP贴身創口貼+%CUTIN_PANTIES%
+		SIF CUTIN_ROTOR != ""
+			CUTIN_ROTOR = CIP贴身跳蛋+
+	ENDSELECT
+	;CIP正面以外は指定画像の名称に SKINTYPE が含まれていないものすべてを消す
+	SIF STRCOUNT(CUTIN_PANST, SKINTYPE) == 0
+		CUTIN_PANST = 
+	SIF STRCOUNT(CUTIN_BOTTOM, SKINTYPE) == 0
+		CUTIN_BOTTOM = 
+	SIF STRCOUNT(CUTIN_BODYS, SKINTYPE) == 0
+		CUTIN_BODYS = 
+	SIF STRCOUNT(CUTIN_SHIRT, SKINTYPE) == 0
+		CUTIN_SHIRT = 
+	SIF STRCOUNT(CUTIN_SKIRT, SKINTYPE) == 0
+		CUTIN_SKIRT = 
+	SIF STRCOUNT(CUTIN_SOCKS, SKINTYPE) == 0
+		CUTIN_SOCKS = 
+	SIF STRCOUNT(CUTIN_ROTOR, SKINTYPE) == 0
+		CUTIN_ROTOR = 
+ENDSELECT
+
+
+;吊帯系は胖次によって上下を変える。默认は胖次の下
+IF CUTIN_PANTIES != ""
+	SELECTCASE PANTIES(ARG, CIPTYPE)
+	CASE "正面高開衩", "正面低腰", "正面超低腰", "正面四角内褲", "正面叶子胖次", "正面Micro內褲", "正面開放型開洞胖次", "贴身開放型開洞胖次"
+		SWAP CUTIN_SOCKS, CUTIN_SOCKS2
+	ENDSELECT
+ENDIF
+
+;穿環の表示は贴身、正面の場合に恥丘穿環のみ対応
+IF TALENT:ARG:恥丘穿環
+	SELECTCASE SKINTYPE
+	CASE "CIP贴身", "CIP正面"
+		SELECTCASE CEVENTS("恥丘穿環", ARG)
+		CASE "金色", "赤", "緑", "紫", "青"
+			CUTIN_PIERCE = %SKINTYPE%恥丘穿環%CEVENTS("恥丘穿環", ARG)%+
+		CASEELSE
+			CUTIN_PIERCE = %SKINTYPE%恥丘穿環+
+		ENDSELECT
+	ENDSELECT
+ENDIF
+
+;淫紋の表示については、現在贴身のみ全パターン対応＆他は基本淫紋のみ
+IF MARK:ARG:淫紋
+	SELECTCASE INMONTYPE
+	CASE ""
+	CASE "贴身"
+		CUTIN_INMON = CIP淫紋%INMONTYPE%%CONDS("淫紋の種類", ARG)%%CONDS("淫紋の色", ARG)%%CONDS("淫紋の段階", ARG)%+
+		SIF CONDS("淫紋の様子", ARG) == "欲求不満"
+			CUTIN_INMON += @"CIP淫紋%INMONTYPE%%CONDS("淫紋の種類", ARG)%粉紅1+"
+	CASEELSE
+		SELECTCASE CONDS("淫紋の種類", ARG)
+		CASE "基本"
+			CUTIN_INMON = CIP淫紋%INMONTYPE%%CONDS("淫紋の色", ARG)%%CONDS("淫紋の段階", ARG)%+
+			SIF CONDS("淫紋の様子", ARG) == "欲求不満"
+				CUTIN_INMON += @"CIP淫紋%INMONTYPE%粉紅1+"
+		CASEELSE
+			CUTIN_INMON = CIP淫紋%INMONTYPE%%CONDS("淫紋の色", ARG)%%CONDS("淫紋の段階", ARG)%+
+			SIF CONDS("淫紋の様子", ARG) == "欲求不満"
+				CUTIN_INMON += @"CIP淫紋%INMONTYPE%粉紅1+"
+		ENDSELECT
+	ENDSELECT
+ENDIF
+
+SELECTCASE SKINTYPE
+CASE "CIP正面", "CIP贴身", "CIPMicro", "CIP蕾丝", "CIP淚珠泳衣"
+	SELECTCASE COND("陰毛年齢", ARG)
+	CASE 1
+		SELECTCASE CONDS("陰毛", ARG)
+		CASE "剃过留痕"
+			CUTIN_PUBES_UNDER = %SKINTYPE%陰毛%CONDS("陰毛", ARG)%１\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "还没長出来"
+			CUTIN_PUBES = %SKINTYPE%陰毛%CONDS("陰毛", ARG)%１\[%CONDS("陰毛の色", ARG)%\]+
+		ENDSELECT
+	CASE 2
+		SELECTCASE CONDS("陰毛", ARG)
+		CASE "剃过留痕", "还没長出来", "無髭"
+			CUTIN_PUBES_UNDER = %SKINTYPE%陰毛%CONDS("陰毛", ARG)%２\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "自然", "随意生長"
+			CUTIN_PUBES = %SKINTYPE%陰毛%CONDS("陰毛", ARG)%２\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "保养完毕"
+			SELECTCASE CEVENTS("陰毛の名称", ARG)
+			CASE "小三角形", "長方形", "心型"
+				CUTIN_PUBES = %SKINTYPE%陰毛%CEVENTS("陰毛の名称", ARG)%２\[%CONDS("陰毛の色", ARG)%\]+
+			CASEELSE
+				CUTIN_PUBES = %SKINTYPE%陰毛%CONDS("陰毛", ARG)%２\[%CONDS("陰毛の色", ARG)%\]+
+			ENDSELECT
+			IF COND("还没長出来露出", ARG)
+				CUTIN_PUBES_UNDER = %SKINTYPE%陰毛还没長出来２\[%CONDS("陰毛の色", ARG)%\]+
+			ELSEIF COND("剃过留痕露出", ARG)
+				CUTIN_PUBES_UNDER = %SKINTYPE%陰毛剃过留痕２\[%CONDS("陰毛の色", ARG)%\]+
+			ENDIF
+		ENDSELECT
+	CASE IS >= 3
+		SELECTCASE CONDS("陰毛", ARG)
+		CASE "剃过留痕", "还没長出来", "無髭"
+			CUTIN_PUBES_UNDER = %SKINTYPE%陰毛%CONDS("陰毛", ARG)%\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "自然", "随意生長"
+			CUTIN_PUBES = %SKINTYPE%陰毛%CONDS("陰毛", ARG)%\[%CONDS("陰毛の色", ARG)%\]+
+		CASE "保养完毕"
+			SELECTCASE CEVENTS("陰毛の名称", ARG)
+			CASE "小三角形", "逆三角形", "卵型", "長方形", "四角形", "心型"
+				CUTIN_PUBES = %SKINTYPE%陰毛%CEVENTS("陰毛の名称", ARG)%\[%CONDS("陰毛の色", ARG)%\]+
+			CASEELSE
+				CUTIN_PUBES = %SKINTYPE%陰毛%CONDS("陰毛", ARG)%\[%CONDS("陰毛の色", ARG)%\]+
+			ENDSELECT
+			IF COND("还没長出来露出", ARG)
+				CUTIN_PUBES_UNDER = %SKINTYPE%陰毛还没長出来\[%CONDS("陰毛の色", ARG)%\]+
+			ELSEIF COND("剃过留痕露出", ARG)
+				CUTIN_PUBES_UNDER = %SKINTYPE%陰毛剃过留痕\[%CONDS("陰毛の色", ARG)%\]+
+			ENDIF
+		ENDSELECT
+	ENDSELECT
+ENDSELECT
+
+IF CUTIN_SKIRT == ""
+	CUTIN_SKIRT_OVER = 
+	CUTIN_SKIRT_BACK = 
+ENDIF
+IF CUTIN_BOTTOM == "" && CUTIN_SKIRT == ""
+	CUTIN_MASK_BOTTOM = 
+ELSE
+	SELECTCASE BOTTOM(ARG, SKINTYPE)
+	CASE ""
+	CASE "正面迷你热褲", "正面布鲁马"
+	;股間の隙間部分を覆っている休闲褲なら跳蛋コード部分は消す
+	CASEELSE
+		SIF STRCOUNT(CUTIN_PANST, "開放型") == 0
+			CUTIN_ROTOR_OVER = 
+	ENDSELECT
+ENDIF
+IF CUTIN_PANST == ""
+	CUTIN_MASK_PANST = 
+ELSE
+	IF STRCOUNT(CUTIN_PANST, "開放型")
+		SWAP CUTIN_ROTOR, CUTIN_ROTOR_PANST
+	ELSE
+		CUTIN_ROTOR = 
+	ENDIF
+ENDIF
+SIF CUTIN_ROTOR == "" && CUTIN_ROTOR_PANST == ""
+	CUTIN_ROTOR_OVER = 
+SIF CUTIN_PANTIES == ""
+	CUTIN_PANTIES_OVER = 
+
+IF COND("CIP縮小中", ARG)
+	FSIZE2 = MAIDFACESIZE()
+	FPOS = NUM_CUTIN * NUMC_MAIDFACE()*50
+	BG = CIP背景粉紅2+
+	BG_MASK = CIP背景口罩+
+	SIF COND("阴蒂ック指令表示中")
+		MEMO_value = CFLAG:ARG:優先順位 + 30
+
+	;各画像の縮小版を使う
+	CUTIN_MASK_BOTTOM = %REPLACE(CUTIN_MASK_BOTTOM, "\\+", "縮小+")%
+	CUTIN_MASK_PANST = %REPLACE(CUTIN_MASK_PANST, "\\+", "縮小+")%
+
+	CUTIN_SKIRT = %REPLACE(CUTIN_SKIRT, "\\+", "縮小+")%
+	CUTIN_SKIRT_OVER = %REPLACE(CUTIN_SKIRT_OVER, "\\+", "縮小+")%
+ENDIF
+
+;これは再現文字列の書式になっている
+LOCALS = %BG%%CUTIN_SKIRT_BACK%%CUTIN_SKIN%%CUTIN_SUNTAN%%CUTIN_INMON%%CUTIN_PUBES_UNDER%%CUTIN_PIERCE%%CUTIN_PUBES%%CUTIN_SOCKS%%CUTIN_ROTOR%%CUTIN_PANTIES%%CUTIN_MASK_PANST%%CUTIN_PANST%%CUTIN_ROTOR_PANST%%CUTIN_SOCKS2%%CUTIN_BODYS%%CUTIN_MASK_BOTTOM%%CUTIN_BOTTOM%%CUTIN_PANTIES_OVER%%CUTIN_SKIRT%%CUTIN_SHIRT%%CUTIN_ROTOR_OVER%%CUTIN_SKIRT_OVER%%BG_MASK%,{FPOS},{FSIZE},{FSIZE2},{ARG:2},{MEMO_value}/
+
+RETURNF LOCALS

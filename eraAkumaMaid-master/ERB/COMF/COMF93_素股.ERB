@@ -1,0 +1,221 @@
+﻿@COM93
+;素股
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+CALL SHOW_COM_ORDER_COM, 93
+
+;実行できない
+SIF TCVAR:干劲 == 0
+	RETURN 0
+;-------------------------------------------------
+;実行決定
+;-------------------------------------------------
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+;-------------------------------------------------
+;射精格子
+;-------------------------------------------------
+CALL SAMEN_CHECK
+
+RETURN 1
+
+@FLAG_COM93, ARG
+IF CHECK_COM("展示肉棒")
+	CALL SETFLAG, "展示肉棒フラグ", TARGET
+ELSE
+	;対象のＶ⇔調教者のＰ的污垢が移動
+	SIF CHECK_CLO("Ｖ露出")
+		CALL EQ_STAIN, TARGET, "Ｖ", PLAYER, "Ｐ"
+ENDIF
+SIF ASSIPLAY == 0
+	TFLAG:好感度BOUNS += 1
+
+@SOURCE_COM93, ARG
+CALL VARSET_COMF
+
+SOURCE:0:欲情追加 = CALCF("実行値による欲情追加")
+SOURCE:0:屈従 = 1200
+SOURCE:0:逸脱 = 50
+
+IF CHECK_COM("展示肉棒") == 0
+	CALL SOURCE_SERVICE_PLAY, "素股"
+
+	CALL SOURCE_DOWNBASE_HP, 93
+
+	SOURCE:0:不潔 = COM_ORDER_STAIN("Ｐ", "Ｖ")*50 + 60
+
+	;ABL:Ｃ感覚をみる
+	SOURCE:0:Ｃ快楽 = CALCF("Ｃ刺激", 2)
+	;阴茎への刺激にはBOUNS
+	SIF PENIS(TARGET)
+		SOURCE:0:Ｃ快楽 += 500
+
+	;PALAM:Ｖ潤
+	SELECTCASE PALAM:Ｖ潤
+	CASE IS < PALAMLV:1
+		TIMES SOURCE:0:Ｃ快楽, 0.10
+		TIMES SOURCE:0:性行動, 0.60
+	CASE IS < PALAMLV:2
+		TIMES SOURCE:0:Ｃ快楽, 0.30
+		TIMES SOURCE:0:性行動, 0.80
+	CASE IS < PALAMLV:3
+		TIMES SOURCE:0:Ｃ快楽, 0.50
+		TIMES SOURCE:0:性行動, 1.00
+	CASE IS < PALAMLV:4
+		TIMES SOURCE:0:性行動, 1.20
+	CASE IS < PALAMLV:5
+		TIMES SOURCE:0:Ｃ快楽, 0.90
+		TIMES SOURCE:0:性行動, 1.40
+	CASEELSE
+		TIMES SOURCE:0:Ｃ快楽, 0.80
+		TIMES SOURCE:0:性行動, 1.60
+	ENDSELECT
+
+	;阴部が露出していないと快Ｃ減
+	IF CHECK_CLO("Ｖ露出") == 0 && COND("調教中")
+		;休闲褲等を是ていると快Ｃ激減
+		IF CHECK_BOTTOM("休闲褲") || CHECK_PANTIES("皮革")
+			TIMES SOURCE:0:Ｃ快楽, 0.20
+			TIMES SOURCE:0:露出, 0.20
+		ELSE
+			TIMES SOURCE:0:Ｃ快楽, 0.60
+			TIMES SOURCE:0:露出, 0.50
+		ENDIF
+	ENDIF
+ENDIF
+
+CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM93
+;ちんこの尺寸は２以上
+IF CHECK_COM("展示肉棒")
+	PRINTFORMW %CALLNAME:PLAYER%挺起腰肢将%TEXTS("巨根：視覚", PLAYER)%向%CALLNAME:TARGET%展示着。
+	IF ABL:欲望 < 3 || EXP:Ｖ性交経験 + EXP:Ａ性交経験 + EXP:尿道性交経験 == 0
+		PRINTFORMW %CALLNAME:TARGET%在%CALLNAME:PLAYER%將陰莖壓上的時候、眼神一直沒能離開……
+	ELSE
+		PRINTFORM %CALLNAME:TARGET%將%CALLNAME:PLAYER%的陰莖%TEXTR("用腰肢輕輕摩擦著/放在腹部感受著")%、
+		PRINTFORMW %TEXTR("因這雄偉而神往著/臉紅地想像著接下來的/確認著其中的灼熱/忍耐著愈加旺盛的慾望")%……
+	ENDIF
+ELSEIF CHECK_COM("Ｗ奉仕")
+	IF SELECTCOM:1 == PREVCOM:1 && SELECTCOM == PREVCOM
+		PRINTFORM 兩人
+		IF TALENT:(TARGET:1):淫乱 + TALENT:(TARGET:1):恋慕 && TALENT:淫乱 + TALENT:恋慕 && RAND:3 == 0
+			PRINT 神情恍惚、眼神濕潤的對視著的同時
+		ELSEIF RAND:2 == 0
+			PRINT 如同完全沉浸於快感一樣無意識的漏出涎水的同時
+		ENDIF
+		PRINTFORMW 將%CALLNAME:MASTER%的陰莖用股間貼緊摩擦著、持續地給予並索取著快樂……
+	ELSE
+		PRINTFORM %CALLNAME:TARGET%和%CALLNAME:(TARGET:1)%
+		SIF TALENT:(TARGET:1):淫乱 + TALENT:(TARGET:1):恋慕 + TALENT:淫乱 + TALENT:恋慕 && RAND:2 == 0
+			PRINTFORM 在用充滿慾望與依戀的雙瞳凝視著%CALLNAME:MASTER%赤裸身體的同時、
+		PRINTFORMW 互相协力用\@ PENIS(TARGET) + PENIS(TARGET:1) == 0 ? 阴部 # 股間 \@将阴茎夹紧…
+	ENDIF
+ELSE
+	IF TEQUIP:接吻
+		PRINTFORM %CALLNAME:TARGET%將%CALLNAME:PLAYER%%TEXTS("接吻継続助詞付き")%將阴茎用
+		CALL SETFLAG, "追加接吻フラグ", TARGET
+	ELSE
+		PRINTFORM %CALLNAME:TARGET%將阴茎用
+	ENDIF
+	IF PREVCOM == SELECTCOM && PREVPLAY("展示肉棒") == 0
+		PRINTFORMW 柔軟的股間夾住、持續摩擦著……
+	ELSE
+		;阴部剥き出し
+		IF CHECK_CLO("Ｖ露出") && TALENT:男性 == 0
+			IF RAND:2
+				PRINT 豐腴而柔軟的
+			ELSEIF COND("陰毛") >= 6
+				PRINT 濡濕的陰毛糾纏在一起的
+			ELSEIF COND("陰毛") == 5
+				;PRINT 綺麗に剃り整えられた
+				PRINT 十分柔軟的
+			;ELSEIF COND("陰毛") == 4
+			;	PRINT 还没長出来の
+			ELSEIF COND("陰毛") && COND("陰毛") <= 3
+				PRINT 剝殼雞蛋一樣光潔的
+			ENDIF
+		ENDIF
+		PRINTFORM 胯股之间夾住、
+		SIF ABL:腰靈活 >= 3
+			PRINT 腰肢淫靡的擺動著
+		IF CHOSECOM(SELECTCOM) == 0 && PENIS(PLAYER) && SIZE("阴茎", PLAYER) >= 2
+			PRINTFORMW 開始摩擦。
+			PRINTFORM %CALLNAME:TARGET%在侍奉的間歇將%CALLNAME:PLAYER%的陰莖用自己的腹部貼緊、
+			IF CHOSECOMS("挿入")
+				PRINTFORMW 丈量著體內進入了多少……
+			ELSE
+				PRINTFORMW 丈量著會抵達哪裡……
+			ENDIF
+		ELSE
+			PRINTFORMW 摩擦起來…
+		ENDIF
+	ENDIF
+ENDIF
+
+@COM_ORDER_COM93, ARG
+VARSET LOCAL
+LOCALS = 
+
+;すべての命令に共通の要素を考慮
+;(信頼が高いと命令に従いやすいなど)
+CALL COM_ORDER, ARG
+
+LOCAL = RESULT
+
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	LOCAL += MIN(ABL:奉仕精神, 10) * 2
+	LOCALS = %LOCALS% + 奉仕精神LV{ABL:奉仕精神}({MIN(ABL:奉仕精神, 10) * 2})
+ENDIF
+;ABL:精液中毒
+IF ABL:精液中毒
+	LOCAL += MIN(ABL:精液中毒, 5) * 3
+	LOCALS = %LOCALS% + 精液中毒LV{ABL:精液中毒}({MIN(ABL:精液中毒, 5) * 3})
+ENDIF
+
+;害羞
+IF TALENT:害羞
+	LOCAL -= 3
+	LOCALS = %LOCALS% - 害羞(3)
+ENDIF
+;否定快感
+IF TALENT:否定快感
+	LOCAL -= 1
+	LOCALS = %LOCALS% - 否定快感(1)
+ENDIF
+
+;媚薬
+IF TEQUIP:媚薬
+	LOCAL += 6
+	LOCALS = %LOCALS% + 媚薬(6)
+ENDIF
+
+;汚れ有
+IF COM_ORDER_STAIN("Ｐ", "Ｖ")/3
+	LOCAL -= COM_ORDER_STAIN("Ｐ", "Ｖ")/3
+	LOCALS = %LOCALS% - 汚れ有
+	;汚臭鈍感
+	SIF TALENT:汚臭鈍感 || TALENT:汚臭敏感
+		LOCALS = %LOCALS%、\@TALENT:汚臭鈍感 ? 汚臭鈍感 # 汚臭敏感\@
+	SIF COND("陶酔")
+		LOCALS = %LOCALS%、陶酔で半減
+	LOCALS = %LOCALS%({COM_ORDER_STAIN("Ｐ", "Ｖ")/3})
+ENDIF
+
+;合計を表示(20以上で実行)
+IF CHECK_COM("展示肉棒", 93)
+	CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 5
+ELSE
+	CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 20
+ENDIF
+
+RETURN RESULT

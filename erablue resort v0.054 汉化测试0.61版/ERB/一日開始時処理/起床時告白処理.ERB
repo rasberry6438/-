@@ -1,0 +1,106 @@
+﻿
+
+
+@起床時告白キャラ判定()
+#FUNCTION
+#DIM キャラ番号
+#DIM 候補配列, 2000
+#DIM 候補数
+
+;まずオプション
+IF OPTION変数:起床時告白禁止
+	RETURNF 0
+;自室にいなかったらダメ
+ELSEIF CFLAG:MASTER:自室位置 != CFLAG:MASTER:現在位置 || CFLAG:MASTER:現在マップ種別
+	RETURNF 0
+ENDIF
+
+候補数 = 0
+;恋慕候補で恋慕条件を満たしてるが恋慕でないキャラを探す
+FOR キャラ番号, 1, CHARANUM
+	SIF CFLAG:キャラ番号:滞在期間 < 1
+		CONTINUE
+	SIF CFLAG:キャラ番号:ゲージ起動分類 != 1
+		CONTINUE
+	SIF TALENT:キャラ番号:恋慕
+		CONTINUE
+	SIF DT_SELECT("関係性データベース", @"(対象キャラ１ = {CFLAG:キャラ番号:人物番号} Or 対象キャラ２ = {CFLAG:キャラ番号:人物番号}) And 関係性種別 = '恋慕'")
+		CONTINUE
+	;本来恋慕50が告白条件だが、あっちから言ってくるのは勇気がいるので70制限
+	SIF CFLAG:キャラ番号:恋慕レベル <= 70
+		CONTINUE
+	SIF GETBIT(TALENT:キャラ番号:陥落不可, 0)
+		CONTINUE
+	SIF 恋愛対象外チェック(キャラ番号, MASTER)
+		CONTINUE
+	;人妻系はあっちからは来ない
+	SIF TALENT:キャラ番号:恋人持ち
+		CONTINUE
+	;一回したらもう来ない
+	SIF CFLAG:キャラ番号:起床時告白済み
+		CONTINUE
+	候補配列:候補数 = キャラ番号
+	候補数 ++
+NEXT
+
+IF 候補数 > 0
+	RETURNF 候補配列:(RAND:候補数)
+ELSE
+	RETURNF 0
+ENDIF
+
+
+@起床時告白処理(告白キャラ)
+#DIM 告白キャラ
+DRAWLINE
+;あっちから告白してくる処理
+
+;口上があるならそっちを表示
+TRYCCALLFORM KOJO_EVENT_起床時告白_開始時_{NO:告白キャラ}(告白キャラ)
+CATCH
+	;汎用告白処理
+	PRINTFORMW %CALLNAME:MASTER%晨间准备时，房间里来了一位访客
+	PRINTFORMW 迎接前来的%CALLNAME:告白キャラ%并奉茶款待，似乎有重要事宜相谈
+	PRINTL
+	PRINTFORMW %CALLNAME:告白キャラ%面泛红潮略显踌躇，向%CALLNAME:MASTER%倾诉爱慕之情。
+	PRINTFORMW 因渴望成为恋人，特意前来%CALLNAME:MASTER%房间告白
+ENDCATCH
+
+PRINTFORML 面对%CALLNAME:告白キャラ%的心意，%CALLNAME:MASTER%……
+PRINTBUTTONLC "[0] 回应心意", 0
+PRINTBUTTONLC "[1] 请求考虑时间", 1
+PRINTL
+
+BINPUT
+IF RESULT == 0
+	TARGET = 告白キャラ
+	TRYCCALLFORM KOJO_EVENT_起床時告白_成功_{NO:TARGET}(TARGET)
+	CATCH
+		PRINTFORMW 当%CALLNAME:MASTER%给予肯定答复，%CALLNAME%露出笑容欣喜不已。
+	ENDCATCH
+	SETCOLOR カラーパレット("えっちな色")
+	PRINTFORMW %CALLNAME%获得［爱慕］特质。
+	RESETCOLOR
+	TALENT:恋慕 = 1
+	CFLAG:現在位置 = CFLAG:MASTER:現在位置
+	CFLAG:現在マップ種別 = CFLAG:MASTER:現在マップ種別
+	CFLAG:睡眠 = 0
+	SIF BASE:酩酊
+		CFLAG:酔いすぎ = 2
+	;野外オナニー時に備えて隠密を消す
+	CALL 野外オナニー途中終了(TARGET)
+	CFLAG:隠密 = 0
+	;先に同室フラグを建てることで発覚口上をスキップする
+	CFLAG:同室 = 1
+	CALL 特定キャラモードリセット(TARGET)
+	CFLAG:同行 = 60 + (CFLAG:好感度レベル - 関係閾値:2) * 5
+	BASE:ムード = MAXBASE:ムード
+
+ELSE
+	TRYCCALLFORM KOJO_EVENT_起床時告白_保留_{NO:告白キャラ}(告白キャラ)
+	CATCH
+		PRINTFORMW %CALLNAME:MASTER%回答说需要时间考虑，%CALLNAME:告白キャラ%表示会耐心等待答复后离去……
+	ENDCATCH
+	CFLAG:告白キャラ:起床時告白済み = 1
+ENDIF
+

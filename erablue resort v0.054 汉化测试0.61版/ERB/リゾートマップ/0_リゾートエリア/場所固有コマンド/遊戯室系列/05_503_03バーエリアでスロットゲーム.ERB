@@ -1,0 +1,113 @@
+﻿
+;-------------------------------------------------
+;遊戯室でスロットゲーム
+;-------------------------------------------------
+
+@COMNAME_PLACE_382_0_503
+#FUNCTION
+TSTR:コマンド名受渡 = 老虎机游戏
+IF 施設改造度:5:0 == 0
+	TSTR:コマンド名受渡 = 
+	RETURNF 0
+ENDIF
+RETURNF 1
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_382_0_503
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+
+@COM_TOOLTIP_382_0_503
+LOCALS = <br>■老虎机游戏<br>
+LOCALS += "进行老虎机游戏的指令。触发迷你游戏『老虎机』"
+LOCALS += "<br>指令类型：可单独执行<br>获取来源：无"
+LOCALS += "<br>专属经验值：赌博经验(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM382_0_503
+RFLAG:コマンド結果受渡し変数 = 0
+RFLAG:コマンド結果受渡し変数２ = 0
+RFLAG:コマンド結果受渡し変数３ = 0
+
+SIF GETBIT(ミニゲーム初回説明フラグ, 0)
+	GOTO 初回説明スキップ
+SETBIT ミニゲーム初回説明フラグ, 0
+PRINTL 
+PRINTL 迷你游戏『老虎机』
+PRINTL 
+PRINTW 
+PRINTW 请停止旋转的滚轮完成图案
+PRINTL
+PRINTW 点击滚轮或输入数字即可停止对应滚轮
+PRINTL 
+PRINTL 选择START可继续游戏
+PRINTW 选择EXIT或卢比耗尽则游戏结束
+PRINTL 
+PRINTL 
+PRINTL 
+$INPUT
+PRINTBUTTON "[0]开始游戏 ", 0
+PRINTBUTTON "[1]放弃游戏 ", 1
+BINPUT
+SELECTCASE RESULT 
+CASE 0
+CASE 1
+	PRINTFORML %CALLNAME:PLAYER%离开了现场…
+	RETURN -1
+ENDSELECT
+
+$初回説明スキップ
+PRINTFORM %CALLNAME:PLAYER%・・・
+
+IF MONEY < 100
+	PRINTL 没有足够的卢比进行游戏・・・
+	RETURN 1
+ENDIF
+
+RFLAG:コマンド結果受渡し変数 = 1 ;遊び始めた
+
+IF あなた特殊能力:ギャンブラー
+	PRINT 毫不犹豫选择了高额赌注！
+	LOCAL = 1000
+ELSEIF CFLAG:PLAYER:隠密 || !TARGET
+	PRINT 顾忌旁人目光选择了高额赌注・・・
+	LOCAL = 1000
+ELSE
+	PRINT 开始进行普通老虎机游戏・・・
+	LOCAL = 100
+ENDIF
+
+CALL スロットゲーム(LOCAL)
+RFLAG:コマンド結果受渡し変数２ = RESULT ;ルピ変動量
+
+EXP:PLAYER:ギャンブル経験 += RFLAG:コマンド結果受渡し変数３
+TIME += RFLAG:コマンド結果受渡し変数３ * 5
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE382_0_503
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(382)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM382_0_503
+
+SIF !RFLAG:コマンド結果受渡し変数 ;遊べなかった
+	RETURN
+
+PRINTFORML %CALLNAME:PLAYER%享受了老虎机游戏。
+

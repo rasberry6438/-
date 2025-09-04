@@ -1,0 +1,357 @@
+﻿;-------------------------------------------------
+;cosplay
+;-------------------------------------------------
+@COMNAME209
+#FUNCTIONS
+TSTR:コマンド名受渡 = cosplay
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_209
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ")
+同時モード許可 = 999
+
+@COM_TOOLTIP_209
+LOCALS = <br>■cosplay<br>
+LOCALS += "为角色更换特殊服饰的指令。"
+LOCALS += "<br>指令类型：嘿咻<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM209
+
+CALL コスプレ実処理(TARGET)
+RETURN RESULT
+
+
+@CAN_cosplay判定(ARG, 服難易度 = 15)
+#DIM 服難易度
+#DIM 実行値
+#DIM ＋表示フラグ
+
+SIF TARGET == MASTER
+	RETURN 1
+
+SKIPDISP ARG
+PRINTL cosplay(%CALLNAME:TARGET%)
+;-------------------------------------------------
+;実行判定処理
+;-------------------------------------------------
+実行値 = 0
+＋表示フラグ = 0
+
+;すべての命令に共通の要素を考慮
+CALL COM_ORDER
+実行値 = RESULT
+＋表示フラグ = RESULT:1
+
+;ABL:露出癖
+IF ABL:露出癖
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:露出癖 * 10
+	PRINTFORM 暴露癖LV{ABL:露出癖}({ABL:露出癖 * 10})
+	＋表示フラグ = 1
+ENDIF
+IF MARK:快楽刻印
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += MARK:快楽刻印 * 1
+	PRINTFORM 快乐刻印LV{MARK:快楽刻印}({MARK:快楽刻印 * 1})
+	＋表示フラグ = 1
+ENDIF
+;PALAM:欲情
+IF GETPALAMLV(PALAM:欲情, 10)
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += GETPALAMLV(PALAM:欲情, 10) * 5
+	PRINTFORM 情欲LV{GETPALAMLV(PALAM:欲情, 10)}({GETPALAMLV(PALAM:欲情, 10) * 5})
+	＋表示フラグ = 1
+ENDIF
+;恥じらい
+IF TALENT:羞恥心 > 0
+	PRINT  - 
+	実行値 -= 1
+	PRINT 害羞(1)
+	＋表示フラグ = 1
+ENDIF
+;男嫌い（恋慕，親愛で無効）
+IF TALENT:性別嗜好 & 1 && !(TALENT:PLAYER:性別 & 1) && (!TALENT:恋慕 || PLAYER != MASTER)
+	PRINT  - 
+	実行値 -= 5
+	PRINT 厌男(5)
+	＋表示フラグ = 1
+ENDIF
+;恋慕
+IF TALENT:恋慕
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 5
+	PRINT 爱慕(5)
+	＋表示フラグ = 1
+ENDIF
+;セフレ
+IF TALENT:セフレ
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 3
+	PRINT 炮友(3)
+	＋表示フラグ = 1
+ENDIF
+
+;言いなり
+IF TCVAR:言いなり
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 999
+	PRINT 绝对服从(999)
+	＋表示フラグ = 1
+ENDIF
+
+;合計を表示(20以上で実行)
+PRINTFORM  = {実行値}
+
+SIF 実行値 < 服難易度
+	PRINT  < 
+SIF 実行値 == 服難易度
+	PRINT  = 
+SIF 実行値 > 服難易度
+	PRINT  > 
+PRINTFORM 実行値{服難易度}
+
+WAIT
+SKIPDISP 0
+
+;実行できない
+SIF 実行値 < 服難易度
+	RETURN 0
+
+RETURN 1
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@COM_ABLE209
+;全部脱衣
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(209)
+	RETURN RESULT
+
+IF TEQUIP:クリトリス
+	SIF !MODE_存在判定_ターゲット側("阴蒂夹", TARGET)
+		RETURN 0
+ENDIF
+IF TEQUIP:膣
+	SIF !MODE_存在判定_ターゲット側("振动棒", TARGET)
+		RETURN 0
+ENDIF
+IF TEQUIP:アナル
+	SIF !MODE_存在判定_ターゲット側("肛门振动棒", TARGET) && !MODE_存在判定_ターゲット側("肛门拉珠", TARGET)
+		RETURN 0
+ENDIF
+IF TEQUIP:胸
+	SIF !MODE_存在判定_ターゲット側("乳头夹", TARGET)
+		RETURN 0
+ENDIF
+SIF TEQUIP:ペニス
+	RETURN 0
+SIF TEQUIP:口
+	RETURN 0
+SIF TEQUIP:指
+	RETURN 0
+SIF MODE_存在判定_プレイヤー側("足コキ", TARGET)
+	RETURN 0
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM209
+#DIM 同時キャラ番号
+
+IF GETBIT(FLAG:モード管理, モードビット_同時)
+	FOR 同時キャラ番号, 0, 同時モード_選択数
+		SIF 同時キャラ番号 > 0
+			PRINT ，
+		PRINTFORM %CALLNAME:(同時モード_選択キャラ:同時キャラ番号)%
+	NEXT
+	PRINTFORM 换上了%RSTR:コマンド結果受渡し文字列%装扮。
+ELSE
+	PRINTFORML %CALLNAME:TARGET%换上了%RSTR:コマンド結果受渡し文字列%装扮。
+ENDIF
+
+;画像表示，默认服装以外の時に表示
+IF RSTR:コマンド結果受渡し文字列 != "默认服装"
+	IF EXIST画像FILE(@"resources/%CSTR:TARGET:画像フォルダ%/短冊_%RSTR:コマンド結果受渡し文字列%")
+		CALL PRINT_STRL(@"IMAGEPATH_%CSTR:TARGET:画像フォルダ%/短冊_%RSTR:コマンド結果受渡し文字列%")
+	ENDIF
+ENDIF
+
+
+
+
+@コスプレ実処理(キャラ番号)
+#DIM キャラ番号
+#DIM ページ数
+#DIM 実行難易度
+#DIMS cosplay一時配列, 200
+#DIMS 分割文字列配列, 2
+#DIMS 解説文
+#DIMS CONST アクセサリ文字列 = "仿真角", "仿真尾巴", "仿真耳朵（艾伦族）", "仿真耳朵（哈文族）"
+ページ数 = 0
+
+DRAWLINE
+PRINTFORML 请为%CALLNAME:キャラ番号%选择服饰
+DRAWLINE
+LOCALS = <div rect='81,31,5844,2812' border='31' bcolor='#C0C0C0'></div>
+
+;服の説明を表示
+LOCALS += "<div rect='156,156,5750,2812'>"
+IF TFLAG:調教モード != 2 && フィールド展開:允许色情制服 == 0
+	;エロ制服ダメパターン
+	cosplay一時配列:0 = %所持制服文字列%
+ELSE
+	cosplay一時配列:0 = %所持制服文字列%%所持エロ衣装文字列%
+ENDIF
+SPLIT cosplay一時配列:0, "_", cosplay一時配列
+FOR LOCAL, 0, 100
+	IF cosplay一時配列:LOCAL == ""
+		BREAK
+	ENDIF
+	SPLIT cosplay一時配列:LOCAL, "/", 分割文字列配列
+	TRYCCALLFORM CLOTHES_着用条件_%分割文字列配列:1%(キャラ番号)
+		SIF RESULT == 0
+			CONTINUE
+	CATCH
+	ENDCATCH
+	VARSET RESULTS
+	IF OPTION変数:ツールチップ切り替え == 0
+		解説文 = 
+		TRYCCALLFORM CLOTHES_販売説明_%分割文字列配列:1%()
+			LOCAL:1 = HTML_STRINGLEN(RESULTS)
+			IF RESULTS != ""
+				解説文 += @"<br>%RESULTS%"
+			ENDIF
+			IF RESULTS:1 != ""
+				解説文 += @"%"来源：" + RESULTS:1, MAX(LOCAL:1, 40)%<br>"
+			ENDIF
+			解説文 '= REPLACE(解説文, "<(?!br).*?>", "")
+		CATCH
+		ENDCATCH
+		LOCALS += @"<button value='{LOCAL+1}' title='%解説文%'>[{LOCAL+1, 3}] %分割文字列配列:1, 30, LEFT%更换</button>"
+	ELSE
+		LOCALS += @"<button value='{LOCAL+1}'>[{LOCAL+1, 3}] 变更为%分割文字列配列:1, 30, LEFT%</button>"
+	ENDIF
+	SIF CSTR:キャラ番号:画像フォルダ == ""
+		CSTR:キャラ番号:画像フォルダ '= GET_RESOURCES_BASE_FOLDER(キャラ番号)
+	IF EXIST画像FILE(@"resources/%CSTR:キャラ番号:画像フォルダ%/顔_%分割文字列配列:1%") || EXIST画像FILE(@"resources/%CSTR:キャラ番号:画像フォルダ%/短冊_%分割文字列配列:1%")
+		LOCALS += @"　<font color='#%カラーパレット_HTML("黄")%'>有图像</font>　　"
+	ELSE
+		LOCALS += "　　　　　　　"
+	ENDIF
+	SIF LOCAL % 2
+		LOCALS += "<br>"
+NEXT
+LOCALS += "</div>"
+;LOCALS += "<div rect='5000,2625,3675,312'>"
+LOCALS += "<div rect='2500,2625,3675,312'>"
+LOCALS += "<button value='0'>[0] 恢复默认服装</button>　"
+IF TFLAG:調教モード == 2
+	;うふふ時のみ
+	LOCALS += "<button value='998'>[998] 佩戴配饰</button>　"
+ENDIF
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "</div>"
+
+
+HTML_PRINT LOCALS, 1
+FOR LOCAL, 0, 25
+	PRINTL
+NEXT
+DRAWLINE
+
+DO
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 999
+		RETURN -1
+	CASE 0
+		CALL CLOTHES_RESET(キャラ番号)
+		CALL CLOTHES_CHANGE(キャラ番号, CSTR:キャラ番号:コスプレ前の服)
+		CSTR:キャラ番号:コスプレ前の服 '= ""
+		RSTR:コマンド結果受渡し文字列 = 默认服装
+		RETURN 1
+	CASE 998
+		$アクセサリLOOP
+		PRINTL
+		PRINTL
+		PRINTL
+		DRAWLINE
+		PRINTL 请选择要佩戴的配饰。
+		PRINTFORM %CALLNAME:キャラ番号%当前佩戴配饰：
+		FOR LOCAL, 206, 210
+			SIF TALENT:キャラ番号:LOCAL == 2
+				PRINTFORM %アクセサリ文字列:(LOCAL - 206)%　
+		NEXT
+		PRINTL 
+		DRAWLINE
+		FOR LOCAL, 206, 210
+			IF TALENT:キャラ番号:LOCAL == 1
+				SETCOLOR カラーパレット("グレーアウト")
+				PRINTPLAINFORM [{LOCAL}] 无法佩戴%アクセサリ文字列:(LOCAL - 206)%
+				RESETCOLOR
+			ELSEIF TALENT:キャラ番号:LOCAL == 2
+				PRINTBUTTON @"[{LOCAL}] 卸除%アクセサリ文字列:(LOCAL - 206)%", LOCAL
+			ELSE
+				PRINTBUTTON @"[{LOCAL}] 佩戴%アクセサリ文字列:(LOCAL - 206)%", LOCAL
+			ENDIF
+			PRINTL 
+		NEXT
+		PRINTL 
+		PRINTBUTTON "[999] 返回", 999
+		BINPUT
+		SELECTCASE RESULT
+			CASE 999
+				RESTART
+			CASEELSE
+				INVERTBIT TALENT:キャラ番号:RESULT, 1
+		ENDSELECT
+		GOTO アクセサリLOOP
+	CASEELSE
+		LOCAL -= 1
+		;一般衣装とエロ衣装で難易度を変える予定だが未実装，とりあえず15で固定
+		SPLIT cosplay一時配列:LOCAL, "/", 分割文字列配列
+		IF 分割文字列配列:0 == "エロ"
+			実行難易度 = 25
+		ELSE
+			実行難易度 = 15
+		ENDIF
+		CALL CAN_cosplay判定(1, 実行難易度)
+		IF RESULT == 0
+			CALL CAN_cosplay判定(0, 実行難易度)
+			RETURN -1
+		ENDIF
+		SIF CSTR:キャラ番号:コスプレ前の服 == "" && CSTR:キャラ番号:表示グラフィックカテゴリ != ""
+			CSTR:キャラ番号:コスプレ前の服 '= CSTR:キャラ番号:表示グラフィックカテゴリ
+		LOCALS '= CSTR:キャラ番号:脱ぐ前の服
+		SPLIT cosplay一時配列:LOCAL, "/", 分割文字列配列
+		CALL CLOTHES_CHANGE(キャラ番号, 分割文字列配列:1)
+		;初回フラグに記録
+		IF STRFIND(CSTR:キャラ番号:衣装初回_着用うふふ, @"_%CSTR:キャラ番号:着せ替え服%_") < 0
+			SIF CSTR:キャラ番号:衣装初回_着用うふふ == ""
+				CSTR:キャラ番号:衣装初回_着用うふふ = _
+			CSTR:キャラ番号:衣装初回_着用うふふ += @"%CSTR:キャラ番号:着せ替え服%_"
+		ENDIF
+		CSTR:キャラ番号:脱ぐ前の服 '= LOCALS
+		RSTR:コマンド結果受渡し文字列 = %分割文字列配列:1%
+		RETURN 1
+ENDSELECT
+LOOP 1

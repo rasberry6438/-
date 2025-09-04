@@ -1,0 +1,72 @@
+﻿
+@COMNAME356
+#FUNCTIONS
+TSTR:コマンド名受渡 = 解除同行
+IF CFLAG:TARGET:デート == MASTER + 100
+	TSTR:コマンド名受渡 = 结束约会
+ENDIF
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_356
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+
+@COM_TOOLTIP_356
+LOCALS = <br>■解除同行<br>
+LOCALS += "终止角色跟随状态的指令。<br>隐匿状态或嘿咻期间无法解除同行。<br>约会进行中将变更为[结束约会]。"
+LOCALS += "<br>指令类型：日常互动<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM356
+IF CFLAG:TARGET:デート == MASTER + 100
+	;将来的にデートの内容に応じて好感度上昇とかしたいが未実装
+	PRINTFORMW 结束与%CALLNAME:TARGET%的约会并道别
+ELSE
+	PRINTFORMW 终止与%CALLNAME:TARGET%的同行并道别
+ENDIF
+
+;SOURCEまで回さないのでここで口上を表示させる
+RESULT = 0
+RESULTS =
+IF FLAG:口上表示切り替えオプション > 0
+	TRYCALLFORM KOJO_COM_{NO:TARGET}_356(TARGET)
+ENDIF
+
+CALL 同行解除処理(TARGET)
+IF CFLAG:TARGET:デート == MASTER + 100
+	CALL デート採点処理(TARGET)
+ENDIF
+TIME += 1
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE356
+;連れ出す実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(356)
+	RETURN RESULT
+;同行状態
+SIF CFLAG:TARGET:同行 < 1 && CFLAG:TARGET:デート != MASTER + 100
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+
+
+
+
+@同行解除処理(対象キャラ)
+#DIM 対象キャラ
+
+CFLAG:対象キャラ:同行 = 0
+CALL MODE_DELETE_完全一致("同行系", PLAYER, 対象キャラ)

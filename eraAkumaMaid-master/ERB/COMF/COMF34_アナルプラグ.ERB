@@ -1,0 +1,127 @@
+﻿@COM34
+;肛塞
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+RETURN 1
+
+@TRAIN_MESSAGE_COM34
+;肛塞の着脱
+IF TEQUIP:肛塞
+	TFLAG:地の文分岐 = TEQUIP:肛塞
+	TEQUIP:肛塞 = 0
+	CALL CALC, "調教ソースの計算"
+
+	;地の文を飛ばすフラグを立てている(ターン開始時にOFFになる)
+	SIF TFLAG:地の文スキップ
+		RETURN 0
+
+	SIF TEQUIP:電話中
+		PRINTFORM 和%TEXTS("彼氏")%%TEXTR("電話着的/電話通話中的/继续打電話的")%、
+
+	PRINTFORMW %CALLNAME:TARGET%\@ TEQUIP:推倒 ? 从 # 的 \@尻穴中将%NAMES("肛塞")%拔了出来…
+
+	PRINTFORM \@ TEQUIP:推倒 ? 拔肛塞的 # 被拔出肛塞的 \@尻穴
+	SELECTCASE ABL:Ａ拡張
+	CASE IS >= 3
+		IF ABL:Ａ拡張 - SIZE("肛塞", TARGET) >= 2
+			PRINTFORM 好像很遗憾地反复抽搐収縮着的同时
+		ELSE
+			PRINTFORM 像大洞一样保持着打開的同时
+		ENDIF
+		IF EXP_GAIN("肛内精液経験")
+			PRINTFORMW 混杂了腸液的精液垂流下来…
+		ELSEIF TALENT:腸液分泌体質
+			PRINTFORMW 汚液垂流下来…
+		ELSE
+			SIF CHECK("Ａ完美契合")
+				PRINTFORM 变成了%CALLNAME:MASTER%的阴茎形状的
+			PRINTFORMW 腸内被显示出来了…
+		ENDIF
+	CASEELSE
+		IF EX:Ａ中出し量 >= 30
+			PRINTFORM 灑落着精液
+		ELSEIF TALENT:腸液分泌体質
+			PRINTFORM 垂落着腸液
+		ENDIF
+		PRINTFORMW 痙攣地想变回原来的形状…
+	ENDSELECT
+	RETURN 0
+ELSE
+	TEQUIP:肛塞 = 1
+	;地の文を飛ばすフラグを立てている(ターン開始時にOFFになる)
+	SIF TFLAG:地の文スキップ
+		RETURN 0
+	PRINTFORMW %CALLNAME:TARGET%的尻穴被塞上了肛塞…
+ENDIF
+
+@FLAG_COM34, ARG
+CALL FLAG_INSERTION, "肛塞", ARG, 100
+
+@SOURCE_COM34, ARG
+IF TEQUIP:肛塞
+	CALL SOURCE_INSERTION, "肛塞", ARG, 100
+ELSE
+	CALL SOURCE_INSERTION, "肛塞", ARG, 30
+ENDIF
+
+
+@EQUIP_COM34
+;肛塞挿入中
+SIF TEQUIP:肛塞 == 0
+	RETURN 0
+SIF SELECTCOM == 34
+	RETURN 0
+
+CALL SOURCE_COM34, 30
+CALL FLAG_COM34, 30
+
+RETURN 1
+
+@EQUIP_COM34_2
+;肛塞挿入中
+SIF TEQUIP:肛塞 == 0
+	RETURN 0
+SIF SELECTCOM == 34
+	RETURN 0
+
+SELECTCASE SIZE("肛塞")
+CASE IS >= 4
+	PRINTL ＜超大型肛塞挿入中＞
+CASE 3
+	PRINTL ＜極太肛塞挿入中＞
+CASE 2
+	PRINTL ＜肛塞(大)挿入中＞
+CASEELSE
+	PRINTL ＜肛塞挿入中＞
+ENDSELECT
+
+LOCAL = 1
+;自慰実行時は経験＋１
+IF SELECTCOM == 3
+	SIF ABL:Ａ拡張 < SIZE("肛塞")
+		LOCAL += 1
+ENDIF
+
+EXP:Ａ経験 += LOCAL
+
+VARSET LOCAL
+;Ａ拡張経験
+IF SELECTCOM == 3 || SELECTCOM == 2
+	SIF SIZE("肛塞") >= 2
+		LOCAL = MAX(SIZE("肛塞") - ABL:Ａ拡張 + 1, SIZE("肛塞")/3)
+ENDIF
+
+IF LOCAL
+	EXP:Ａ拡張経験 += LOCAL
+	;拡張経験による追加の疲労
+	DOWNBASE:体力 += LOCAL*50
+ENDIF
+
+RETURN 1

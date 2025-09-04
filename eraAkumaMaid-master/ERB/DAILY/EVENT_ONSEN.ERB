@@ -1,0 +1,321 @@
+﻿;SAVESTR:現在位置 == "温泉街"在整个流程中不变，通过CEVENT判断角色泡温泉的具体位置
+
+;CEVENT("发现温泉馆",MASTER) 判定是不是第一次来温泉馆
+;CEVENT("温泉馆VIP",MASTER) 解锁混浴
+;CEVENT("今天泡过温泉了",MASTER) 判定今天是不是泡过
+;CEVENT("错误性别1",MASTER)
+;CEVENT("错误性别2",MASTER)
+;CEVENT("错误性别3",MASTER)
+
+
+;CEVENT("同汤",TARGET) 两人在同一浴场
+;CEVENT("穿着浴巾",TARGET) 同伴穿着浴巾
+
+;CEVENT("位于男汤",MASTER)
+;CEVENT("位于女汤",MASTER)
+;CEVENT("位于混浴",MASTER)
+;同伴固定女性，不会进入男汤
+;CEVENT("位于女汤",TARGET)
+;CEVENT("位于混浴",TARGET)
+
+;CEVENT("玫瑰温泉",TARGET)
+;CEVENT("牛奶温泉",TARGET)
+;CEVENT("鱼疗温泉",TARGET)
+
+@EVENT_ONSEN
+	IF CEVENT("今天泡过温泉了",MASTER)
+		PRINTFORMW 今天泡过温泉了
+		PRINTFORMW 明天再来吧
+		RETURN 1
+	ENDIF
+	SIF !CEVENT("发现温泉馆",MASTER)
+		CALL FIRST_ONSEN
+	SELECTCASE RAND:6	
+		CASE 0	
+			CALL SET_CEVENT("玫瑰温泉",TARGET)
+		CASE 1
+			CALL SET_CEVENT("牛奶温泉",TARGET)
+		CASE 2
+			CALL SET_CEVENT("鱼疗温泉",TARGET)
+		CASEELSE
+			; PRINTFORMW 普通温泉
+	ENDSELECT
+	CALL ONSEN_INIT
+	CALL EVENT_ONSEN_MAIN
+
+	; PRINTFORMW 这里删除所有特别温泉
+	SIF CEVENT("玫瑰温泉",TARGET)
+		CALL DEL_CEVENT("玫瑰温泉",TARGET)
+	SIF CEVENT("牛奶温泉",TARGET)
+		CALL DEL_CEVENT("牛奶温泉",TARGET)
+	SIF CEVENT("鱼疗温泉",TARGET)
+		CALL DEL_CEVENT("鱼疗温泉",TARGET)
+	;PRINTFORMW 这里设置master泡过温泉的标志
+	;CALL SET_CEVENT("今天泡过温泉了",MASTER)
+
+
+@EVENT_ONSEN_MAIN
+	#DIM CHOICE
+	#DIM LCOUNT
+	#DIM OSAN_COUNT
+	;IF !CEVENT("发现温泉馆",MASTER)
+	;	CALL FIRST_ONSEN
+	;ENDIF
+	OSAN_COUNT = 1 + RAND:2
+	; PRINTFORMW 温泉馆主要内容开启
+	FOR LCOUNT, 0, 40
+		CALL EVENT_ONSEN_TOP
+		PRINTFORML 当前循环{LCOUNT} / 40
+		CALL EVENT_ONSEN_BOTTOM
+		INPUT
+		CHOICE = RESULT
+		CALL ONSEN_EVENT, CHOICE
+		SIF CHOICE == 99
+			BREAK
+		;PRINTFORMW 这里是温泉循环体，没什么好看的，是否提前结束
+		;CALL PRINT_SELECT, "结束/继续"
+		;SIF RESULT == 0
+		;	BREAK
+		IF OSAN_COUNT == 0
+			CALL SUNNA_BACK
+			CALL DEL_CEVENT("混浴桑拿中",TARGET)
+			OSAN_COUNT = 1 + RAND:2
+		ENDIF
+		SIF CEVENT("混浴桑拿中")
+			OSAN_COUNT = OSAN_COUNT - 1
+		IF !CEVENT("穿着浴巾",TARGET)
+			CALL SET_CEVENT("NTRS_露出")
+		ENDIF
+		SIF CEVENT("同汤",TARGET)
+			CALL NTRS_EXP_SUMMARY
+	NEXT
+	; PRINTFORMW 温泉馆主要内容结束
+	; PRINTFORMW 这里删除所在有关温泉EVENT
+	CALL ONSEN_OUT
+	SIF CEVENT("位于男汤",MASTER)
+		CALL DEL_CEVENT("位于男汤",MASTER)
+	SIF CEVENT("位于女汤",MASTER)
+		CALL DEL_CEVENT("位于女汤",MASTER)
+	SIF CEVENT("位于混浴",MASTER)
+		CALL DEL_CEVENT("位于混浴",MASTER)
+	SIF CEVENT("位于女汤",TARGET)
+		CALL DEL_CEVENT("位于女汤",TARGET)
+	SIF CEVENT("位于混浴",TARGET)
+		CALL DEL_CEVENT("位于混浴",TARGET)
+	SIF CEVENT("位于混浴",TARGET)
+		CALL DEL_CEVENT("位于混浴",TARGET)
+	SIF CEVENT("同汤",TARGET)
+		CALL DEL_CEVENT("同汤",TARGET)
+	SIF CEVENT("穿着浴巾",TARGET)
+		CALL DEL_CEVENT("穿着浴巾",TARGET)
+	; PRINTFORMW 这里设置master泡过温泉的标志
+	CALL SET_CEVENT("今天泡过温泉了",MASTER)
+	CALL DEL_CEVENT("混浴桑拿发生",TARGET)
+	CALL DEL_CEVENT("混浴桑拿偷窥",TARGET)
+	CALL DEL_CEVENT("混浴桑拿中",TARGET)
+	CFLAG:温泉行为 = 0
+	CFLAG:MASTER:泡温泉次数 += 1
+	CFLAG:TARGET:泡温泉次数 += 1
+
+;绘制UI上半部分
+@EVENT_ONSEN_TOP
+	DRAWLINE
+	DRAWLINE
+	; PRINTFORML 温泉馆上UI开始
+	PRINTFORML
+	PRINTFORM %TEXTS("日期表示")% 
+	PRINTFORML -%TEXTS("現在位置")%- 
+	SIF CEVENT("位于男汤",MASTER)
+		PRINTFORML 『銀醴』温泉	-男汤-
+	SIF CEVENT("位于女汤",MASTER)
+		PRINTFORML 『銀醴』温泉	-女汤-
+	SIF CEVENT("位于混浴",MASTER)
+		PRINTFORML 『銀醴』温泉	-混浴-
+	PRINTFORML
+	PRINTFORM 今天的温泉是
+	IF CEVENT("玫瑰温泉",TARGET)
+		CALL PRINT_STRL, @"紅_玫瑰温泉"
+	ELSEIF CEVENT("牛奶温泉",TARGET)
+		CALL PRINT_STRL, @"黄色_牛奶温泉"
+	ELSEIF CEVENT("鱼疗温泉",TARGET)
+		CALL PRINT_STRL, @"緑_鱼疗温泉"
+	ELSE
+		CALL PRINT_STRL, @"普通温泉"
+	ENDIF
+	PRINTFORML
+	PRINTFORML
+	; PRINTFORML master : {CFLAG:MASTER:泡温泉次数}
+	PRINTFORML %CALLNAME:TARGET%泡温泉的次数 : {CFLAG:TARGET:泡温泉次数}次
+	PRINTFORML 当前温泉露出等级 :{CFLAG:温泉露出等级}Lv
+	CALL GET_MOOD_VALUE
+	; PRINTFORML 气氛值 : {TCVAR:混浴温泉气氛值}
+	SIF CEVENT("位于混浴",MASTER) && CEVENT("同汤",TARGET)
+		CALL GET_PEOPLE_MAIN
+	; 颜绘
+	IF !CEVENT("混浴桑拿中")
+		CALL PRINT_MAIDFACE, TARGET
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%正在桑拿间里...
+	ENDIF
+	DRAWLINE
+
+;绘制UI下半部分(选项)
+@EVENT_ONSEN_BOTTOM
+	#DIM LCOUNT
+	#DIM NEXT_LINE
+	STR:選択肢 = 
+	SIF !CEVENT("位于男汤",MASTER) && !CEVENT("位于女汤",MASTER) && !CEVENT("位于混浴",MASTER)
+		STR:選択肢 += "[1]男汤/"
+	SIF !CEVENT("位于女汤",MASTER) && !CEVENT("位于男汤",MASTER) && !CEVENT("位于混浴",MASTER)
+		STR:選択肢 += "[2]女汤/"
+	SIF !CEVENT("位于女汤",MASTER) && !CEVENT("位于男汤",MASTER) && !CEVENT("位于混浴",MASTER) && CEVENT("温泉馆VIP",MASTER)
+		STR:選択肢 += "[3]混浴/"
+	STR:選択肢 += "改行/DRAWLINE/"
+	;进入任意温泉
+	SIF CEVENT("位于男汤",MASTER) || CEVENT("位于女汤",MASTER) || CEVENT("位于混浴",MASTER)
+		STR:選択肢 += "[10]观察四周/"
+	;进入温泉且两人在同一温泉
+	SIF (CEVENT("位于女汤",MASTER) || CEVENT("位于混浴",MASTER)) && CEVENT("同汤",TARGET) && !CEVENT("混浴桑拿中",TARGET)
+		STR:選択肢 += "[11]与同伴交流/"
+	;同汤且没穿浴巾
+	SIF (CEVENT("位于女汤",MASTER) || CEVENT("位于混浴",MASTER)) && CEVENT("同汤",TARGET) && !CEVENT("穿着浴巾",TARGET) && !CEVENT("混浴桑拿中",TARGET)
+		STR:選択肢 += "[19]让同伴穿上浴巾/"
+	;同汤且穿着浴巾
+	SIF (CEVENT("位于女汤",MASTER) || CEVENT("位于混浴",MASTER)) && CEVENT("同汤",TARGET) && CEVENT("穿着浴巾",TARGET) && !CEVENT("混浴桑拿中",TARGET)
+		STR:選択肢 += "[19]让同伴脱下浴巾/"
+	STR:選択肢 += "改行/"
+	SIF (CEVENT("位于女汤",MASTER) || CEVENT("位于混浴",MASTER)) && CEVENT("同汤",TARGET) && !CEVENT("混浴桑拿中",TARGET)
+		STR:選択肢 += "[21]接吻/[22]揉胸/[23]爱抚/"
+	STR:選択肢 += "改行/"
+	SIF (CEVENT("位于女汤",MASTER) || CEVENT("位于混浴",MASTER)) && CEVENT("同汤",TARGET) && !CEVENT("混浴桑拿中",TARGET) && TCVAR:混浴温泉气氛值 >= 30
+		STR:選択肢 += "[24]口交/[25]正面坐位/[26]背面座位/"
+	STR:選択肢 += "改行/"
+	SIF CEVENT("位于混浴",MASTER) && CEVENT("同汤",TARGET) && !CEVENT("混浴桑拿中",TARGET)
+		STR:選択肢 += "[27]让同伴去桑拿房/"
+	SIF CEVENT("混浴桑拿中",TARGET)
+		STR:選択肢 += "爱心粉紅/[28]桑拿偷窥/"
+	SIF !CEVENT("混浴桑拿中",TARGET)  && CEVENT("混浴桑拿发生",TARGET)
+		STR:選択肢 += "爱心粉紅/[29]讨论桑拿/"
+	STR:選択肢 += "改行/DRAWLINE/"
+	STR:選択肢 += "[99]离开温泉"
+
+	
+	CALL SELECT_BAN
+		VARSET LOCALS
+		SPLIT STR:選択肢, "/", LOCALS
+		NEXT_LINE = 0
+		FOR LCOUNT, 0, 100
+			;まずは色だけチェック
+			SELECTCASE LOCALS:LCOUNT
+			CASE "灰色", "水色", "爱心粉紅", "青", "緑", "緑色", "黄色"
+				;すでに指定色になっている場合は色変換を止める
+				IF GETCOLOR() != DEF_COLOR(LOCALS:LCOUNT)
+					SETCOLOR DEF_COLOR(LOCALS:LCOUNT)
+					CONTINUE
+				ENDIF
+			ENDSELECT
+
+			SELECTCASE LOCALS:LCOUNT
+			CASE ""
+				BREAK
+			CASE "太字"
+				FONTSTYLE 1
+				CONTINUE
+			CASE "改行"
+				SIF NEXT_LINE%5
+					PRINTL 
+				NEXT_LINE = 0
+				CONTINUE
+			CASE "DRAWLINE"
+				IF NEXT_LINE%5
+					NEXT_LINE = 0
+					PRINTL 
+				ENDIF
+				DRAWLINE
+				CONTINUE
+			ENDSELECT
+
+			;太字にした？
+			IF GETBIT(GETSTYLE(), 0)
+				SELECTCASE LOCALS:LCOUNT
+				CASE "NOBUTTON"
+					PRINTPLAINFORM %TEXT_LJ("", 21)%
+				CASEELSE
+					PRINTFORM %TEXT_LJ(LOCALS:LCOUNT, 21)%
+				ENDSELECT
+			ELSE
+				SELECTCASE LOCALS:LCOUNT
+				CASE "NOBUTTON"
+					PRINTPLAINFORM %TEXT_LJ("", 24)%
+				CASEELSE
+					PRINTFORM %TEXT_LJ(LOCALS:LCOUNT, 24)%
+				ENDSELECT
+			ENDIF
+			FONTREGULAR
+			RESETCOLOR
+
+			NEXT_LINE += 1
+			SIF NEXT_LINE%5 == 0
+				PRINTL 
+		NEXT
+
+; 一开始主人公只能进自己对应性别的温泉、选择不同性别温泉只会让老板出面制止
+; 在泡温泉超过3次之后、再选择性别不同的温泉时老板会提醒3次、第三次会推荐温泉馆的隐藏服务、
+; 花费5000円即可获得温泉馆VIP、解锁混浴
+
+
+@ONSEN_EVENT, ARG
+	SELECTCASE ARG
+		;男汤
+		CASE 1
+			CALL ONSEN_OTOKOYU
+		;女汤
+		CASE 2
+			CALL ONSEN_ONNAYU
+		;混浴
+		CASE 3
+			CALL ONSEN_KONYOKU
+		;观察四周
+		CASE 10
+			CALL ONSEN_MIMAWASU
+		;与同伴接吻
+		CASE 21
+			CALL ONSEN_KISU
+		;揉胸
+		CASE 22
+			CALL ONSEN_OPI
+		;爱抚
+		CASE 23
+			CALL ONSEN_OPI
+		;让同伴脱下浴巾 / 穿上浴巾
+		CASE 19
+			CALL ONSEN_BASUTAORU
+		;口交
+		CASE 24
+			CALL ONSEN_ORARUSEKKUSU
+		;正面座位
+		CASE 25
+			CALL ONSEN_TAIMENZAI
+		;背面座位
+		CASE 26
+			CALL ONSEN_HAIMENZAI
+		;让同伴去桑拿房
+		CASE 27
+			CALL ONSEN_SAUNA
+		;桑拿偷窥
+		CASE 28
+			CALL SUNNA_NOZOMI
+		;桑拿聊天
+		CASE 29
+			CALL SUNNA_TALK
+		;与同伴交流
+		CASE 11
+			CALL ONSEN_CHATTO
+		;离开温泉
+		CASE 99
+			CALL ONSEN_LEAVE
+		;超出选项范围
+		CASEELSE
+			PRINTFORMW ONSEN_EVENT进入错误分支
+			RETURN 1
+	ENDSELECT

@@ -1,0 +1,157 @@
+﻿@経験値増加アイテム処理画面(キャラ番号)
+#DIM キャラ番号
+#DIM 配列番号
+#DIM 星晶系所持数, 3
+#DIM 星晶系使用数, 3
+#DIM 増加経験値量
+#DIM 予測レベル
+
+
+CALL 戦闘能力表示画面(キャラ番号)
+DRAWLINE
+PRINTL 使用道具可增加角色经验值
+PRINTFORML ※上限为现有角色中的最高等级
+PRINTFORML 当前上限：Lv{最大レベル保存, 2}
+DRAWLINE
+星晶系所持数:0 = 素材アイテム数量算出("星晶碎片")
+星晶系所持数:1 = 素材アイテム数量算出("星晶碎块")
+星晶系所持数:2 = 素材アイテム数量算出("星晶块")
+
+増加経験値量 = 星晶系使用数:0 * 500 + 星晶系使用数:1 * 3000 + 星晶系使用数:2 * 15000
+FOR LOCAL, 0, 80
+	IF 戦闘経験値テーブル:LOCAL >= 基礎BATTLE_STATE:キャラ番号:蓄積EXP + 増加経験値量
+		予測レベル = LOCAL + 1
+		BREAK
+	ENDIF
+NEXT
+
+IF SUMARRAY(星晶系所持数) > 0
+	IF 星晶系所持数:0 > 0
+		PRINTFORM ■星晶碎片　　持有数：{星晶系所持数:0, 3}　　使用数：{星晶系使用数:0, 3}　　
+		PRINTBUTTON "[-10]", 1
+		PRINTBUTTON "[-1]", 2
+		IF 予測レベル >= 最大レベル保存
+			SETCOLOR カラーパレット("グレーアウト")
+			PRINTPLAIN [+1]
+			PRINTPLAIN [+10]
+			RESETCOLOR
+		ELSE
+			PRINTBUTTON "[+1]", 3
+			PRINTBUTTON "[+10]", 4
+		ENDIF
+		PRINTL
+	ENDIF
+	IF 星晶系所持数:1 > 0
+		PRINTFORM ■星晶碎块　　持有数：{星晶系所持数:1, 3}　　使用数：{星晶系使用数:1, 3}　　
+		PRINTBUTTON "[-10]", 101
+		PRINTBUTTON "[-1]", 102
+		IF 予測レベル >= 最大レベル保存
+			SETCOLOR カラーパレット("グレーアウト")
+			PRINTPLAIN [+1]
+			PRINTPLAIN [+10]
+			RESETCOLOR
+		ELSE
+			PRINTBUTTON "[+1]", 103
+			PRINTBUTTON "[+10]", 104
+		ENDIF
+		PRINTL
+	ENDIF
+	IF 星晶系所持数:2 > 0
+		PRINTFORM ■星晶块　　　持有数：{星晶系所持数:2, 3}　　使用数：{星晶系使用数:2, 3}　　
+		PRINTBUTTON "[-10]", 201
+		PRINTBUTTON "[-1]", 202
+		IF 予測レベル >= 最大レベル保存
+			SETCOLOR カラーパレット("グレーアウト")
+			PRINTPLAIN [+1]
+			PRINTPLAIN [+10]
+			RESETCOLOR
+		ELSE
+			PRINTBUTTON "[+1]", 203
+			PRINTBUTTON "[+10]", 204
+		ENDIF
+		PRINTL
+	ENDIF
+	PRINTFORML 预计成长：Lv{基礎BATTLE_STATE:キャラ番号:Lv, 2} > Lv{予測レベル, 2}
+	PRINTL
+	IF SUMARRAY(星晶系使用数) > 0
+		PRINTBUTTON "[998] 使用以上数量", 998
+		PRINTL
+	ELSE
+		SETCOLOR カラーパレット("グレーアウト")
+		PRINTPLAIN [998] 使用以上数量
+		RESETCOLOR
+		PRINTL
+	ENDIF
+ELSE
+	PRINTL ※未持有目标道具
+ENDIF
+[IF_DEBUG]
+	PRINTBUTTON "[997] 提升至指定等级", 997
+	PRINTL
+[ENDIF]
+DRAWLINE
+PRINTBUTTON "[999] 返回", 999
+PRINTL
+
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 998
+		IF 星晶系使用数:0 > 0
+			PRINTFORML 使用了{星晶系使用数:0, 3}个星晶碎片！
+			CALL 素材消費処理("星晶碎片", 星晶系使用数:0)
+		ENDIF
+		IF 星晶系使用数:1 > 0
+			PRINTFORML 使用了{星晶系使用数:1, 3}星晶碎块！
+			CALL 素材消費処理("星晶碎块", 星晶系使用数:1)
+		ENDIF
+		IF 星晶系使用数:2 > 0
+			PRINTFORML 使用了{星晶系使用数:2, 3}个星晶块！
+			CALL 素材消費処理("星晶块", 星晶系使用数:2)
+		ENDIF
+		PRINTFORMW 获得了{増加経験値量, 6}经验值！
+		基礎BATTLE_STATE:キャラ番号:蓄積EXP += 増加経験値量
+		CALL 口上変数初期化
+		CALL レベルアップ処理(キャラ番号)
+		SIF RESULT
+			CALL 口上変数表示(キャラ番号, 0)
+		VARSET 星晶系使用数
+		RESTART
+	CASE 999
+		VARSET 星晶系使用数
+		RETURN 0
+	CASE 997
+		PRINTL 请输入目标等级（最高80，不可降级）
+		INPUT
+		IF INRANGE(RESULT, 基礎BATTLE_STATE:キャラ番号:Lv+2, 80)
+			基礎BATTLE_STATE:キャラ番号:蓄積EXP = 戦闘経験値テーブル:(RESULT - 1)
+			CALL レベルアップ処理(キャラ番号)
+		ENDIF
+		RESTART
+	CASEELSE
+		SELECTCASE LOCAL % 100
+			CASE 1
+				星晶系使用数:(LOCAL / 100) = MAX(0, 星晶系使用数:(LOCAL / 100) - 10)
+			CASE 2
+				星晶系使用数:(LOCAL / 100) = MAX(0, 星晶系使用数:(LOCAL / 100) - 1)
+			CASE 3
+				星晶系使用数:(LOCAL / 100) = MIN(星晶系所持数:(LOCAL / 100), 星晶系使用数:(LOCAL / 100) + 1)
+			CASE 4
+				FOR 配列番号, 0, 10
+					星晶系使用数:(LOCAL / 100) = MIN(星晶系所持数:(LOCAL / 100), 星晶系使用数:(LOCAL / 100) + 1)
+					増加経験値量 = 星晶系使用数:0 * 500 + 星晶系使用数:1 * 3000 + 星晶系使用数:2 * 15000
+
+					FOR LOCAL:1, 0, 80
+						IF 戦闘経験値テーブル:(LOCAL:1) >= 基礎BATTLE_STATE:キャラ番号:蓄積EXP + 増加経験値量
+							予測レベル = (LOCAL:1) + 1
+							BREAK
+						ENDIF
+					NEXT
+					IF 予測レベル >= 最大レベル保存
+						BREAK
+					ENDIF
+				NEXT
+		ENDSELECT
+		RESTART
+ENDSELECT
+

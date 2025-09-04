@@ -1,0 +1,589 @@
+﻿;-------------------------------------------------
+;肉棒でおまんこマッサージ♡
+;-------------------------------------------------
+@MASSAGE_COMNAME53
+#FUNCTIONS
+
+TSTR:コマンド名受渡 = 用蜜穴给肉棒排毒_H_
+TSTR:コマンドカラー受渡 = FFD900
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_53
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("エロマッサージ")
+
+@MASSAGE_COM_TOOLTIP_53
+LOCALS = <br>■用蜜穴给肉棒排毒<br>
+LOCALS += "使用专用『理疗器具』对鼓胀不适的阳具进行按摩"
+LOCALS += "<br>在插入前尚可勉强称为护理，一旦插入则已属性行为范畴，将进入嘿咻模式"
+LOCALS += "<br>指令类型：情色按摩<br>获取来源：快Ｃ・暴露・接触・痛苦・不洁(特定条件)"
+LOCALS += "<br>专属经验值：Ｃ性交经验_Ｖ插入(TARGET)・Ｖ性交经验(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+@MASSAGE_COM53
+#DIM CONST 必要実行値 = 20
+#DIM 実行値
+#DIM ＋表示フラグ
+;まずキャラの状態によって３つに分岐する
+
+;肉棒マッサージを流用
+CALL MASSAGE_分岐_COM51(TARGET)
+RFLAG:コマンド結果受渡し変数 = RESULT
+;RFLAG:コマンド結果受渡し変数に結果を入れる
+; 1:通常許可
+; 2:なし崩し許可
+; 3:レイプ
+;失敗はそもそもコマンドを出さないので分岐しない
+
+;ここでレイプ時の記憶喪失手段使うよ～とか
+;レイプするけどOK～？　みたいな確認分岐を入れる
+IF RFLAG:コマンド結果受渡し変数 == 2
+	PRINTFORML %CALLNAME:TARGET%察觉到%CALLNAME:PLAYER%的意图，出言制止
+	PRINTW 然而拒绝声线软弱无力，似乎稍加强势便可令其妥协……
+	PRINTL 是否继续执行？
+	PRINTL
+	PRINTBUTTONLC "[0] 确定", 0
+	PRINTBUTTONLC "[1] 取消", 1
+	BINPUT
+	IF RESULT == 1
+		PRINTFORMW %CALLNAME:PLAYER%重新考虑后放弃行动
+		RETURN -1
+	ENDIF
+	;履歴セット
+	CFLAG:TARGET:泥酔ックス回数 += 1
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>在按摩过程中趁%CALLNAME:TARGET%沉溺快感时得手</font><img src='えっちハート'>","うふふ")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>在按摩过程中因快感失控，与%CALLNAME:PLAYER%越界</font><img src='えっちハート'>","うふふ")
+	
+
+	IF (CFLAG:TARGET:お願いックス回数 + CFLAG:TARGET:泥酔ックス回数 / 3) >= 4 || TALENT:淫乱
+		SETBIT CFLAG:1 , 0
+		TALENT:セフレ = 1
+		初体験日:セフレ = DAY
+		RFLAG:コマンド結果受渡し変数３ = 1
+		RFLAG:コマンド結果受渡し変数４ = TALENT:陥落不可
+		CLEARBIT TALENT:陥落不可, 1
+		CALL 履歴データベース登録(CFLAG:PLAYER:人物番号,@"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>%CALLNAME:TARGET%被[炮友]攻略</font><img src='えっちハート'>","うふふ")
+		CALL 履歴データベース登録(CFLAG:TARGET:人物番号,@"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>获得攻略特质[炮友]</font><img src='えっちハート'>","うふふ")
+	ENDIF
+ELSEIF RFLAG:コマンド結果受渡し変数 == 3
+	;レイプしないを選んだ時はキャンセル扱いでコマンド選択に戻す
+	PRINTFORM 以『按摩』为借口褪去下半身衣物
+	PRINTFORM 展示%TEXTR("充分湿润/准备就绪")%%TEXTR("蜜穴/私处/阴道口")%
+	PRINTFORML %CALLNAME:TARGET%意识到%CALLNAME:PLAYER%%TEXTR("即将进行的意图/将要遭受的对待")%
+	IF TFLAG:マッサージ_鬼灯の香使用時間 + 20 < DAY * 1440 + TIME
+		PRINTFORM 在恍惚状态中仍
+		IF TALENT:TARGET:度胸 == -1 || TALENT:TARGET:応答 == -1 || TALENT:TARGET:プライド == -1 || TALENT:TARGET:陽気／陰気 == -1
+		;臆病、大人しい、プライド低い、陰気
+			PRINTFORML 恳求停止
+		ELSE
+			PRINTFORML 竭力%TEXTR("出言制止/表达拒绝")%
+		ENDIF
+		PRINTFORMW 若强行继续，平日里的%CALLNAME:TARGET%本应会%TEXTR("激烈/强烈")%抵抗……
+	ELSE
+		PRINTFORML 出言要求停止
+		PRINTFORMW 若强行继续，%CALLNAME:TARGET%必将激烈反抗……
+	ENDIF
+	PRINTL
+	;香使用から20分以上経ってると許可
+	IF TFLAG:マッサージ_鬼灯の香使用時間 > 0 && TFLAG:マッサージ_鬼灯の香使用時間 + 20 < DAY * 1440 + TIME
+		;ここで記憶を曖昧にする薬の所持分岐
+		PRINTFORML 此刻「鬼灯之香」已充分生效，在快感与药效作用下%CALLNAME:TARGET%只剩婴儿般的抵抗力
+		PRINTFORML 加之香料效果会模糊行为记忆，最终只会残留「虽记不清但很舒服」的朦胧印象……
+		PRINTFORM 此时%CALLNAME:PLAYER%可轻易压制抵抗
+		SELECTCASE RAND:5
+			CASE 0
+				IF TALENT:TARGET:恋人持ち == 1 || TALENT:TARGET:恋人持ち == 2
+					PRINTFORM 在%CALLNAME:TARGET%最深处强行烙下%TEXTR("不贞的/出轨的/背德性爱的/被非心上人强奸的")%快感记忆
+				ELSE
+					PRINTFORM 强行%TEXTR("建立关系/侵犯")%
+				ENDIF
+			CASE 1
+				IF アイドル判定(TARGET)
+					PRINTFORM 通过%TEXTR("强奸/迷奸逆推/性行为/非自愿")%丑闻使其背叛粉丝
+				ELSE
+					PRINTFORM 在无共识状态下肆意享用%CALLNAME:TARGET%的肉体
+				ENDIF
+			CASE 2
+				PRINTFORM 尽情体验作为男性的『舒适感』
+			CASE 3
+				PRINTFORM 将按摩时因触碰%CALLNAME:TARGET%肉体而积蓄的%TEXTR("兽欲/欲望")%尽数%TEXTR("倾注于肉棒/追责")%
+			CASE 4
+				PRINTFORM 零风险享受逆推快感
+		ENDSELECT
+		PRINTFORMW 
+		PRINTL
+		PRINTL 是否继续执行？
+		PRINTL
+		PRINTBUTTONLC "[0] 确定", 0
+		PRINTBUTTONLC "[1] 取消", 1
+		BINPUT
+		IF RESULT == 1
+			PRINTFORMW %CALLNAME:PLAYER%最终悬崖勒马
+			RETURN -1
+		ENDIF
+		CFLAG:TARGET:泥酔ックス回数 += 1
+		CALL 履歴データベース登録(CFLAG:PLAYER:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>在按摩过程中，借快感与香薰剥夺%CALLNAME:TARGET%抵抗力后得手</font><img src='えっちハート'>","うふふ")
+		CALL 履歴データベース登録(CFLAG:TARGET:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>在按摩过程中，于快感与香薰造成的恍惚中无力抵抗%CALLNAME:PLAYER%的逆推</font><img src='えっちハート'>","うふふ")
+		IF GETBIT(TALENT:TARGET:非童貞, 0) == 0
+			IF 知識素質:TARGET:高貴 >= 1
+				CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>强行夺取%CALLNAME:TARGET%的皇家童贞</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>在快感与香薰造成的意识朦胧中，身为贵胄却遭%CALLNAME:PLAYER%强奸，童贞%TEXTR("被夺/遭玷")%</font><img src='えっちハート'>","うふふ")
+			ELSE
+				CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>强行夺取%CALLNAME:TARGET%的童贞</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>在快感与香薰造成的意识朦胧中，遭%CALLNAME:PLAYER%强行侵犯导致童贞%TEXTR("被夺/遭玷")%</font><img src='えっちハート'>","うふふ")
+			ENDIF
+		ENDIF
+		;うわべだけ実行判定
+		;骑乘位のみ
+		PRINTL 骑乘位
+
+		実行値 = 0
+		＋表示フラグ = 0
+
+		;すべての命令に共通の要素を考慮
+		CALL COM_ORDER
+		実行値 = RESULT
+		＋表示フラグ = RESULT:1
+
+		;ABL:欲望
+		IF ABL:欲望
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += ABL:欲望 * 3
+			PRINTFORM 欲望LV{ABL:欲望}({ABL:欲望 * 3})
+			＋表示フラグ = 1
+		ENDIF
+		;ABL:Ｃ感覚
+		IF ABL:Ｃ感覚
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += ABL:Ｃ感覚 * 3
+			PRINTFORM Ｃ感觉LV{ABL:Ｃ感覚}({ABL:Ｃ感覚 * 3})
+			＋表示フラグ = 1
+		ENDIF
+		;快楽刻印
+		IF MARK:快楽刻印
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += MARK:快楽刻印 * 3
+			PRINTFORM 快乐刻印LV{MARK:快楽刻印}({MARK:快楽刻印 * 3})
+			＋表示フラグ = 1
+		ENDIF
+		;PALAM:欲情
+		IF GETPALAMLV(PALAM:欲情, 5)
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += GETPALAMLV(PALAM:欲情, 5) * 3
+			PRINTFORM 情欲LV{GETPALAMLV(PALAM:欲情, 5)}({GETPALAMLV(PALAM:欲情, 5) * 3})
+			＋表示フラグ = 1
+		ENDIF
+		;恥じらい
+		IF TALENT:羞恥心 > 0
+			PRINT  - 
+			実行値 -= 2
+			PRINT 羞耻心(2)
+			＋表示フラグ = 1
+		ENDIF
+		;快感の否定
+		IF TALENT:快感応答 < 0 && !TALENT:恋慕
+			PRINT  - 
+			実行値 -= 5
+			PRINT 否定快感(5)
+			＋表示フラグ = 1
+		ENDIF
+		;恋慕
+		IF TALENT:恋慕
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += 15
+			PRINT 爱慕(15)
+			＋表示フラグ = 1
+		ELSE
+			;男嫌い（恋慕で無効）
+			IF TALENT:性別嗜好 & 1 && TALENT:PLAYER:性別 == 2
+				PRINT  - 
+				実行値 -= 12
+				PRINT 厌男(12)
+				＋表示フラグ = 1
+			ENDIF
+			;女嫌い（恋慕で無効）
+			IF TALENT:性別嗜好 & 2 && TALENT:PLAYER:性別 == 1
+				PRINT  - 
+				実行値 -= 12
+				PRINT 厌女(12)
+				＋表示フラグ = 1
+			ENDIF
+		ENDIF
+		;セフレ
+		IF TALENT:セフレ
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += 10
+			PRINT 炮友(10)
+			＋表示フラグ = 1
+		ENDIF
+		;未陥落
+		IF TALENT:セフレ == 0 && TALENT:恋慕 == 0
+			PRINT  - 
+			実行値 -= 10
+			PRINT 未攻略(10)
+			＋表示フラグ = 1
+		ENDIF
+		;童貞
+		IF GETBIT(TALENT:非童貞, 0) == 0
+			PRINT  - 
+			実行値 -= 10
+			PRINTFORM 童贞({LOCAL})
+			＋表示フラグ = 1
+		ENDIF
+		;C経験
+		IF EXP:Ｃ経験 < EXPLV:2
+			PRINT  - 
+			実行値 -= 5
+			PRINT Ｃ经验不足(5)
+			＋表示フラグ = 1
+		ENDIF
+		;媚薬
+		IF TEQUIP:媚薬
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += 6
+			PRINT 春药(6)
+			＋表示フラグ = 1
+		ENDIF
+		;发情期
+		IF CFLAG:発情期フラグ < 0
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += 6
+			PRINT 发情中(6)
+			＋表示フラグ = 1
+		ENDIF
+
+		;合計を表示(20以上で実行…？)
+		PRINTFORM  = {実行値}
+		SIF 実行値 < 必要実行値
+			PRINT  < 
+		SIF 実行値 == 必要実行値
+			PRINT  = 
+		SIF 実行値 > 必要実行値
+			PRINT  > 
+		PRINTFORM 执行值{必要実行値}
+		WAIT
+		PRINTL
+
+		;ここまでの実行値
+		PRINTFORM %CALLNAME:TARGET%的尊严值({実行値})
+
+		;鬼灯之香
+		PRINT  + 
+		実行値 += 999
+		SETCOLOR カラーパレット("赤")
+		PRINTFORM 鬼灯之香(999)
+		RESETCOLOR
+
+		;再度合計を表示()
+		PRINT  = 
+		SETCOLOR カラーパレット("赤")
+		PRINTFORM {実行値}
+		RESETCOLOR
+		PRINT  >>>> 
+		PRINTFORM 执行值{必要実行値}
+		WAIT
+		PRINTL
+
+		CALL PRINT_STR(@"_FS_4_騎乗位_")
+		SETCOLOR カラーパレット("赤")
+		PRINTFORML 　逆推成功
+		RESETCOLOR
+	ELSEIF TFLAG:マッサージ_鬼灯の香使用時間
+		PRINTL 鬼灯之香完全生效仍需等待片刻
+		PRINTFORMW %CALLNAME:PLAYER%决定暂缓行动
+		RETURN -1
+	ELSE
+		PRINTL 当前无法执行，需要准备压制抵抗的道具
+		PRINTFORMW %CALLNAME:PLAYER%重新考虑后放弃行动
+		RETURN -1
+	ENDIF
+	
+
+ENDIF
+
+;通常モードに移行はターンエンド時に行う
+;骑乘位
+;引数は前から快楽量、露出量、接触量
+PALAM:PLAYER:潤滑 += 5000
+CALL MASSAGE_逆体位COM(500, 120, 150)
+CALL SOURCE_CALC_奉仕(PLAYER, TARGET, 250)
+RETURN RESULT
+
+
+@MASSAGE_逆体位COM(ARG, ARG:1, ARG:2)
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+;基盤ができたあとで理性を削る処理を入れる
+
+;Ｖ挿入から持ってきた
+CALL SOURCE_CALC_快Ｖ(PLAYER, TARGET, ARG)
+CALL SOURCE_CALC_露出(PLAYER, TARGET, ARG:1)
+CALL SOURCE_CALC_接触(PLAYER, TARGET, ARG:2)
+
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, ARG)
+
+
+;苦痛
+LOCAL = 200 * PAIN_CHECK_V(PLAYER) / 1000
+CALL SOURCE_CALC_苦痛(PLAYER, TARGET, LOCAL)
+
+;貞操観念
+IF !TALENT:恋慕
+	IF TALENT:貞操 == 1
+		CALL SOURCE_CALC_不潔(TARGET, PLAYER, 300)
+	ELSEIF TALENT:貞操 == 0
+		CALL SOURCE_CALC_不潔(TARGET, PLAYER, 150)
+	ENDIF
+ENDIF
+;処女喪失
+CALL LOST_VIRGIN(PLAYER, TARGET, 1)
+CALL LOST_MAN_VIRGIN(TARGET, PLAYER)
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+EXP:PLAYER:Ｖ性交経験 ++
+EXP:Ｃ性交経験_Ｖ挿入 ++
+
+;同性愛
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 4
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 4
+
+	EXP:愛情経験 += TALENT:恋慕 * 2
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE53
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(53)
+	RETURN RESULT
+
+;あなた以外PLAYERだととりあえず封印
+SIF PLAYER != MASTER
+	RETURN 0
+
+;Vがない場合駄目
+SIF TALENT:PLAYER:Ｖ感度 == -2
+	RETURN 0
+;オトコだとダメ
+SIF !(TALENT:PLAYER:性別 & 1)
+	RETURN 0
+;二人きりのみ
+SIF GET_TARGETNUM() > 1
+	RETURN 0
+
+;勃起必須
+SIF BASE:TARGET:勃起 < 1000
+	RETURN 0
+
+;調教者がオトコ、半人半妖、ふたなりがないとダメ
+SIF GETBIT(TALENT:TARGET:性別, 1) == 0
+	RETURN 0
+
+;理性警戒の合計が1以下じゃないとダメ
+;エロマッサージの終着点ポジションなのに、香さえ回れば他のエロマッサージより先に解禁されるのは風情に欠けるため
+SIF (BASE:TARGET:理性 + BASE:TARGET:警戒) > 1
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM53
+#DIM 対象キャラ
+#DIM 対象キャラ２
+;RFLAG:コマンド結果受渡し変数に結果を入れる
+; 1:通常許可
+; 2:なし崩し許可
+; 3:レイプ
+
+;下着がある場合はRFLAG:コマンド結果受渡し変数２に1が入り、下着を剥ぎ取っている
+
+PRINTL
+SELECTCASE RFLAG:コマンド結果受渡し変数
+	CASE 1
+		PRINTFORM %CALLNAME:PLAYER%把
+		IF RFLAG:コマンド結果受渡し変数２
+			PRINTFORM %CALLNAME:TARGET%的理疗服褪去后，
+		ENDIF
+		PRINT 将湿润的
+		PRINTFORM %CALLNAME:TARGET%的肉棒
+		PRINTL 缓缓插入自己的蜜穴……
+	CASE 2
+		PRINTFORML 经%CALLNAME:PLAYER%再三恳求，%CALLNAME:TARGET%犹豫着同意了突破界限的『按摩』
+		PRINTFORM %CALLNAME:PLAYER%把
+		IF RFLAG:コマンド結果受渡し変数２
+			PRINTFORM %CALLNAME:TARGET%的理疗服褪去后，
+		ENDIF
+		PRINT 将湿润的
+		PRINTFORM %CALLNAME:TARGET%的肉棒
+		PRINTL 缓缓插入自己的蜜穴……
+
+		IF RFLAG:コマンド結果受渡し変数３
+			SIF !TALENT:TARGET:淫乱
+				PRINTFORML %CALLNAME:TARGET%与%CALLNAME:PLAYER%多次交合后逐渐失去抗拒……
+			PRINTFORML %CALLNAME:TARGET%获得了[炮友]特质
+			IF GETBIT(RFLAG:コマンド結果受渡し変数４, 1)
+				IF GETBIT(TALENT:TARGET:陥落不可, 0)
+					PRINTFORML %CALLNAME:TARGET%的[无法攻略]转变为[无法爱慕]。
+				ELSE
+					PRINTFORML %CALLNAME:TARGET%的[无法炮友]特质已消除。
+				ENDIF
+			ENDIF
+		ENDIF
+	CASE 3
+	;むりやり犯すコマンドから持ってきた
+		PRINTFORM %CALLNAME:PLAYER%把
+		IF RFLAG:コマンド結果受渡し変数２
+			PRINTFORM %CALLNAME:TARGET%的理疗服褪去后，
+		ENDIF
+
+		;仰向けだと正常位
+		PRINTFORM 在仰卧状态下%TEXTR("用微弱力量徒劳抵抗/以残存气力挣扎反抗/意识模糊地摇头拒绝/难以组织有效抵抗/丧失抵抗力任人摆布")%
+		PRINTFORML %CALLNAME:TARGET%被%TEXTR("骑乘压制/覆盖压制/凝视阳具")%，
+
+		IF TALENT:TARGET:恋人持ち == 1
+			;恋人持ち
+			IF GETBIT(TALENT:TARGET:非童貞, 0) == 0
+				PRINTFORM %TEXTR("仍为恋人保留纯洁/本应为恋人守护的/为恋人精心保存的")%
+			ELSE
+				PRINTFORM 本应只对恋人开放的
+			ENDIF
+		ELSEIF TALENT:TARGET:恋人持ち == 2
+			;人妻
+				IF GETBIT(TALENT:TARGET:非童貞, 0) == 0
+				PRINTFORM 已婚却仍保持清白之身
+			ELSE
+				PRINTFORM 本应只对妻子开放的
+			ENDIF
+		ELSEIF TALENT:TARGET:恋人持ち == 3
+		;未亡人
+			IF GETBIT(TALENT:TARGET:非童貞, 0) == 0
+				PRINTFORM %TEXTR("未能向亡妻献身的/为亡妻守节的")%寡夫
+			ELSE
+				PRINTFORM 丧偶后%TEXTR("长期禁欲的/欲求不满的")%
+			ENDIF
+		ELSEIF TALENT:TARGET:恋人持ち == -1
+		;想い人あり
+			IF GETBIT(TALENT:TARGET:非童貞, 0) == 0
+				PRINTFORM %TEXTR("仍为心上人保留纯洁/未被任何人触碰的/本应献给心上人的")%
+			ELSE
+				PRINTFORM 本应只对心上人开放的
+			ENDIF
+		ELSEIF キャラ一致チェック(TARGET, "[苍天的剑闪]莫妮卡") || キャラ一致チェック(TARGET, "[天空之剑]莉夏")
+			IF GETBIT(TALENT:TARGET:非童貞, 0) == 0
+				PRINTFORM 如秩序般严守至今的
+			ELSE
+				PRINTFORM 本应如秩序般未被玷污的
+			ENDIF
+		ELSEIF TALENT:TARGET:種族 == 5 && GETBIT(TALENT:TARGET:非童貞, 0) == 0
+		;星晶獣かつ処女
+			PRINTFORM %TEXTR("不老/长生")%存在却保持纯洁的
+		ELSEIF GETBIT(TALENT:TARGET:非童貞, 0) == 0
+			IF RAND:3 == 0
+				PRINTFORM 仿佛专为%CALLNAME:PLAYER%侵犯而守护至今的
+			ELSE
+				PRINTFORM %TEXTR("坚守纯洁的/尚未知晓污秽的")%
+			ENDIF
+		ELSE
+		;その他　犯す側の、自分勝手であまりにも都合の良い解釈
+			PRINTFORM %CALLNAME:PLAYER%%TEXTR("的股间正躁动不安/的兽欲正熊熊燃烧/如同待宰的美味猎物")%
+		ENDIF
+
+		PRINTFORM %CALLNAME:TARGET%的
+
+		;おまんこ冠詞群
+		;範囲が狭くシコリティの高そうなものから順につけていく
+		IF 知識素質:TARGET:高貴 >= 1
+		;高貴持ち
+			PRINTFORM %TEXTR("高贵的/皇家")%
+		ELSEIF アイドル判定(TARGET)
+		;偶像勢
+			PRINTFORM 偶像
+		ELSEIF 固有素質チェック(TARGET, "女高中生")
+			PRINTFORM 女高中生
+		ELSEIF 固有素質チェック(TARGET, "初中生")
+			PRINTFORM 初中生
+		ELSEIF 固有素質チェック(TARGET, "小学生")
+			PRINTFORM 小学生
+		ELSEIF 固有素質チェック(TARGET, "サーヴァント")
+		;包括して英霊という表現を使っていいものかは……まぁ文句来たら変えればヨシ
+			PRINTFORM %TEXTR("英灵/从者")%
+		ELSEIF TALENT:TARGET:ギャル
+		;ギャル
+			PRINTFORM ギャル
+		ELSEIF TALENT:TARGET:経験豊富
+		;経験豊富
+			PRINTFORM %TEXTR("经验丰富的/被充分开发的")%
+		ELSEIF TALENT:TARGET:性別嗜好 == 2
+		;女嫌い
+			PRINTFORM 厌女
+		ELSEIF TALENT:TARGET:種族 == 5
+		;星晶獣
+			PRINTFORM 强大星晶兽的
+		ELSEIF TALENT:TARGET:男性器サイズ <= -1
+		;短小以下
+			PRINTFORM %TEXTR("小巧可爱的/娇小可人")%
+		ELSEIF TALENT:TARGET:男性器サイズ >= 1
+		;巨根以上
+			PRINTFORM 雄伟壮观的
+		ENDIF
+		IF RISKY_DAY(TARGET) >= 1
+			IF CFLAG:TARGET:発情期フラグ < 0
+				PRINTFORM 发情
+			ENDIF
+		ENDIF
+	
+		SIF TALENT:TARGET:恋人持ち == 3
+			PRINTFORM 单身
+		SIF TALENT:TARGET:恋人持ち == 2
+			PRINTFORM 已婚者
+
+		SIF TALENT:TARGET:処女
+			PRINTFORM %TEXTR("全新品/未开封")%
+		SIF TALENT:TARGET:年齢層 == 10 || (BASE:TARGET:年齢 <= 13 && BASE:TARGET:年齢 != 0)
+			PRINTFORM %TEXTR("正太/幼童/小鬼")%
+	
+		PRINTFORM 鸡巴，
+
+		PRINTFORM 将自身湿润的蜜穴
+		PRINTFORML %TEXTR("缓缓地/粘腻地")%%TEXTR("纳入其中/吞入品尝/插入体验『男性』快感/吞噬践踏『男性』尊严/持续推进/完全吞没/深深埋入")%…
+		PRINTL
+
+		;おまけ
+		IF TALENT:TARGET:恋人持ち == 2
+			PRINTW 
+			PRINTFORM %CALLNAME:TARGET%在朦胧意识中，反复梦呓着向伴侣道歉
+			IF PALAM:欲情 >= PALAMLV:3
+				PRINTFORML ，
+				PRINTFORML 随着%CALLNAME:PLAYER%收紧阴道，那些话语逐渐被快感浸染的呻吟淹没…
+			ELSE
+				PRINTFORML …
+			ENDIF
+		ENDIF
+ENDSELECT
+

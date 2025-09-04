@@ -1,0 +1,212 @@
+﻿
+@COMNAME326
+#FUNCTIONS
+TSTR:コマンド名受渡 = 掀起裙子
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_326
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("セクハラ弱")
+睡眠中許可 = 1
+
+@COM_TOOLTIP_326
+LOCALS = <br>■掀起裙子<br>
+LOCALS += "掀裙指令。<br>非裙装服饰不可执行<br>在场人数越多越易引发不快与反感。"
+LOCALS += "<br>指令类型：性骚扰<br>获取来源：接触・暴露・不快・反感"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+@COM326
+
+TIME += 3
+SIF CFLAG:TARGET:睡眠
+	RETURN 1
+
+CALL セクハラ反応タイプ判定(TARGET)
+;RFLAG:コマンド結果受渡し変数
+;1:拒絶  2:受け入れ  3:喜び
+;RFLAG:コマンド結果受渡し変数２
+;1:無知  2:無反応  3:嫌悪  4:拒否  5:余裕  6:羞恥  7:愉悦  8:汎用
+
+;結果に関わりなく発生する快楽部分
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 50)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 150)
+;ノーパン時、露出が倍
+IF TEQUIP:TARGET:下半身下着あり == 0
+	CALL SOURCE_CALC_露出(TARGET, PLAYER, 150)
+ENDIF
+
+
+IF RFLAG:コマンド結果受渡し変数２ <= 2
+	;無知、あるいは無反応の場合不快反感発生無し
+	IF 陥落チェック(TARGET)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+	ENDIF
+ELSEIF GET_TARGETNUM() > 1
+	;自身とあなた以外のキャラが居る場合
+	CALL SOURCE_CALC_露出(TARGET, PLAYER, (GET_TARGETNUM() - 1) * 15)
+	CALL SOURCE_CALC_不快(TARGET, PLAYER, (GET_TARGETNUM() - 1) * 10 + 50)
+	CALL SOURCE_CALC_反感(TARGET, PLAYER, (GET_TARGETNUM() - 1) * 10 + 50)
+ELSE
+	;二人きりの場合
+	IF 陥落チェック(TARGET)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+	ELSE
+		CALL SOURCE_CALC_不快(TARGET, PLAYER, 50)
+		CALL SOURCE_CALC_反感(TARGET, PLAYER, 50)
+	ENDIF
+ENDIF
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE326
+;実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(326)
+	RETURN RESULT
+;スカート着用必須
+SIF TEQUIP:TARGET:下半身服あり == 0
+	RETURN 0
+SIF TEQUIP:TARGET:スカートめくり可 == 0
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM326
+
+IF CFLAG:TARGET:睡眠
+	PRINTFORML %CALLNAME:PLAYER%缓缓掀起酣睡的%CALLNAME:TARGET%的裙摆。
+ELSE
+	PRINTFORML %CALLNAME:PLAYER%悄然接近%CALLNAME:TARGET%并撩起其裙角。
+ENDIF
+
+IF TEQUIP:TARGET:下半身下着あり == 0
+	LOCALS = 未着内衣的下半身
+ELSE
+	LOCALS = %今日の下着文字列生成(TARGET)%
+ENDIF
+PRINTFORML 裙底隐约露出%LOCALS%……
+
+@MESSAGE_COM326_非口上時
+
+PRINTFORM %CALLNAME:TARGET%
+IF CFLAG:TARGET:睡眠
+	PRINTFORML 仍在安稳沉睡……
+	RETURN 0
+ENDIF
+
+SELECTCASE RFLAG:コマンド結果受渡し変数２
+	CASE 1
+		;無知
+		PRINTFORM 露出不解神情注视着%CALLNAME:PLAYER%的动作。
+	CASE 2
+		;無反応
+		PRINTFORM 面无表情地任由摆布。
+	CASE 3
+		;嫌悪
+		IF GET_TARGETNUM() > 1
+			PRINTFORM 慌忙按住衣裙，用嫌恶的眼神瞪着%CALLNAME:PLAYER%。
+		ELSE
+			IF RFLAG:コマンド結果受渡し変数 == 1
+				;拒絶
+				PRINTFORM 慌忙按住衣裙，用嫌恶的眼神瞪着%CALLNAME:PLAYER%。
+			ELSEIF RFLAG:コマンド結果受渡し変数 == 2
+				;受け入れ
+				PRINTFORM 按住裙摆，用无奈的眼神看着%CALLNAME:PLAYER%。
+			ELSE
+				;喜び
+				PRINTFORM 用[真拿你没办法]的表情默许%CALLNAME:PLAYER%继续。
+			ENDIF
+		ENDIF
+	CASE 4
+		;拒否
+		IF GET_TARGETNUM() > 1
+			PRINTFORM 严肃警告%CALLNAME:PLAYER%停止骚扰。
+		ELSE
+			IF RFLAG:コマンド結果受渡し変数 == 1
+				;拒絶
+				PRINTFORM 严肃警告%CALLNAME:PLAYER%停止骚扰。
+			ELSEIF RFLAG:コマンド結果受渡し変数 == 2
+				;受け入れ
+				PRINTFORM 委婉提醒%CALLNAME:PLAYER%注意分寸。
+			ELSE
+				;喜び
+				PRINTFORM 建议%CALLNAME:PLAYER%在人少时进行这类行为。
+			ENDIF
+		ENDIF
+	CASE 5
+		;余裕
+		IF GET_TARGETNUM() > 1
+			PRINTFORM 默默地整理服饰，用冰冷的目光瞪着%CALLNAME:PLAYER%。
+		ELSE
+			IF RFLAG:コマンド結果受渡し変数 == 1
+				;拒絶
+				PRINTFORM 默默地整理服饰，用冰冷的目光瞪着%CALLNAME:PLAYER%。
+			ELSEIF RFLAG:コマンド結果受渡し変数 == 2
+				;受け入れ
+				PRINTFORM 委婉提醒%CALLNAME:PLAYER%注意分寸。
+			ELSE
+				;喜び
+				PRINTFORM 主动掀起裙角向%CALLNAME:PLAYER%展示更多。
+			ENDIF
+		ENDIF
+	CASE 6
+		;羞恥
+		IF GET_TARGETNUM() > 1
+			PRINTFORM 羞愤地后退与%CALLNAME:PLAYER%拉开距离。
+		ELSE
+			IF RFLAG:コマンド結果受渡し変数 == 1
+				;拒絶
+				PRINTFORM 羞愤地后退与%CALLNAME:PLAYER%拉开距离。
+			ELSEIF RFLAG:コマンド結果受渡し変数 == 2
+				;受け入れ
+				PRINTFORM 慌忙按住裙子，红着脸打了%CALLNAME:PLAYER%一耳光。
+			ELSE
+				;喜び
+				PRINTFORM 按住裙子，双颊绯红地凝视%CALLNAME:PLAYER%。
+			ENDIF
+		ENDIF
+	CASE 7
+		;愉悦
+		IF GET_TARGETNUM() > 1
+			PRINTFORM 默默地整理服饰，用冰冷的目光瞪着%CALLNAME:PLAYER%。
+		ELSE
+			IF RFLAG:コマンド結果受渡し変数 == 1
+				;拒絶
+				PRINTFORM 默默地整理服饰，用冰冷的目光瞪着%CALLNAME:PLAYER%。
+			ELSEIF RFLAG:コマンド結果受渡し変数 == 2
+				;受け入れ
+				PRINTFORM 调侃%CALLNAME:PLAYER%对裙底的好奇心。
+			ELSE
+				;喜び
+				PRINTFORM 挑逗地问%CALLNAME:PLAYER%是否想探索更深领域。
+			ENDIF
+		ENDIF
+	CASEELSE
+		;汎用
+		IF GET_TARGETNUM() > 1
+			PRINTFORM 慌忙按住裙子，瞪视%CALLNAME:PLAYER%。
+		ELSE
+			IF RFLAG:コマンド結果受渡し変数 == 1
+				;拒絶
+				PRINTFORM 慌忙按住裙子，瞪视%CALLNAME:PLAYER%。
+			ELSEIF RFLAG:コマンド結果受渡し変数 == 2
+				;受け入れ
+				PRINTFORM 按住裙子，露出困扰表情看着%CALLNAME:PLAYER%。
+			ELSE
+				;喜び
+				PRINTFORM 苦笑着提醒%CALLNAME:PLAYER%注意行为尺度。
+			ENDIF
+		ENDIF
+ENDSELECT

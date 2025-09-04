@@ -1,0 +1,48 @@
+﻿
+@アイテム個別文章表示_魔石(ARGS)
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 1000
+ENDIF
+
+LOCALS = 
+LOCALS += @"■魔石　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "魔石")}<br>"
+LOCALS += "蕴含基础魔力的常见矿石。<br>"
+LOCALS += "粉碎后可利用溢出的魔力恢复ＭＰ。<br>"
+LOCALS += "虽可加工为魔力药水，<br>"
+LOCALS += "但直接使用也具备一定效果<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "我方单体ＭＰ恢复[１００]。<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_魔石
+CALL 汎用使用先表示("味方単体")
+
+@アイテム効果処理_魔石(ARG)
+;ARG = 隊列の何番目か
+
+IF !BATTLE_STATE:ARG:キャラ登録番号
+	RETURN 0
+ENDIF
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "魔石") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:最大ＭＰ == BATTLE_STATE:ARG:ＭＰ
+	PRINTW ＭＰ已满
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:最大ＭＰ - BATTLE_STATE:ARG:ＭＰ < 100
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＭＰ恢复了{BATTLE_STATE:ARG:最大ＭＰ - BATTLE_STATE:ARG:ＭＰ}
+ELSE
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＭＰ恢复了100
+ENDIF
+
+BATTLE_STATE:ARG:ＭＰ = MIN(BATTLE_STATE:ARG:ＭＰ + 100, BATTLE_STATE:ARG:最大ＭＰ)
+
+RETURN 1

@@ -1,0 +1,223 @@
+﻿@汎用喘ぎ処理(キャラ番号)
+#DIM キャラ番号
+
+SIF キャラ番号 == 0
+	RETURN 0
+
+CALL 口上変数初期化
+CALL 喘ぎ内容取得(キャラ番号)
+IF RESULT
+	CALL 口上変数表示(キャラ番号, 1)
+	CALL 口上変数初期化
+ENDIF
+
+@喘ぎ内容取得(キャラ番号)
+#DIM キャラ番号
+#DIM 文節数
+#DIM 基準快楽量
+#DIM 喘ぎレベル
+
+基準快楽量 = CUP:キャラ番号:快Ｃ + CUP:キャラ番号:快Ｂ + CUP:キャラ番号:快Ｖ + CUP:キャラ番号:快Ａ + CUP:キャラ番号:快Ｓ
+IF 基準快楽量 < 1
+	IF TCVAR:キャラ番号:前ターン絶頂 && CFLAG:キャラ番号:うふふ
+		;快楽が発生していないが、絶頂直後なら余韻喘ぎ
+		LOCALS = %汎用喘ぎ基礎文字(0)%
+		SELECTCASE RAND:2
+			CASE 0
+				KSTR:(K++) = 「%LOCALS%────呃_H_ %LOCALS%────呃_H_」
+			CASE 1
+				KSTR:(K++) = 「%LOCALS%呃……_H_ %LOCALS%呃……_H_ %LOCALS%呃……_H_」
+		ENDSELECT
+		RETURN 1
+	ENDIF
+	;快楽が発生していないなら戻る
+	RETURN 0
+ENDIF
+
+基準快楽量 = MAX(CUP:キャラ番号:快Ｃ, CUP:キャラ番号:快Ｂ, CUP:キャラ番号:快Ｖ, CUP:キャラ番号:快Ａ, CUP:キャラ番号:快Ｓ)
+SELECTCASE 基準快楽量
+	CASE 1 TO 999
+		喘ぎレベル = 1
+	CASE 1000 TO 2999
+		喘ぎレベル = 2
+	CASE 3000 TO 5999
+		喘ぎレベル = 3
+	CASE 6000 TO 9999
+		喘ぎレベル = 4
+	CASE IS >= 10000
+		喘ぎレベル = 5
+ENDSELECT
+IF PALAM:キャラ番号:欲情 >= PALAMLV:8
+	喘ぎレベル = MIN(5, 喘ぎレベル + 2)
+ELSEIF PALAM:キャラ番号:欲情 >= PALAMLV:4
+	喘ぎレベル = MIN(5, 喘ぎレベル + 1)
+ENDIF
+
+IF CFLAG:キャラ番号:うふふ && RCVAR:キャラ番号:汎用喘ぎ_文節低減フラグ == 0
+	SELECTCASE PALAM:キャラ番号:欲情
+		CASE IS <= PALAMLV:2
+			文節数 = RAND:2 + 1
+		CASE IS <= PALAMLV:4
+			文節数 = LIMIT(RAND:喘ぎレベル, 2, 3)
+		CASEELSE
+			文節数 = LIMIT(RAND:喘ぎレベル, 2, 4)
+	ENDSELECT
+ELSE
+	文節数 = 1
+ENDIF
+
+;快Ｓ哈通常性感帯で哈ないので、強い快感を覚えない限り哈喘がない
+IF CUP:キャラ番号:快Ｓ == MAX(CUP:キャラ番号:快Ｃ, CUP:キャラ番号:快Ｂ, CUP:キャラ番号:快Ｖ, CUP:キャラ番号:快Ａ, CUP:キャラ番号:快Ｓ)
+	喘ぎレベル = MAX(1, 喘ぎレベル - 2)
+	文節数 = 1
+	IF CUP:キャラ番号:快Ｓ < 1000
+		RETURN 0
+	ENDIF
+ENDIF
+;睡眠時哈喘ぎレベル１固定
+IF CFLAG:キャラ番号:睡眠
+	喘ぎレベル = 1
+	文節数 = 1
+ENDIF
+
+KSTR:(K++) = %汎用喘ぎ基礎文節(文節数, 喘ぎレベル)%
+RETURN 1
+
+
+@汎用喘ぎ基礎文字(喘ぎレベル)
+#FUNCTIONS
+#DIM 喘ぎレベル
+#DIMS 文字返り値
+
+SELECTCASE 喘ぎレベル
+	CASE 0
+		STRDATA 文字返り値
+			DATA 哈
+			DATA 呼
+		ENDDATA
+	CASE 1 TO 3
+		STRDATA 文字返り値
+			DATA 哈
+			DATA 呼
+			DATA 啊
+			DATA 嗯
+			DATA 嗯呜
+			DATA 嗯呀
+			DATA 呀嗯
+			DATA 呀
+			DATA 呜呀
+			DATA 呀啊
+			DATA 呀！
+			DATA 嗨呀
+			DATA 呼呃
+			DATA 呀呃
+		ENDDATA
+	CASE 4 TO 5
+		STRDATA 文字返り値
+			DATA 啊呃
+			DATA 啊呃！
+			DATA 呀呀！
+			DATA 呜呃
+			DATA 呜呃！
+			DATA 哦呃
+			DATA 哦呃！
+			DATA 哦呜呃！
+			DATA 呼、呜呜……呀
+			DATA 啊呀啊呀
+			DATA 呀！
+			DATA 哈、呀
+			DATA 啊、呀！
+			DATA 嗯呜呜呃
+			DATA 啊──！
+			DATA 呀呃
+			DATA 呜呀
+			DATA 呀啊
+		ENDDATA
+ENDSELECT
+
+RETURNF 文字返り値
+
+@汎用喘ぎ接続文字()
+#FUNCTIONS
+#DIMS 文字返り値
+
+
+STRDATA 文字返り値
+	DATA 嗯
+	DATA 呀！
+	DATA 呀
+	DATA ──
+ENDDATA
+
+
+RETURNF 文字返り値
+
+@汎用喘ぎ基礎文節(文節数, 喘ぎレベル)
+#FUNCTIONS
+#DIM 喘ぎレベル
+#DIM 文節数
+#DIMS 文字返り値
+#DIMS 文節保存
+
+SELECTCASE 文節数
+	CASE 1
+		STRDATA 文字返り値
+			DATAFORM 「%汎用喘ぎ基礎文字(喘ぎレベル)%呃……%汎用喘ぎハート数返り(喘ぎレベル)%」
+			DATAFORM 「%汎用喘ぎ基礎文字(喘ぎレベル)%%汎用喘ぎ接続文字()%%汎用喘ぎハート数返り(喘ぎレベル)%」
+			DATAFORM 「%汎用喘ぎ接続文字()%%汎用喘ぎ基礎文字(喘ぎレベル)%%汎用喘ぎハート数返り(喘ぎレベル)%」
+			DATAFORM 「%汎用喘ぎ接続文字()%呃%汎用喘ぎハート数返り(喘ぎレベル)%」
+		ENDDATA
+	CASEELSE
+		文字返り値 = 
+		FOR LOCAL, 0, 文節数
+			STRDATA 文節保存
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%呃%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%呃%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%、%汎用喘ぎ基礎文字(喘ぎレベル)%呃……%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%、%汎用喘ぎ基礎文字(喘ぎレベル)%呃%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%、%汎用喘ぎ基礎文字(喘ぎレベル)%呃%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%、%汎用喘ぎ基礎文字(喘ぎレベル)%、%汎用喘ぎ基礎文字(喘ぎレベル)%%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ接続文字()%、%汎用喘ぎ基礎文字(喘ぎレベル)%、%汎用喘ぎ基礎文字(喘ぎレベル)%呃%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ接続文字()%、%汎用喘ぎ接続文字()%、%汎用喘ぎ基礎文字(喘ぎレベル)%呃%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%、%汎用喘ぎ接続文字()%、%汎用喘ぎ接続文字()%呀%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%──呃%汎用喘ぎハート数返り(喘ぎレベル)%
+				DATAFORM %汎用喘ぎ基礎文字(喘ぎレベル)%……呃%汎用喘ぎハート数返り(喘ぎレベル)%
+			ENDDATA
+			文字返り値 += @"　%文節保存%"
+		NEXT
+		;先頭の全角スペースを削除
+		SUBSTRING 文字返り値, 2, -1
+		文字返り値 = 「%RESULTS%」
+ENDSELECT
+
+RETURNF 文字返り値
+
+@汎用喘ぎハート数返り(喘ぎレベル)
+#FUNCTIONS
+#DIM 喘ぎレベル
+#DIMS 文字返り値
+
+SELECTCASE 喘ぎレベル
+	CASE 1
+		RETURNF "_H_"
+	CASE 2
+		IF RAND:2 == 0
+			文字返り値 = _H_
+		ELSE
+			文字返り値 = _H_H_
+		ENDIF
+		RETURNF 文字返り値
+	CASE 3
+		RETURNF "_H_H_"
+	CASE 4
+		IF RAND:2 == 0
+			文字返り値 = _H_H_
+		ELSE
+			文字返り値 = _H_H_H_
+		ENDIF
+		RETURNF 文字返り値
+	CASE 5
+		RETURNF "_H_H_H_"
+ENDSELECT
+

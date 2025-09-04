@@ -1,0 +1,185 @@
+﻿
+
+@COMNAME324
+#FUNCTIONS
+TSTR:コマンド名受渡 = 抓挠乳头
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_324
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("セクハラ強")
+弱点コマンドカテゴリ = B
+睡眠中許可 = 1
+
+@COM_TOOLTIP_324
+LOCALS = <br>■抓挠乳头<br>
+LOCALS += "隔着衣物用指甲搔刮对方乳头的指令。<br>目标穿着上半身护甲时不可执行。"
+LOCALS += "<br>指令类型：性骚扰<br>获取来源：接触・暴露・快Ｂ"
+LOCALS += "<br>专属经验值：乳头开发(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM324
+;抓挠乳头
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 1
+
+RCVAR:乳首開発フラグ = 1
+;発生する快楽は受け手の状態に依存しない
+CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 150)
+SIF TALENT:PLAYER:器用な指
+	CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 50)
+
+
+TIME += 10
+SIF CFLAG:TARGET:睡眠
+	RETURN 1
+
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 1
+
+
+CALL セクハラ反応タイプ判定(TARGET)
+;RFLAG:コマンド結果受渡し変数
+;1:拒絶  2:受け入れ 3:喜び
+;RFLAG:コマンド結果受渡し変数２
+;1:無知  2:無反応 3:嫌悪  4:拒否  5:余裕  6:羞恥  7:愉悦  8:汎用
+
+;セクハラ強は基本的に喜び以外に入らないはず（合意条件であり、合意に入るにはそれなりに仲良くならなければならないため）
+
+SELECTCASE RFLAG:コマンド結果受渡し変数２
+	CASE 1
+		;無知
+		CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 250)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+	CASE 2
+		;無反応
+		CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 250)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+	CASE 3
+		;嫌悪
+		CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 250)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 80)
+	CASE 4
+		;拒否
+		CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 250)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+	CASE 5
+		;余裕
+		CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 250)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 120)
+	CASE 6
+		;羞恥
+		CALL SOURCE_CALC_接触(TARGET, PLAYER, 300)
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 350)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 150)
+	CASE 7
+		;愉悦
+		CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 250)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 130)
+	CASE 8
+		;汎用
+		CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+		CALL SOURCE_CALC_露出(TARGET, PLAYER, 250)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ENDSELECT
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE324
+;抓挠乳头実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;Bがない場合駄目
+SIF TALENT:TARGET:Ｂ感度 == -2
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(324) && !RFLAG:罰ゲーム中
+	RETURN RESULT
+SIF TEQUIP:上半身鎧あり
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM324
+
+PRINTFORM %CALLNAME:PLAYER%
+SIF 体格差計算(PLAYER, TARGET) <= -3 && !CFLAG:睡眠
+	PRINT 蹲下身
+PRINTFORM 将手伸向%CALLNAME:TARGET%
+SELECTCASE TALENT:TARGET:バストサイズ
+	CASE -2
+		PRINT 几乎无起伏的平坦胸部
+	CASE -1
+		PRINT 微微隆起的青涩酥胸
+	CASE 0
+		PRINT 胸部的柔软轮廓
+	CASE 1 TO 2
+		PRINT 饱满丰盈的浑圆双峰
+	CASE 3
+		PRINT 双手难以掌握的丰硕乳肉
+ENDSELECT
+PRINTL 隔着衣物搔刮乳头
+
+IF CUP:TARGET:快Ｂ > 3000
+	IF CFLAG:TARGET:睡眠
+		PRINTFORML %CALLNAME:TARGET%即使在睡梦中也明显因乳头刺激产生强烈反应…
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%发出娇喘声沉溺于乳头快感…
+	ENDIF
+	PRINTL
+ELSEIF CUP:TARGET:快Ｂ > 1000
+	;一定以上の快楽が発生した時にちょっと声が出る
+	IF CFLAG:TARGET:睡眠
+		PRINTFORML 突如其来的快感让%CALLNAME:TARGET%在睡梦中发出细微呻吟…
+	ELSE
+		PRINTFORML 突如其来的快感让%CALLNAME:TARGET%不禁漏出些许声音…
+	ENDIF
+	PRINTL
+ENDIF
+
+@MESSAGE_COM324_非口上時
+
+IF CFLAG:TARGET:睡眠
+	PRINTFORML %CALLNAME:TARGET%仍在安稳沉睡……
+	RETURN 0
+ENDIF
+
+IF CUP:TARGET:快Ｂ <= 3000
+	SELECTCASE RFLAG:コマンド結果受渡し変数２
+		CASE 1
+			;無知
+			PRINTFORML %CALLNAME:TARGET%虽不明所以却因%CALLNAME:PLAYER%的愉悦而展露笑颜
+		CASE 2
+			;無反応
+			PRINTFORML %CALLNAME:TARGET%看似镇定，却红着脸将身体贴近%CALLNAME:PLAYER%…
+		CASE 3
+			;嫌悪
+			PRINTFORML %CALLNAME:TARGET%露出[真拿你没办法]的表情任由%CALLNAME:PLAYER%摆布…
+		CASE 4
+			;拒否
+			PRINTFORML %CALLNAME:TARGET%似乎并不讨厌，放任%CALLNAME:PLAYER%继续动作…
+		CASE 5
+			;余裕
+			PRINTFORML %CALLNAME:TARGET%悄悄提醒%CALLNAME:PLAYER%注意避开旁人视线…
+		CASE 6
+			;羞恥
+			PRINTFORML %CALLNAME:TARGET%红着脸凝视%CALLNAME:PLAYER%，轻轻依偎过来…
+		CASE 7
+			;愉悦
+			PRINTFORML %CALLNAME:TARGET%用妩媚神情暗示%CALLNAME:PLAYER%触碰更多部位…
+		CASE 8
+			PRINTFORML %CALLNAME:TARGET%似乎对%CALLNAME:PLAYER%的触碰感到欣喜…
+	ENDSELECT
+ENDIF

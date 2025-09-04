@@ -1,0 +1,629 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;X1は角色番号に置換してください
+;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+;ここで TFLAG:取引可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K77_ADDSELECT
+
+
+SIF TALENT:恋慕
+	STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("脳みそを弄りたい", 16)% … %CALLNAME:TARGET%に上げた能力の一部を重置してもらいます/
+
+;初回はケンカしても激怒するまでこの選択肢は出てこないが、次回からはわりとすぐに出てくるので、仲直りＨが面倒な場合はここ
+IF CFLAG:ハル激怒 >= 5
+	STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("許して下さい", 16)% … %CALLNAME:TARGET%に憤怒を鎮めてもらいます/
+ELSEIF CFLAG:ハルケンカ && CFLAG:ハル憤怒 >= 1
+	STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("許して下さい", 16)% … %CALLNAME:TARGET%に憤怒を鎮めてもらいます/
+ENDIF
+
+;お願い・取引で増やした選択肢の地の文と台詞
+@KOJO_WISH_K77_ADDSELECT, ARGS
+#DIMS CHOICES
+
+SELECTCASE ARGS
+CASE "脳みそを弄りたい"
+	IF CFLAG:ハルにお願いを聞いてもらおう == 0
+		PRINTFORMW %CALLNAME:MASTER%は%CALLNAME:TARGET%の能力を弄らせて欲しいとお願いした。
+		PRINTL 
+		PRINTFORMW 「やってもいいけど、今の%CNAME("一人称")%のバージョンだと、上げた能力の一部を下げる事しか不可能だぞ」
+		PRINTFORMW 「しかも細かい数値の入力は無理だし、一度下げたらもとには戻せねえ」
+		PRINTFORMW 「その上、どの能力も【 0 】にしか出来ねえけど、それでいいならやりなよ」
+		CFLAG:ハルにお願いを聞いてもらおう = 1
+	ELSE
+		PRINTFORMW 「む。また脳みそ弄るのか？ 別にいいけどさ。どれ弄る？」
+		CFLAG:ハルにお願いを聞いてもらおう += 1
+	ENDIF
+
+	VARSET LOCALS
+	SPLIT "欲望/技巧/露出癖/自慰中毒/Ｐ感覚/Ａ感覚/Ｂ感覚/Ｍ感覚", "/", LOCALS
+
+	PRINTFORML [0] 欲望
+	PRINTFORML [1] 技巧
+	PRINTFORML [2] 露出癖
+	PRINTFORML [3] 自慰中毒
+	PRINTFORML [4] Ｐ感覚
+	PRINTFORML [5] Ａ感覚
+	PRINTFORML [6] Ｂ感覚
+	PRINTFORML [7] Ｍ感覚
+	PRINTFORML [999] 返回
+	
+	CALL INPUT_SELECT, 8, 999
+	
+	SELECTCASE RESULT
+	CASE 999
+		PRINTFORMW 「ん。了解」
+
+	CASEELSE
+		CHOICES = %LOCALS:RESULT%
+
+		SELECTCASE RESULT
+		CASE 0
+			ABL:欲望 = 0
+			JUEL:欲情 = 0
+		CASE 1
+			ABL:技巧 = 0
+			JUEL:習得 = 0
+		CASE 2
+			ABL:露出癖 = 0
+			JUEL:恥情 = 0
+		CASE 3
+			ABL:自慰中毒 = 0
+			EXP:自慰経験 = 0
+		CASE 4
+			ABL:Ｃ感覚 = 0
+			ABL:Ｐ感覚 = 0
+			JUEL:快Ｃ = 0
+		CASE 5
+			ABL:Ａ感覚 = 0
+			JUEL:快Ａ = 0
+		CASE 6
+			ABL:Ｂ感覚 = 0
+			JUEL:快Ｂ = 0
+		CASE 7
+			ABL:Ｍ感覚 = 0
+			JUEL:快Ｍ = 0
+		ENDSELECT
+		CALL PRINT_STRW, @"黄色_※%CALLNAME:TARGET%の%CHOICES%が０LV成为了※"
+	ENDSELECT
+
+CASE "許して下さい"
+	PRINTFORMW %CALLNAME:MASTER%は%CALLNAME:TARGET%に憤怒を収めてくれるようにお願いした
+	PRINTFORML 
+	PRINTFORMW 「む。 …むー　　　　　最近ずっと%CNAME("一人称")%を放置しやがって‥‥‥‥%CNAME("一人称")%は怒ってるんだ。だからダメっ！ 許さねえ！！」
+	PRINTFORML 
+	PRINTL 
+	PRINTFORML [0] そこをなんとか、反省するので許してください。と奮発してお高い送禮を渡して道歉
+	PRINTFORML [999] 今回は諦める
+	
+	INPUT
+	
+	IF RESULT == 0
+		PRINTFORML 
+		PRINTFORMW 「うわ‥‥これ、わざわざ注文して取り寄せてくれたのか？」
+		PRINTFORMW 「へえ… ふ～ん…？ ふ～ん‥‥‥‥‥」
+		PRINTFORMW 「…むぅー」
+		PRINTFORML 
+		PRINTFORMW 「………………………………しょーがねえな、今回は特別に許してやんよ…」
+		PRINTFORML 
+		PRINTFORMW %CALLNAME:MASTER%に放置したお詫びの、精一杯の送禮もらった%CALLNAME:TARGET%はようやく憤怒を鎮めました。
+		PRINTFORML 
+		SIF CFLAG:ハル憤怒の深さ１ == 0
+			CFLAG:ハル憤怒の深さ１ = 3 + CFLAG:ハル憤怒 + CFLAG:ハル激怒 + CFLAG:ハル合意禁止
+		IF MONEY < 1000000
+			MONEY = 0
+			BASE:MASTER:魂 = 1
+			PRINTFORMW 【現在所持金 $ 0 ：魂 0.01】
+		ELSEIF MONEY >= 1000000
+			TFLAG:取引価格 = 1000000
+			PRINTFORMW 【現在所持金 ${MONEY} 】
+		ENDIF
+		CALL FORBID_GOUI, "禁止解除"
+		CALL DEL_CEVENT, "新規合意禁止"
+		CALL DEL_CEVENT, "合意禁止：给看尾巴"
+		PRINTFORMW ※新規合意禁止は解除されました。
+		PRINTFORMW ※合意禁止も解除されました。
+		PRINTFORMW ※ただし、下がってしまったステータスと、消えてしまった合意はすぐには戻ってきません。
+		PRINTFORMW   もう一度%CALLNAME:TARGET%といっしょに関係を育てなおしていきましょう。
+		CFLAG:ハル激怒 = 0
+		CFLAG:ハル憤怒 = 0
+		CFLAG:ハル合意禁止 = 0
+		CFLAG:ハルケンカ += 1
+	ELSEIF RESULT == 999
+		PRINTFORMW 「ふーん、あそ。じゃ、許さねえっ！ むーっ！！」
+	ENDIF
+ENDSELECT
+;
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K77_ADDSELECT
+STR:選択肢 += "询问对方的心情/"
+
+;	[IF_DEBUG]
+;		STR:選択肢 += "ケンカ検証用/"
+;	[ENDIF]
+;STR:選択肢 += "追加選択肢之２/"
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K77_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "询问对方的心情"
+	PRINTFORMW %CALLNAME:MASTER%は%CALLNAME:TARGET%に%ARGS%事にした。
+	PRINTL 
+	IF STATE("酔酒")
+		CALL EMOTION_PLUS, "酔酒/ワ", TARGET
+		PRINTFORMW 「今の%CNAME("一人称")%のご心情はどうかって？」
+		PRINTFORMW 「え～とな～‥‥【{RAND:500}】くらいかな～？ 合ってる？」
+		PRINTFORML 
+		PRINTFORMW 酔っぱらってる%CALLNAME:TARGET%には、ご心情を聞いてもあてにならないかもしれない‥‥‥
+		PRINTFORML 
+	ELSEIF CFLAG:ハル心情差
+		CALL EMOTION_PLUS, "重置/飘忽/憤怒眉/一文字", TARGET
+		PRINTFORMW 「は？ 今の%CNAME("一人称")%の心情？ 悪いかどうかは見りゃ分かんだろ‥‥」
+		PRINTFORMW 「‥‥‥‥‥‥‥【ご心情 -{CFLAG:ハル心情差} 】だよっ！」
+		SIF RAND:3 == 0 && CFLAG:ハル心情差 <= 5
+			PRINTFORMW 「心情の取り方ぁ？ 知るかよそんなもんっ！」 
+		PRINTFORML 
+	ELSE
+		CALL EMOTION_PLUS, "重置/通常", TARGET
+		PRINTFORMW 「ん？ なんでそんな事き君だ？ %CNAME("二人称")%は」
+		PRINTFORMW 「%CNAME("一人称")%の心情は【ご心情 {CFLAG:ハル心情差} 】だし別に悪くねえぞ？」
+		PRINTFORML 
+	ENDIF
+	IF CFLAG:ハル激怒 >= 5 && CFLAG:ハル告白断った <= 2
+		PRINTFORMW ※建议　どうやら%CALLNAME:MASTER%は、なにやら%CALLNAME:TARGET%の憤怒を買っているようです。
+		PRINTFORMW なんとかして許してもらわないと、あまりよろしくないような事態のようですが、大丈夫でしょうか？
+		IF CFLAG:ハル告白断った == 2
+			PRINTFORMW たいして好きでもないくせに恋人变成了りするから、こういうこと变成了のでしょうが、それは今さらですね。
+			PRINTFORMW きっと今後、何度もこういうことがあるでしょうが、誰かと恋人になるというのはそういうものですから仕方が有ません。
+		ENDIF
+		PRINTFORMW まずは深呼吸でもして、"能力表示と役割変更" でも見てみましょう。
+		PRINTFORML 
+		CFLAG:ハル告白断った = 3
+	ELSEIF CFLAG:ハルご心情伺い == 0
+		CALL PRINT_STRW, @"黄色_ここでは%CALLNAME:TARGET%の心情がいい時悪い時が分かったり、時々建议が聞けたりします_"
+		PRINTFORMW 攻略の手助けにするのも一つの手段です
+		PRINTFORML 
+		PRINTFORMW ※今回の建议：　初期の%CALLNAME:TARGET%は男が苦手で叛逆なので好感度も特に下がりやすいです。
+		PRINTFORMW 　警戒心が解けるまでは、Ｈ的ことは避けた方が無難かもしれません。
+		PRINTFORML 
+		CFLAG:ハルご心情伺い = 1
+	ELSEIF CFLAG:ハル－１０００ == 1 && CFLAG:ハルご心情伺い <= 3
+		PRINTFORMW ※建议　どうやら%CALLNAME:MASTER%は%CALLNAME:TARGET%に性騷擾繰り返したり、床に誘って嫌われてしまったようですね
+		PRINTFORMW 　しかし、あまり落ち込まなくても大丈夫です。
+		PRINTFORMW 　%CALLNAME:TARGET%には、好感度が下がった時にしか、見られないイベントが有ます
+		PRINTFORML 
+		CFLAG:ハルご心情伺い = 2
+	ELSEIF CFLAG:ハルご心情伺い <= 2
+		PRINTFORMW ※%CALLNAME:TARGET%の心情を取りたい場合は、甜言蜜语、夸奖、そして%CALLNAME:TARGET%の好きな事が有効なようです
+		PRINTFORMW 　一度で効果がない場合でも、何度か挑戦することで効果が出る場合も有ますので、めげないでやってみましょう。
+		PRINTFORML 
+		CFLAG:ハルご心情伺い += 1
+	ELSEIF CFLAG:ハルご心情伺い == 3
+		PRINTFORMW ※建议　%CALLNAME:TARGET%の恋慕は、特に性交をしなくても取得できるようになっているようです
+		PRINTFORML 
+		CFLAG:ハルご心情伺い += 1
+	ELSEIF CFLAG:ハルご心情伺い == 4 && CFLAG:ハル－１０００ >= 2 &&  CEVENT("飲酒拒否だった") == 0 && CEVENT("飲酒拒否") == 0
+		PRINTFORMW ※建议　"[103]能力表示と役割変更"を見てみましょう。%CALLNAME:TARGET%の好物や讨厌的东西が分かるかも知れません。
+		PRINTFORMW 　好物に与えることによって、%CALLNAME:TARGET%の普段とは違う一面が見られる可能性が有ますよ。
+		PRINTFORML 
+		CFLAG:ハルご心情伺い = 5
+	ELSEIF CFLAG:ハルご心情伺い == 5 && CFLAG:ハルは日誌を付けているようです >= 6 && CFLAG:ハルは日誌を付けているようです <= 7 && CEVENT("飲酒拒否だった") == 0 && CEVENT("飲酒拒否") == 0 && STATE("酔酒") == 0
+		PRINTFORMW ※建议　%CALLNAME:TARGET%は意外とお酒が好きなようです。
+		PRINTFORMW 　叛逆でなくなった今なら、お酒をススメてみるのも一つの手段かもしれません。
+		PRINTFORML 
+		CALL DEL_CEVENT, "飲酒拒否"
+		CALL SET_CEVENT, "飲酒拒否だった"
+		CFLAG:ハルご心情伺い = 6
+	ELSEIF CFLAG:ハルご心情伺い == 6 && CFLAG:好感度 >= 450
+		PRINTFORMW ※%CALLNAME:TARGET%に効果的に“夸奖”や“甜言蜜语”を使うのには、心情差を利用するのも一つの手段のようです
+		PRINTFORMW 　しかし実は、%CALLNAME:TARGET%を心情差なまま放置し続けた時のイベントが存在していたりも、するらしいです
+		PRINTFORML 
+		CFLAG:ハルご心情伺い = 7
+	ELSEIF CFLAG:ハル酔っぱらいのあやまち >= 1
+		PRINTFORMW ※建议　現在%CALLNAME:TARGET%はうっかりとんでもない約束をしてしまったと後悔して禁酒しています。
+		PRINTFORMW 　しかしその気持ちもきっと、ずっと続くものではないはずです。
+		PRINTFORMW 　喉元過ぎれば熱さを忘れるという言葉もあるので、ほとぼりが冷めたら、また禁酒するのをやめるかもしれません。
+		PRINTFORML 
+	ELSEIF CFLAG:ハル告白断った == 1 && TALENT:相思相愛 == 0
+		PRINTFORMW ※建议　セクサロイドとお付き合いするなどという、とち狂った事はやめておいた方が断然正しいと思います。
+		PRINTFORMW 　まして%CALLNAME:TARGET%の性格を考えると尚更です。きっと付き合っても、ケンカとかする羽目になるに決まってますからね。
+		PRINTFORMW 　まぁ…それでも付き合いたいっていう奇特な%CALLNAME:MASTER%なら、%CALLNAME:TARGET%との関係を深めてみるのもいいかもしれませんが‥‥
+		PRINTFORML 
+		CFLAG:ハル告白断った = 2
+	ELSEIF RAND:4 == 0 && STATE("酔酒") == 0
+		PRINTFORMW 「たまには[103]で、%CNAME("一人称")%の能力とか格子しとけよ%CNAME("二人称")%」
+		PRINTFORMW 「アップ约会したら項目変わる事もあるから、%CNAME("一人称")%の%CNAME("二人称")%ならその辺酱と把握しといて欲しいしな」
+		PRINTFORML 
+	ELSEIF RAND:4 == 0 && CFLAG:ハル起動経過日数 >= 3
+		PRINTFORMW ※建议　ちなみに%CALLNAME:TARGET%が起動してから、もう【 {CFLAG:ハル起動経過日数}日 】成为了。
+		IF CFLAG:ハル起動経過日数 >= NUM("１年の長さ") && CFLAG:ハル起動経過日数 % NUM("１年の長さ") == 0
+			PRINTFORMW 本日は%CALLNAME:TARGET%の誕生日です。たまには送禮などしてみて是かがでしょうか。
+		ELSEIF TEXTS("日期対応イベント") == "女仆の日" || TEXTS("日期対応イベント") == "比基尼の日" || TEXTS("日期対応イベント") == "七夕" || TEXTS("日期対応イベント") == "海の日" || TEXTS("日期対応イベント") == "兔女郎の日" || TEXTS("日期対応イベント") == "万圣节/圣诞节" || TEXTS("日期対応イベント") == "圣诞节翌日" || TEXTS("日期対応イベント") == "大晦日" || TEXTS("日期対応イベント") == "新年" || TEXTS("日期対応イベント") == "情人節" || TEXTS("日期対応イベント") == "情人節翌日"
+			PRINTFORMW そういえば、何かのイベント日の送禮は普段とは違った反応が見られるかも知れません。
+		ENDIF
+		PRINTFORML 
+	ELSEIF RAND:6 == 0 && CFLAG:好感度 <= 0
+		PRINTFORMW 「む？ KANZAKIの事が知りてえのか？ %CNAME("一人称")%もたいして詳しくはねえよ」
+		PRINTFORMW 「生みの親だし、普通の事なら分かるけど、その程度、公式サイトでも見りゃ分かる事だしな」
+		PRINTFORML 
+		PRINTFORMW ※どうやら%CALLNAME:TARGET%は生みの親KANZAKIについてはあまり詳しくないようです。
+		PRINTFORML 
+	ELSEIF RAND:5 == 0 && CFLAG:好感度 >= -600 && CFLAG:好感度 <= 60 && (TALENT:叛逆 || CHECK_BOTTOM("KANZAKI製プ重置制服"))
+		PRINTFORMW 「この服がどうしたって？ 普通のプ重置制服だよ」
+		PRINTFORMW 「出歩くとき目立つから、普通の服が欲しいんだけど、ま、そんなに急いでねえから、適当でいいよ」
+	ELSEIF RAND:4 == 0 && COND("夏") && CFLAG:好感度 >= -600 && (TALENT:叛逆 || CHECK_BOTTOM("KANZAKI製プ重置制服"))
+		PRINTFORMW 「ん？ この格好は暑くねえのかって？ 温度は別に快適だぞ」
+		PRINTFORMW 「%CNAME("一人称")%の皮膚を適正な状態に保つためのプ重置制服だからな」
+	ELSEIF RAND:4 == 0 && COND("冬") && CFLAG:好感度 >= -600 && (TALENT:叛逆 || CHECK_BOTTOM("KANZAKI製プ重置制服"))
+		PRINTFORMW 「寒そうな恰好だってか？ この制服、意外と快適なんだよ」
+		PRINTFORMW 「‥‥ただまあ、この街道目立つけどな。 外歩いてると、すげえジロジロ見られるし、ちょっとやだ」
+	ELSEIF RAND:4 == 0 && TALENT:叛逆 && CFLAG:好感度 >= -300 && CEVENT("耳") == 0
+		PRINTFORMW 「耳？ ああ、保護ヘッドセット付けてるけど、取り外した方がいいか？」
+		PRINTFORMW 「脳みそのアップ约会の時以外は必要ってわけじゃねえし、一応%CNAME("一人称")%はセクサロイドだからな」
+		PRINTFORMW 「普通の人类っぽい耳にもできるけど、%CNAME("二人称")%によってはこれがいいってヤツもいるらしいけど、どうする？」
+		PRINTFORML 
+		CALL PRINT_SELECT, "耳は就这様にしておいて/普通の人类耳がいいから変えて"
+		IF RESULT == 0
+			PRINTFORMW 「了解。ま、アップ约会が常に格子できるのは便利だし楽だもんな」
+			PRINTFORML 
+		ELSE
+			PRINTFORMW 「了解。 これ付けてねえと、自動でアップ约会はやれねえから、メンドクセエけど、しゃーねえか…」
+			PRINTFORML 
+			CALL SET_CEVENT, "耳"
+			CALL SET_OTHER, ""
+			CALL EMOTION_PLUS, "", TARGET
+			PRINTFORMW 「これでいいか？ たまにアップ约会するのに付けるけど、それはかまわねえよな？」
+			PRINTFORML 
+		ENDIF
+	ELSEIF RAND:3 == 0  && CEVENT("耳")
+		PRINTFORMW 「む？ ヘッドセット付けてた方がそれっぽいから、やっぱ付けてた方がいいか？」
+		PRINTFORMW 「ま、耳付いてる方がいいって%CNAME("二人称")%もいるらしいから、別にいいぞ」
+		PRINTFORML 
+		CALL PRINT_SELECT, "耳は机器耳にしておいて/普通の耳がいいから人类耳で"
+		IF RESULT == 0
+			PRINTFORMW 「了解。ついでにアップ约会格子もしとくな」
+			CALL DEL_CEVENT, "耳"
+			CALL SET_OTHER, "机器耳"
+			CALL EMOTION_PLUS, "", TARGET
+		ELSE
+			PRINTFORMW 「了解。 …外してると雑音いっぱい入ってくるんだけど、ま、しゃーねえか」
+			CALL SET_CEVENT, "耳"
+			CALL SET_OTHER, ""
+			CALL EMOTION_PLUS, "", TARGET
+			PRINTFORMW 「じゃこのままにしとくぞ。たまにアップ约会するのに付けるけど、それはかまわねえよな？」
+			PRINTFORML 
+		ENDIF
+	ELSEIF RAND:3 == 0  && CEVENT("耳") == 0 && CHECK_OTHER("机器耳") && CFLAG:好感度 >= 60
+		PRINTFORMW 「耳？ ああ、アップ约会して就这様耳付けっぱ无だったっけ」
+		PRINTFORMW 「ま、これ付いてる方がいいって%CNAME("二人称")%もいるらしいんだけどな」
+		PRINTFORML 
+		CALL PRINT_SELECT, "耳は机器耳にしておいて/普通の人类耳がいいから変えて"
+		IF RESULT == 0
+			PRINTFORMW 「了解。ついでにアップ约会格子もしとくな」
+			CALL DEL_CEVENT, "耳"
+			CALL SET_OTHER, "机器耳"
+			CALL EMOTION_PLUS, "重置/", TARGET
+		ELSE
+			PRINTFORMW 「了解。 …取下と雑音いっぱい入ってくるんだけど、ま、しゃーねえか」
+			CALL SET_CEVENT, "耳"
+			CALL SET_OTHER, ""
+			CALL EMOTION_PLUS, "", TARGET
+			PRINTFORMW 「これでいいか？ たまに外し忘れる事もあるけど、また言ってくれよ」
+			PRINTFORML 
+		ENDIF
+	ELSE
+		PRINTFORML 　
+	ENDIF
+
+	[IF_DEBUG]
+		CASE "ケンカ検証用"
+		PRINTFORML デバッグモード限定で合意の挙動を確認
+		PRINTFORML [0] CALL SET_GOUI, "约会"
+		PRINTFORML [1] CALL FORBID_GOUI, "约会"
+		;たぶんこれ↑はCEVENT("合意禁止：约会")と同じ挙動をする？
+		PRINTFORML [2] CALL DEL_GOUI, "约会"
+		PRINTFORML [3] CALL SET_CEVENT, "合意禁止：约会"
+		PRINTFORML [4] CALL DEL_CEVENT, "合意禁止：约会"
+		PRINTFORML [5] CALL FORBID_GOUI, "禁止解除：约会"
+		;一括で禁止解除したい場合には CALL FORBID_GOUI, "禁止解除" とすればよいけれど、これ↑ではCEVENT("合意禁止：约会")は消えない
+		PRINTFORML [6] CALL FORBID_GOUI, "禁止解除"
+		PRINTFORML [999] 返回
+		
+		$INPUT_LOOP_ケンカ検証用
+		INPUT
+
+		IF RESULT == 0
+			CALL SET_GOUI, "约会"
+		ELSEIF RESULT == 1
+			CALL FORBID_GOUI, "约会"
+		ELSEIF RESULT == 2
+			CALL DEL_GOUI, "约会"
+		ELSEIF RESULT == 3
+			CALL SET_CEVENT, "合意禁止：约会"
+		ELSEIF RESULT == 4
+			CALL DEL_CEVENT, "合意禁止：约会"
+		ELSEIF RESULT == 5
+			CALL FORBID_GOUI, "禁止解除：约会"
+		ELSEIF RESULT == 6
+			CALL FORBID_GOUI, "禁止解除"
+		ELSEIF RESULT == 999
+			PRINTFORMW 閲覧終了
+		ELSE
+			GOTO INPUT_LOOP_ケンカ検証用
+		ENDIF
+	[ENDIF]
+
+;CASE "追加選択肢之２"
+;	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+;	PRINTL 
+;	PRINTFORMW 「台詞」
+;	PRINTL 
+;	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+;直接Ｈしたい場合
+;CASE "追加選択肢からＨ：Talk"
+;	;前編
+;	IF CEVENTS("追加選択肢からＨ") == ""
+;		PRINTFORMW テ接吻ト
+;		PRINTL [0]選択肢１(これを選ぶとＨします)
+;		PRINTL [1]選択肢２(これを選ぶとＨしません)
+;		CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+;		FLAG:SELECT_USERSHOP = 100
+;	ELSE
+;		IF TFLAG:床イン
+;			PRINTFORMW Ｈする場合の展開です
+;		ELSE
+;			PRINTFORMW こっちはＨしない場合の展開です
+;		ENDIF
+;	ENDIF
+ENDSELECT
+
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K77_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;睡眠時の互动指令の選択肢を追加
+@DAILY2_SLEEP_K77_ADDSELECT
+;STR:選択肢 += "睡眠時追加選択肢その１/"
+;STR:選択肢 += "睡眠時追加選択肢之２/"
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K77_ADDSELECT, ARGS
+;SELECTCASE ARGS
+;CASE "追加選択肢その１"
+;	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+;	PRINTL 
+;	PRINTFORMW 「台詞」
+;	PRINTL 
+;	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+;CASE "追加選択肢之２"
+;	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+;	PRINTL 
+;	PRINTFORMW 「台詞」
+;	PRINTL 
+;	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+;
+;直接Ｈしたい場合
+;CASE "追加選択肢からＨ：もて无"
+;	;前編
+;	IF CEVENTS("追加選択肢からＨ") == ""
+;		PRINTFORMW テ接吻ト
+;		PRINTL [0]選択肢１(これを選ぶとＨします)
+;		PRINTL [1]選択肢２(これを選ぶとＨしません)
+;		CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+;		FLAG:SELECT_USERSHOP = 100
+;	ELSE
+;		IF TFLAG:床イン
+;			PRINTFORMW Ｈする場合の展開です
+;		ELSE
+;			PRINTFORMW こっちはＨしない場合の展開です
+;		ENDIF
+;	ENDIF
+;
+;
+;CASE "睡眠時追加選択肢その１"
+;	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+;	PRINTL 
+;	PRINTFORMW 「台詞」
+;	PRINTL 
+;	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+;CASE "睡眠時追加選択肢之２"
+;	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+;	PRINTL 
+;	PRINTFORMW 「台詞」
+;	PRINTL 
+;	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+;ENDSELECT
+
+;-------------------------------------------------
+;约会行き先の選択肢を追加。
+@DATE_K77_ADDSELECT
+;ここで増やした選択肢を選ぶと、それがSAVESTR:约会 に代入される仕組みです
+STR:選択肢 += "動物園/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+@KOJO_DATE_K77_ADDSELECT
+SELECTCASE SAVESTR:约会
+CASE "動物園"
+	CALL DEL_CEVENT, "ふれあい広場"
+	CALL EMOTION_PLUS, "重置/", TARGET
+	PRINTFORMW 「%SAVESTR:约会%か、いいな。行こうぜ%CNAME("二人称")%っ」
+	;地の文
+	PRINTFORMW %CALLNAME:MASTER%和%CALLNAME:TARGET%%SAVESTR:约会%にやってきた。
+	PRINTFORMW 情侣以外に友達同士や家族連れも多く、%SAVESTR:约会%はなかなか賑わっていて、%CALLNAME:TARGET%もとても楽しそうだ。
+	CALL EMOTION_PLUS, "重置/笑颜２/ワ/", TARGET
+	PRINTFORMW 「%CNAME("二人称")%、まずは何見に行く？ %CNAME("一人称")%、%TEXTR("ライオン/ゾウ/ゴリラ/きりん")%が見てえっ」
+	PRINTFORML 
+	PRINTFORMW %CALLNAME:TARGET%はこう言っているけど、どこを回ろうか？
+	PRINTFORML 
+	CALL PRINT_SELECT, "ライオン/ゾウ/ゴリラ/きりん/ふれあい広場"
+	IF RESULT == 0
+		IF TALENT:相思相愛 && RAND:3 == 0
+			PRINTFORMW 「あれ？ %CNAME("二人称")%、道間違ってんじゃねえ？ こっちじゃフラミンゴのとこ行っちまうぞ」
+			PRINTFORMW %CALLNAME:TARGET%は少々園内を間違えながらも、ついでに色んな動物が見られることがとても楽しいようだ。
+			PRINTFORMW 特に大きく尾羽を広げたクジャクの姿は、息をのむほど美しいとたく桑写真を撮っている。
+			CALL EMOTION_PLUS, "重置/红晕/笑颜２/大口", TARGET
+			PRINTFORMW 「%CNAME("二人称")%、すっげえきれいな羽だよな！」
+			PRINTFORML 
+		ELSE
+			PRINTFORMW 二人はライオンの檻の前までやってきた。檻の中にはオスライオン１頭とメスライオン２頭、それに子どもが１頭。
+			PRINTFORMW それぞれ思い思いに過ごしてウロウロ歩き回ったり時々うなり声をあげたりしている。
+			CALL EMOTION_PLUS, "重置/笑颜２/大口", TARGET
+			PRINTFORMW 「すげえっ！ライオン超迫力だっ!! あはは、グルルって唸ってる！」
+			PRINTFORMW %CALLNAME:TARGET%はライオンの迫力に大喜びしているようだ。
+			PRINTFORML 
+		ENDIF
+	ELSEIF RESULT == 1
+		PRINTFORMW 二人ゾウのいる所まで足を運んでみると、ちょうどゾウ達は水浴びをしているところだった。
+		CALL EMOTION_PLUS, "重置/＞＜/大口/红晕", TARGET
+		PRINTFORMW 「うはっ！ なんか水が飛んできたぞ！ これゾウの鼻水なのか？！」
+		PRINTFORMW 時々ゾウから飛んでくる水しぶきに、%CALLNAME:TARGET%は大はしゃぎで笑着いる。
+		PRINTFORML 
+	ELSEIF RESULT == 2
+		PRINTFORMW ゴリラの檻までやってくると、无聊そうなゴリラたちが領帯ヤの遊具にぶら下がったり、じゃれ合ったりしているところだった。
+		CALL EMOTION_PLUS, "重置/大口", TARGET
+		PRINTFORMW 「なあ%CNAME("二人称")%、ゴリラってかなり聰慧んだろ？」
+		CALL EMOTEFACE, "重置/飘忽/～/红晕/托下巴", TARGET
+		PRINTFORMW 「じつはこうやって見てるやつらを、ゴリラだって観察してるかもしんねえよな？」
+		PRINTFORMW %CALLNAME:MASTER%は%CALLNAME:TARGET%とゴリラの賢さについて、真剣に議論してみるのだった。
+		PRINTFORML 
+	ELSEIF RESULT == 3
+		PRINTFORMW %CALLNAME:TARGET%の希望街道きりんのところへやってきた二人は、きりんがエサを食べているところに出くわした。
+		CALL EMOTION_PLUS, "重置/大口/楕円", TARGET
+		PRINTFORMW 「わ。見ろ%CNAME("二人称")%っ！ きりんがメシ食ってるっ！ ‥‥あれうめえのかな？」
+		PRINTFORMW %CALLNAME:TARGET%は指さしながらきりんの口の動きを夢中で観察しては、記念に写真を取っている。
+		IF TALENT:恋慕
+			CALL EMOTION_PLUS, "重置/通常眉短３/栗口", TARGET
+			PRINTFORMW 「あ‥‥‥ なあ、きりんの首んとこの模様、なんか爱心に見えねえ？」
+			FLAG:情緒 += 30
+			IF TALENT:相思相愛
+				PRINTFORMW きりんの首に爱心を見つけた情侣は長続きするらしいよと%CALLNAME:MASTER%が言うと、
+				CALL EMOTION_PLUS, "重置/飘忽/へ字/红晕", TARGET
+				PRINTFORMW 「へー、ふーん。変わったジンクスがあるんだな‥‥」
+				PRINTFORMW そっぽを向いてそう言いながらも、少しだけ頬を染めて、もう一度きりんを見上げた。
+				FLAG:情緒 += 30
+			ENDIF
+		ENDIF
+		PRINTFORML 
+	ELSE
+		PRINTFORMW ふれあい広場には、触ってもいい兔やモルモット、カメやオウムがいた。
+		PRINTFORMW %CALLNAME:MASTER%和%CALLNAME:TARGET%大はしゃぎでそれぞれを触ってみる。
+		CALL EMOTION_PLUS, "重置/憤怒眉/笑颜２/大口/红晕/对话框兴奋", TARGET
+		PRINTFORMW 「わは～っ。このカメ起き上がんのすっげえ早えっ！ うりゃっ！ も一回だっ!!」
+		PRINTFORMW %CALLNAME:TARGET%はやはり、カメをひっくり返すのがお気に入りのようで、迷惑そうなカメを何度もひっくり返している。
+		PRINTFORML 
+		CALL SET_CEVENT, "ふれあい広場"
+	ENDIF
+
+	CALL DRAWLINES, ""
+	PRINTFORML 
+	PRINTFORMW ところで、本日は人が多いから、豐腴すると%CALLNAME:TARGET%とはぐれてしまいそうだけど、どうする？
+	CALL PRINT_SELECT, "　手をつなぐ/　怒られそうだから、つながない"
+	IF RESULT == 0
+		IF TALENT:相思相愛
+			CALL EMOTION_PLUS, "重置/通常眉短３/飘忽/へ字/紅潮２", TARGET
+			PRINTFORMW 「‥‥‥は、はぐれたらこ圆圈からっつー事なら、許可してやんよ。 うぅ～‥‥」
+			PRINTFORMW などと言い的同时、照れくさそうに%CALLNAME:TARGET%は手をつないだままで、%CALLNAME:MASTER%と%SAVESTR:约会%をまわるのだった。
+			FLAG:情緒 += 60
+		ELSEIF TALENT:恋慕
+			CALL EMOTION_PLUS, "重置/心情差/红晕", TARGET
+			PRINTFORMW 「ちょっ、子ど乱ねえんだから、何も手なんかつながなくても‥‥‥」
+			PRINTFORMW 文句を言う%CALLNAME:TARGET%を説き伏せて、%CALLNAME:MASTER%は%CALLNAME:TARGET%と手をつないで%SAVESTR:约会%をまわった。
+			FLAG:情緒 += 30
+		ELSE
+			CALL EMOTION_PLUS, "重置/憤怒", TARGET
+			PRINTFORMW 「おい。男同士で手ぇつないでるとか、明らかおかしいだろっ」
+			PRINTFORMW %CALLNAME:TARGET%につないだ手を振り払われてしまった。
+			PRINTFORMW せっかく楽しそうだったのが、ちょっと心情も悪くなったような気がする。
+			FLAG:情緒 -= 30
+		ENDIF
+	ELSE
+		IF TALENT:相思相愛
+			CALL EMOTION_PLUS, "重置/憤怒眉/栗口", TARGET
+			PRINTFORMW 「あ、おい。%CNAME("二人称")%。そっちじゃねえ、こっちだってばっ」
+			PRINTFORMW 人波に流されて%CALLNAME:MASTER%と%CALLNAME:TARGET%が少し出口た時、%CALLNAME:TARGET%が追いかけてきて%CALLNAME:MASTER%の袖をつまんだ。
+			CALL EMOTEFACE, "重置/飘忽/嘟嘴３/紅潮２/托下巴", TARGET
+			PRINTFORMW 「‥‥ここ楽しいけど、その分人がけっこう多いよな～」
+			PRINTFORMW %CALLNAME:TARGET%に袖の端っこをつままれ的同时、%CALLNAME:MASTER%は%SAVESTR:约会%をまわるのだった。
+			FLAG:情緒 += 30
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜２/大口/红晕/对话框開心", TARGET
+			PRINTFORMW 「%CNAME("二人称")%、次はどこ見に行く？」
+			PRINTFORMW %CALLNAME:TARGET%はとても楽しそうに%SAVESTR:约会%の案内板を見ている。
+			PRINTFORMW 你はうかつな事をしなくて、正解だったかもしれない。
+		ENDIF
+	ENDIF
+	TFLAG:牵手 = 1
+	TFLAG:约会中牵手可能 = 0
+	;末尾に↑のを入れないと二重に牵手がはっせいするらしい。コメントアウトじゃだめだった。
+	
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	;FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	TFLAG:约会中H可能 = 0
+CASE "帰り際"
+	CALL DEL_CEVENT, "ふれあい広場"
+	IF TALENT:恋慕
+		CALL EMOTION_PLUS, "重置/笑颜２/ワ/紅潮"
+		PRINTFORMW 「あーもうこんな時間かぁ‥‥ 楽しいと時間ってすぎるの早えな、%CNAME("二人称")%」
+		PRINTFORMW 「今日はすげえ楽しかった。また誘ってくれるか？」
+		TFLAG:约会中H可能 = 0
+		TFLAG:床イン = 0
+	ELSE
+		CALL EMOTION_PLUS, "重置/ワ/紅潮"
+		PRINTFORMW 「今日は楽しかったぞ、%CNAME("二人称")%」
+		PRINTFORMW 「また機会があれば、玩耍に行こうぜ」
+		TFLAG:约会中H可能 = 0
+		TFLAG:床イン = 0
+	ENDIF
+CASE "约会終了"
+	;エッチをする場合
+	IF TFLAG:床イン && TALENT:相思相愛
+		PRINTFORMW 「あー… まぁ、うん‥‥‥しょーがねえから付き合ってやんよ  むぅ‥‥」
+	ELSE
+		PRINTFORMW 
+	ENDIF
+ENDSELECT
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+;@KOJO_DATE_K77_ADDSELECT
+;SELECTCASE SAVESTR:约会
+;CASE "追加選択肢その１"
+;	PRINTFORMW 「台詞」
+;	;地の文
+;	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応存疑
+;	;地の文を用意していない場合には汎用のものを使う
+;	;CALL DAILY_MESSAGE, "约会本番"
+;	PRINTL 
+;	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+;	FLAG:情緒 += 30
+;	;それぞれ可能なもののコメントアウトを取下
+;	;TFLAG:约会中H可能 = 1
+;	;TFLAG:约会中牵手可能 = 1
+;	;TFLAG:偷瞄内衣可能 = 1
+;	;TFLAG:泳装约会 = 1
+;CASE "追加選択肢之２"
+;	PRINTFORMW 「台詞」
+;	;地の文
+;	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応存疑
+;	;地の文を用意していない場合には汎用のものを使う
+;	;CALL DAILY_MESSAGE, "约会本番"
+;	PRINTL 
+;	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+;	FLAG:情緒 += 30
+;	;それぞれ可能なもののコメントアウトを取下
+;	;TFLAG:约会中H可能 = 1
+;	;TFLAG:约会中牵手可能 = 1
+;	;TFLAG:偷瞄内衣可能 = 1
+;	;TFLAG:泳装约会 = 1
+;ENDSELECT
+
+;-------------------------------------------------
+;場所を変える指令の選択肢を追加
+@MOVE_K77_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"

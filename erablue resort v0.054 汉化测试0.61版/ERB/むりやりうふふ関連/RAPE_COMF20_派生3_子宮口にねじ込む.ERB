@@ -1,0 +1,84 @@
+﻿
+@RAPE_COMNAME_S20_3
+#FUNCTIONS
+TSTR:コマンド名受渡 = 插入子宫口
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@RAPE_COMTYPE_S_20_3
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = RAPE_COMTYPE("Ｖ系")
+
+
+@RAPE_COM_TOOLTIP_S20_3
+LOCALS = <br>■插入子宫口<br>
+LOCALS += "将阴茎插入成熟柔软的子宫口的指令。<br>仅在Ｖ插入系模式中可执行。"
+LOCALS += "<br>强奸指令类型：Ｖ系<br>获取来源：快Ｖ・接触・痛苦"
+LOCALS += "<br>专属经验值：Ｖ性交经验(TARGET)・子宫口开发(TARGET)・Ｃ性交经验_Ｖ插入(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@RAPE_COM_S20_3
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+CALLF RAPE_COMNAME_S20_3()
+RCVAR:ポルチオ開発フラグ = 5
+
+CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, 600)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+
+CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 500)
+
+;苦痛
+LOCAL = 200 * PAIN_CHECK_V(TARGET) / 1000
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, LOCAL)
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+EXP:Ｖ性交経験 ++
+EXP:PLAYER:Ｃ性交経験_Ｖ挿入 ++
+
+;同性愛　レズなら戻り値1ゲイなら戻り値2
+IF HETEROSEX(TARGET,PLAYER)
+	EXP:同性愛経験 += 4
+	EXP:PLAYER:同性愛経験 += 4
+ENDIF
+
+EXP:愛情経験 += TALENT:恋慕 * 2
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@RAPE_COM_ABLE_S20_3
+;子宮口実行判定
+;一括管理
+SIF GLOBAL_RAPE_COMABLE_S("20_3")
+	RETURN RESULT
+;妊娠中はダメ
+SIF TALENT:TARGET:妊娠
+	RETURN 0
+;Ｖ挿入系モードじゃない時はアウト
+SIF MODE_確認_完全一致("Ｖ挿入系", PLAYER, TARGET) < 0
+	RETURN 0
+;解放イベ踏んでないとアウト
+SIF CFLAG:TARGET:子宮口許可フラグ == 0
+	RETURN 0
+;オプション封印
+SIF OPTION変数:子宮口挿入_封印
+	RETURN 0
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@RAPE_MESSAGE_COM_S20_3
+
+PRINTFORM %CALLNAME:PLAYER%
+PRINTFORML 将阴茎%TEXTR("刺入/扭动插入")%成熟柔软的%CALLNAME:TARGET%子宫…
+

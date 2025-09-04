@@ -1,0 +1,120 @@
+﻿;-------------------------------------------------
+;正式员工邀请
+;-------------------------------------------------
+@COMNAME603
+#FUNCTIONS
+TSTR:コマンド名受渡 = 正式员工邀请
+IF TALENT:TARGET:店持ち
+	TSTR:コマンド名受渡 = 官方店铺邀请
+ENDIF
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_603
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("探索")
+
+@COM_TOOLTIP_603
+LOCALS = <br>■正式员工邀请<br>
+LOCALS += "与对方签订正式雇佣合同，使其长期为度假村工作。<br>"
+LOCALS += "对象将成为度假村正式员工。<br>"
+LOCALS += "若对方拥有店铺，营业中的店铺将转为度假村官方店铺，可设置制服。<br>"
+LOCALS += "<br>指令类型：探索<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+@COM603
+
+IF TALENT:TARGET:定住者 < 1
+	LOCAL:2 = 0
+	FOR LOCAL, 0, 従業員部屋数
+		IF 従業員部屋割り配列:LOCAL < 1
+			LOCAL:2 = 1
+			BREAK
+		ENDIF
+	NEXT
+	IF LOCAL:2 == 0
+		PRINTW 员工房间已满
+		RETURN -1
+	ENDIF
+ENDIF
+
+DRAWLINE
+IF TALENT:TARGET:店持ち
+	PRINTFORML 要将%CALLNAME:TARGET%的店铺「%商業区店割り配列:(店持ちキャラ店検索(TARGET)):店舗名%」设为度假村官方店铺吗？
+	PRINTL ※设为官方店铺后，可设定该店铺所属角色的制服。　（所需卢比：每日/2000卢比）
+ELSE
+	PRINTFORML 要正式雇佣%CALLNAME:TARGET%为员工吗？　（需要卢比：１天/2000卢比）
+ENDIF
+
+
+
+PRINTBUTTON "[0]确定", 0
+PRINTL
+PRINTBUTTON "[1]取消", 1
+PRINTL
+$INPUT_LOOP
+INPUT
+
+SELECTCASE RESULT
+	CASE 0
+		TALENT:TARGET:従業員 = 1
+		CFLAG:TARGET:滞在期間 = 999
+		CFLAG:TARGET:長期雇用 = 0
+		CFLAG:TARGET:探索参加許可フラグ = 1
+		IF STRFIND(NAME:TARGET, "[一般人]") > -1
+			NAME:TARGET = [従業員]%CALLNAME:TARGET%
+		ENDIF
+		IF TALENT:TARGET:定住者 < 1
+			CALL 滞在者部屋割り配列削除処理(TARGET)
+			FOR LOCAL, 0, 従業員部屋数
+				IF 従業員部屋割り配列:LOCAL < 1
+					従業員部屋割り配列:LOCAL = TARGET
+					BREAK
+				ENDIF
+			NEXT
+		ELSEIF TALENT:TARGET:店持ち
+			現在仕事:TARGET:0 = -1
+		ENDIF
+		CALL 従業員人数チェック()
+	CASE 1
+		RETURN -1
+	CASEELSE
+		REUSELASTLINE 
+		GOTO INPUT_LOOP
+ENDSELECT
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE603
+#DIM ループ用
+;移動実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(602)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;既に従業員だと無し
+SIF TALENT:TARGET:従業員
+	RETURN 0
+;好感度レベル50以上
+SIF CFLAG:TARGET:好感度レベル < 50
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;メッセージ
+;-------------------------------------------------
+
+@MESSAGE_COM603
+
+PRINTFORML 已正式雇佣%CALLNAME:TARGET%为员工
+

@@ -1,0 +1,1070 @@
+﻿;-------------------------------------------------
+;颜绘を一時的に変化させて表示する
+;-------------------------------------------------
+;ARGSにはREPRINT_MAIDFACEのARGSに指定できる文字列、颜绘シュミレーターの眉、眼形、嘴形のボタンと同じ名称、吹き出しの種類を"/"区切りで代入する事で颜绘を変更させつつ出力することが出来る
+;吹き出しの種類は"对话框憤怒", "对话框汗", "对话框爱心", "对话框兴奋", "对话框惊讶", "对话框睡眠", "对话框困倦", "对话框開心"など
+;例）CALL EMOTION_PLUS, "躁动难忍/斜眼/憤怒眉/へ字/对话框憤怒"
+;萌え袖V领毛衣を着ている場合には"萌え袖"指定で萌え袖を口元で見せてる状態に出来る
+;複数人同時に変化させる場合には、CALL EMOTION_PLUSをする前にARG:1～ARG:4のCSTR:颜绘変化 を変更しておく必要が有ます
+;第一製作者　ブリート
+;-------------------------------------------------
+@EMOTION_PLUS, ARGS, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+IF COND("KOJO_DAILY台詞中")
+	CALL EMOTEFACE, ARGS, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+	RETURN 1
+ENDIF
+
+CALL SET_CHANGE_FACE, ARG, ARGS
+
+CALL REPRINT_MAIDFACE, ARGS, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+
+;普通はCSTR:颜绘変化 を重置するが、颜绘シミュ中は重置しない方がやりやすいので保たせる
+SIF COND("颜绘シミュ中") == 0
+	CVARSET CSTR, GETNUM(CSTR, "颜绘変化")
+
+;-------------------------------------------------
+;CSTR:颜绘変化 用の関数
+;-------------------------------------------------
+@SET_CHANGE_FACE, ARG, ARGS
+#DIM LCOUNT
+#DIM MEMO_TARGET
+
+MEMO_TARGET = TARGET
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+TARGET = ARG
+
+SIF ARGS != ""
+	CSTR:ARG:颜绘変化 = %ARGS%
+
+;PRINTFORML CSTR:颜绘変化 = %CSTR:颜绘変化%, CONDS("颜绘コンディション") = %CONDS("颜绘コンディション")%
+
+
+;現在的颜绘コンディションと CSTR:颜绘変化 に対する、独自の颜绘変化があるかを格子
+STR:颜绘改髪 = 
+;まずは現在的颜绘コンディションに対応する改髪を、STR:颜绘改髪 に代入しておく
+SELECTCASE CONDS("颜绘コンディション")
+CASE "", "重置"
+CASEELSE
+	STR:颜绘改髪 = 
+	TRYCALLFORM EMOTION_K{NO:TARGET}, CONDS("颜绘コンディション")
+	;改髪する際には重置属性を追加する
+	SIF STR:颜绘改髪 != "" && STRCOUNT(CSTR:颜绘変化改髪, @"＠%CONDS("颜绘コンディション")%：",) == 0
+		CSTR:颜绘変化改髪 += @"＠%CONDS("颜绘コンディション")%：重置/%STR:颜绘改髪%_"
+ENDSELECT
+
+;続いて各要素について独自変化があるなら置換後を記録しておく
+VARSET LOCALS
+SPLIT CSTR:ARG:颜绘変化, "/", LOCALS
+FOR LCOUNT, 0, 10
+	SELECTCASE LOCALS:LCOUNT
+	CASE ""
+		CONTINUE
+	CASEELSE
+		STR:颜绘改髪 = 
+		TRYCALLFORM EMOTION_K{NO:TARGET}, LOCALS:LCOUNT
+		;改髪する際には重置属性を追加する
+		SIF STR:颜绘改髪 != "" && STRCOUNT(CSTR:颜绘変化改髪, @"＠%LOCALS:LCOUNT%：") == 0
+			CSTR:颜绘変化改髪 += @"＠%LOCALS:LCOUNT%：重置/%STR:颜绘改髪%_"
+	ENDSELECT
+NEXT
+
+;PRINTFORML CSTR:颜绘変化 = %CSTR:颜绘変化%, CSTR:颜绘変化改髪 = %CSTR:颜绘変化改髪%, STR:颜绘改髪 = %STR:颜绘改髪%
+
+TARGET = MEMO_TARGET
+
+;-------------------------------------------------
+;一度表示したEMOTION_PLUSを書き換える
+;それまで表示していた行も再現して表示することが出来る
+;-------------------------------------------------
+@CHANGE_EMOTION_PLUS, ARGS, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+#DIM DYNAMIC LCOUNT
+#DIM DYNAMIC MEMO_REDRAW
+#DIM DYNAMIC MEMO_LINE
+
+MEMO_REDRAW = CURRENTREDRAW()
+REDRAW 0
+
+VARSET LOCALS
+MEMO_LINE = LINECOUNT - TFLAG:颜绘表示中
+
+FOR LCOUNT, MEMO_LINE, 0, -1
+	LOCALS:LCOUNT = %HTML_GETPRINTEDSTR(0)%
+	CLEARLINE 1
+NEXT
+
+CALL EMOTION_PLUS, ARGS, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+
+FOR LCOUNT, 1, MEMO_LINE + 1
+	HTML_PRINT LOCALS:LCOUNT
+NEXT
+
+REDRAW MEMO_REDRAW
+
+RETURN 1
+
+;-------------------------------------------------
+;最新の颜绘のGraphicsを差し替える
+;ARGに角色を指定、颜绘内に存在していれば差し替える
+;-------------------------------------------------
+@EMOTEFACE, ARGS, ARG, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+#DIM DYNAMIC LCOUNT
+#DIM DYNAMIC LCOUNT2
+#DIM DYNAMIC ACTOR, 6
+#DIM DYNAMIC ACTORFACEID, 6
+#DIM DYNAMIC HIT_COUNT
+#DIM ACTOR_POSITION, 6
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+CALL SET_EMOTE, ARGS, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+
+;表示している颜绘内にARGと同一の角色がいるか調べる
+FOR LCOUNT, 0, 6
+	SIF ARG:LCOUNT <= 0
+		BREAK
+	FOR LCOUNT2, 0, 6
+		SIF LATESTFACECHARA:LCOUNT2 <= 0
+			BREAK
+		;角色が存在した場合は番号とGraphicsIDをメモ
+		IF ARG:LCOUNT == LATESTFACECHARA:LCOUNT2
+			ACTOR:HIT_COUNT = ARG:LCOUNT
+			ACTOR_POSITION:HIT_COUNT = LCOUNT2
+			ACTORFACEID:HIT_COUNT = LATESTFACEID:LCOUNT2
+			HIT_COUNT += 1
+			BREAK
+		ENDIF
+	NEXT
+NEXT
+
+;メモから対象角色を表示しているGraphicsIDを書き換える
+FOR LCOUNT, 0, HIT_COUNT
+	CALL SET_CHANGE_FACE, ACTOR:LCOUNT, ARGS
+	CALL OVERLAY_GCREATE, ACTORFACEID:LCOUNT, EXTSTR(MAIDFACE(ACTOR:LCOUNT, ACTOR_POSITION:LCOUNT), "", ",")
+NEXT
+
+CALL RESET_EMOTE, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+
+;KOJO_DAILY台詞中でなければ颜绘変化を重置
+SIF COND("KOJO_DAILY台詞中") == 0
+	CVARSET CSTR, GETNUM(CSTR, "颜绘変化")
+
+RETURN 1
+
+;-------------------------------------------------
+;感情を指定して颜绘を出す関数。もしも既に颜绘が表示されている場合には消して上書きします
+;ARGSに入れられる文字列は"重置", "甜言蜜语", "心情好", "欣喜", "心情差", "躁动难忍", "交流中", "睡眠", "刚睡醒", "憤怒", "害羞", "闲"など
+;-------------------------------------------------
+@REPRINT_MAIDFACE, ARGS, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+#DIM LCOUNT
+#DIM DYNAMIC ISCLEAR_CUTIN
+
+;もしも直前に颜绘やCIPが表示されている場合には消す
+IF TFLAG:CIP表示中 == LINECOUNT
+	CALL CLEAR_CUTIN
+	ISCLEAR_CUTIN = 1
+ENDIF
+SIF TFLAG:颜绘表示中 == LINECOUNT
+	CALL CLEAR_MAIDFACE
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+CALL SET_EMOTE, ARGS, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+CALL PRINT_MAIDFACE, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+CALL RESET_EMOTE, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+
+SIF ISCLEAR_CUTIN
+	CALL PRINT_CUTIN, STR:直近CIP種別, ARG
+
+;-------------------------------------------------
+;感情をARGSにする
+;-------------------------------------------------
+@SET_EMOTE, ARGS, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+#DIM LCOUNT
+#DIM LCOUNT2
+
+FOR LCOUNT, 0, 6
+	SIF ARG:LCOUNT <= 0
+		BREAK
+
+	TMP_CFLAG27:LCOUNT = CFLAG:(ARG:LCOUNT):甜言蜜语
+	TMP_CFLAG28:LCOUNT = CFLAG:(ARG:LCOUNT):心情好
+	TMP_CFLAG29:LCOUNT = CFLAG:(ARG:LCOUNT):心情差
+	TMP_CFLAG31:LCOUNT = CFLAG:(ARG:LCOUNT):睡眠
+	TMP_CFLAG34:LCOUNT = CFLAG:(ARG:LCOUNT):刚睡醒
+	TMP_CFLAG36:LCOUNT = CFLAG:(ARG:LCOUNT):憤怒
+	TMP_CFLAG70:LCOUNT = CFLAG:(ARG:LCOUNT):躁动难忍
+	TMP_CFLAG86:LCOUNT = CFLAG:(ARG:LCOUNT):交流中
+	TMP_CFLAG99:LCOUNT = CFLAG:(ARG:LCOUNT):害羞
+	TMP_CFLAG117:LCOUNT = CFLAG:(ARG:LCOUNT):闲
+
+	VARSET LOCALS
+	IF CSTR:(ARG:LCOUNT):颜绘変化 != ""
+		SPLIT CSTR:(ARG:LCOUNT):颜绘変化, "/", LOCALS
+	ELSE
+		SPLIT ARGS, "/", LOCALS
+	ENDIF
+
+	FOR LCOUNT2, 0, 10
+		SELECTCASE LOCALS:LCOUNT2
+		CASE ""
+			BREAK
+		CASE "重置", "甜言蜜语", "心情好", "欣喜", "心情差", "睡眠", "刚睡醒", "憤怒", "躁动难忍", "交流中", "害羞", "闲"
+			TMP_EMOTE:LCOUNT += @"%LOCALS:LCOUNT2%/"
+		ENDSELECT
+	NEXT
+
+	CFLAG:(ARG:LCOUNT):甜言蜜语 = 0
+	CFLAG:(ARG:LCOUNT):心情好 = 0
+	CFLAG:(ARG:LCOUNT):心情差 = 0
+	CFLAG:(ARG:LCOUNT):睡眠 = 0
+	CFLAG:(ARG:LCOUNT):刚睡醒 = 0
+	CFLAG:(ARG:LCOUNT):憤怒 = 0
+	CFLAG:(ARG:LCOUNT):躁动难忍 = 0
+	CFLAG:(ARG:LCOUNT):交流中 = 0
+	CFLAG:(ARG:LCOUNT):害羞 = 0
+	CFLAG:(ARG:LCOUNT):闲 = 0
+
+	VARSET LOCALS
+	SPLIT TMP_EMOTE:LCOUNT, "/", LOCALS
+
+	FOR LCOUNT2, 0, 10
+		SELECTCASE LOCALS:LCOUNT2
+		CASE ""
+			BREAK
+		CASE "重置"
+			CONTINUE
+		CASE "欣喜"
+			CFLAG:(ARG:LCOUNT):甜言蜜语 = 1
+			CFLAG:(ARG:LCOUNT):心情好 = 1
+		CASEELSE
+			CFLAG:(ARG:LCOUNT):(LOCALS:LCOUNT2) = 1
+		ENDSELECT
+	NEXT
+NEXT
+
+;-------------------------------------------------
+;もともとの感情を設定しなおす
+;-------------------------------------------------
+@RESET_EMOTE, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+#DIM LCOUNT
+
+FOR LCOUNT, 0, 6
+	SIF ARG:LCOUNT <= 0
+		BREAK
+	SIF TMP_EMOTE:LCOUNT == ""
+		CONTINUE
+	CFLAG:(ARG:LCOUNT):甜言蜜语 = TMP_CFLAG27:LCOUNT
+	CFLAG:(ARG:LCOUNT):心情好 = TMP_CFLAG28:LCOUNT
+	CFLAG:(ARG:LCOUNT):心情差 = TMP_CFLAG29:LCOUNT
+	CFLAG:(ARG:LCOUNT):睡眠 = TMP_CFLAG31:LCOUNT
+	CFLAG:(ARG:LCOUNT):刚睡醒 = TMP_CFLAG34:LCOUNT
+	CFLAG:(ARG:LCOUNT):憤怒 = TMP_CFLAG36:LCOUNT
+	CFLAG:(ARG:LCOUNT):躁动难忍 = TMP_CFLAG70:LCOUNT
+	CFLAG:(ARG:LCOUNT):交流中 = TMP_CFLAG86:LCOUNT
+	CFLAG:(ARG:LCOUNT):害羞 = TMP_CFLAG99:LCOUNT
+	CFLAG:(ARG:LCOUNT):闲 = TMP_CFLAG117:LCOUNT
+NEXT
+
+;一時記憶したものは削除
+VARSET TMP_EMOTE
+VARSET TMP_CFLAG27
+VARSET TMP_CFLAG28
+VARSET TMP_CFLAG29
+VARSET TMP_CFLAG31
+VARSET TMP_CFLAG34
+VARSET TMP_CFLAG36
+VARSET TMP_CFLAG70
+VARSET TMP_CFLAG86
+VARSET TMP_CFLAG99
+VARSET TMP_CFLAG117
+
+;文字列ARGSから種類を抜き出す
+@CHECK_TYPE(ARGS)
+#FUNCTIONS
+
+IF STRCOUNT(ARGS, "眯眯眼")
+	RETURNF "眯眯眼"
+ELSEIF STRCOUNT(ARGS, "笑颜")
+	RETURNF "笑颜"
+ELSEIF STRCOUNT(ARGS, "闭眼")
+	RETURNF "闭眼"
+ELSEIF STRCOUNT(ARGS, "〇〇")
+	RETURNF "〇〇"
+ELSEIF STRCOUNT(ARGS, "＞＜")
+	RETURNF "＞＜"
+ELSEIF STRCOUNT(ARGS, "普通眼")
+	RETURNF "普通眼"
+ELSEIF STRCOUNT(ARGS, "吊眼")
+	RETURNF "吊眼"
+ELSEIF STRCOUNT(ARGS, "垂眼")
+	RETURNF "垂眼"
+ELSEIF STRCOUNT(ARGS, "斜眼")
+	RETURNF "斜眼"
+ELSEIF STRCOUNT(ARGS, "水灵眼")
+	RETURNF "水灵眼"
+ELSEIF STRCOUNT(ARGS, "縦長目")
+	RETURNF "縦長目"
+ELSEIF STRCOUNT(ARGS, "重度三白眼")
+	RETURNF "重度三白眼"
+ELSEIF STRCOUNT(ARGS, "三白眼")
+	RETURNF "三白眼"
+ELSEIF STRCOUNT(ARGS, "Ｘ目")
+	RETURNF "Ｘ目"
+ENDIF
+RETURNF ""
+
+@CHECK_NUM(ARGS, ARGS:1)
+#FUNCTIONS
+#DIM LCOUNT
+
+IF ARGS:1 != ""
+	FOR LCOUNT, 1, 10
+		LOCALS = %TOFULL(TOSTR(LCOUNT) )%
+		SIF STRCOUNT(ARGS:1, LOCALS)
+			RETURNF LOCALS
+	NEXT
+	RETURNF ""
+ENDIF
+FOR LCOUNT, 1, 10
+	LOCALS = %TOFULL(TOSTR(LCOUNT) )%
+	SIF STRCOUNT(ARGS, LOCALS)
+		RETURNF LOCALS
+NEXT
+RETURNF ""
+
+;-------------------------------------------------
+;高光の振り分け
+;ARGには角色番号、ARGSには左右、ARGS:1には眼形状が入っている
+;ARGS:1の書式は例えばARGS == "左"ならば 11普通眼４飘忽左\[%CONDS("左瞳色", ARG)%\] となっている
+;-------------------------------------------------
+@CHECK_HIGHLIGHT(ARGS, ARGS:1, ARG)
+#FUNCTIONS
+#DIMS DYNAMIC EYE_TYPE
+#DIMS DYNAMIC HIGHLIGHT_TYPE
+
+;まずはARGS:1から瞳色より左側の部分を抜き出す
+;ちなみにARGS:1に瞳色指定がないものは瞳が見えていない形状の目(例えば眯眯眼)なので、高光の指定は不要
+SELECTCASE ARGS
+CASE "左"
+	SIF STRCOUNT(ARGS:1, CONDS("左瞳色", ARG) ) == 0
+		RETURNF ""
+	EYE_TYPE = %EXTSTR(ARGS:1, "", @"\[%CONDS("左瞳色", ARG)%")%
+CASE "右"
+	SIF STRCOUNT(ARGS:1, CONDS("右瞳色", ARG) ) == 0
+		RETURNF ""
+	EYE_TYPE = %EXTSTR(ARGS:1, "", @"\[%CONDS("右瞳色", ARG)%")%
+ENDSELECT
+;高光は半目関係ない
+EYE_TYPE = %REPLACE(EYE_TYPE, "半目", "")%
+
+HIGHLIGHT_TYPE = %EYE_TYPE%高光+
+
+RETURNF HIGHLIGHT_TYPE
+
+
+;-------------------------------------------------
+;再現文字列をHTML_PRINT用の文字列に直す。ボタン部分は無視するので注意
+;文字列の末尾には順にpos, height, width, ypos, button value, titleを入れる
+;-------------------------------------------------
+@CONVERTSTR(ARGS)
+#FUNCTIONS
+#DIM LCOUNT
+#DIM LCOUNT2
+#DIMS MEMO_ARGS, 12
+#DIMS STR_OUTPUT
+#DIM MEMO_pos
+#DIM MEMO_height
+#DIM MEMO_width
+#DIM MEMO_ypos
+#DIM MEMO_value
+#DIMS MEMO_title
+
+TFLAG:MAX_height = 0
+STR_OUTPUT = 
+VARSET MEMO_ARGS
+SPLIT ARGS, "/", MEMO_ARGS
+
+FOR LCOUNT2, 0, 12
+	SIF MEMO_ARGS:LCOUNT2 == ""
+		BREAK
+
+	VARSET LOCALS
+	SPLIT MEMO_ARGS:LCOUNT2, ",", LOCALS
+	MEMO_ARGS:LCOUNT2 = %LOCALS:0%
+	MEMO_pos = TOINT(LOCALS:1)
+	MEMO_height = TOINT(LOCALS:2)
+	MEMO_width = TOINT(LOCALS:3)
+	MEMO_ypos = TOINT(LOCALS:4)
+	MEMO_value = TOINT(LOCALS:5)
+	MEMO_title = %LOCALS:6%
+
+	TFLAG:MAX_height = MAX(TFLAG:MAX_height, (MEMO_height + MEMO_ypos)/100 - 1)
+
+	VARSET LOCALS
+	SPLIT MEMO_ARGS:LCOUNT2, "+", LOCALS
+	;LOCALS:0にはvalueとtitleを有ればつける
+	IF MEMO_value || COND("颜绘セーブロード中")
+		MEMO_value = MAX(MEMO_value, 0)
+		STR_OUTPUT += @"<button value='{MEMO_value}' pos='{MEMO_pos}' title='%MEMO_title%'><img src='%LOCALS:0%' height = '{MEMO_height}' width = '{MEMO_width}' ypos = '{MEMO_ypos}'></button>"
+	ELSE
+		STR_OUTPUT += @"<nonbutton pos='{MEMO_pos}'><img src='%LOCALS:0%' height = '{MEMO_height}' width = '{MEMO_width}' ypos = '{MEMO_ypos}'></nonbutton>"
+	ENDIF
+	FOR LCOUNT, 1, 100
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			STR_OUTPUT += @"<nonbutton pos='{MEMO_pos}'><img src='%LOCALS:LCOUNT%' height = '{MEMO_height}' width = '{MEMO_width}' ypos = '{MEMO_ypos}'></nonbutton>"
+		ENDSELECT
+	NEXT
+	;メイン画面でのマウス阴蒂ック指令
+	SIF LCOUNT2
+		CONTINUE
+	;SIF COND("阴蒂ック指令表示中")
+	;	STR_OUTPUT += @"<button value='{290}' pos='{MEMO_pos}' title='[290]手机で写真を撮る'><img src='照相机' height = '{PICSIZE(300)}' width = '{PICSIZE(300)}' ypos = '{PICSIZE(700)}'></button>"
+NEXT
+
+SIF STRCOUNT(STR_OUTPUT, "<nobr>") == 0
+	STR_OUTPUT = <nobr>%STR_OUTPUT%
+RETURNF STR_OUTPUT
+
+;-------------------------------------------------
+;ARGSに再現文字列を入れる事で表示された画像と同じ物を再表示させることが出来る
+;これは特写でも颜绘でも再現しちゃう版
+;-------------------------------------------------
+@REDRAW_STR, ARGS
+#DIM LCOUNT
+#DIM MEMO_REDRAW
+
+SIF ARGS == ""
+	RETURN 0
+
+MEMO_REDRAW = CURRENTREDRAW()
+REDRAW 0
+
+HTML_PRINT CONVERTSTR(ARGS)
+CALL MULTILINE, TFLAG:MAX_height
+
+REDRAW MEMO_REDRAW
+
+
+;-------------------------------------------------
+;会話登場用の颜绘付き路人を作成する関数
+;作成した路人の番号を取得する場合にはCNUM(ARGS)を用いる
+;(@CNUM(ARGS)はCALLNAMEがARGSかを見るので、必ずCALLNAMEとARGSは一致させること)
+;例)CALL CREATE_MOB, "冨路牟"した後に、冨路牟の番号を使いたい場合はCNUM("冨路牟")で取得できる
+;-------------------------------------------------
+@CREATE_MOB, ARGS
+#DIM MEMO_TARGET
+#DIM ACTOR
+#DIM LCOUNT
+
+MEMO_TARGET = TARGET
+
+;ベースはドッペル你
+ADDCHARA 99
+
+;記述の簡略化のために路人をTARGETにする
+TARGET = CHARANUM - 1
+;颜绘出力に必要な共通フラグ設定
+CFLAG:颜绘 = 1
+CFLAG:路人 = 1
+
+CALLNAME:TARGET = %ARGS%
+NAME:TARGET = %ARGS%
+CSTR:ふりがな = %ARGS%
+
+FOR LCOUNT, 1, 200
+	;各角色の口上ファイルで設定しているかを見る
+	TRYCALLFORM CREATE_MOB_K{LCOUNT}, ARGS
+NEXT
+
+;システム共通路人(今は不在)
+SELECTCASE ARGS
+;CASE ""
+CASE "成海爱琉"
+	CSTR:髪色 = 氷水髪
+	CSTR:髪長 = 中等長度
+	CSTR:前髪 = 編髪２
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 麻花辫２
+	CSTR:呆毛 = 无呆毛
+	CSTR:挑染 = 挑染２_纯白
+	CSTR:渐变颜色 = 草青
+	CSTR:まつ毛の色 = 氷水
+	CSTR:瞳色 = 紅
+	CSTR:眼形 = 垂眼３半目
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉短２
+	CSTR:嘴形 = 得意
+	CSTR:頬 = 頬創口貼鼻
+	CSTR:高光 = 高光有
+	CSTR:痣 = 泪痣左
+	TALENT:巨乳 = 2
+	TALENT:巨尻 = 1
+	TALENT:肤色 = 2
+	TALENT:開朗 = 1
+	TALENT:聰慧 = 1
+	TALENT:接受快感 = 1
+	TALENT:好色 = 1
+	TALENT:气味弱点 = 1
+	TALENT:情熱的 = 1
+	CALL SET_SHIRT, "水手服/青"
+	CALL SET_BOTTOM, "迷你百褶裙"
+	CALL SET_PANTIES, "Micro比基尼/青"
+	CALL SET_SOCKS, "及膝襪"
+	CALL SET_SHOES, "小皮靴"
+	CALL SET_OTHER, "泪痣右"
+	CALL SET_OTHER, "狐面/顎口罩"
+ENDSELECT
+
+TARGET = MEMO_TARGET
+
+
+;-------------------------------------------------
+;会話登場用の颜绘付き路人を全員消す関数
+;-------------------------------------------------
+@DEL_MOB
+#DIM LCOUNT
+#DIM IS_DEL
+
+IS_DEL = 0
+FOR LCOUNT, 1, CHARANUM
+	IF CFLAG:LCOUNT:路人
+		DELCHARA LCOUNT
+		IS_DEL = 1
+	ENDIF
+	SIF IS_DEL
+		BREAK
+NEXT
+SIF IS_DEL
+	RESTART
+RETURN 1
+
+
+
+;-------------------------------------------------
+;アプデ角色の颜绘表示用関数
+;-------------------------------------------------
+@PRINT_UPDATE_MAIDFACE
+#DIM LCOUNT
+#DIM LCOUNT2
+#DIM NUM_ADDCHARA
+#DIM ACTOR
+#DIM NO_PRINT, 100
+#DIM NO_ORDER, 100
+#DIM DATE_ORDER, 100
+#DIM NOW_TIME
+
+NOW_TIME = (GETTIME() / 1000000000)%1000000
+
+VARSET NO_ORDER
+VARSET DATE_ORDER
+
+VARSET LOCALS
+SPLIT STR:最新更新角色, "/", LOCALS
+FOR LCOUNT, 0, 100
+	SIF LOCALS:LCOUNT == ""
+		BREAK
+	NO_ORDER:LCOUNT = TOINT(LOCALS:LCOUNT)
+NEXT
+
+VARSET LOCALS
+SPLIT STR:最新更新日時, "/", LOCALS
+FOR LCOUNT, 0, 100
+	SIF LOCALS:LCOUNT == ""
+		BREAK
+	DATE_ORDER:LCOUNT = TOINT(LOCALS:LCOUNT)
+NEXT
+
+VARSET NO_PRINT
+NUM_ADDCHARA = 0
+FOR LCOUNT, 0, 100
+	SIF NO_ORDER:LCOUNT == 0
+		BREAK
+	;表示はとりあえず18人まで
+	SIF NUM_ADDCHARA >= 18
+		BREAK
+	;角色メイクフラグ中なら勧誘画面表示できるかを見る
+	IF COND("角色メイク中")
+		SIF COND("勧誘画面表示", NO_ORDER:LCOUNT) == 0
+			CONTINUE
+	ENDIF
+
+	;13人目からは1年以内の更新に限る
+	IF LCOUNT >= 12
+		SIF NOW_TIME - DATE_ORDER:LCOUNT > 10000
+			BREAK
+	ENDIF
+
+	ADDCHARA NO_ORDER:LCOUNT
+	ACTOR = CHARANUM - 1
+	CFLAG:ACTOR:颜绘 = 1
+	CALL VARSET_MAIDFACE, ACTOR
+
+	;学園に居ない角色は便装
+	IF COND("部室出現可能", ACTOR) == 0
+		CALL SET_COORDINATE, "便装", ACTOR
+	ELSE
+		CALL SET_COORDINATE, "制服", ACTOR
+	ENDIF
+
+	NO_PRINT:NUM_ADDCHARA = ACTOR
+	NUM_ADDCHARA += 1
+NEXT
+
+CALL DRAWLINES, "□ 直近の更新角色12人+α(1年以内の更新)でMAX18人表示 □"
+
+IF CONFIG("颜绘勧誘")
+	;颜绘パネル中フラグON
+	SETBIT FLAG:状況判定, 50
+	FOR LCOUNT, 0, (NUM_ADDCHARA/6)+1
+		CALL PRINT_MAIDFACE, NO_PRINT:(LCOUNT*6), NO_PRINT:(LCOUNT*6+1), NO_PRINT:(LCOUNT*6+2), NO_PRINT:(LCOUNT*6+3), NO_PRINT:(LCOUNT*6+4), NO_PRINT:(LCOUNT*6+5)
+
+		FOR LCOUNT2, 0, 6
+			ACTOR = NO_PRINT:(LCOUNT*6+LCOUNT2)
+			SIF ACTOR <= 0
+				BREAK
+			RESULT = 0
+			TRYCALLFORM IS_SINGLE_ENDING_K{NO:ACTOR}
+			SIF RESULT
+				SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINTFORM %TEXT_LJ(@"[{NO:ACTOR, 2}]%NAME:ACTOR%", NUMC_MAIDFACE())%
+			RESETCOLOR
+		NEXT
+		PRINTL 
+		SIF NO_PRINT:(LCOUNT*6 + 6) == 0
+			BREAK
+	NEXT
+	;颜绘パネル中フラグOFF
+	CLEARBIT FLAG:状況判定, 50
+ELSE
+	FOR LCOUNT, 0, 100
+		ACTOR = NO_PRINT:LCOUNT
+		SIF ACTOR <= 0
+			BREAK
+		RESULT = 0
+		TRYCALLFORM IS_SINGLE_ENDING_K{NO:ACTOR}
+		SIF RESULT
+			SETCOLOR DEF_COLOR("爱心粉紅")
+		CALL TEXT_SHOP_CHARA_SHOW, NO:ACTOR
+		RESETCOLOR
+	NEXT
+ENDIF
+CALL BLANK_DRAWLINE
+
+FOR LCOUNT, 0, NUM_ADDCHARA
+	DELCHARA CHARANUM-1
+NEXT
+
+;-------------------------------------------------
+;勧誘画面の颜绘表示用関数
+;ARG:0～ARG:5に値が入っている場合はその番号の角色のみ出力する
+;-------------------------------------------------
+@PRINT_SHOP_MAIDFACE, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+#DIM LCOUNT
+#DIM LCOUNT2
+#DIM NUM_ADDCHARA
+#DIM ACTOR
+#DIM NO_PRINT, 100
+;ARG:0～ARG:5の幾つに値が入っているかをカウントする
+#DIM NUM_ARG
+
+NUM_ARG = 0
+FOR LCOUNT, 0, 6
+	SIF ARG:LCOUNT > 0
+		NUM_ARG += 1
+NEXT
+
+;刷新过滤器
+IF TFLAG:过滤器 == 210 && NUM_ARG == 0
+	CALL PRINT_UPDATE_MAIDFACE
+	RETURN 1
+ENDIF
+
+VARSET NO_PRINT
+NUM_ADDCHARA = 0
+FOR LCOUNT, 1, 200
+	IF NUM_ARG
+		SELECTCASE LCOUNT
+		CASE ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5
+		CASEELSE
+			CONTINUE
+		ENDSELECT
+	ELSE
+		SIF COND("勧誘画面表示", LCOUNT) == 0
+			CONTINUE
+	ENDIF
+
+	ADDCHARA LCOUNT
+	ACTOR = CHARANUM - 1
+	CFLAG:ACTOR:颜绘 = 1
+	CALL VARSET_MAIDFACE, ACTOR
+
+	;学園に居ない角色は便装
+	IF COND("部室出現可能", ACTOR) == 0
+		CALL SET_COORDINATE, "便装", ACTOR
+	ELSE
+		CALL SET_COORDINATE, "制服", ACTOR
+	ENDIF
+
+	NO_PRINT:NUM_ADDCHARA = ACTOR
+	NUM_ADDCHARA += 1
+NEXT
+;表示する角色がいない
+SIF NUM_ADDCHARA == 0
+	RETURN 0
+
+;颜绘パネル中フラグON
+SETBIT FLAG:状況判定, 50
+
+FOR LCOUNT, 0, (NUM_ADDCHARA/6)+1
+	CALL PRINT_MAIDFACE, NO_PRINT:(LCOUNT*6), NO_PRINT:(LCOUNT*6+1), NO_PRINT:(LCOUNT*6+2), NO_PRINT:(LCOUNT*6+3), NO_PRINT:(LCOUNT*6+4), NO_PRINT:(LCOUNT*6+5)
+	
+	FOR LCOUNT2, 0, 6
+		ACTOR = NO_PRINT:(LCOUNT*6+LCOUNT2)
+		SIF ACTOR <= 0
+			BREAK
+		RESULT = 0
+		TRYCALLFORM IS_SINGLE_ENDING_K{NO:ACTOR}
+		SIF RESULT
+			SETCOLOR DEF_COLOR("爱心粉紅")
+		IF STRCOUNT(CSVCSTR(NO:ACTOR, GETNUM(CSTR, "CEVENT") ), "情報隠蔽")
+			PRINTFORM %TEXT_LJ(@"[{NO:ACTOR, 2}]？？？", NUMC_MAIDFACE())%
+		ELSE
+			PRINTFORM %TEXT_LJ(@"[{NO:ACTOR, 2}]%NAME:ACTOR%", NUMC_MAIDFACE())%
+		ENDIF
+		RESETCOLOR
+	NEXT
+	PRINTL 
+	SIF NO_PRINT:(LCOUNT*6 + 6) == 0
+		BREAK
+NEXT
+
+
+FOR LCOUNT, 0, NUM_ADDCHARA
+	DELCHARA CHARANUM-1
+NEXT
+
+;颜绘パネル中フラグOFF
+CLEARBIT FLAG:状況判定, 50
+
+
+;-------------------------------------------------
+;勧誘画面の颜绘表示に使うRESOURCES生成関数(現在は使用していない)
+;-------------------------------------------------
+@PRINT_SHOP_MAIDFACE_ALL
+#DIM LCOUNT
+#DIM LCOUNT2
+#DIM NUM_ADDCHARA
+#DIM ACTOR
+#DIM NO_PRINT, 100
+#DIMS TEXT_RESOURCES, 200
+;x列 y行＝xCOLUMN yROW
+#DIM NUM_COLUMN
+#DIM NUM_ROW
+
+;角色メイク中フラグON
+SETBIT FLAG:状況判定, 13
+
+VARSET TEXT_RESOURCES
+VARSET NO_PRINT
+NUM_ADDCHARA = 0
+FOR LCOUNT, 1, 200
+	;存在する角色なのか判定
+	SIF EXISTCSV_EX(LCOUNT) == 0
+		CONTINUE
+
+	ADDCHARA LCOUNT
+
+	ACTOR = CHARANUM - 1
+	NO_PRINT:NUM_ADDCHARA = ACTOR
+
+	;x列 y行＝xCOLUMN yROW
+	NUM_COLUMN = NUM_ADDCHARA%6
+	NUM_ROW = (NUM_ADDCHARA%24)/6
+	TEXT_RESOURCES:NUM_ADDCHARA = 颜绘{NO:ACTOR},パネル{1+(NUM_ADDCHARA/24)}.png,{180*NUM_COLUMN},{190*NUM_ROW},170,170
+
+	NUM_ADDCHARA += 1
+	CFLAG:ACTOR:颜绘 = 1
+	SIF COND("休托莉", ACTOR)
+		CALL SET_CEVENT, "正体偽装", ACTOR
+
+	;学園に居ない角色は便装
+	IF COND("部室出現可能", ACTOR) == 0
+		CALL SET_COORDINATE, "便装", ACTOR
+	ELSE
+		CALL SET_COORDINATE, "制服", ACTOR
+	ENDIF
+NEXT
+FOR LCOUNT, 0, (NUM_ADDCHARA/6)+1
+	CALL PRINT_MAIDFACE, NO_PRINT:(LCOUNT*6), NO_PRINT:(LCOUNT*6+1), NO_PRINT:(LCOUNT*6+2), NO_PRINT:(LCOUNT*6+3), NO_PRINT:(LCOUNT*6+4), NO_PRINT:(LCOUNT*6+5)
+	PRINTL 
+	SIF NO_PRINT:(LCOUNT*6 + 6) == 0
+		BREAK
+NEXT
+
+
+FOR LCOUNT, 0, NUM_ADDCHARA
+	DELCHARA CHARANUM-1
+NEXT
+
+FOR LCOUNT, 0, NUM_ADDCHARA
+	PRINTFORML %TEXT_RESOURCES:LCOUNT%
+NEXT
+
+;角色メイク中フラグOFF
+CLEARBIT FLAG:状況判定, 13
+
+
+;-------------------------------------------------
+;現在表示されている特写や颜绘の横にテ接吻トを並べる関数
+;CALL START_PRINT_LINEUP から CALL PRINT_LINEUPまでのすべての行が対象となる
+;CLEARLINEや改行操作をするのでREDRAW 0 必須
+;-------------------------------------------------
+@START_PRINT_LINEUP, ARGS
+REDRAW 0
+IF TFLAG:MAX_height == 0
+	SELECTCASE ARGS
+	CASE "CIP"
+		TFLAG:LINECOUNT_LINEUP = LINECOUNT + CUTINSIZE()/100
+	CASEELSE
+		TFLAG:LINECOUNT_LINEUP = LINECOUNT + MAIDFACESIZE()/100
+	ENDSELECT
+	RETURN 0
+ENDIF
+
+STR:PRINT_LINEUP = %HTML_GETPRINTEDSTR(TFLAG:MAX_height)%
+STR:PRINT_LINEUP = %REPLACE(STR:PRINT_LINEUP, "</nobr></p>", "")%
+CLEARLINE TFLAG:MAX_height + 1
+TFLAG:LINECOUNT_LINEUP = LINECOUNT
+
+@PRINT_LINEUP, ARGS
+#DIM LCOUNT
+#DIM NUM_LINE
+VARSET LOCALS
+
+IF TFLAG:MAX_height == 0
+	SIF TFLAG:LINECOUNT_LINEUP > LINECOUNT
+		CALL MULTILINE, TFLAG:LINECOUNT_LINEUP - LINECOUNT
+	RETURN 0
+ENDIF
+
+NUM_LINE = 0
+FOR LCOUNT, 0, LINECOUNT - TFLAG:LINECOUNT_LINEUP
+	LOCALS:NUM_LINE = %HTML_GETPRINTEDSTR(LINECOUNT - TFLAG:LINECOUNT_LINEUP - LCOUNT - 1)%
+	NUM_LINE += 1
+NEXT
+
+;一番上の行は画像とくっつけるので弄る
+LOCALS:0 = %REPLACE(LOCALS:0, @"<p align='left'><nobr>", "<nonbutton pos='0'>")%
+LOCALS:0 = %REPLACE(LOCALS:0, @"</nobr>", "</nonbutton></nobr>")%
+LOCALS:0 = %STR:PRINT_LINEUP%%LOCALS:0%
+
+CLEARLINE LINECOUNT - TFLAG:LINECOUNT_LINEUP
+
+FOR LCOUNT, 0, 20
+	SELECTCASE LOCALS:LCOUNT
+	CASE ""
+		IF LCOUNT <= TFLAG:MAX_height
+			PRINTL 
+		ELSE
+			BREAK
+		ENDIF
+	CASEELSE
+		HTML_PRINT LOCALS:LCOUNT
+	ENDSELECT
+NEXT
+
+@RESET_EMOT, ARG
+CFLAG:ARG:睡眠 = 0
+CFLAG:ARG:甜言蜜语 = 0
+CFLAG:ARG:心情好 = 0
+CFLAG:ARG:心情差 = 0
+CFLAG:ARG:躁动难忍 = 0
+CFLAG:ARG:刚睡醒 = 0
+CFLAG:ARG:憤怒 = 0
+CFLAG:ARG:害羞 = 0
+
+
+
+;GLOBALS:40～63を使う
+@SAVE_MAIDFACE, ARGS, ARG
+#DIM CHOICE
+#DIM MEMO_LINECOUNT
+#DIMS MEMO_EMOT
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+MEMO_EMOT = %CSTR:ARG:颜绘変化%
+CSTR:ARG:颜绘変化 = 
+
+MEMO_LINECOUNT = LINECOUNT
+LOADGLOBAL
+
+PRINTL 
+PRINTFORML 要记录到几号位置呢？点击[DEL]可以进行删除（请注意存档是全游戏存档公用的）
+CALL SHOW_FACESAVE, ARG
+PRINTFORML [100] 返回　[200] 整理编号
+
+CALL INPUT_SELECT, 48, 100, 200
+CHOICE = RESULT
+
+SELECTCASE CHOICE
+CASE 200
+	CALL SORT_FACESAVE
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+CASE 100
+CASE 24 TO 47
+	GLOBALS:(CHOICE+16) = 
+	SAVEGLOBAL
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+CASEELSE
+	IF GLOBALS:(CHOICE+40) != ""
+		PRINTFORML 覆盖[{CHOICE, 2}]号存档可以吗？
+		CALL PRINT_SELECT, "是/否"
+		IF RESULT
+			CLEARLINE LINECOUNT - MEMO_LINECOUNT
+			RESTART
+		ENDIF
+	ENDIF
+	STR:颜绘記録 = %ARGS%
+	CALL SETFLAG, "颜绘記録からの復元", ARG
+	CALL SETFLAG, "颜绘の記録", ARG
+	GLOBALS:(CHOICE+40) = %STR:颜绘記録%
+ENDSELECT
+
+STR:颜绘記録 = %ARGS%
+CALL SETFLAG, "颜绘記録からの復元", ARG
+CSTR:ARG:颜绘変化 = %MEMO_EMOT%
+SAVEGLOBAL
+
+RETURN 1
+
+
+
+
+@LOAD_MAIDFACE, ARGS, ARG
+#DIM CHOICE
+#DIM MEMO_LINECOUNT
+#DIMS MEMO_EMOT
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+MEMO_EMOT = %CSTR:ARG:颜绘変化%
+CSTR:ARG:颜绘変化 = 
+
+MEMO_LINECOUNT = LINECOUNT
+LOADGLOBAL
+
+PRINTL 
+PRINTFORML 使用几号存档呢？点击[DEL]可以进行删除
+CALL SHOW_FACESAVE, ARG
+PRINTFORML [100] 返回　[200] 整理编号
+
+CALL INPUT_SELECT, 48, 100, 200
+CHOICE = RESULT
+
+SELECTCASE CHOICE
+CASE 200
+	CALL SORT_FACESAVE
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+CASE 100
+	STR:颜绘記録 = %ARGS%
+CASE 24 TO 47
+	GLOBALS:(CHOICE+16) = 
+	SAVEGLOBAL
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+CASEELSE
+	IF GLOBALS:(CHOICE+40) == ""
+		PRINTFORML [{CHOICE, 2}]番には何も記録されていないようです
+		CLEARLINE LINECOUNT - MEMO_LINECOUNT
+		RESTART
+	ELSE
+		STR:颜绘記録 = %GLOBALS:(CHOICE+40)%
+	ENDIF
+ENDSELECT
+
+CALL SETFLAG, "颜绘記録からの復元", ARG
+CALL SETFLAG, "無表情颜绘の記録", ARG
+CSTR:ARG:颜绘変化 = %MEMO_EMOT%
+SAVEGLOBAL
+RETURN 1
+
+@SHOW_FACESAVE, ARG
+#DIM LCOUNT
+#DIM LCOUNT2
+
+;阴蒂ック指令表示中ON
+SETBIT FLAG:メイン画面, 20
+;颜绘セーブロード中ON
+SETBIT FLAG:状況判定, 51
+
+SIF NO:ARG != 99
+	CALL PRINT_STRL, "黄色_※実際に存在する角色の颜绘を変更する際には、[肤色],[耳の形],[種族]等は変更されません※"
+FOR LCOUNT, 0, 24
+	ADDCOPYCHARA ARG
+	CALL RESET_EMOT, CHARANUM - 1
+	TALENT:(CHARANUM - 1):叛逆 = 0
+	CFLAG:(CHARANUM - 1):角色用 = LCOUNT
+	SELECTCASE GLOBALS:(LCOUNT+40)
+	CASE ""
+		CALL SET_CEVENT, "颜绘没有", CHARANUM - 1
+	CASEELSE
+		CALL DEL_CEVENT, "颜绘没有", CHARANUM - 1
+		STR:颜绘記録 = %GLOBALS:(LCOUNT+40)%
+		CALL SETFLAG, "颜绘記録からの復元", CHARANUM - 1
+	ENDSELECT
+	SELECTCASE LCOUNT
+	CASE 5, 11, 17, 23
+		CALL PRINT_MAIDFACE, CHARANUM - 6, CHARANUM - 5, CHARANUM - 4, CHARANUM - 3, CHARANUM - 2, CHARANUM - 1
+
+		FOR LCOUNT2, 0, 6
+			IF CEVENT("颜绘没有", CHARANUM - 6 + LCOUNT2)
+				PRINTFORM %TEXT_LJ(@" [{LCOUNT-5+LCOUNT2, 2}]", NUMC_MAIDFACE() )%
+			ELSE
+				PRINTFORM %TEXT_LJ(@" [{LCOUNT-5+LCOUNT2, 2}]", NUMC_MAIDFACE()-7)%
+				PRINTBUTTON "[DEL]", 24+LCOUNT-5+LCOUNT2
+				PRINTPLAIN 　
+			ENDIF
+		NEXT
+		PRINTL 
+		DELCHARA CHARANUM - 6, CHARANUM - 5, CHARANUM - 4, CHARANUM - 3, CHARANUM - 2, CHARANUM - 1
+	ENDSELECT
+NEXT
+
+CLEARBIT FLAG:メイン画面, 20
+CLEARBIT FLAG:状況判定, 51
+
+@SORT_FACESAVE
+#DIM LCOUNT
+#DIM LCOUNT2
+
+;63番目は見る必要ないので最初から62番までとする
+FOR LCOUNT, 40, 63
+	SELECTCASE GLOBALS:LCOUNT
+	CASE ""
+		FOR LCOUNT2, LCOUNT+1, 64
+			SELECTCASE GLOBALS:LCOUNT2
+			CASE ""
+			CASEELSE
+				SWAP GLOBALS:LCOUNT, GLOBALS:LCOUNT2
+				BREAK
+			ENDSELECT
+		NEXT
+	ENDSELECT
+NEXT
+SAVEGLOBAL

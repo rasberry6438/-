@@ -1,0 +1,212 @@
+﻿@EVENTTRAIN
+#PRI
+SIF COND("第一対象") == 0
+	FLAG:状況判定 += TARGET
+;調教中のフラグON
+SETBIT FLAG:状況判定, 10
+;射精フラグ、処女喪失フラグなどを重置
+VARSET TFLAG
+;調教開始時のTARGETの番号を記録
+FLAG:調教開始時の対象 = TARGET
+;ASSIを調教したフラグを重置
+FLAG:助手を調教した = 0
+;Ｗ推倒の変数を重置
+VARSET SELECTCOM, -1
+VARSET PREVCOM, -1
+;不要な文字列を初期化
+VARSET STR, "", 100, 110
+STR:ビデオ内容 = 
+STR:ビデオジャンル = 
+STR:青写真 = 
+;Ｐ汚れの重置
+CVARSET CSTR, GETNUM(CSTR, "Ｐ汚れ")
+;SELECTCOM履歴の重置
+CVARSET CSTR, GETNUM(CSTR, "SELECTCOM履歴")
+
+SAVESTR:Ｈ中の撮影履歴 = 
+
+CVARSET CFLAG, GETNUM(CFLAG, "刚睡醒")
+
+;フラグに使う現実時間を取得
+CALL GET_REALTIMEFORFLAG
+
+;調教者は誰か
+PLAYER = MASTER
+CALL SET_PARTNER
+
+;複数PLAYの基本的な補佐に助手を設定。変更する時には違う人を設定する事
+IF ASSI
+	;partnerが指导者兼任の場合には能力は残すけど助手は不在扱い
+	IF TARGET == ASSI
+		ASSI = 0
+	ELSEIF COND("現在不在", ASSI) || COND("约会中") || CSTR:お誘い == "邀请一起入浴"
+		CALL SET_CEVENT, "助手設定：下がらせる", ASSI
+		ASSI = 0
+		ASSI:1 = 0
+	ENDIF
+ENDIF
+
+;３Ｐの参加者として用いる
+PLAYER:1 = ASSI
+TARGET:1 = ASSI
+
+SIF EQUIP:Ｈ的奖励
+	FLAG:情緒 += 90
+
+IF EQUIP:お浴室でＨ
+	CALL SETFLAG, "浴室PLAY"
+	CALL SETFLAG, "衣装全脱ぎ", TARGET
+ENDIF
+
+SELECTCASE CSTR:お誘い
+CASE "邀请一起入浴"
+	CALL SETFLAG, "浴室PLAY"
+	CALL SETFLAG, "衣装全脱ぎ", TARGET
+	CFLAG:心情好 = 2
+CASE "二人きりＨ的邀请"
+	FLAG:情緒 += 60
+	CFLAG:心情好 = 2
+CASE "Ｈ的邀请", "放課後Ｈ的邀请"
+	FLAG:情緒 += 30
+	CFLAG:心情好 = 2
+CASE "推倒"
+	;被逆推状態の付与
+	TEQUIP:推倒 = 1
+	FLAG:情緒 += 30
+	CFLAG:心情好 = 2
+ENDSELECT
+
+;圣诞节ツリー格子
+SIF DAYEV("圣诞节期間")
+	FLAG:情緒 += NUM("圣诞节ツリー") * 30
+;酔酒による情緒補正
+SIF STATE("酔酒", TARGET)
+	FLAG:情緒 += 30
+;SIF STATE("酔酒", MASTER)
+;	FLAG:情緒 += 45
+;心动不已状態
+IF CFLAG:甜言蜜语
+	FLAG:情緒 += 60
+	TEQUIP:甜言蜜语 = 5
+	CFLAG:甜言蜜语 = 0
+ENDIF
+IF ASSI && CFLAG:ASSI:甜言蜜语
+	TEQUIP:ASSI:甜言蜜语 = 5
+	CFLAG:ASSI:甜言蜜语 = 0
+ENDIF
+SIF CFLAG:躁动难忍
+	FLAG:情緒 += 30
+
+;★追加
+SELECTCASE SAVESTR:現在位置
+CASE "情人旅館"
+	FLAG:情緒 += 30
+CASE "人気のない教室"
+	;立位でスタート
+	SETBIT FLAG:調教过滤器, 10
+CASEELSE
+	;相手的家
+	SIF PLACE("partnerの自宅")
+		FLAG:情緒 += 30
+	;野外は立位でスタート
+	SIF PLACE("野外") && PLACE("車内") == 0
+		SETBIT FLAG:調教过滤器, 10
+ENDSELECT
+
+;消耗品の所持数記録
+CALL SETFLAG, "消耗品所持数"
+
+;開始前の諸設定１（口上前で重置されてそうなもの）
+CALL SETFLAG, "調教開始前Ａ", TARGET
+CALL SETFLAG, "調教開始前Ａ", MASTER
+SIF ASSI
+	CALL SETFLAG, "調教開始前Ａ", ASSI
+
+CALL SETFLAG, "Ｈ前PALAM調整", MASTER
+CALL SETFLAG, "Ｈ前PALAM調整", TARGET
+SIF ASSI
+	CALL SETFLAG, "Ｈ前PALAM調整", ASSI
+
+;衣装的污垢
+CALL STAIN_CALC_COSPLAY
+;你はエッチの前に廁所に行く？
+SIF CONFIG("Ｈ前廁所")
+	BASE:MASTER:尿意 = 0
+
+@EVENTTRAIN
+#LATER
+;開始前の諸設定２（前回記録で口上で使えそうなものを重置）
+CALL SETFLAG, "調教開始前Ｂ", TARGET
+CALL SETFLAG, "調教開始前Ｂ", MASTER
+SIF ASSI
+	CALL SETFLAG, "調教開始前Ｂ", ASSI
+
+;指导者能力発動
+CALL EVENTTRAIN_BONUS_ADVISER
+
+DRAWLINE
+;助手が忙しく色々準備
+CALL EVENT_ASSI_AUTO, "調教開始"
+
+IF CONFIG("脱掉胖次过滤器") && CHECK_CLO("下衣露出") && CHECK_CLO("Ｖ露出可") == 0
+	IF CONFIG("脱掉鞋子过滤器") && EQUIP:靴 && PLACE("野外") == 0
+		PRINTFORMW %CALLNAME:TARGET%按照%CALLNAME:MASTER%的要求脱去了%BOTTOM(TARGET)%和%SHOES(TARGET)%。
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%依照%CALLNAME:MASTER%的要求脱下了%BOTTOM(TARGET)%。
+	ENDIF
+ELSEIF CONFIG("脱掉鞋子过滤器") && EQUIP:靴 && PLACE("野外") == 0
+	PRINTFORMW %CALLNAME:TARGET%按照%CALLNAME:MASTER%的要求脱去了%SHOES(TARGET)%。
+ENDIF
+IF CONFIG("脱掉胖次过滤器")
+	IF CHECK_CLO("下衣露出") && CHECK_CLO("Ｖ露出可") == 0
+		IF COND("胖次形状確認") == 0
+			SIF CHECK_BOTTOM("连褲襪")
+				CALL SET_BOTTOM, ""
+			IF EQUIP:胖次 == 0 || RAND:2
+				CALL TEXT_PANTU_CHECK, "下衣"
+			ELSE
+				CALL TEXT_PANTU_CHECK_SHORT
+			ENDIF
+		ENDIF
+		CALL SET_BOTTOM, ""
+	ENDIF
+	SIF ASSI && CHECK_CLO("下衣露出", ASSI) && CHECK_CLO("Ｖ露出可", ASSI) == 0
+		CALL SET_BOTTOM, "", ASSI
+ENDIF
+IF CONFIG("脱掉鞋子过滤器") && PLACE("野外") == 0
+	CALL SET_SHOES, ""
+	SIF ASSI
+		CALL SET_SHOES, "", ASSI
+ENDIF
+IF TEQUIP:創口貼
+	PRINTFORMW ……開始之前要撕掉%CALLNAME:TARGET%的股間的創口貼吗？
+	CALL PRINT_SELECT, "是/就这様放着"
+	IF RESULT == 0
+		CALLFORM TRAIN_MESSAGE_COM{TNUM("創口貼")}
+		CALLFORM FLAG_COM{TNUM("創口貼")}
+		TEQUIP:創口貼 = 0
+		CFLAG:創口貼装着 = 0
+	ELSE
+		CALL PRINT_STRW, "如果想実行扒開阴道 和 Ｖ挿入指令类指令的话、请不要忘记_爱心粉紅_撕下創口貼_の。"
+	ENDIF
+ENDIF
+
+
+;３Ｐ出来るかを表示
+IF ASSI == 0
+ELSEIF COND("只和你Ｈ") && COND("只和你Ｈ", ASSI)
+	DRAWLINE
+	CALL PRINT_STRW, @"黄色_※因为%CALLNAME:TARGET%和%CALLNAME:ASSI%只和%CALLNAME:MASTER%做过、所以无法进行交代和3P指令"
+ELSEIF COND("只和你Ｈ", ASSI)
+	DRAWLINE
+	CALL PRINT_STRW, @"黄色_※因为%TEXTS("助手の名称")%の%CALLNAME:ASSI%只和%CALLNAME:MASTER%做过、所以无法进行交代和3P指令"
+ELSEIF COND("只和你Ｈ")
+	DRAWLINE
+	CALL PRINT_STRW, @"黄色_※因为%CALLNAME:TARGET%只和%CALLNAME:MASTER%做过、所以无法进行交代和3P指令"
+ENDIF
+
+CALL SETFLAG, "調教開始前Ｃ", TARGET
+CALL SETFLAG, "調教開始前Ｃ", MASTER
+SIF ASSI
+	CALL SETFLAG, "調教開始前Ｃ", ASSI
+

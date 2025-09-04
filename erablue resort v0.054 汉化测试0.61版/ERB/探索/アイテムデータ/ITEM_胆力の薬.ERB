@@ -1,0 +1,48 @@
+﻿
+@アイテム個別文章表示_勇气药剂(ARGS)
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 500
+ENDIF
+
+LOCALS = 
+LOCALS += @"■勇气药剂　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "勇气药剂")}<br>"
+LOCALS += "具有增强魔力辅助效果的统称道具<br>"
+LOCALS += "可便捷辅助释放奥义技能。<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "我方全体奥义槽恢复[３０％]。<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_勇气药剂
+IF 戦闘行動内容 != 1000
+	LOCALS = <br><br>无法在战斗外使用。
+	詳細文文字列受け渡し変数 += @"%LOCALS%"
+	RETURN 0
+ENDIF
+CALL 汎用使用先表示("味方全体")
+
+@アイテム効果処理_勇气药剂(ARG)
+;ARG = 隊列の何番目か
+
+IF 戦闘行動内容 != 1000
+	PRINTW 无法在战斗外使用
+	RETURN 0
+ENDIF
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "勇气药剂") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+FOR LOCAL, 0, 4
+	SIF !BATTLE_STATE:LOCAL:キャラ登録番号
+		CONTINUE
+	LOCAL:1 = MIN(BATTLE_STATE:LOCAL:ゲージ最大値 - BATTLE_STATE:LOCAL:奥義ゲージ, 30)
+	BATTLE_STATE:LOCAL:奥義ゲージ = MIN(BATTLE_STATE:LOCAL:奥義ゲージ + 30, BATTLE_STATE:LOCAL:ゲージ最大値)
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:LOCAL:キャラ登録番号)%的奥义槽增加了{LOCAL:1}
+NEXT
+
+
+RETURN 1

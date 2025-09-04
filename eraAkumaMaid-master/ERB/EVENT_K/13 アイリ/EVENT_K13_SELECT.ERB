@@ -1,0 +1,417 @@
+﻿;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+;ここで TFLAG:取引可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K13_ADDSELECT
+SIF TALENT:恋慕
+	STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("男性器の呼び方", 16)% … %CALLNAME:TARGET%にアレの呼び方を決めてもらいます/
+
+
+;お願い・取引で増やした選択肢の地の文と台詞
+@KOJO_WISH_K13_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "男性器の呼び方"
+	IF CEVENT("ちんちんの呼び名") == 0
+		IF CEVENT("ちんちん指定経験") == 0
+			PRINTFORMW 「……那个」
+			PRINTFORMW 「えーっと、なんて言ったら、いいのか……」
+			PRINTFORMW 「い、いわゆる……だ、男性器の呼び方についてなんだけど」
+			PRINTFORMW 「恥ずかしくて、言わないようにしてたんだけど…」
+			PRINTFORMW 「やっぱり、酱と声に出した方が……嬉しい？」
+			PRINTFORMW 「……もし、呼ぶとしたらだけど…」
+			PRINTFORMW 「何て呼ぶのが、一番うれしい？」
+		ELSE
+			PRINTFORMW 「…やっぱり呼んで欲しいの？」
+			PRINTFORMW 「……い、いや別に、構わないけど…」
+			PRINTFORMW 「じゃあ、何て呼べばいい？」
+		ENDIF
+	ELSE
+		PRINTFORMW 「…やっぱり他の呼び方がいいの？」
+		PRINTFORMW 「……何でそんなにこだわるのよ…別にいいけど」
+		PRINTFORMW 「じゃあ、何て呼べばいい？」
+	ENDIF
+
+	CALL PRINT_SELECT, "おちんちん/ちんちん/ちんこ/ちんぽ/やっぱり呼ばなくていい"
+	SELECTCASE RESULT
+	CASE 0
+		CALL SET_CEVENT, "ちんちんの呼び名：おちんちん"
+	CASE 1
+		CALL SET_CEVENT, "ちんちんの呼び名：ちんちん"
+	CASE 2
+		CALL SET_CEVENT, "ちんちんの呼び名：ちんこ"
+	CASE 3
+		CALL SET_CEVENT, "ちんちんの呼び名：ちんぽ"
+	CASE 4
+		CALL DEL_CEVENT_GROUP, "ちんちんの呼び名"
+	ENDSELECT
+	IF CEVENT("ちんちんの呼び名") == 0
+		PRINTFORMW 「……それなら、いいけど」
+	ELSE
+		PRINTFORMW 「じゃあ、これからは…%CEVENTS("ちんちんの呼び名")%って、呼ぶから…」
+		PRINTFORMW 「よ、よろしくね？」
+		CALL SET_CEVENT, "ちんちん指定経験"
+	ENDIF
+ENDSELECT
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K13_ADDSELECT
+SIF CEVENT("髪型変化：アイリ") && CFLAG:心情好 == 0
+	STR:選択肢 += "髪型を夸奖/"
+SIF ABL:信頼 >= 5 && COND("発情中") == 0
+	STR:選択肢 += "雑談：猫/"
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K13_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "髪型を夸奖"
+	PRINTFORMW %CALLNAME:MASTER%は%CALLNAME:TARGET%の髪型%TEXTR("がとても似合っていると伝えた/のセンスがいいと褒めてみた")%
+	PRINTL 
+	PRINTFORMW 「%TEXTR(@"まあ、雑誌に載ってたの真似しただけなんだけどね…/でしょ？決めるの結構苦労したんだから/…見るところは見てるのね、%CNAME("二人称")%も/そ、そう…？お世辞だとは思うけど、有がと")%」
+	PRINTL 
+	PRINTFORMW %CALLNAME:TARGET%很高兴！
+	CFLAG:心情好 = 1
+	IF CSTR:改髪 == "马尾辫" && CFLAG:ポニテ手応え < 5
+		CFLAG:ポニテ手応え += 1
+	ELSEIF CSTR:後髪 == "卷髪" && CFLAG:卷髪手応え < 5
+		CFLAG:卷髪手応え += 1
+	ENDIF
+CASE "雑談：猫"
+	PRINTFORML 猫に関することわざにかこつけて%CALLNAME:TARGET%と戯れてみようか…
+	PRINTL 
+	CALL PRINT_SELECT, "猫の目のように変わる/猫の手も借りたい/猫を叱るより猫を囲え/猫に小判/猫に鰹節/猫の額"
+	SELECTCASE RESULT
+	;猫の目のように変わる
+	CASE 0
+		PRINTFORMW 「たしかに私の瞳孔ってどうなってるんだろ」
+		PRINTFORMW 「……ちょっと見てくれる？」
+		PRINTFORMW %CALLNAME:TARGET%の目をしばらく見つめてみたが一向に変化がない…
+		IF RAND:2
+			PRINTFORMW 「……ぶふっ」
+			PRINTFORMW 「ちょ、なんでそんな思いっきり目開けてんの…！くふふっ…！」
+		ELSE
+			PRINTFORMW ……手机のライトを当ててみるのはどうだろう？
+			PRINTFORMW 「まぶしいからやめてね」
+		ENDIF
+	;猫の手も借りたい
+	CASE 1
+		IF ABL:信頼 >= 5 && RAND:2
+			PRINTFORMW 「……是、じゃあどうぞ」
+			PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:MASTER%に向けて手を差し出してきた…
+			PRINTFORMW 「どうしたの？借りたかったんじゃないの？」
+		ELSE
+			PRINTFORMW 「んー…？課題のことなら、私も忙しいからまた今度ね」
+		ENDIF
+	;猫を叱るより猫を囲え
+	CASE 2
+		IF RAND:2 && COND("同居中") && TALENT:相思相愛
+			PRINTFORMW 「猫は自由でいるべきじゃないのかしら、叱られたり囲われたりにはあんまり向いてないのよ」
+			PRINTFORMW 「%CNAME("二人称")%も、囲ってる猫\@ FIND_COND("同居中", "種族：猫") ? たち # \@はせめて酱と大事にしてよ？」
+		ELSE
+			PRINTFORMW 「どっちかっていうと%CNAME("一人称")%が%CNAME("二人称")%を叱ることの方が多いわよね？」
+			PRINTFORMW 「%CNAME("二人称")%も囲いに入れといたら大人しくなるかしら？」
+		ENDIF
+	;猫に小判
+	CASE 3
+		IF RAND:2
+			PRINTFORMW 「…お金の価値がわかる猫だっているはずよね」
+			PRINTFORMW 「豚に真珠を给よりはきっと有効活用できると思うわ、根拠はないけど」
+		ELSE
+			PRINTFORMW 「手っ取り早く猫のご心情を取るんならおいしいものの方がいいと思うわ、うん」
+			PRINTFORMW 「…小判もちょっと欲しいけど」
+		ENDIF
+	;猫に鰹節
+	CASE 4
+		PRINTFORMW やはり%CALLNAME:TARGET%も鰹節が好きなのだろうか…
+		IF RAND:2
+			PRINTFORMW 「%CNAME("一人称")%的には小鱼干し出汁なのよね最近は」
+			PRINTFORMW 「あ、あとサバ節も悪くないと思うの」
+			PRINTFORMW 「……あー…お味噌汤飲みたい…」
+		ELSE
+			PRINTFORMW 「いい气味よね、鰹節」
+			PRINTFORMW 「涼拌菜とかお豆腐とか食べる時、ついかけすぎちゃうのよね…」
+		ENDIF
+	;猫の額
+	CASE 5
+		PRINTFORMW %CALLNAME:TARGET%の額はどれくらい狭窄のだろうか…？
+		PRINTFORMW 気になってしまったのでちょうど無防備にしている%CALLNAME:TARGET%の頭に手を伸ばした…
+		IF RAND:2
+			PRINTFORMW 「あ、こら、やめて！前髪が！」
+			PRINTFORMW 「なにすんのよもー！」
+		ELSE
+			PRINTFORMW 「なに、どしたの？」
+			PRINTFORMW 「人のおでこ触って何がしたいの？」
+		ENDIF
+	ENDSELECT
+ENDSELECT
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K13_ADDSELECT
+SIF STATE("酔酒", TARGET) == 0 && COND("夜") && CFLAG:マタタビ > 0 && CFLAG:マタタビ < 3
+	STR:選択肢 += "让她闻木天蓼/"
+SIF CFLAG:じゃれつき具合 != 0
+	STR:選択肢 += "逗猫棒/"
+SIF CEVENT("爪保养完毕") == 0 && ABL:信頼 >= 3
+	STR:選択肢 += "爪のお手入れ/"
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K13_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "让她闻木天蓼"
+	;CFLAG:マタタビが1の場合初回反応っぽくなる
+	PRINTFORMW 说起来今天\@ CFLAG:マタタビ == 2 ? 也准备了木天蓼 # 把以前说过的木天蓼准备好了 \@…
+	PRINTFORML 要给%CALLNAME:TARGET%闻一下试试看吗？
+	CALL PRINT_SELECT, "试着做做看/今天还是算了"
+	SELECTCASE RESULT
+	CASE 0
+		IF CFLAG:マタタビ == 2
+			PRINTFORMW 「肯定出了什么问题啊…本来、应该没有这样的效果的…本不应该…」
+		ELSE
+			PRINTFORMW 「嘛，好吧、反正嗅一嗅也没什么大不了的…」
+			CFLAG:マタタビ += 1
+		ENDIF
+		PRINTFORMW 「……」
+		PRINTFORMW 「……」
+		CALL PRINT_STR, "「…唔、唔嗯嗯……_／／／_」_W"
+		PRINTFORML 
+		CALL PRINT_STRW, @"%CALLNAME:TARGET%变成了[_爱心粉紅_酔酒_]的状态_黄色_(実行値と情緒にBOUNS＆偶尔奇行)"
+		CALL ADD_STATE, TARGET, "酔酒"
+	CASE 1
+		PRINTFORMW 「怎么了？现在在藏着什么东西吗…？」
+	ENDSELECT
+	CFLAG:マタタビ += 2
+CASE "逗猫棒"
+	PRINTFORM %CALLNAME:MASTER%在%CALLNAME:TARGET%的眼前%TEXTR("微微地/轻轻地/＿")%
+	IF CSTR:PREV_DAILYCOM != STR:日常イベント名
+		PRINTFORMW 试着晃动了一下逗猫棒…
+	ELSE
+		PRINTFORMW 持续地晃动着逗猫棒…
+	ENDIF
+	PRINTL 
+	;発情中はえろいことにしか興味ない
+	SIF COND("発情中")
+		CFLAG:じゃれつき具合 = 0
+	;途中でやめる（この時間に初回でない、かつ連続実行でない）と飽きちゃう　例外有
+	SIF CHOSE_DEVENT(STR:日常イベント名) && CSTR:PREV_DAILYCOM != STR:日常イベント名 && !(CONDS("直前行動") == "露脐装超短裙胖次チラ" && CFLAG:じゃれつき具合 >= 4)
+		CFLAG:じゃれつき具合 = 0
+	;低確率で気まぐれ発動
+	IF RAND:20 == 0 && CFLAG:じゃれつき具合 > 0 && CHOSE_DEVENT(STR:日常イベント名)
+		IF RAND:3 == 0 && CFLAG:じゃれつき具合 < 4
+			PRINTFORMW 「嘿、抓到了、呼」
+			PRINTFORMW 「无论如何都要玩的话就给我再摇得认真一点啊…」
+			PRINTFORMW %CALLNAME:TARGET%好像很嫌弃这种半桶水的挑逗的样子…
+		ELSEIF RAND:2
+			PRINTFORMW 「あっ」
+			PRINTFORMW %CALLNAME:TARGET%は勢い余って%CALLNAME:MASTER%の手をひっかいてしまった…
+			PRINTFORMW 「……えっと、ご、ごめん……大丈夫？」
+			PRINTFORMW なんだかお互い急にテンションが下がってしまった……
+		ELSE
+			PRINTFORMW 「……」
+			PRINTFORMW 「喂、已经够了吧…」
+			PRINTFORMW 「稍微有点厌倦了、停下来吧」
+			PRINTFORMW %CALLNAME:TARGET%好像已经厌倦了逗猫棒的样子…
+		ENDIF
+		CFLAG:じゃれつき具合 = 0
+		RETURN 1
+	ENDIF
+
+	SELECTCASE CFLAG:じゃれつき具合
+	CASE 0
+		IF COND("発情中")
+			PRINTFORMW 「%TEXTR("唔…现在并没有玩那个心情呀…/无论如何都要玩的话、玩别的“游戏”也是可以的呀…♪")%」
+			PRINTFORMW 发情中的%CALLNAME:TARGET%对逗猫棒完全没兴趣的样子…
+		ELSEIF CONDS("直前行動") == "露脐装超短裙胖次チラ"
+			PRINTFORMW 「那个、绝对不会再做了……！」
+			PRINTFORMW 「已经看穿了%CNAME("二人称")%的阴谋了…！」
+			PRINTFORMW %CALLNAME:TARGET%为了避免被看到胖次而警戒着…
+		ELSEIF CSTR:PREV_DAILYCOM == "掀起裙子"
+			PRINTFORMW 「今天就算了わ…これ以上%CNAME("二人称")%に卖个破绽のは危険だから」
+		ELSE
+			PRINTFORMW 「又是那个啊、已经厌倦了…」
+			PRINTFORMW 「没有其他可以玩的吗？」
+			PRINTFORMW %CALLNAME:TARGET%对逗猫棒完全失去了兴趣的样子…
+		ENDIF
+	CASE 1
+		IF RAND:3 == 0
+			PRINTFORMW %CALLNAME:TARGET%は猫じゃらしを横目でちらっと見た…
+			PRINTFORMW わざと興味がなさそうなふりをしているようだ…
+		ELSE
+			IF RAND:2
+				PRINTFORMW 「……」
+				PRINTFORMW 「打、打算做什么……」
+				PRINTFORMW 「我不会答应陪你玩那个的……」
+			ELSE
+				PRINTFORMW 「把我当作笨蛋吗？」
+				PRINTFORMW 「……才不是对所有会动的东西都有兴趣呢…」
+			ENDIF
+			PRINTFORMW 说着这样的话%CALLNAME:TARGET%还是无意识地盯着逗猫棒… 
+		ENDIF
+	CASE 2, 3
+		IF RAND:2
+			PRINTFORMW 「……」
+			PRINTFORMW %CALLNAME:TARGET%快速地转动着脖子，目光紧紧跟着逗猫棒的动作…
+		ELSE
+			PRINTFORMW 「…！」
+			PRINTFORMW %CALLNAME:TARGET%配合着逗猫棒的动作不时地扭动着身体…
+		ENDIF
+	CASEELSE
+		IF RAND:4 == 0
+			IF RAND:3 == 0
+				PRINTFORMW 「………%TEXTR("呀/就是现在/呼")%っ！！」
+				PRINTFORMW 「做、做到了……！抓住了……！！」
+				PRINTFORMW 「………啊」
+				IF RAND:2
+					CALL PRINT_STR, "「嘛、嘛？冷静下来好好想想的话、这种游戏…_／／／_」_W" 
+				ELSE
+					PRINTFORMW 「啊啊够了……为什么要这么认真啊%CNAME("一人称")%…！」
+				ENDIF
+				PRINTFORMW %CALLNAME:TARGET%%TEXTR("好像感觉很羞耻地/好像回过神、慌张地/装作好像从最開始就没有兴趣一样")%丢掉了逗猫棒…
+			ELSEIF RAND:2
+				PRINTFORMW 「………にゃーっ！」
+				PRINTFORMW %CALLNAME:TARGET%の%TEXTR("右/左")%手が猫じゃらしをとらえた！
+				PRINTFORMW そして%CALLNAME:TARGET%はその勢いのまま猫じゃらしに噛みついた！
+				PRINTFORMW 「……
+				CLEARLINE 1
+				PRINTFORMW 「……那个」
+				PRINTFORMW 「……あんまり興奮させないでよね」
+				PRINTFORMW %CALLNAME:TARGET%は猫じゃらしを吐き出すと有点害臊的つぶやいた…
+			ELSE
+				PRINTFORMW 「……取ったっ！」
+				PRINTFORMW %CALLNAME:TARGET%は見事に猫じゃらしを捕まえた！
+				PRINTFORMW %CALLNAME:MASTER%は%CALLNAME:TARGET%を夸奖ように頭を撫でてあげた…
+				PRINTFORMW 「……」
+				PRINTFORMW 「…何のつもり？なんかバカにしてる？」
+				PRINTFORMW %CALLNAME:TARGET%は何故か急に不服そうにしている…
+			ENDIF
+			CFLAG:じゃれつき具合 = 0
+		ELSE
+			IF RAND:5 == 0
+				PRINTFORMW 「………」
+				PRINTFORMW %CALLNAME:TARGET%は四つん這い变成了まま身体をくねくねと動かして「ため」を作っている…
+			ELSEIF RAND:4 == 0
+				PRINTFORMW 「……！！」
+				PRINTFORMW 「不、还不行……离这里太远了呀…」
+				PRINTFORMW 「再往这边靠近一点才有机会……」
+				PRINTFORMW %CALLNAME:TARGET%为了抓住逗猫棒、在寻找最佳的时机…
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 「……っ！」
+				PRINTFORMW 「………唔噜…下次、不会让你逃走的…」
+				PRINTFORMW %CALLNAME:TARGET%似乎在为刚才那精心计算的一击没有抓住目标而后悔的样子…
+			ELSEIF RAND:2
+				PRINTFORMW 「…………哈！！」
+				PRINTFORMW 「诶、那个……？诶！！」
+				PRINTFORMW 「咕噜……有一套嘛……！」
+				PRINTFORMW %CALLNAME:TARGET%在一瞬间感到惋惜之后又马上抬起手開始拼命追逐逗猫棒…
+			ELSE
+				PRINTFORMW 「………」
+				PRINTFORMW 「…绝对、会抓到你的……」
+				PRINTFORMW %CALLNAME:TARGET%%TEXTR("用认真的眼神/随时准备扑上去一样")%盯着逗猫棒…
+			ENDIF
+		ENDIF
+	ENDSELECT
+	IF CFLAG:じゃれつき具合 > 0
+		CFLAG:じゃれつき具合 += 1
+	ENDIF
+CASE "爪のお手入れ"
+	PRINTFORMW %CALLNAME:TARGET%の爪をお手入れして给ことにした…
+	PRINTFORML どっちを先にヤスリで削ってあげますか？
+	CALL PRINT_SELECT, "手の爪/足の爪"
+	SELECTCASE RESULT
+	CASE 0
+		IF CFLAG:爪お手入れ熟練度 >= 9 && RAND:2
+			IF RAND:2
+				PRINTFORMW 「ん、じゃあよろしくね」
+				PRINTFORM %CALLNAME:TARGET%和%CALLNAME:MASTER%に片手を差し出すともう片方の手で
+				PRINTFORMW %TEXTR("手机をいじり始めた/本を読み始めた")%…
+			ELSE
+				PRINTFORMW 「なーに、ご心情取り？」
+				PRINTFORMW 「ふふ…酱と%CNAME("一人称")%をご心情にできるのかしら？」
+				PRINTFORMW %CALLNAME:TARGET%はなんだか女王様気取りだ…
+			ENDIF
+		ELSEIF CFLAG:爪お手入れ熟練度 >= 5
+			IF RAND:2
+				PRINTFORMW 「……ん、そんな感じね」
+				PRINTFORMW %CALLNAME:TARGET%はくつろぎながら時々こちらの作業に目を向けている…
+			ELSE
+				PRINTFORMW 「……だいぶ慣れてきたんじゃない？」
+				PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:MASTER%の手つきに信頼を感じているようだ…
+			ENDIF
+		ELSEIF CFLAG:爪お手入れ熟練度 >= 1
+			IF RAND:2
+				PRINTFORMW 「なんだか手つきがぎこちないんだけど」
+				PRINTFORMW %CALLNAME:TARGET%は不安そうにこちらを看了过来…
+			ELSE
+				PRINTFORMW 「んー、その指はもういいかな…じゃあ次は…」
+				PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:MASTER%にすべてを任せるのがどうも不安なようだ…
+			ENDIF
+		ELSEIF CFLAG:爪お手入れ熟練度 == 0
+			PRINTFORMW 「……本当に大丈夫なの？」
+			PRINTFORMW 「削りすぎると結構痛いのよ？慎重にやってね」
+		ENDIF
+	CASE 1
+		IF CFLAG:爪お手入れ熟練度 >= 9 && RAND:2
+			IF RAND:3 == 0
+				PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:MASTER%の差し出した手に慢慢地足を乗せた…
+				PRINTFORMW 「やるからにはきっちりやってよ？」
+				PRINTFORMW %CALLNAME:TARGET%は期待に満ちた目でこちらを見ている…
+			ELSEIF RAND:2
+				PRINTFORMW 「ん、じゃあよろしくね」
+				PRINTFORMW %CALLNAME:TARGET%はおもむろに襪子を脱いで裸足变成了…
+				PRINTFORMW そして、椅子に座ると跪く%CALLNAME:MASTER%の前に素足を差し出した…
+			ELSE
+				PRINTFORMW 「……」
+				PRINTFORMW 「ふふ、なんだかいい眺めね」
+				PRINTFORMW %CALLNAME:TARGET%は足を組んで座り、爪を削る%CALLNAME:MASTER%を満足げに看了过来…
+			ENDIF
+		ELSEIF CFLAG:爪お手入れ熟練度 >= 5
+			IF RAND:2
+				PRINTFORMW 「自己やるよりもやりやすいし、実際助かるのよね」
+				PRINTFORMW 「%CNAME("二人称")%が妙なことさえ考えてなければ完璧なんだけどね…」
+			ELSE
+				PRINTFORMW 「…そう？じゃあ拜托了けど」
+				PRINTFORMW 「なんか、頼むのに抵抗が薄れてる自分に惊嚇だわ…」
+			ENDIF
+		ELSEIF CFLAG:爪お手入れ熟練度 >= 1
+			IF RAND:2
+				PRINTFORMW 「……なんか、変な気分」
+				PRINTFORMW 「いたたまれないっていうか、落ち着かないっていうか…」
+			ELSE
+				PRINTFORMW 「……その、できれば顔近づけないでやってほしいんだけど」
+				PRINTFORMW 「%CNAME("二人称")%は良くても%CNAME("一人称")%が気にするの！」
+			ENDIF
+		ELSEIF CFLAG:爪お手入れ熟練度 == 0
+			PRINTFORMW 「何言ってんのよ、さすがに恥ずかしいんだけど…」
+			PRINTFORMW 「…どうしてもやりたいの？」
+			PRINTFORMW 「はぁ…また%CNAME("二人称")%の変態に付き合わされるのね…」
+		ENDIF
+	ENDSELECT
+	PRINTFORMW ………
+	PRINTFORMW ……
+	PRINTFORMW …	
+	IF CFLAG:爪お手入れ熟練度 >= 9
+		IF RAND:2
+			PRINTFORMW 「おー…完璧じゃない」
+			PRINTFORMW 「…これからも%CNAME("二人称")%に頼もうかしら？」
+		ELSE
+			PRINTFORMW 「随分小心地やってくれたみたいね、形もきれいだし」
+			PRINTFORMW 「…いつも有がとね」
+		ENDIF
+	ELSEIF CFLAG:爪お手入れ熟練度 >= 5
+		IF RAND:2
+			PRINTFORMW 「ふーん、いい感じね」
+			PRINTFORMW 「これなら服とかにも引っかからないし、助かるわ」
+		ELSE
+			PRINTFORMW 「んー、合格ね」
+			PRINTFORMW 「……ごめん、ちょっと偉そうだったかも」
+		ENDIF
+	ELSE
+		IF RAND:2
+			PRINTFORMW 「うん、思ったより悪くないわね」
+			PRINTFORMW 「有がと」
+		ELSE
+			PRINTFORMW 「ん、これで大丈夫」
+			PRINTFORMW 「最後の仕上げは自己やるわ」
+		ENDIF
+	ENDIF
+	CALL SET_CEVENT, "爪保养完毕"
+	CFLAG:爪お手入れ熟練度 += 1
+ENDSELECT
+

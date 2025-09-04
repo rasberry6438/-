@@ -1,0 +1,84 @@
+﻿;-----------------------------------------
+;入室時などの特殊パターン時にエロイベントを発生させてよいかを判断するための関数
+;-----------------------------------------
+@SPECIAL_SEX, ARGS, ARG:0, ARG:1
+#DIM MEMO_TARGET
+#DIM MEMO_PLAYER
+#DIM DYNAMIC ACTOR
+#DIMS DYNAMIC SOME_STR
+#DIM LCOUNT
+
+;ARG:0とARG:1両方がCOND("交流中")なことが条件
+SIF COND("交流中", ARG:0) == 0 || COND("交流中", ARG:1) == 0
+	RETURN 0
+
+MEMO_TARGET = TARGET
+MEMO_PLAYER = PLAYER
+
+SELECTCASE ARGS
+CASE ""
+	RETURN 0
+CASE "交流Ｈ"
+	SIF PLACE("部室") == 0 || RAND:100 < 49
+		RETURN 0
+
+	;TARGETとPLAYERを設定する
+	IF COND("部員間Ｈ主導者", ARG:0)
+		PLAYER = ARG:0
+		TARGET = ARG:1
+	ELSEIF COND("部員間Ｈ主導者", ARG:1)
+		PLAYER = ARG:1
+		TARGET = ARG:0
+	ELSE
+		RETURN 0
+	ENDIF
+
+	;各種指令が実行できるか格子
+	CALL CHECK_COM_ABLE, TARGET
+
+	IF EXCHANGE_JADGE() == "本番"
+		VARSET LOCALS
+		SPLIT EXCHANGE_TABLE(), "/", LOCALS
+		SOME_STR = 
+		FOR LCOUNT, 0, 10
+			SELECTCASE LOCALS:LCOUNT
+			CASE "Ｖ性交"
+				SIF CANTRAINS("Ｖ挿入")
+					SOME_STR += @"%LOCALS:LCOUNT%/"
+			CASE "Ａ性交"
+				SIF CANTRAINS("Ａ挿入")
+					SOME_STR += @"%LOCALS:LCOUNT%/"
+			CASE "Ａ挿入"
+				SIF CANTRAINS("Ａ逆挿入")
+					SOME_STR += @"%LOCALS:LCOUNT%/"
+			CASE "口交"
+				SOME_STR += @"%LOCALS:LCOUNT%/"
+			ENDSELECT
+		NEXT
+
+		SELECTCASE TEXTR(SOME_STR)
+		CASE "Ｖ性交"
+			TEQUIP:PLAYER:避孕套 = 1
+			CALL EXCHANGE_STR, "昼Ｖ性交する"
+			CALL SIMULATE_TRAIN_COM, CANTRAINS("Ｖ挿入"), 1
+			TEQUIP:PLAYER:避孕套 = 0
+		CASE "Ａ性交"
+			TEQUIP:PLAYER:避孕套 = 1
+			CALL EXCHANGE_STR, "昼Ａ性交する"
+			CALL SIMULATE_TRAIN_COM, CANTRAINS("Ａ挿入"), 1
+			TEQUIP:PLAYER:避孕套 = 0
+		CASE "Ａ挿入"
+			TEQUIP:避孕套 = 1
+			CALL EXCHANGE_STR, "昼Ａ性交される"
+			CALL SIMULATE_TRAIN_COM, CANTRAINS("Ａ逆挿入"), 1
+			TEQUIP:避孕套 = 0
+		CASE "口交"
+			CALL EXCHANGE_STR, "昼口交"
+			CALL SIMULATE_TRAIN_COM, TNUM("口交"), 1
+		ENDSELECT
+	ENDIF
+	FLAG:Ｈ事件發生++
+ENDSELECT
+
+TARGET = MEMO_TARGET
+PLAYER = MEMO_PLAYER

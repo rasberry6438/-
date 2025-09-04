@@ -1,0 +1,88 @@
+﻿@MOVE_ROUTINE_FESTIVAL_クリスマスパーティ(対象キャラ, ARGS)
+#DIM 対象キャラ
+#DIM 時間計算
+#DIM CONST 開催費用 = 10000
+
+SELECTCASE ARGS
+	CASE "お祭り説明"
+		LOCALS = <div rect='2125,500,3762,2812'>
+		LOCALS += "■圣诞节派对<br>"
+		LOCALS += "<br>"
+		LOCALS += "用圣诞节氛围装点整个度假村。<br>"
+		LOCALS += "在欢乐的气氛中，所有角色无需特定条件即可更容易提升友情度。<br>"
+		LOCALS += "<br>"
+		LOCALS += "好感度要素：友情的提升效率为1.2倍。<br>"
+		LOCALS += "员工制服将变更为圣诞节主题服装。<br>"
+		LOCALS += "满足特定条件的角色可能穿着圣诞节限定服装。<br>"
+		LOCALS += "<br>"
+		IF 10000 > MONEY
+			LOCALS += @"卢比不足。（需要卢比：%NUM_FORMAT(開催費用)%）<br>"
+		ELSE
+			LOCALS += @"<button value='0'>[0] 筹办此庆典（需要卢比：%NUM_FORMAT(開催費用)%）</button><br>"
+		ENDIF
+		LOCALS += "</div>"
+		HTML_PRINT LOCALS, 1
+	CASE "出現条件"
+		;既に予定に入ってたらアウト
+		SIF 開催予定祭り名 == "FESTIVAL_クリスマスパーティ"
+			RETURN 0
+		;冬の月限定
+		SIF DAY % 120 / 30 != 3
+			RETURN -1
+		RETURN 1
+	CASE "参加判定"
+		;ルーチンは変動させないので0を返す
+		RETURN 0
+	CASE "特設マップ"
+		;存在しない
+		RETURN 0
+	CASE "起床時刻"
+		;ルーチンは変動しないので必要なし
+	CASE "就寝時刻"
+		;ルーチンは変動しないので必要なし
+	CASE "就寝場所"
+		;ルーチンは変動しないので必要なし
+	CASE "初期位置"
+		;ルーチンは変動しないので必要なし
+	CASE "お祭り補正条件"
+		;条件なし
+		RETURN 1
+	CASE "お祭り補正内容"
+		;好感度要素：友情に補正
+		NOWEX:対象キャラ:友情度上昇格納 = MAX(NOWEX:対象キャラ:友情度上昇格納 * 13 / 10, 0)
+	CASE "服装変更"
+		;お祭り開催で服入手
+		CALL 制服登録処理("迷你圣诞裙")
+		;女性のみ
+		IF GETBIT(TALENT:対象キャラ:性別, 0)
+			IF TALENT:対象キャラ:従業員
+				;従業員は全員着る
+			ELSEIF TALENT:対象キャラ:目立ちたがり
+				;目立ちたがりも全員着る
+			ELSE
+				;基本的に他人時は着ない
+				SIF CFLAG:対象キャラ:好感度レベル < 関係閾値:1
+					RETURN 0
+				;恥じらい持ちは親友から
+				SIF TALENT:対象キャラ:羞恥心 > 0 && CFLAG:対象キャラ:好感度レベル < 関係閾値:3
+					RETURN 0
+				;保守的は友人から
+				SIF TALENT:対象キャラ:性的興味 < 0 && CFLAG:対象キャラ:好感度レベル < 関係閾値:2
+					RETURN 0
+				;真面目・自制心は友人から
+				SIF TALENT:対象キャラ:自制心 > 0 && CFLAG:対象キャラ:好感度レベル < 関係閾値:2
+					RETURN 0
+				;無関心は着ない
+				SIF TALENT:対象キャラ:無関心 > 0
+					RETURN 0
+				;陰気は親友から
+				SIF TALENT:対象キャラ:陽気／陰気 < 0 && CFLAG:対象キャラ:好感度レベル < 関係閾値:3
+					RETURN 0
+				;見た目壮年以上は着ない
+				SIF TALENT:対象キャラ:年齢層 >= 年齢層_壮年 && (!TALENT:対象キャラ:外見年齢 || TALENT:対象キャラ:外見年齢 >= 年齢層_壮年)
+					RETURN 0
+			ENDIF
+			RSTR:服装名受け渡し = 迷你圣诞裙
+		ENDIF
+ENDSELECT
+

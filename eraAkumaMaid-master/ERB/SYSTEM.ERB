@@ -1,0 +1,932 @@
+﻿@EVENTTURNEND_FLAG, ARG
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+
+;2番以降は傍晚無視
+SIF ARG >= 2 && COND("夕")
+	RETURN 0
+
+SELECTCASE ARG
+CASE 1
+	;避孕套関連のフラグ初期化
+	CVARSET CFLAG, GETNUM(CFLAG, "套套内精液")
+	CVARSET CSTR, GETNUM(CSTR, "避孕套履歴")
+	ITEM:套套内精液 = 0
+	ITEM:用过的避孕套 = 0
+	ITEM:未飲的避孕套 = 0
+
+	;其他フラグ初期化
+	CVARSET CFLAG, GETNUM(CFLAG, "情緒補正")
+
+	;partnerと指导者を元に戻す
+	IF TARGET && ASSI
+		SIF COND("第一対象") && COND("第一対象") != TARGET
+			SWAP TARGET, ASSI
+	;partnerが指导者兼任の時の処理
+	ELSEIF ASSI == 0 && ASSI:1
+		ASSI = ASSI:1
+	ENDIF
+
+	;TCVARの999番まで初期化
+	VARSET TCVAR:MASTER:0, 0, 0, 1000
+	;状態変化や装備の解除
+	VARSET TEQUIP:MASTER:0, 0, 0, 100
+	VARSET EQUIP:MASTER:0, 0, 0, 10
+	;ご褒美状態の重置
+	CVARSET EQUIP, GETNUM(EQUIP, "Ｈ的奖励")
+
+	;立位モードOFF
+	CLEARBIT FLAG:調教过滤器, 10
+
+	FOR LCOUNT, 2, CHARANUM
+		VARSET TCVAR:LCOUNT:0, 0, 0, 1000
+		VARSET TEQUIP:LCOUNT:0, 0, 0, 100
+		VARSET EQUIP:LCOUNT:0, 0, 0, 10
+		;いちゃついているなら打招呼がまだでもフラグON
+		IF CFLAG:LCOUNT:日常事件回数
+			CFLAG:LCOUNT:打招呼した = 1
+			CFLAG:LCOUNT:打招呼された = 1
+		ENDIF
+		CFLAG:LCOUNT:カ胸罩ンド = RAND:10
+		CFLAG:LCOUNT:カ胸罩ンド_DAILY = RAND:10
+		;2になるのは推倒てきたのを抱きとめてマグロ化させた場合なので0に戻す
+		SIF CFLAG:LCOUNT:マグロ == 2
+			CFLAG:LCOUNT:マグロ = 0
+		CALL DEL_CEVENT, "Ｖ完全挿入初達成", LCOUNT
+		CALL DEL_CEVENT, "Ｖ完全挿入未達成", LCOUNT
+		CALL DEL_CEVENT, "Ｖ完全挿入達成文", LCOUNT
+	NEXT
+
+	;一時的なCEVENTフラグや、其他のフラグの操作
+	FOR LCOUNT, 1, CHARANUM
+		CALL DEL_CEVENT_GROUP, "助手で性処理", LCOUNT
+		IF CEVENT("助手設定：下がらせる", LCOUNT)
+			ASSI = LCOUNT
+			ASSI:1 = LCOUNT
+			CALL DEL_CEVENT, "助手設定：下がらせる", LCOUNT
+		ENDIF
+		;日常イベントフラグ確定
+		CALL SET_DEVENT2, LCOUNT
+	NEXT
+
+	FOR LCOUNT, 1, CHARANUM
+		;調教で得た経験などをここで一段落
+		CALL RESET_EXP_GAIN, LCOUNT
+		;特技LVに還元
+		CALL GET_EXABL2, LCOUNT
+	NEXT
+
+	;夜は4でこの処理を行う
+	IF COND("夜") == 0
+		FOR LCOUNT, 1, CHARANUM
+			;服装の状態を初期化
+			CALL RESETFLAG_CLO, LCOUNT
+			;服装や装備を初期化
+			CALL EVENT_AFTER_TRAIN_COS, LCOUNT
+		NEXT
+		;随机胖次
+		CALL RAND_PANTU_ALL
+	ENDIF
+CASE 2
+	FOR LCOUNT, 2, CHARANUM
+		;欲求不満。イかせたり、相手することで減ります
+		LOCAL = RAND:3 + RAND:3
+		SIF TALENT:LCOUNT:恋慕
+			LOCAL += 2
+		SIF TALENT:LCOUNT:好色
+			LOCAL += 5
+		SIF TALENT:LCOUNT:淫乱
+			LOCAL += 10
+		SELECTCASE MAX(ABL:LCOUNT:欲望/2, ABL:LCOUNT:精液中毒)
+		CASE IS >= 5
+			LOCAL += 1 + RAND:7
+		CASE IS >= 3
+			LOCAL += 1 + RAND:5
+		CASE IS >= 1
+			LOCAL += 1 + RAND:3
+		ENDSELECT
+		IF MARK:LCOUNT:淫紋 && TALENT:LCOUNT:男性 == 0
+			SELECTCASE COND("胎内の精液量", LCOUNT)
+			CASE IS <= 20000
+				LOCAL += MARK:LCOUNT:淫紋
+			CASE IS <= 50000
+				LOCAL += (MARK:LCOUNT:淫紋 + 1)/2
+			CASE IS <= 80000
+				LOCAL += (MARK:LCOUNT:淫紋 + 1)/4
+			ENDSELECT
+		ENDIF
+		SIF COND("発情期", LCOUNT)
+			LOCAL += 50
+		SIF TALENT:LCOUNT:感情缺乏
+			LOCAL -= 1
+		SIF COND("種族：人形", LCOUNT)
+			LOCAL -= 2
+		BASE:LCOUNT:欲求不満 = LIMIT(BASE:LCOUNT:欲求不満 + LOCAL, BASE:LCOUNT:欲求不満, 100)
+	NEXT
+
+	IF COND("夜")
+		;日々の身嗜みや陰毛腋毛処理
+		IF CONFIG("陰毛と腋毛")
+			FOR LCOUNT, 1, CHARANUM
+				CALL CALC, "日々の陰毛＆腋毛処理", LCOUNT
+			NEXT
+		ENDIF
+
+		FOR LCOUNT, 1, CHARANUM
+			;常時挿入格子
+			TALENT:LCOUNT:常時Ｖ振動棒 = COND("身嗜み：Ｖ拡張", LCOUNT)
+			IF TALENT:LCOUNT:常時Ｖ振動棒
+				EXP:LCOUNT:Ｖ経験 += 1
+				SIF EXP:LCOUNT:Ｖ経験 < EXP_LV(TALENT:LCOUNT:常時Ｖ振動棒 + 3)
+					EXP:LCOUNT:Ｖ経験 += EXP_LV(TALENT:LCOUNT:常時Ｖ振動棒) / 5
+
+				SIF TALENT:LCOUNT:常時Ｖ振動棒 >= 2 && EXP:LCOUNT:Ｖ拡張経験 < EXP_LV(TALENT:LCOUNT:常時Ｖ振動棒 + 2)
+					EXP:LCOUNT:Ｖ拡張経験 += MIN(GET_EXP_LV(EXP:LCOUNT:Ｖ拡張経験) + TALENT:LCOUNT:常時Ｖ振動棒 - 1, TALENT:LCOUNT:常時Ｖ振動棒)
+				CALL SETFLAG, "Ｖ受け入れ振動棒", TALENT:LCOUNT:常時Ｖ振動棒, LCOUNT, LCOUNT
+				CFLAG:LCOUNT:常時Ｖ振動棒日数 += 1
+			ENDIF
+
+			TALENT:LCOUNT:常時Ａ肛塞 = COND("身嗜み：Ａ拡張", LCOUNT)
+			IF TALENT:LCOUNT:常時Ａ肛塞
+				EXP:LCOUNT:Ａ経験 += 1
+				SIF EXP:LCOUNT:Ａ経験 < EXP_LV(TALENT:LCOUNT:常時Ａ肛塞 + 3)
+					EXP:LCOUNT:Ａ経験 += EXP_LV(TALENT:LCOUNT:常時Ａ肛塞) / 5
+
+				SIF TALENT:LCOUNT:常時Ａ肛塞 >= 2 && EXP:LCOUNT:Ａ拡張経験 < EXP_LV(TALENT:LCOUNT:常時Ａ肛塞 + 2)
+					EXP:LCOUNT:Ａ拡張経験 += MIN(GET_EXP_LV(EXP:LCOUNT:Ａ拡張経験) + TALENT:LCOUNT:常時Ａ肛塞 - 1, TALENT:LCOUNT:常時Ａ肛塞)
+				CALL SETFLAG, "Ａ受け入れ塞子", TALENT:LCOUNT:常時Ａ肛塞, LCOUNT, LCOUNT
+				CFLAG:LCOUNT:常時Ａ肛塞日数 += 1
+			ENDIF
+
+			TALENT:LCOUNT:常時尿道塞 = COND("身嗜み：尿道拡張", LCOUNT)
+			IF TALENT:LCOUNT:常時尿道塞
+				EXP:LCOUNT:尿道経験 += 1
+				SIF EXP:LCOUNT:尿道経験 < EXP_LV(TALENT:LCOUNT:常時尿道塞 + 2)
+					EXP:LCOUNT:尿道経験 += EXP_LV(TALENT:LCOUNT:常時尿道塞) / 5
+				IF TALENT:LCOUNT:常時尿道塞 >= 2 && EXP:LCOUNT:尿道拡張経験 < EXP_LV(TALENT:LCOUNT:常時尿道塞 + 2)
+					SELECTCASE CALCF("尿道径", LCOUNT)
+					CASE IS >= CALCF("尿道拡張の限界", LCOUNT)*6/5
+
+					CASE IS >= CALCF("尿道拡張の限界", LCOUNT)
+						SIF RAND:2
+							CALL SETFLAG, "尿道拡張", MIN_STR(CONDS("尿道拡張度", LCOUNT) ) + 1, LCOUNT
+					CASE IS >= CALCF("尿道拡張の壁", LCOUNT)
+						SIF RAND:3
+							CALL SETFLAG, "尿道拡張", MIN_STR(CONDS("尿道拡張度", LCOUNT) ) + 1, LCOUNT
+					CASEELSE
+						CALL SETFLAG, "尿道拡張", MIN_STR(CONDS("尿道拡張度", LCOUNT) ) + 1, LCOUNT
+					ENDSELECT
+				ENDIF
+				CFLAG:LCOUNT:常時尿道塞日数 += 1
+			ENDIF
+		NEXT
+
+		;自慰
+		FOR LCOUNT, 2, CHARANUM
+			;自慰禁止中だとしない
+			SIF COND("身嗜み：自慰禁止", LCOUNT)
+				CONTINUE
+
+			SELECTCASE BASE:LCOUNT:欲求不満
+			CASE IS >= 90
+				LOCAL = 1 + RAND:(MIN(ABL:LCOUNT:自慰中毒, 5) + 3)
+			CASE IS >= 75
+				LOCAL = RAND:(MIN(ABL:LCOUNT:自慰中毒, 5) + 2)
+			CASEELSE
+				SIF RAND:(ABL:LCOUNT:自慰中毒 + 1) == 0
+					CONTINUE
+				LOCAL = RAND:(MIN(ABL:LCOUNT:自慰中毒, 5) + 1)/2
+			ENDSELECT
+
+			SIF LOCAL == 0
+				CONTINUE
+
+			CALL CHECK_FAV_ONANIE, LCOUNT
+
+			EXP:LCOUNT:自慰経験 += LOCAL
+			SIF EXP:LCOUNT:射精経験 && PENIS(LCOUNT) && TALENT:LCOUNT:男性 + TALENT:LCOUNT:Ｃ性向 + TALENT:LCOUNT:淫核
+				EXP:LCOUNT:射精経験 += 1 + RAND:LOCAL
+
+			SELECTCASE TALENT:LCOUNT:喜欢的自慰方式
+			;扣穴派
+			CASE 2
+				EXP:LCOUNT:Ｖ経験 += LOCAL
+			;插尻派
+			CASE 3
+				EXP:LCOUNT:Ａ経験 += LOCAL
+			;尿道自慰派
+			CASE 5
+				EXP:LCOUNT:尿道経験 += LOCAL
+			ENDSELECT
+
+			;欲求不満を解消
+			CALL CALC, "欲求不満解消", LCOUNT, MAX(LOCAL*(LOCAL + 1)*5, 20)
+		NEXT
+
+		;勉強。試験が近いかで如実に差が出る
+		FOR LCOUNT, 1, CHARANUM
+			SIF COND("学生", LCOUNT) == 0
+				CONTINUE
+			SIF TALENT:LCOUNT:笨蛋 && RAND:20
+				CONTINUE
+
+			IF TALENT:LCOUNT:真面目 + COND("種族：魔法使", LCOUNT) + COND("種族：妖术使", LCOUNT) && RAND:4 == 0
+				CFLAG:LCOUNT:勉強時間 += 1
+			ELSEIF TALENT:LCOUNT:笨蛋 == 0 && RAND:10 == 0
+				CFLAG:LCOUNT:勉強時間 += 1
+			ELSEIF DAYEV("周考")
+				SELECTCASE BASE:LCOUNT:体力
+				CASE IS >= MAXBASE:LCOUNT:体力
+					SIF RAND:3 == 0 || (DAYEV("試験前日") && TALENT:LCOUNT:笨蛋 == 0)
+						CFLAG:LCOUNT:勉強時間 += 1
+				CASE IS >= MAXBASE:LCOUNT:体力 * 7 / 10
+					SIF RAND:5 == 0 || (DAYEV("試験前日") && CFLAG:LCOUNT:勉強時間 == 0 && TALENT:LCOUNT:笨蛋 == 0)
+						CFLAG:LCOUNT:勉強時間 += 1
+				ENDSELECT
+			ENDIF
+		NEXT
+	ENDIF
+CASE 3
+	;MASTERだけは、夜袭の前に少しだけ回復
+	CALL CALC, "体力回復", 200, MASTER
+	CALL CALC, "精力回復", MAXBASE:MASTER:精力/10, MASTER
+
+	;3サイズと身高
+	FOR LCOUNT, 1, CHARANUM
+		CALL CHECK_3SIZE, LCOUNT
+	NEXT
+CASE 4
+
+	;回復は夜袭などのあと
+	FOR LCOUNT, 1, CHARANUM
+		SIF BASE:LCOUNT:体力 == MAXBASE:LCOUNT:体力
+			CONTINUE
+
+		;体力の回復（午後の調教後は夜の休みが入るので回復大きい）
+		CALL CALC, "体力回復", MAXBASE:LCOUNT:体力, LCOUNT
+	NEXT
+
+	FOR LCOUNT, 1, CHARANUM
+		;精力の回復（夜の休みは回復大きい）
+		IF COND("夜") || FLAG:休憩
+			LOCAL = MAXBASE:LCOUNT:精力
+		ELSE
+			LOCAL = MAX(MAXBASE:LCOUNT:精力/2, 10)
+		ENDIF
+
+		CALL CALC, "精力回復", LOCAL, LCOUNT
+	NEXT
+
+	;排泄物
+	FOR LCOUNT, 1, CHARANUM
+		IF COND("種族：人形", LCOUNT)
+			BASE:LCOUNT:排泄物 = 0
+			CONTINUE
+		ENDIF
+
+		BASE:LCOUNT:排泄物 += 1
+		;Ａ塞子している場合にはある程度溜める
+		SIF TALENT:LCOUNT:常時Ａ肛塞 && BASE:LCOUNT:排泄物 <= 4
+			CONTINUE
+		;溜圆圈ほどに排泄しやすい（Ａ拡張LV > Ａ技術LVだと溜まりづらい）。最低でも１残る
+		SIF RAND:2 && BASE:LCOUNT:排泄物 > MAX(RAND:10 - MAX(ABL:LCOUNT:Ａ拡張 - ABL:LCOUNT:Ａ技術, 0), 1)
+			BASE:LCOUNT:排泄物 = MAX(BASE:LCOUNT:排泄物/2 - 1 - RAND:(ABL:LCOUNT:Ａ拡張/3 + 2), 1)
+	NEXT
+
+	;老廃物（今のところ、ＶとＰ的污垢だけ）
+	FOR LCOUNT, 1, CHARANUM
+		IF PENIS(LCOUNT)
+			SETBIT BASE:LCOUNT:老廃物, 0
+
+			;普通は掃除
+			SIF COND("身嗜み：Ｐ掃除", LCOUNT)
+				CLEARBIT BASE:LCOUNT:老廃物, 0
+		ENDIF
+		IF TALENT:LCOUNT:男性 == 0
+			SETBIT BASE:LCOUNT:老廃物, 1
+
+			;普通は掃除が…
+			SIF COND("身嗜み：Ｖ掃除", LCOUNT)
+				CLEARBIT BASE:LCOUNT:老廃物, 1
+		ENDIF
+	NEXT
+;復活と損傷の回復と日々の晒痕処理(これは夜のみ)
+CASE 5
+	SIF COND("夜") == 0
+		RETURN 0
+	;夜以外は1でこの処理を行う
+	FOR LCOUNT, 1, CHARANUM
+		;服装の状態を初期化
+		CALL RESETFLAG_CLO, LCOUNT
+		;服装や装備を初期化
+		CALL EVENT_AFTER_TRAIN_COS, LCOUNT
+	NEXT
+
+	;PALAMとCUPなどの初期化
+	FOR LCOUNT, 1, CHARANUM
+		VARSET PALAM:LCOUNT:0
+		VARSET CUP:LCOUNT:0
+	NEXT
+
+	;随机胖次
+	CALL RAND_PANTU_ALL
+
+	;髪型変更のお願い
+	FOR LCOUNT, 2, CHARANUM
+		SIF CFLAG:LCOUNT:髪型変更のお願い中 == 0
+			CONTINUE
+	
+		CFLAG:LCOUNT:髪型変更のお願い中 -= 1
+		SIF CFLAG:LCOUNT:髪型変更のお願い中 == 0
+			CALL SETFLAG, "普段の髪型復元", LCOUNT
+	NEXT
+
+	FOR LCOUNT, 1, CHARANUM
+		SIF TALENT:LCOUNT:常時晒痕
+			CONTINUE
+		SELECTCASE CFLAG:LCOUNT:晒痕強度
+		CASE 0
+			CSTR:LCOUNT:晒痕 = 
+		CASEELSE
+			;晒痕がひっそりと消える
+			CFLAG:LCOUNT:晒痕強度 = MAX(CFLAG:LCOUNT:晒痕強度 - 1 - RAND:2, 0)
+			SIF CFLAG:LCOUNT:晒痕強度 == 0
+				CSTR:LCOUNT:晒痕 = 
+		ENDSELECT
+	NEXT
+
+	DRAWLINE
+	SETCOLOR DEF_COLOR("黄色")
+	MEMO_LINECOUNT = LINECOUNT
+	FOR LCOUNT, 1, CHARANUM
+		;ＶＡ損傷の回復
+		IF TALENT:LCOUNT:Ｖ損傷 + TALENT:LCOUNT:Ａ損傷 && BASE:LCOUNT:体力 >= MAXBASE:LCOUNT:体力
+			LOCAL = 7
+
+			SIF FLAG:休憩 || TARGET != LCOUNT
+				LOCAL -= 3
+
+			IF TALENT:LCOUNT:Ｖ損傷 > 0 && RAND:LOCAL == 0
+				TALENT:LCOUNT:Ｖ損傷 -= 1
+
+				IF TALENT:LCOUNT:Ｖ損傷 == 0
+					PRINTFORMW %CALLNAME:LCOUNT%的[Ｖ損傷]痊愈了。
+				ELSE
+					PRINTFORMW %CALLNAME:LCOUNT%的[Ｖ損傷]治愈了一些。距离痊愈还有段時间…
+				ENDIF
+			ENDIF
+			IF TALENT:LCOUNT:Ａ損傷 > 0 && RAND:LOCAL == 0
+				TALENT:LCOUNT:Ａ損傷 -= 1
+
+				IF TALENT:LCOUNT:Ａ損傷 == 0
+					PRINTFORMW %CALLNAME:LCOUNT%的[Ａ損傷]痊愈了。
+				ELSE
+					PRINTFORMW %CALLNAME:LCOUNT%的[Ａ損傷]治愈了一些。距离痊愈还有段時间…
+				ENDIF
+			ENDIF
+		ENDIF
+	NEXT
+	SIF LINECOUNT == MEMO_LINECOUNT
+		CLEARLINE 1
+	RESETCOLOR
+
+	;魂の傷の回復
+	IF TALENT:MASTER:復活
+		DRAWLINE
+		PRINTFORML ＜%TALENT_NAME(GETNUM(TALENT, "復活"), TALENT:MASTER:復活)%＞
+		PRINTFORM %CALLNAME:MASTER%的魂回復了%TEXTS("0.01", TALENT:MASTER:復活)%（%TEXTS("0.01", BASE:MASTER:魂)% 
+		BASE:MASTER:魂 += TALENT:MASTER:復活
+		;限界を超えて回復した魂はこっそりコインに変換して貯蓄
+		IF BASE:MASTER:魂 > MAXBASE:MASTER:魂
+			MONEY:1 += BASE:MASTER:魂 - MAXBASE:MASTER:魂
+			BASE:MASTER:魂 = MAXBASE:MASTER:魂
+		ENDIF
+		PRINTFORML → %TEXTS("0.01", BASE:MASTER:魂)%）
+	ENDIF
+	IF TALENT:MASTER:男性 == 0 && COND("妊娠中", MASTER) == 0 && TALENT:MASTER:避妊の護符 == 0
+		IF ITEM:口服避孕薬
+			PRINTFORML ＜口服避孕薬を一錠服用した＞
+			ITEM:口服避孕薬 -= 1
+			CALL DEL_CEVENT, "口服避孕薬終了", MASTER
+			IF ITEM:口服避孕薬 == 0
+				CALL SET_CEVENT, "口服避孕薬終了", MASTER
+				CALL PRINT_STR, "黄色_※持有的口服避孕薬用完了※"
+				FORCEWAIT
+			ENDIF
+		ELSEIF CEVENT("口服避孕薬終了", MASTER)
+			CFLAG:MASTER:口服避孕薬 = 0
+			TALENT:MASTER:口服避孕薬派 = 0
+			CALL DEL_CEVENT, "口服避孕薬終了", MASTER
+			CALL PRINT_STR, "黄色_＜口服避孕薬的避妊効果结束了＞"
+			FORCEWAIT
+		ENDIF
+	ENDIF
+ENDSELECT
+
+@EVENTTURNEND
+#PRI
+#DIM LCOUNT
+#DIM LCOUNT2
+#DIM MEMO_LINECOUNT
+#DIM MEMO_TARGET
+#DIM MEMO_SOUL
+#DIMS MEMO_SEASON
+
+;いくつかの変数を重置
+CVARSET CFLAG, GETNUM(CFLAG, "甜言蜜语")
+CVARSET CFLAG, GETNUM(CFLAG, "心情好")
+CVARSET CFLAG, GETNUM(CFLAG, "心情差")
+CVARSET CFLAG, GETNUM(CFLAG, "憤怒")
+CVARSET CFLAG, GETNUM(CFLAG, "害羞")
+CVARSET CFLAG, GETNUM(CFLAG, "睡眠")
+CVARSET CFLAG, GETNUM(CFLAG, "闲")
+CVARSET CFLAG, GETNUM(CFLAG, "湿透")
+CVARSET CFLAG, GETNUM(CFLAG, "隙有")
+CVARSET CFLAG, GETNUM(CFLAG, "刚睡醒")
+CVARSET CFLAG, GETNUM(CFLAG, "廁所済")
+
+FLAG:対複数 = 0
+
+;この時間に選んだpartnerを記録
+IF COND("昼")
+	FLAG:昼の相手 = BASE:識別番号
+ELSEIF COND("夜")
+	FLAG:夜の相手 = BASE:識別番号
+ENDIF
+
+IF EXCHANGE_GATE() == 0
+	;ちょっとした接触から軽いエロまで。寝取りとか寝取られは無いよ
+	CALL EVENT_ACADEMY, "部員同士の交流"
+ELSE
+	;ここで交流イベントを発生させる
+	CALL EVENT_EXCHANGE
+ENDIF
+CVARSET CFLAG, GETNUM(CFLAG, "交流中")
+
+;フラグ変更その1
+CALL EVENTTURNEND_FLAG, 1
+
+CVARSET CSTR, GETNUM(CSTR, "DAILYCOM履歴")
+FLAG:放課後Ｈ = 0
+
+IF COND("昼")
+	DRAWLINE
+	SELECTCASE TEXTS("曜日")
+	CASE "日"
+		PRINTFORMW 天黑了。星期日还剩下半天。
+	CASEELSE
+		CALL EVENT_ACADEMY, "归途"
+	ENDSELECT
+	;バイト領帯ム！
+	CALL EVENT_ACADEMY, "傍晚のお仕事"
+
+ELSEIF COND("夕")
+
+ELSEIF COND("夜")
+
+ENDIF
+
+;フラグ変更その2
+CALL EVENTTURNEND_FLAG, 2
+
+IF COND("夕") == 0
+	FOR LCOUNT, 1, CHARANUM
+		;妊娠判定&妊娠イベントカウント処理
+		CALL EVENT_N1, LCOUNT
+	NEXT
+ENDIF
+
+;妊娠イベント
+IF COND("夜")
+	;妊娠発覚＆出産予定報告処理
+	FOR LCOUNT, 1, CHARANUM
+		SIF BASE:LCOUNT:胎児 + BASE:LCOUNT:育児中
+			CALL EVENT_N2, LCOUNT
+	NEXT
+	;其他の妊娠イベント処理
+	FOR LCOUNT, 1, CHARANUM
+		SIF BASE:LCOUNT:胎児 + BASE:LCOUNT:育児中
+			CALL EVENT_N3, LCOUNT
+	NEXT
+ENDIF
+
+;フラグ変更その3
+CALL EVENTTURNEND_FLAG, 3
+
+;日期変更時のイベント呼び出し
+IF COND("夜")
+	;一日の終わりに汚れの重置(CSTR:Ｐ汚れ も重置もされる)
+	FOR LCOUNT, 1, CHARANUM
+		CALL RESET_STAIN_EX, "老廃物以外全部", LCOUNT
+		;ついでに実行できる指令も更新しておく
+		CALL CHECK_COM_ABLE, LCOUNT
+	NEXT
+	CALL YOBAI_ASAGAKE
+ENDIF
+
+;ターンエンドでの指导者能力発動
+SIF COND("夕") == 0
+	CALL EVENTTURNEND_BONUS_ADVISER
+
+;フラグ変更その4
+CALL EVENTTURNEND_FLAG, 4
+
+;休憩フラグ初期化
+FLAG:休憩 = 0
+;情緒初期化
+FLAG:情緒 = 0
+
+;情人旅館に行く？
+IF FLAG:放課後Ｈ
+	TARGET = FLAG:放課後Ｈ
+	TIME = 3
+	IF STR:Ｈする場所 != ""
+		SAVESTR:現在位置 = %STR:Ｈする場所%
+	ELSE
+		SAVESTR:現在位置 = 情人旅館
+	ENDIF
+
+	;二人きり
+	FOR LCOUNT, 2, CHARANUM
+		SIF LCOUNT == TARGET
+			CONTINUE
+		CFLAG:LCOUNT:不在 = 1
+	NEXT
+
+	BEGIN TRAIN
+ENDIF
+
+;時間経過イベント
+IF COND("昼") || COND("夕")
+	SAVESTR:現在位置 = 部室
+
+	;傍晚来た場合は本来は昼の領帯ミングで来るのをスキップした形なので時間を昼に
+	TIME = 1
+	MEMO_TARGET = TARGET
+	;角色ごとに時間遷移で弄りたい事が有るならここで。時間帯はCOND("昼")
+	FOR LCOUNT, 2 , CHARANUM
+		TARGET = LCOUNT
+		CALL BLANK_DRAWLINE
+		MEMO_LINECOUNT = LINECOUNT
+		TRYCALLFORM TIMEEVENT_K{NO:TARGET}
+		IF LINECOUNT == MEMO_LINECOUNT
+			CLEARLINE 1
+		ELSE
+			CALL BLANK_DRAWLINE
+		ENDIF
+	NEXT
+	TARGET = MEMO_TARGET
+	;時間を夜に
+	TIME = 2
+	CALL SYSTEM_ADVICE
+ELSEIF COND("夜")
+	;フラグ変更その5
+	CALL EVENTTURNEND_FLAG, 5
+
+	SAVESTR:現在位置 = 居間
+
+	CALL SYSTEM_ADVICE
+
+	MEMO_TARGET = TARGET
+	;角色ごとに時間遷移で弄りたい事が有るならここで。時間帯はCOND("夜")
+	FOR LCOUNT, 2 , CHARANUM
+		TARGET = LCOUNT
+		CALL BLANK_DRAWLINE
+		MEMO_LINECOUNT = LINECOUNT
+		TRYCALLFORM TIMEEVENT_K{NO:TARGET}
+		IF LINECOUNT == MEMO_LINECOUNT
+			CLEARLINE 1
+		ELSE
+			CALL BLANK_DRAWLINE
+		ENDIF
+	NEXT
+	TARGET = MEMO_TARGET
+
+	MEMO_SEASON = %TEXTS("季節")%
+	TIME = 0
+	DAY += 1
+	CALL SETFLAG, "年月日"
+
+	;廁所ハプニング イベントフラグ阴蒂ア
+	CALL EVENTTURNEND_TOILET_HAPPENING
+
+	;標語の設定
+	CALL SET_RULES
+
+	;淫紋
+	SIF FINDCHARA(MARK:淫紋時計, 1) > 0
+		DRAWLINE
+	FOR LCOUNT, 1, CHARANUM
+		SELECTCASE MARK:LCOUNT:淫紋時計
+		CASE 0
+		CASE 1
+			MARK:LCOUNT:淫紋時計 -= 1
+			;シール
+			IF MARK:LCOUNT:淫紋 == 1
+				MARK:LCOUNT:淫紋 = 0
+				PRINTFORMW %NAME:LCOUNT%的淫紋失效了。
+			ELSE
+				PRINTFORMW %NAME:LCOUNT%的淫紋已经定型了。
+			ENDIF
+		CASEELSE
+			MARK:LCOUNT:淫紋時計 -= 1
+		ENDSELECT
+	NEXT
+	DRAWLINE
+
+	;式神の維持
+	MEMO_SOUL = BASE:MASTER:魂
+	FOR LCOUNT, 2, CHARANUM
+		IF COND("種族：式神", LCOUNT)
+			BASE:LCOUNT:魂 += 1
+			BASE:MASTER:魂 -= 1
+		ENDIF
+	NEXT
+	IF MEMO_SOUL != BASE:MASTER:魂
+		PRINTFORMW 为了維持式神、魂减少至%TEXTS("0.01", MEMO_SOUL - BASE:MASTER:魂)%。
+		DRAWLINE
+	ENDIF
+
+	IF DAYEV("周一", "游戏内")
+		CVARSET CFLAG, GETNUM(CFLAG, "ご褒美権")
+	ENDIF
+	;日替わりには色々起きる
+ 	IF DAYEV("周日", "游戏内")
+		CALL ABLUP_MASTER, "週末"
+		DRAWLINE
+		;季節の変わり目
+		IF TEXTS("季節") != MEMO_SEASON
+			PRINTFORMW １週过去了、终于迎来了周日的早上……从今天開始就是%TEXTS("季節")%了。
+		ELSE
+			PRINTFORMW １週过去了、迎来了周日的早上。
+		ENDIF
+		;IF TARGET
+		;	;女仆からお小遣いをもらう
+		;	CALL KOJO_EVENT, "お小遣い"
+		;	PRINTFORMW 財布の紐を握っている%CALLNAME:TARGET%から、%MONEY_C(1000)%のお小遣いをもらいました。
+		;ELSE
+			PRINTFORMW 从存款里取出了%MONEY_C(3000)%、这就是本周的交際費了。
+		;ENDIF
+		MONEY += 3000
+	ELSE
+		MEMO_TARGET = TARGET
+
+		;お友達紹介イベント中
+		SETBIT FLAG:状況判定, 46
+
+		;お友達紹介イベント。一日一人のペースでお知らせ（勧誘自体は角色が増えていれば、ここで言われなくても出来ます）
+		FOR LCOUNT, 2, 200
+			SIF COND("勧誘可能角色", LCOUNT) == 0
+				CONTINUE
+
+			SIF STRCOUNT(SAVESTR:角色介绍, CSVNAME(LCOUNT) ) || FINDCHARA(NO, LCOUNT) > 0
+				CONTINUE
+
+			IF CONFIG("永久過濾")
+				SELECTCASE CSVCALLNAME(LCOUNT)
+				CASE "阿丽努", "千穂", "恭子"
+					CONTINUE
+				ENDSELECT
+			ENDIF
+
+			DRAWLINE
+			IF FLAG:勧誘可能 == 0
+				PRINTFORMW 「啊、对了对了……有一个消息要告诉主人」
+			ELSE
+				PRINTFORMW 「稍微打扰一下……今天有一个消息要告诉主人」
+			ENDIF
+
+			;一時的に角色として追加する
+			CALL PROFILE, LCOUNT
+
+			;ADDCHARA LCOUNT
+			TARGET = CHARANUM-1
+
+			PRINTFORM 
+			;名前で分岐
+			SELECTCASE NAME:TARGET
+			CASE "六華"
+				PRINTFORMW 「学園附近的神社里有一柱、说不定是主人能够驱使的弱小的鬼……不、应该说是神吗？总之那里有一个的様子」
+			CASE "樱"
+				PRINTFORMW 「学園%CSTR:学年%中的一人、……似乎是一个非常可怜的、得了不治之症的女孩子」
+			CASE "双葉成美"
+				PRINTFORMW 「学園%CSTR:学年%の中的一人……干脆点说就是主人的班级委員長、好像怀抱着非常深刻的烦恼的様子」
+				PRINTFORMW 「具体点说的话、似乎是长出了小鸡鸡的様子……据我所知、她应该只是一个普通的女性」
+			CASE "槞彁"
+				PRINTFORMW 「我想应该对学园没有影响、但是在异世界……在魔界、好像变成了一场可怕的事态」
+				PRINTFORMW 「我的故乡不是魔界、所以没関系、如果什么都不会发生就好了」
+			CASE "長谷川焰"
+				PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是寄宿着火の精霊的人的様子」
+			CASE "リナ・フォーゲル"
+				PRINTFORMW 「学園中似乎马上就要来了一位新任的『絵画』講師」
+			CASE "此花"
+				PRINTFORMW 「学園附近被发现的其中一人、似乎有着不可思议的传言的样子」
+				PRINTFORMW 「……具体来说的话、似乎真实年龄和看上去的差距很大」
+			CASE "茶露帖"
+				PRINTFORMW 「这里有一封说是给主人大人的信」
+			CASE "HaLL-5c68a32"
+				PRINTFORMW 「最近似乎接到了一个来自●●●運輸的関于大型的家具？的配送的确认电话」
+			;あとは種族
+			CASEELSE
+				IF COND("種族：竜人")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是只龙的様子」
+				ELSEIF COND("種族：死神")
+					PRINTFORMW 最近有很多梦中见到了一个白色的女孩子的传闻...主人有见过吗？」
+				ELSEIF COND("種族：天使")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是神的使者的様子」
+					PRINTFORMW 「……会不会和我関系不好？不、其实并不会」
+				ELSEIF COND("種族：獣人")
+					IF COND("種族：猫")
+						PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是猫娘的様子」
+					ELSEIF COND("種族：狼")
+						PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是人狼的様子」
+					ELSEIF COND("種族：兎")
+						PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是兔人的様子」
+					ELSEIF COND("種族：狐")
+						PRINTFORMW 「学園%CSTR:学年%の中に一人、好像其实是狐狼的様子」
+					ELSEIF COND("種族：火鼠")
+						PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是被火鼠附身的人的様子」
+						PRINTFORMW 「……火鼠吗？比较有名应该是竹取物語的那只吧。虽然那只就剩张皮了」
+					ELSE
+						PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是獣人的様子」
+					ENDIF
+				ELSEIF COND("種族：精霊")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人……一人？ 好像其实是精灵的様子」
+				ELSEIF COND("種族：妖狐")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是吸取生気的妖的様子」
+				ELSEIF COND("種族：吸血鬼")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是啜取血液的鬼的様子」
+				ELSEIF COND("種族：鬼")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、鬼神……倒不如说其实好像就是个鬼的様子」
+				ELSEIF COND("種族：人形")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是像人一様的人偶的様子」
+				ELSEIF COND("種族：拉米亚")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是蛇の魔物的様子」
+				ELSEIF COND("種族：淫魔")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是梦魔的様子」
+				ELSEIF COND("種族：驱魔人")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是驱魔人的様子」
+				ELSEIF COND("種族：悪魔")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像是我的同類……也是一个想要魂的悪魔的様子」
+				ELSEIF COND("種族：魔法使")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是传说中的魔法使的様子」
+				ELSEIF COND("種族：妖术使")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是传说中的妖術使的様子」
+				ELSEIF COND("種族：精灵")
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是精灵的様子」
+				ELSEIF CSTR:関係 == "社团同伴" || COND("種族：人类") || CSTR:種族 == ""
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是对主人抱有興味的人的様子」
+					PRINTFORMW 「说不定的话、只是純粋地想来当个部員也有可能」
+				ELSE
+					PRINTFORMW 「学園%CSTR:学年%の中的一人、好像其实是不为人知的魔物的様子」
+				ENDIF
+			ENDSELECT
+
+			PRINTL 
+
+			IF COND("基本情報隠蔽")
+				PRINTFORML ■ ？？？ ？？？[？？？] ■
+			ELSE
+				PRINTFORML ■ %NAME:TARGET% %CSTR:学年%[%CSTR:称号%] ■
+			ENDIF
+			SIF COND("休托莉")
+				CALL SET_CEVENT, "正体偽装"
+			CALL PRINT_MAIDFACE, TARGET
+
+			;紹介文を出す
+			;CALL EVENT_PROFILE, "紹介文", TARGET
+			PRINTL 
+
+			;名前で分岐
+			SELECTCASE NAME:TARGET
+			CASE "樱"
+				PRINTFORMW 「如果是故事里的情节的话、这様不幸的孩子都是通过帅气的主人公的手来拯救的……你觉得呢？」
+			CASE "莉雅拉"
+				PRINTFORMW 「如果想去认识一下的话……就用自己的脚去吧。地方你是知道的呦」
+			CASE "長谷川焰"
+				PRINTFORMW 「虽然说已经有了家庭……不过如果想和她更亲近一些的话、就由我前去联络一下吧」
+			CASE "纯白死神"
+				PRINTFORMW 「虽然是传闻、但是如果认真去找的话说不定真的能找到哦？这就是所谓的缘分啦」
+			CASE "茶露帖"
+				PRINTFORMW 「好像是很久以前、照顾过主人大人的样子……从用词来看似乎是有一定的年龄的人了呢？」
+			CASE "HaLL-5c68a32"
+				PRINTFORMW 「因为限制了检索所以存在信息缺失、需要您亲自去确认一下吗？」
+			CASEELSE
+				IF COND("種族：竜人")
+					PRINTFORMW 「老实说、如果真的发狂的话、一口气就能把这里烧成一面平原……就算是这様也想去认识的话、就由我前去联络一下吧」
+				ELSEIF COND("種族：驱魔人")
+					PRINTFORMW 「绝对不要接近危険人物。听明白了吧？！」
+				ELSE
+					PRINTFORMW 「如果想去结识的话、就由我前去联络一下吧」
+				ENDIF
+			ENDSELECT
+
+			SAVESTR:角色介绍 += @"%NAME:TARGET%/"
+
+			DELCHARA CHARANUM-1
+
+			IF FLAG:勧誘可能 == 0
+				PRINTL 
+				CALL PRINT_STRW, "黄色_[301]勧誘同伴_ 可以実行了"
+				PRINTL 
+				PRINTFORMW 「只是变成朋友这种目标的话、我觉得很快就可以达成的呦？」
+				PRINTFORMW 「持有異能之人的宿命之一就是、缺少可以真心交流的对象」
+				PRINTFORMW 「而且既然是主人的话、肯定会非常高兴的马上関系好起来的♪」
+				FLAG:勧誘可能 = 1
+			ENDIF
+
+			BREAK
+		NEXT
+		TARGET = MEMO_TARGET
+		CLEARBIT FLAG:状況判定, 46
+	ENDIF
+
+	DRAWLINE
+	PRINTW 一天结束了・・・
+
+	;画面の色替え
+	CALL FADEOUT, TOSTR(GETBGCOLOR()), 4
+	TWAIT 100, 1
+	;一旦ログを流す
+	CALL MULTILINE, WINDOWROWS()
+	CALL EFFECT_ALLRESET
+ENDIF
+
+BEGIN SHOP
+
+
+;-------------------------------------------------
+;夜袭などの相手を決定して、イベントを管理する
+;TARGETがイベント相手、TARGET:1が複数イベント時の登場角色となる
+;-------------------------------------------------
+@YOBAI_ASAGAKE
+#DIM LCOUNT
+#DIM MEMO_TARGET
+
+;MASTERしか居ないなら発生しない
+SIF CHARANUM <= MASTER + 1
+	RETURN 0
+
+;MASTER争奪戦
+MEMO_TARGET = TARGET
+VARSET TARGET
+CALL RESET_PARTNER
+
+;昨夜はお楽しみでしたね
+IF COND("朝") && COND("一緒に寝た", MASTER)
+	TARGET = COND("一緒に寝た", MASTER)
+	;CFLAG:一緒に寝た の初期化
+	CVARSET CFLAG, GETNUM(CFLAG, "一緒に寝た")
+;同衾
+ELSEIF COND("夜") && COND("同衾イベント", MASTER)
+	TARGET = FIND_COND("同衾イベント")
+;夜袭可能か判定
+ELSEIF COND("夜")
+	SIF RAND:3 == 0
+		TARGET = FIND_COND("夜袭可能", "発情期")
+	SIF TARGET == 0
+		TARGET = FIND_COND("夜袭可能")
+ELSE
+	SIF RAND:3 == 0
+		TARGET = FIND_COND("朝袭可能", "発情期")
+	SIF TARGET == 0
+		TARGET = FIND_COND("朝袭可能")
+ENDIF
+
+;念のためPLAYERをMASTERに
+PLAYER = MASTER
+
+;候補が居る
+IF TARGET
+	VARSET TCVAR, 0, 0, 30
+	SAVESTR:現在位置 = %CALLNAME:MASTER%的房間
+	IF COND("夜")
+		CALL EVENT_YOBAI
+	ELSEIF COND("朝")
+		CALL EVENT_NEWDAY
+	ENDIF
+
+	CALL SETFLAG, "調教外Ｈ終了", MASTER
+	;流石に目に見えるほど的污垢は拭く
+	CALL RESET_STAIN_EX, "Ｐ", MASTER
+	FOR LCOUNT, 0, 4
+		SIF TARGET:LCOUNT == 0
+			CONTINUE
+		CALL SETFLAG, "調教外Ｈ終了", TARGET:LCOUNT
+		CALL RESET_STAIN_EX, "Ｐ", TARGET:LCOUNT
+	NEXT
+ENDIF
+TFLAG:地の文スキップ = 0
+
+VARSET TARGET
+TARGET = MEMO_TARGET
+CALL SET_PARTNER
+
+@GAMEOVER
+DRAWLINE
+PRINTL ------------------------------------GAMEOVER-----------------------------------
+DRAWLINE
+
+PRINTW 现在不再起動的话、游戏就结束了
+QUIT
+

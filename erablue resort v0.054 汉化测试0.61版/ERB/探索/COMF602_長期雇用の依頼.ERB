@@ -1,0 +1,111 @@
+﻿;-------------------------------------------------
+;长期雇佣协议
+;-------------------------------------------------
+@COMNAME602
+#FUNCTIONS
+TSTR:コマンド名受渡 = 长期雇佣协议
+SIF CFLAG:TARGET:長期雇用
+	TSTR:コマンド名受渡 = 取消长期雇佣
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_602
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("探索")
+
+@COM_TOOLTIP_602
+LOCALS = <br>■长期雇佣协议<br>
+LOCALS += "与对方签订协议，让其长期停留度假村协助探索工作。<br>"
+LOCALS += "协议持续期间，对象将常驻于度假村。<br>"
+LOCALS += "<br>指令类型：探索<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+@COM602
+CALL ユニーク客人数チェック()
+DRAWLINE
+IF CFLAG:TARGET:長期雇用
+	PRINTL ※已处于长期雇佣状态
+	PRINTFORML 要取消%CALLNAME:TARGET%的长期雇佣吗？　（当前花费：１天/1000卢比）
+ELSEIF CFLAG:TARGET:スイートルーム滞在フラグ && 滞在キャラ数 >= 滞在キャラ上限
+	PRINTL ※长期雇佣后将从套房转移至普通房间
+	PRINTW ※普通房间已满无法进行长期雇佣
+	RETURN -1
+ELSE
+	PRINTL 通过长期委托探索协助，每日花费卢比可使角色不再归家
+	PRINTL ※可随时从探索队伍中移除
+	SIF CFLAG:TARGET:スイートルーム滞在フラグ
+		PRINTL ※长期雇佣后将从套房转移至普通房间
+	PRINTFORML 要长期雇佣%CALLNAME:TARGET%吗？　（需要卢比：１天/1000卢比）
+ENDIF
+
+
+PRINTBUTTON "[0]确定", 0
+PRINTL
+PRINTBUTTON "[1]取消", 1
+PRINTL
+$INPUT_LOOP
+INPUT
+
+SELECTCASE RESULT
+	CASE 0
+		CFLAG:TARGET:長期雇用 = !CFLAG:TARGET:長期雇用
+		CFLAG:TARGET:探索参加許可フラグ = 1
+		;長期雇用するとスイートから抜ける
+		IF CFLAG:TARGET:スイートルーム滞在フラグ
+			CALL 滞在者部屋割り配列削除処理(TARGET)
+			FOR LOCAL, 0, 滞在キャラ上限
+				IF 滞在者部屋割り配列:LOCAL < 1
+					滞在者部屋割り配列:LOCAL = TARGET
+					BREAK
+				ENDIF
+			NEXT
+		ENDIF
+	CASE 1
+		RETURN -1
+	CASEELSE
+		REUSELASTLINE 
+		GOTO INPUT_LOOP
+ENDSELECT
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE602
+#DIM ループ用
+;移動実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(602)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;好感度レベル11以上(探索パーティ勧誘と同条件)
+SIF CFLAG:TARGET:好感度レベル < 11
+	RETURN 0
+;従業員はだめ
+SIF TALENT:TARGET:従業員
+	RETURN 0
+;定住してるとだめ
+SIF TALENT:TARGET:定住者
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;メッセージ
+;-------------------------------------------------
+
+@MESSAGE_COM602
+
+IF CFLAG:TARGET:長期雇用
+	PRINTFORML 已长期雇佣%CALLNAME:TARGET%
+	PRINTL （每日结束时将消耗1000卢比）
+ELSE
+	PRINTFORML 已取消%CALLNAME:TARGET%的长期雇佣
+ENDIF

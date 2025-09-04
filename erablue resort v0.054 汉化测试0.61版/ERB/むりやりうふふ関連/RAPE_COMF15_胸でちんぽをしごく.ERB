@@ -1,0 +1,137 @@
+﻿;-------------------------------------------------
+;强制乳交
+;奉仕系コマンド、レベル3
+;-------------------------------------------------
+@RAPE_COMNAME15
+#FUNCTIONS
+
+TSTR:コマンド名受渡 = 强制乳交
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@RAPE_COMTYPE_15
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = RAPE_COMTYPE("うふふ")
+
+
+
+@RAPE_COM_TOOLTIP_15
+LOCALS = <br>■强制乳交<br>
+LOCALS += "利用对方胸部摩擦自己阴茎的指令。<br>进入乳交模式，在模式变更或性行为结束前持续产生特定效果。<br>因属强奸行为不会转变为[乳交口交]。"
+LOCALS += "<br>强奸指令类型：嘿咻<br>获取来源：快Ｂ・暴露・接触・侍奉・不洁"
+LOCALS += "<br>专属经验值：乳交经验(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@RAPE_COM15
+;-------------------------------------------------
+;モードの設定
+;-------------------------------------------------
+
+CALL MODE_CHANGE("パイズリ", TARGET, PLAYER)
+
+;-------------------------------------------------
+;RAPE_COM別FLAGの設定
+;-------------------------------------------------
+
+
+RCVAR:TARGET:汎用喘ぎ_文節低減フラグ = 1
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+
+
+
+CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 80)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 50)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 150)
+CALL SOURCE_CALC_奉仕(TARGET, PLAYER, 400)
+
+CALL SOURCE_CALC_不潔(TARGET, PLAYER, 200)
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+EXP:パイズリ経験 ++
+
+;同性愛　レズなら戻り値1ゲイなら戻り値2
+IF HETEROSEX(TARGET,PLAYER)
+	EXP:同性愛経験 += 7
+	EXP:PLAYER:同性愛経験 += 7
+ENDIF
+
+;愛情経験
+SIF TALENT:恋慕
+	EXP:愛情経験 ++
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@RAPE_COM_ABLE15
+;パイズリ実行判定
+SIF GLOBAL_RAPE_COMABLE(15)
+	RETURN RESULT
+;ちんこがない場合駄目
+SIF TALENT:PLAYER:Ｃ感度 == -2
+	RETURN 0
+;調教者がオトコか半人半妖かふたなりじゃないとダメ
+SIF !(TALENT:PLAYER:性別 & 2)
+	RETURN 0
+;相手に胸がないならダメ
+SIF TALENT:TARGET:性別 == 2
+	RETURN 0
+;縄使用中は不可
+; SIF TEQUIP:縄
+; 	RETURN 0
+;上半身着衣
+;鎧、差し込めないorはだけない服、タイツがあると無理
+SIF TEQUIP:上半身鎧あり
+	RETURN 0
+SIF TEQUIP:上半身服あり && (!TEQUIP:はだけ可 && !TEQUIP:パイズリ可)
+	RETURN 0
+SIF TEQUIP:上タイツあり && !TEQUIP:上タイツ破れ
+	RETURN 0
+;胸、ペニスを何かに使ってる・届かないなら無理
+IF MODE_確認_完全一致("フェラチオ", TARGET, PLAYER) < 0
+	SIF TEQUIP:PLAYER:ペニス
+		RETURN 0
+	SIF TEQUIP:TARGET:胸
+		RETURN 0
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@RAPE_MESSAGE_COM15
+
+PRINTFORM %CALLNAME:PLAYER%
+IF CFLAG:TARGET:睡眠
+	IF TCVAR:TARGET:泥酔眠姦
+		PRINTFORM 醉倒了
+	ELSE
+		PRINTFORM 睡着了
+	ENDIF
+ENDIF
+PRINTFORM 跨坐在%CALLNAME:TARGET%身上，
+	;貧乳
+	IF TALENT:バストサイズ <= -1
+		PRINTFORM 将阴茎抵在贫瘠的胸部上
+	;巨乳
+	ELSEIF TALENT:バストサイズ == 1
+		PRINTFORM 抓握丰满的乳房夹住阴茎
+	;爆乳以上
+	ELSEIF TALENT:バストサイズ > 1
+		PRINTFORM 抓握过于丰腴的乳房夹住阴茎
+	ELSE
+		PRINTFORM 将阴茎夹在柔软深邃的乳沟间
+	ENDIF
+	PRINTFORML 当作手淫工具使用…
+
+

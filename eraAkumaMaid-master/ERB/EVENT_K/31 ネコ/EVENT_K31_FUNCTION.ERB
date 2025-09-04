@@ -1,0 +1,173 @@
+﻿
+;-------------------------------------------------
+;猫の日（游戏内５６日）に猫内衣を着ける
+;部室入室時、もしくは性処理時に変更
+;アイリ口上作者様からまた借りパクパク　有がとうございます
+;-------------------------------------------------
+@CATDAY_K31
+;今日は猫の日？
+IF TEXTS("日期対応イベント") == "猫の日"
+	;既に今回の猫の日イベントを見たならRETURN 0
+	SIF CEVENT("猫の日")
+		RETURN 0
+;猫の日でないなら次の猫の日に備えてフラグ消しつつRETURN 0
+ELSE
+	CALL DEL_CEVENT, "猫の日"
+	RETURN 0
+ENDIF
+
+;着替えさせたり脱がせた際は勝手に着替えない
+SIF CFLAG:Cosplay中 || CSTR:没収済胖次 != "" || COND("全裸状態終了可能")
+	RETURN 0
+SIF COND("Ｈ的サプライズ可能") == 0
+	RETURN 0
+;泳装の場合は制服に更衣
+IF CHECK_CLO("泳装")
+	CALL SETFLAG, "变成裸体", TARGET
+	CALL SET_COORDINATE, "制服", TARGET
+	CALL FOLLOW_RULES
+	CALL SET_OTHER, "围巾"
+ENDIF
+CALL SET_BRA, "猫型胸罩"
+CALL SET_PANTIES, "肉球印花胖次"
+CALL SET_CEVENT, "猫の日"
+
+RETURN 1
+
+
+;-------------------------------------------------
+;廁所自慰とかで使う処理
+;A性向の影響かSIMULATE_TRAINだとほぼ確定でケツをイジってしまうので
+;-------------------------------------------------
+@ONA_NEKO
+;自慰回数
+#DIM PLAY_ON
+;絶頂回数
+#DIM PLAY_ORG
+
+PLAY_ON = 0
+;自慰回数決定
+SELECTCASE COND("欲求不満")
+	;欲求不満90以上
+	CASE 3
+		PLAY_ON += MAX((RAND:10 + 1),5) + ABL:欲望
+	;75以上
+	CASE 2
+		PLAY_ON += (RAND:5 + 1) + ABL:欲望
+	;50以上
+	CASE 1
+		PLAY_ON += (RAND:2 + 1) + ABL:欲望
+	;ムラついてない
+	CASEELSE
+		PLAY_ON += 1
+ENDSELECT
+
+IF ABL:自慰中毒 >= 5
+	PLAY_ON += MAX(RAND:10 + 1,5)
+ELSEIF ABL:自慰中毒 >= 3
+	PLAY_ON += MAX(RAND:5 + 1, 3)
+ELSEIF ABL:自慰中毒 >= 1
+	PLAY_ON += RAND:3 + 1
+ENDIF
+
+
+;経験増加
+PRINTFORML 
+PRINTFORML 
+PRINTFORML 
+SELECTCASE TALENT:喜欢的自慰方式
+	;阴蒂
+	CASE 1
+		IF ABL:Ｃ感覚 >= 5
+			PLAY_ORG = PLAY_ON * 2
+		ELSEIF ABL:Ｃ感覚 >= 3
+			PLAY_ORG = PLAY_ON
+		ELSE
+			PLAY_ORG = MAX(PLAY_ON / 2,1)
+		ENDIF
+		JUEL:快Ｃ += PLAY_ORG * 1000
+		PRINTFORMW %CALLNAME:TARGET%の快Ｃの珠 ＋ {PLAY_ORG * 1000}
+	;膣
+	CASE 2
+		EXP:Ｖ経験 += PLAY_ON
+		PRINTFORML %CALLNAME:TARGET%のＶ経験 ＋ {PLAY_ON}
+
+		IF ABL:Ｖ感覚 >= 5
+			PLAY_ORG = PLAY_ON * 2
+		ELSEIF ABL:Ｖ感覚 >= 3
+			PLAY_ORG = PLAY_ON
+		ELSE
+			PLAY_ORG = MAX(PLAY_ON / 2,1)
+		ENDIF
+		JUEL:快Ｖ += PLAY_ORG * 1000
+		PRINTFORMW %CALLNAME:TARGET%の快Ｖの珠 ＋ {PLAY_ORG * 1000}
+	;けつ
+	CASE 3
+		EXP:Ａ経験 += PLAY_ON
+		PRINTFORML %CALLNAME:TARGET%のＡ経験 ＋ {PLAY_ON}
+		IF ABL:Ａ感覚 >= 5
+			PLAY_ORG = PLAY_ON * 2
+		ELSEIF ABL:Ａ感覚 >= 3
+			PLAY_ORG = PLAY_ON
+		ELSE
+			PLAY_ORG = MAX(PLAY_ON / 2,1)
+		ENDIF
+		JUEL:快Ａ += PLAY_ORG * 1000
+		PRINTFORMW %CALLNAME:TARGET%の快Ａの珠 ＋ {PLAY_ORG * 1000}
+	;胸部
+	CASE 4
+		IF ABL:Ｂ感覚 >= 5
+			PLAY_ORG = PLAY_ON * 2
+		ELSEIF ABL:Ｂ感覚 >= 3
+			PLAY_ORG = PLAY_ON
+		ELSE
+			PLAY_ORG = MAX(PLAY_ON / 2,1)
+		ENDIF
+		JUEL:快Ｂ += PLAY_ORG * 1000
+		PRINTFORMW %CALLNAME:TARGET%の快Ｂの珠 ＋ {PLAY_ORG * 1000}
+	;尿
+	CASE 5
+		EXP:尿道経験 += PLAY_ON
+		PRINTFORML %CALLNAME:TARGET%の尿道経験 ＋ {PLAY_ON}
+		IF ABL:尿道感覚 >= 5
+			PLAY_ORG = PLAY_ON * 2
+		ELSEIF ABL:尿道感覚 >= 3
+			PLAY_ORG = PLAY_ON
+		ELSE
+			PLAY_ORG = MAX(PLAY_ON / 2,1)
+		ENDIF
+		JUEL:快尿 += PLAY_ORG * 1000
+		PRINTFORMW %CALLNAME:TARGET%の快尿の珠 ＋ {PLAY_ORG * 1000}
+ENDSELECT
+
+IF TALENT:恋慕 == 0
+	EXP:被虐快楽経験 += LIMIT(PLAY_ON,1,5)
+	PRINTFORML %CALLNAME:TARGET%の被虐快楽経験 ＋ {LIMIT(PLAY_ON,1,(ABL:受虐属性 + 1) * 10)}
+ENDIF
+
+EXP:自慰経験 += PLAY_ON
+PRINTFORML %CALLNAME:TARGET%の自慰経験 ＋ {PLAY_ON}
+
+EXP:絶頂経験 += PLAY_ORG
+PRINTFORMW %CALLNAME:TARGET%の絶頂経験 ＋ {PLAY_ORG}
+
+RETURN 0
+
+
+;-------------------------------------------------
+;恋慕取得のCFLAG:思い出閾値汎用加算処理
+;-------------------------------------------------
+
+@NEKO_POINT
+
+CFLAG:思い出 ++
+
+;二人きりだと＋１BOUNS
+SIF FLAG:二人きり
+	CFLAG:思い出 ++
+
+;発情期は気の迷いで0~2増加
+SIF COND("発情期")
+	CFLAG:思い出 += RAND:3
+
+RETURN 0

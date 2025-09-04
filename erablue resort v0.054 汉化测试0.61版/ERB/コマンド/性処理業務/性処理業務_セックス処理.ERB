@@ -1,0 +1,1508 @@
+﻿;-------------------------------------------------
+;セックス処理
+;-------------------------------------------------
+@性処理NAME_セックス処理
+#FUNCTIONS
+TSTR:コマンド名受渡 = 性交服务
+
+@性処理_TOOLTIP_セックス処理
+LOCALS = <br>■性交服务<br>
+LOCALS += @"%CALLNAME:PLAYER%通过Ｖ插入的方式进行性服务。<br>"
+LOCALS += "需较高好感度，多数角色需完成攻略方可执行。<br>"
+LOCALS += "<br>指令类型：性处理<br>获取来源：快Ｖ・暴露・接触・侍奉・不洁"
+LOCALS += "<br>专属经验值：Ｖ性交经验(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@性処理_セックス処理
+#DIM 行為回数
+
+;射精するまで刺激する
+行為回数 = 0
+DO
+	CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 350)
+	CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, 400)
+	行為回数++
+LOOP CUP:PLAYER:快Ｃ + PALAM:PLAYER:快Ｃ < 10000
+TIME += 経過時間算出(行為回数)
+
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 100)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 250)
+CALL SOURCE_CALC_奉仕(TARGET, PLAYER, 500)
+
+;苦痛
+LOCAL = 200 * PAIN_CHECK_V(TARGET) / 1000
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, LOCAL)
+;貞操観念
+IF !TALENT:恋慕
+	IF TALENT:貞操 == 1
+		CALL SOURCE_CALC_不潔(TARGET, PLAYER, 500)
+	ELSEIF TALENT:貞操 == 0
+		CALL SOURCE_CALC_不潔(TARGET, PLAYER, 250)
+	ENDIF
+ENDIF
+
+;奉仕快楽
+RCVAR:TARGET:奉仕コマンドフラグ = 1
+
+;処女喪失
+CALL LOST_VIRGIN(TARGET, PLAYER, 1)
+CALL LOST_MAN_VIRGIN(PLAYER, TARGET)
+
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+EXP:Ｖ性交経験 ++
+EXP:PLAYER:Ｃ性交経験_Ｖ挿入 ++
+
+;同性愛
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 12
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 12
+
+;愛情経験
+SIF TALENT:恋慕
+	EXP:愛情経験 ++
+
+;売春経験がない相手に交渉を成立させた場合、あなたの買春カウントが進む
+;これにより「あなたが何人買ったか」の記録とする。
+;最初から売春経験を持ってるキャラに関しては……知らん！！！
+SIF EXP:TARGET:売春経験 == 0
+	EXP:PLAYER:買春経験 += 1
+
+EXP:TARGET:売春経験 += 1
+
+
+RETURN 1
+
+
+@性処理_射精時処理_セックス処理()
+;射精時にどこに出すかを呼び出す
+;とはいってもフィニッシュ場所を入れて関数呼ぶだけ
+IF 陥落チェック(TARGET)
+	CALL 射精実処理(PLAYER, TARGET, 0)
+	RETURN 1
+ELSE
+	SELECTCASE RAND:4
+	CASE 0
+		;お腹に出す
+		CALL 射精実処理(PLAYER, TARGET, 6)
+		RETURN 1
+	CASE 1
+		;背中……というか尻に出す
+		CALL 射精実処理(PLAYER, TARGET, 7)
+		RETURN 1
+	CASEELSE
+		;無許可中出し
+		CALL 射精実処理(PLAYER, TARGET, 0)
+		RETURN 1
+	ENDSELECT
+ENDIF
+RETURN 0
+
+
+;-------------------------------------------------
+;値段設定
+;-------------------------------------------------
+@CAN_性処理_セックス処理(対象キャラ)
+#DIM 対象キャラ
+#DIM 値段計算
+#DIMS 素質名
+
+PRINTFORML 性交服务计算(%CALLNAME:TARGET%)
+DRAWLINE
+
+;基礎値段
+IF NO:TARGET > 1000
+;EXキャラ
+;元いた世界でのカラダの価値はわかっても、空の世界での売春相場を知らない。おまけにルピもたいして持ってないのでまとまったお金がありがたい。
+;現実の一般JKが空の世界に来て5万円のつもりで5000ルピでカラダを売るイメージ。総じてリゾート内の価格帯から見ると格安。
+;……グラブルキャラたちの基本料金が高いだけ？それはそう。
+	SELECTCASE RAND:2
+	CASE 0
+	;10万円のつもり。これでも超高額のつもりで強気の値段交渉してる。
+		値段計算 = 10000
+	CASE 1
+	;5万円のつもり。これでも相場よりやや高めのつもりで値段交渉してる。
+		値段計算 = 5000
+	ENDSELECT
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSEIF TALENT:幼稚
+	;幼稚
+	;性知識うんぬん以前に、そもそもお金の価値に対する理解が足りていない。
+	;自分のカラダの価値も理解していないので、「お菓子いっぱいあげるから」とかでも許しちゃったりするイメージ。でも値段表示する仕様上お菓子たくさんとかでは買えない。
+	;本人は精一杯吹っ掛けているつもりで「じゅーまんえんくれるならいいよ」って言っても、他キャラの相場から見れば格安だったりする。
+	;でもちょいちょい「ひゃくまんえん！」とか言いはじめる。
+	SELECTCASE RAND:100
+	;５割で超高額提示
+	CASE 0 TO 24
+		PRINTFORML %"基本料金", 25, LEFT%：　一百万卢比！
+		値段計算 = 1000000
+	CASE 25 TO 49
+		PRINTFORML %"基本料金", 25, LEFT%：　十万卢比！
+		値段計算 = 100000
+	CASE 50 TO 74
+		PRINTFORML %"基本料金", 25, LEFT%：　一万卢比！
+		値段計算 = 10000
+	CASE 75 TO 98
+		PRINTFORML %"基本料金", 25, LEFT%：　一千卢比！
+		値段計算 = 1000
+	CASE 99
+		PRINTFORML %"基本料金", 25, LEFT%：　一百卢比就可以了！
+		値段計算 = 100
+	ENDSELECT
+ELSEIF 知識素質:高貴 > 0
+;高貴
+;基本的に実家が太い子らなので、そもそも目先の金銭のために体を売っているわけではない。
+;お金が欲しいからではなくあなたが頼むから、あなたに喜んでんでほしいから売ってくれているのである。つまり純愛。
+	IF 知識素質:性知識 < 0
+	;性知識がなくとも、自身のカラダは民草のそれよりも価値があるということを知っている。
+	;……のだが、相場知識がないため結局吹っ掛けたつもりでも高貴キャラとしてはお安めの価格設定
+		値段計算 = 50000
+	ELSE
+	;王侯貴族に連なるような高貴な体を100万円で好きにできると考えるとこれでも相当リーズナブル。良心的な価格設定でございます。
+		値段計算 = 100000
+	ENDIF
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSEIF 知識素質:性知識 < 0
+;性知識マイナス勢
+;お金の価値が分からないわけではないが、カラダの価値の相場を知らないので直感的にいま欲しい金額を言ってくる。
+;幼稚ほどブッ飛んだ値段は提示してこないが結局値段はブレる。
+	SELECTCASE RAND:4
+	;４割で高額提示
+	CASE 0
+		値段計算 = 100000
+	CASE 1
+		値段計算 = 50000
+	CASE 2
+		値段計算 = 30000
+	CASE 3
+		値段計算 = 20000
+	CASE 4
+		値段計算 = 10000
+	ENDSELECT
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSEIF TALENT:非戦闘キャラ
+;非戦闘キャラは、「戦うことで稼げる」キャラより相対的に肉体の価値が安く、「カラダを売って稼ぐ」ことへの抵抗感が戦闘キャラより薄いイメージ
+	値段計算 = 20000
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSEIF TALENT:性転換 == 2
+;元男だと嫌がって値段を高めに設定する(でも結局買われて、もう女なんだってことをわからされてしまう)
+	値段計算 = 40000
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSE
+;「基本的にみんな美女である」「普段売っていないので市場価値が高い」「戦闘能力のあるキャラは相応のプライドというものがある」などの理由から
+;補正抜きで30000ルピ≒30万円とする。ここに素質で補正がかかり、地の文や口上でのプレイ内容に応じてオプションが上乗せされていく。
+	値段計算 = 30000
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ENDIF
+
+;好感度
+;好感度閾値の表現からして、親友あたりからお友達料金にしてくれるんじゃないかなと
+LOCAL = (50 - CFLAG:好感度レベル) * -100
+IF LOCAL < 0
+	IF CFLAG:好感度レベル <= 20
+	;友達未満だと大きく値上げ。初対面で20万円上乗せされるイメージ。普段身売りしてない美女に値段交渉するんだからそんくらい吹っ掛けてきてもおかしくないと思う。なお従業員採用に必要な好感度……
+		PRINTFORML %"关系尚浅", 25, LEFT%：＋%NUM_FORMAT(LOCAL * -4), 8%卢比
+		値段計算 -= LOCAL * 4
+	ELSE
+	;ただの友達だと若干の値上げ。値上げっていうかここまで含めて基本料金みたいなとこがある
+		PRINTFORML %"普通朋友", 25, LEFT%：＋%NUM_FORMAT(LOCAL * -1), 8%卢比
+		値段計算 -= LOCAL
+	ENDIF
+ELSE
+	;親友以上で値下げしてくれる。基本料金30万円で、好感度100で5000ルピ≒50000円引きならまぁ妥当っちゃ妥当か
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORML %"友情折扣", 25, LEFT%：－%NUM_FORMAT(LOCAL), 8%卢比
+	RESETCOLOR
+	値段計算 -= LOCAL
+ENDIF
+
+;容姿
+IF TALENT:容姿 == -1
+;あなたがブサイクの場合。あえてつけてる素質のはずだけど、ストレートに「醜い」だの「ブサイク」だの書くとプレイヤーの心にトゲが刺さりそうなため表現はマイルドに
+	値段計算 += 1500
+	PRINTFORML %"长相不合胃口", 25, LEFT%：＋%NUM_FORMAT(1500), 8%卢比
+ENDIF
+IF TALENT:容姿 == 1
+;イケメン
+	値段計算 -= 500
+	PRINTFORML %"长相不错", 25, LEFT%：－%NUM_FORMAT(500), 8%卢比
+ENDIF
+IF TALENT:容姿 == 2
+;絶世。ちょっと下げ過ぎな気もしないでもない
+	値段計算 -= 1500
+	PRINTFORML %"长相超正！", 25, LEFT%：－%NUM_FORMAT(1500), 8%卢比
+ENDIF
+
+;体力
+IF BASE:TARGET:体力 < MAXBASE:TARGET:体力 / 4
+	値段計算 += 1500
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"体力低下", 25, LEFT%：＋%NUM_FORMAT(1500), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;酩酊は値段ではなくむしろ実行判定にかかわったほうがいい気がするので移動。
+;「安く売ってしまう」よりも、「ね、いいでしょ？」ってあなたのお願いに頷いてしまうほうがイメージに近い。
+
+;処女
+;使い切りの付加価値なので基本料金よりも値が張る
+IF TALENT:TARGET:処女
+	IF NO:TARGET > 1000
+	;空の相場を知らずに安売りしてしまう哀れなEX娘たち。鮫トレ最高！
+		値段計算 += 10000
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"处女", 25, LEFT%：＋%NUM_FORMAT(10000), 8%卢比
+		RESETCOLOR
+	ELSEIF 知識素質:高貴 > 0
+	;高貴
+		IF 知識素質:性知識 < 0
+			値段計算 += 100000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"皇家处女", 25, LEFT%：＋%NUM_FORMAT(100000), 8%卢比
+			RESETCOLOR
+		ELSE
+			値段計算 += 200000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"皇家处女", 25, LEFT%：＋%NUM_FORMAT(200000), 8%卢比
+			RESETCOLOR
+		ENDIF
+	ELSEIF TALENT:プライド > 0
+	;プライド高い
+	;基本料金と合わせて100万円になる計算
+		値段計算 += 70000
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"处女", 25, LEFT%：＋%NUM_FORMAT(70000), 8%卢比
+		RESETCOLOR
+	ELSEIF TALENT:プライド < 0
+	;プライド低い
+	;自己評価が低いため、基本料金の倍額貰えればいいやと思っている
+		値段計算 += 30000
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"处女", 25, LEFT%：＋%NUM_FORMAT(30000), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 50000
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"处女", 25, LEFT%：＋%NUM_FORMAT(50000), 8%卢比
+		RESETCOLOR
+	ENDIF
+ENDIF
+
+;恋人持ち
+IF TALENT:恋人持ち == 2
+	値段計算 += 5000
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"人妻", 25, LEFT%：＋%NUM_FORMAT(5000), 8%卢比
+	RESETCOLOR
+ENDIF
+IF TALENT:恋人持ち == 1
+	値段計算 += 3000
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"已有恋人", 25, LEFT%：＋%NUM_FORMAT(3000), 8%卢比
+	RESETCOLOR
+ENDIF
+IF TALENT:恋人持ち == -1
+;別に恋人になってるワケでもないのに「好きな人がいるから」ってだけで生意気にも値段を釣り上げてくるし、上昇幅は恋人持ちと同じ。
+;「ゆ、許せねぇよ……絶対買って俺のものにしてやる……！」
+;＊ あなたにケツイがみなぎった。
+	値段計算 += 3000
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORML %"已有恋人", 25, LEFT%：＋%NUM_FORMAT(3000), 8%卢比
+	RESETCOLOR
+ENDIF
+;淫乱
+IF TALENT:淫乱
+	値段計算 -= 2500
+	PRINTFORML %"淫乱", 16, LEFT%：－%NUM_FORMAT(2500), 8%卢比
+ENDIF
+
+;同性愛
+IF 同性愛性癖判定(TARGET,PLAYER) == 1
+	;性癖素質:同性愛
+	IF TALENT:TARGET:性愛傾向 == 1 ||TALENT:TARGET:性愛傾向 == 2
+		素質名 = 異性愛
+	ELSE
+		素質名 = 同性愛
+	ENDIF
+	SELECTCASE 性癖素質:同性愛
+		CASE 1
+			;補正なし
+		CASE 2
+			値段計算 -= 1000
+			PRINTFORML %@"%素質名%(愛好)", 25, LEFT%：－%NUM_FORMAT(1000), 8%卢比
+		CASE 3
+			値段計算 -= 2500
+			PRINTFORML %@"%素質名%(中毒)", 25, LEFT%：－%NUM_FORMAT(2500), 8%卢比
+		CASEELSE
+			;好奇心
+			IF TALENT:性的興味 > 0
+				値段計算 -= 500
+				PRINTFORML %@"好奇心(%素質名%)", 25, LEFT%：－%NUM_FORMAT(500), 8%卢比
+			ENDIF
+			;保守的
+			IF TALENT:性的興味 < 0
+				値段計算 += 1500
+				SETCOLOR カラーパレット("薄ピンク")
+				PRINTFORML %@"保守的(%素質名%)", 25, LEFT%：＋%NUM_FORMAT(1500), 8%卢比
+				RESETCOLOR
+			ENDIF
+	ENDSELECT
+ENDIF
+
+;気丈
+;「物怖じせず値段交渉に臨む」とするなら基本料金の一割増しくらいで吹っ掛けそう
+IF TALENT:度胸 > 0
+	値段計算 += 3000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"刚毅", 25, LEFT%：＋%NUM_FORMAT(3000), 8%卢比
+	RESETCOLOR
+ENDIF
+;臆病
+;気丈の逆で「高値を吹っ掛けて値段交渉するのが苦手」とするならば一割くらいまけてくれないかな……
+IF TALENT:度胸 < 0
+	値段計算 -= 3000
+	PRINTFORML %"怯懦", 25, LEFT%：－%NUM_FORMAT(3000), 8%卢比
+ENDIF
+
+;プライド
+;処女のとこでも参照しているが、こちらは基本料金にかかるので別枠。
+;プライド高い
+IF TALENT:プライド > 0
+	値段計算 += 3000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"高自尊", 25, LEFT%：＋%NUM_FORMAT(3000), 8%卢比
+	RESETCOLOR
+ENDIF
+;プライド低い
+IF TALENT:プライド < 0
+	値段計算 -= 1500
+	PRINTFORML %"低自尊", 25, LEFT%：－%NUM_FORMAT(1500), 8%卢比
+ENDIF
+
+;性欲
+IF TALENT:性欲 >= 1
+	値段計算 -= 2000
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORML %"性欲旺盛", 25, LEFT%：－%NUM_FORMAT(2000), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;謎の魅力
+IF TALENT:PLAYER:謎の魅力
+	値段計算 -= 1000
+	PRINTFORML %"迷之魅力", 25, LEFT%：－%NUM_FORMAT(1000), 8%卢比
+ENDIF
+
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	値段計算 -= ABL:奉仕精神 * 200
+	PRINTFORML %"侍奉精神", 25, LEFT%：－%NUM_FORMAT(ABL:奉仕精神 * 200), 8%卢比
+ENDIF
+;汚臭鈍感
+IF TALENT:汚臭耐性 > 0
+	値段計算 -= TALENT:汚臭耐性 * 500
+	PRINTFORML %GET_TALENTNAME(61, TALENT:汚臭耐性,,TARGET), 25, LEFT%：－%NUM_FORMAT(TALENT:汚臭耐性 * 500), 8%卢比
+ENDIF
+;汚臭敏感
+IF TALENT:汚臭耐性 < 0
+	値段計算 -= TALENT:汚臭耐性 * 1000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %GET_TALENTNAME(61, TALENT:汚臭耐性,,TARGET), 25, LEFT%：＋%NUM_FORMAT(ABS(TALENT:汚臭耐性) * 1000), 8%卢比
+	RESETCOLOR
+ENDIF
+;献身的
+IF TALENT:献身的
+	値段計算 -= 500
+	PRINTFORML %"献身", 25, LEFT%：－%NUM_FORMAT(500), 8%卢比
+ENDIF
+
+;貞操観念による売春への抵抗感。これは値段高めのほうが「らしさ」が出る
+IF TALENT:貞操 == 1
+	値段計算 += 5000
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORML %"贞操观念", 25, LEFT%：＋%NUM_FORMAT(5000), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;男嫌い
+IF TALENT:性別嗜好 == 1 && TALENT:PLAYER:性別 == 2
+	値段計算 += 3000
+	SETCOLOR カラーパレット("赤")
+	PRINTFORML %"厌男", 25, LEFT%：＋%NUM_FORMAT(3000), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;この時点で値段がマイナスになっていた場合、強制的に0まで戻す。買ってるはずなのに買われてんじゃねぇ！
+SIF 値段計算 < 0
+	値段計算 = 0
+
+;割引クーポンはひとつまでです！
+IF TALENT:対象キャラ:恋慕
+	DRAWLINE
+	PRINTFORML 折扣
+;恋慕は完全無料
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORM %"挚爱特惠", 25, LEFT%：　　　　　%CALLNAME:PLAYER%专属100％折扣
+	CALL PRINT_STRL(@"_H_")
+	RESETCOLOR
+	値段計算 *= 0
+ELSEIF TALENT:対象キャラ:弱味
+	DRAWLINE
+	PRINTFORML 折扣
+	;弱みを握ってはした金で体を売らせたい！という鉄の意志
+	;せっかく値段が出るんだしタダで抱かせてもらうよりも「100円で買ってあげた」みたいののほうが尊厳を性的搾取できている感が出るので
+	;本来は30,000ルピ……ですが！なんと！今回に限り！お客様だけに！99%オフの300ルピで！！のほうが絶対にシコれる。古事記にもそう書かれている。
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORM %"弱点折扣", 25, LEFT%：　　　　　99％折扣
+	CALL PRINT_STRL(@"_H_")
+	RESETCOLOR
+	値段計算 /= 100
+	;ELSEIF TALENT:金欠 || TALENT:貧乏
+	;お金に困っているときはちょっとお安くなるが、発情期のムラムラは値段に適用されなくなる。買っては欲しいがお金も欲しいため。
+	;	SETCOLOR カラーパレット("薄ピンク")
+	;	PRINTFORM %"金欠中", 25, LEFT%：　　　　　25％オフ
+	;	CALL PRINT_STRL(@"_H_")
+	;	RESETCOLOR
+	;	値段計算 /= 4 *= 3
+ELSEIF CFLAG:TARGET:発情期フラグ < 0 && BASE:TARGET:性欲 >= 500
+	DRAWLINE
+	PRINTFORML 折扣
+	;発情期
+	IF BASE:TARGET:性欲 >= 1000
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORM %"发情期饥渴中", 25, LEFT%：　　　　　30％折扣
+		CALL PRINT_STRL(@"_H_")
+		RESETCOLOR
+		値段計算 /= 10
+		値段計算 *= 7
+	ELSE
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORM %"发情期饥渴中", 25, LEFT%：　　　　　10％折扣
+		CALL PRINT_STRL(@"_H_")
+		RESETCOLOR
+		値段計算 /= 10
+		値段計算 *= 9
+	ENDIF
+ENDIF
+
+DRAWLINE
+IF TALENT:対象キャラ:恋慕
+	値段計算 = -1
+ELSE
+	値段計算 = MAX(0, 値段計算)
+ENDIF
+IF 値段計算 > 0
+	PRINTFORML %"合计价格", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSE
+	PRINTFORM %"合计价格", 25, LEFT%：　%"免费", 8%
+	CALL PRINT_STRL(@"_H_")
+ENDIF
+
+RETURN 値段計算
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@性処理_ABLE_セックス処理
+#DIM ループ用
+#DIM 許可好感度
+#DIM 補正後好感度
+
+;RETURN 0は非表示
+SIF GETBIT(TALENT:PLAYER:性別, 1) == 0
+	RETURN 0
+SIF TALENT:PLAYER:Ｃ感度 == -2
+	RETURN 0
+SIF TALENT:PLAYER:射精不可
+	RETURN 0
+SIF GETBIT(TALENT:TARGET:性別, 0) == 0
+	RETURN 0
+SIF TALENT:TARGET:Ｖ感度 == -2
+	RETURN 0
+
+;RETURN -1は表示するが選択出来ない
+;泥酔はここに移動
+許可好感度 = 100
+補正後好感度 = 補正後好感度算出(TARGET)
+SIF TALENT:TARGET:処女
+	補正後好感度 -= 20
+SIF BASE:酩酊 > MAXBASE:酩酊 / 2
+	補正後好感度 += 30
+;経験があなたを強くする
+LOCAL = EXP:PLAYER:買春経験
+補正後好感度 += LOCAL
+IF あなた特殊能力:ルピえっち交渉術
+;口がうまくなったことで未陥落の一般客に通りやすくなった、ということで補正をかけておく。習得にかかった労力ぶんのリワード。
+;だ、だって……パパ活って一期一会みたいなイメージだし……好感度高くなくても通るイメージだし……
+;かわりに低好感度だと補正によってルピ消費ががっつり増える。
+	補正後好感度 += 50
+ENDIF
+TRYCCALLFORM 性処理業務固有補正_可不可_{NO:TARGET}_セックス処理(TARGET, 補正後好感度)
+	補正後好感度 = RESULT
+CATCH
+ENDCATCH
+SIF 許可好感度 > 補正後好感度
+	RETURN -1
+
+RETURN 1
+
+
+;-------------------------------------------------
+;メッセージ
+;-------------------------------------------------
+
+@MESSAGE_性処理_セックス処理
+#DIM 対象キャラ
+#DIM 値段計算
+#DIM オプション込み最終価格
+#DIM 見える位置へのキスマーク
+#DIM キス
+#DIM ファーストキス
+#DIM 射精煽り
+#DIM 合意中出し
+#DIM 無許可中出し
+#DIM 精液お持ち帰り
+#DIM 尻尾抱きつき
+#DIM 耳吸い
+#DIM 首噛みわからせ
+
+対象キャラ = TARGET
+
+PRINTFORM %CALLNAME:TARGET%
+IF TALENT:TARGET:恋慕
+	PRINTFORM 似乎对被需求感到高兴而微笑着
+ELSEIF TALENT:TARGET:弱味 || (TALENT:PLAYER:性別 == 2 && TALENT:TARGET:性別嗜好 == 1)
+;これだけ露骨に浮かぶバリエーションが多い……なんでやろな？
+	PRINTFORM %TEXTR("不情不愿地/面露嫌恶却不甘心地/眉头紧蹙勉强地/瞪视着这边却还是")%
+ELSEIF TALENT:TARGET:恋人持ち == 3
+	PRINTFORM 向着逝去的伴侣轻声致歉后
+ELSEIF TALENT:TARGET:恋人持ち == 2
+	PRINTFORM 向着誓约的伴侣轻声致歉后
+ELSEIF TALENT:TARGET:恋人持ち == 1
+	PRINTFORM 向着现任恋人轻声致歉后
+ELSEIF TALENT:TARGET:恋人持ち == -1
+	PRINTFORM 向着心仪之人轻声致歉后
+ELSEIF TALENT:TARGET:セフレ
+	PRINTFORM 脸上浮现出戏谑的坏笑
+ELSEIF TALENT:TARGET:精神的余裕 == 2
+	PRINTFORM 轻叹有失体统却仍
+ELSEIF TALENT:TARGET:ギャル
+	PRINTFORM 落落大方地
+ELSEIF TALENT:TARGET:羞恥心
+	PRINTFORM %TEXTR("双颊绯红地/含羞垂首")%
+ELSEIF TALENT:TARGET:性的興味
+	PRINTFORM %TEXTR("饶有兴致地/满怀期待地")%
+ELSEIF TALENT:TARGET:性欲 <= -1
+	PRINTFORM 公事公办地
+ELSE
+	PRINTFORM 略带羞涩却仍
+ENDIF
+PRINTFORMW %TEXTR("应允/首肯")%，与%CALLNAME:PLAYER%%TEXTR("隐入就近的遮蔽处/至隐蔽角落/进入藏身暗处")%……
+PRINTL
+PRINTFORMW ────
+PRINTL
+
+;履歴
+
+IF RCVAR:対象キャラ:破瓜 == 1
+	;このターンに処女を失う
+	IF RFLAG:コマンド結果受渡し変数 == 1
+		CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>试图购买%CALLNAME:TARGET%的处女，却因其自愿而免费享用了她的身体</font><img src='えっちハート'>","うふふ実績")
+		CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>向试图购买处女的%CALLNAME:PLAYER%无偿献出身体</font><img src='えっちハート'>","うふふ実績")
+	ELSEIF TALENT:対象キャラ:弱味
+	;弱味想定。いつか必要になるかもしれないし……
+		CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>仅用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%就尽情享用了被抓住把柄的%CALLNAME:TARGET%的处女之身</font><img src='えっちハート'>","うふふ実績")
+		CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>被%CALLNAME:PLAYER%抓住了把柄，仅用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%就被买下了处女之身</font><img src='えっちハート'>","うふふ実績")
+	ELSE
+		CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%买下%CALLNAME:TARGET%的处女，尽情享用了她的身体</font><img src='えっちハート'>","うふふ実績")
+		CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>被%CALLNAME:PLAYER%用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%买下了自己的处女之身</font><img src='えっちハート'>","うふふ実績")
+	ENDIF
+ELSEIF RFLAG:コマンド結果受渡し変数 == 1
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>虽以工作名义最终免费享用了%CALLNAME:TARGET%的身体</font><img src='えっちハート'>","うふふ実績")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>为深爱的%CALLNAME:PLAYER%免费出卖身体</font><img src='えっちハート'>","うふふ実績")
+ELSEIF TALENT:対象キャラ:弱味
+	;弱味想定。いつか必要になるかもしれないし……
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%买下了被抓住把柄的%CALLNAME:TARGET%的身体</font><img src='えっちハート'>","うふふ実績")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>被%CALLNAME:PLAYER%抓住弱点，仅用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%就买下了自己的身体</font><img src='えっちハート'>","うふふ実績")
+ELSE
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%买下%CALLNAME:TARGET%的身体，将其作为取悦自己的工具</font><img src='えっちハート'>","うふふ実績")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>被%CALLNAME:PLAYER%用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%买下了身体</font><img src='えっちハート'>","うふふ実績")
+ENDIF
+
+@MESSAGE_性処理_セックス処理_非口上時
+#DIM 対象キャラ
+#DIM 値段計算
+#DIM オプション込み最終価格
+#DIM 見える位置へのキスマーク
+#DIM キス
+#DIM ファーストキス
+#DIM 射精煽り
+#DIM 合意中出し
+#DIM 無許可中出し
+#DIM 精液お持ち帰り
+#DIM 尻尾抱きつき
+#DIM 耳吸い
+#DIM 首噛みわからせ
+#DIMS 中出し名称
+#DIM 中出し価格
+#DIM 精液大好きホールド
+#DIM 体位
+#DIM 項目幅
+
+対象キャラ = TARGET
+キス = 0
+ファーストキス = 0
+見える位置へのキスマーク = 0
+射精煽り = 0
+合意中出し = 0
+無許可中出し = 0
+精液お持ち帰り = 0
+尻尾抱きつき = 0
+耳吸い = 0
+首噛みわからせ = 0
+中出し名称 =
+中出し価格 = 0
+精液大好きホールド = 0
+項目幅 = 25
+
+SELECTCASE RAND:3
+CASE 0
+	CALL PRINT_STR(@"溜啾_H_ 咕啾_H_")
+CASE 1
+	CALL PRINT_STR(@"啪嗒_H_ 啪嗒_H_")
+CASE 2
+	CALL PRINT_STR(@"嗒啾_H_ 噗啾_H_")
+ENDSELECT
+PRINTFORMW 隐蔽处回响着淫靡的水声。 
+PRINTL
+
+IF RAND:2
+	体位 = 0	;対面立位(50%)
+ELSE
+	体位 = 1	;立ちバック
+ENDIF
+
+IF 体位 == 0
+;対面立位
+	PRINTFORML %CALLNAME:対象キャラ%与%CALLNAME:PLAYER%在极近距离对视，将紧贴的身躯压向墙壁，以站立姿势摆动腰部。
+	PRINTL
+	IF RCVAR:対象キャラ:破瓜 == 1
+		PRINTFORM 方才还%TEXTR("保持着纯洁/未经人事/未被使用/未成为女人")%的%CALLNAME:対象キャラ%
+		IF 知識素質:対象キャラ:高貴 > 0
+			PRINTFORM %TEXTR("血统纯正的/皇家的/高贵的/尊贵的")%
+		ELSEIF アイドル判定(対象キャラ) && CSTR:対象キャラ:出演作品 != ""
+		;偶像勢
+			PRINTFORM %TEXTR("异世界偶像的顶点/粉丝们求之不得的异界偶像")%
+		ELSEIF アイドル判定(対象キャラ)
+			PRINTFORM %TEXTR("偶像的顶点/粉丝们无法触及的偶像")%
+		ENDIF
+		PRINTFORM %TEXTR("处女阴道/纯洁私处")%
+		;買い叩かれたEXキャラ
+		SIF NO:TARGET > 1000
+			PRINTFORM 仅
+		PRINTFORM 用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%向%CALLNAME:PLAYER%献上了自己的纯洁，
+		PRINTFORML %TEXTR("迎来初次入侵者/迎来首位主人")%的%CALLNAME:PLAYER%%TEXTR("阴茎/肉棒")%被%TEXTR("疼痛地/紧密地")%包裹着，
+		PRINTFORM 在%CALLNAME:PLAYER%%TEXTR("黏腻的/淫靡的")%技巧下，%CALLNAME:対象キャラ%%TEXTR("女性特质/雌性本能")%被强行催熟，伴随着抽插
+		CALL PRINT_STR(@"噗啾_H_ 咕啾_H_")
+		PRINTFORMW 的水声昭示着%CALLNAME:対象キャラ%已%TEXTR("明显开始/赤裸裸地")%沉溺快感。
+		PRINTL
+	ENDIF
+	IF 陥落チェック(TARGET)
+		PRINTFORML 每当子宫口被顶弄，%CALLNAME:対象キャラ%便发出甜腻鼻音。%CALLNAME:PLAYER%吮住她柔软的唇瓣，她便欣喜闭目接受深吻。
+		PRINTL
+		PRINTFORMW 在缠绵舌吻中摆动着紧贴的腰肢，翻涌的快感麻痹神经，缺氧般的欣快感充斥%CALLNAME:PLAYER%全身。
+		PRINTL
+		キス = 1
+	ELSEIF TALENT:TARGET:弱味 || (TALENT:PLAYER:性別 == 2 && TALENT:TARGET:性別嗜好 == 1) || TALENT:TARGET:恋人持ち >= 1 || TALENT:TARGET:恋人持ち == -1
+	;嫌がりそうな子セット
+		SELECTCASE RAND:2
+		CASE 0
+		;キスマーク
+			PRINTFORML %TEXTR("刮擦阴道壁/顶弄子宫口")%的肉棒带来的快愉使%CALLNAME:対象キャラ%%TEXTR("双颊绯红/喘息急促")%，其媚态撩拨着%CALLNAME:PLAYER%的%TEXTR("肉欲/征服欲")%。
+			PRINTL
+			PRINTFORMW 肌肤相贴、粘膜相磨，交换体温与快感的过程中……彼此吐息交融的距离正逐渐缩短……
+			PRINTL
+			PRINTFORML ……但%CALLNAME:対象キャラ%在最后关头清醒，扭头躲开了。看来暂时还不允许触碰嘴唇。
+			PRINTL
+			PRINTFORMW %CALLNAME:PLAYER%转而吮吸%CALLNAME:対象キャラ%的颈侧，随着%CALLNAME:対象キャラ%发出情动之声，衣领处留下了鲜红的吻痕……
+			PRINTL
+			見える位置へのキスマーク = 1
+		CASE 1
+		;キス
+			PRINTFORML %TEXTR("刮擦阴道壁/顶弄子宫口")%的肉棒带来的快愉使%CALLNAME:対象キャラ%%TEXTR("双颊绯红/喘息急促")%，其媚态撩拨着%CALLNAME:PLAYER%的%TEXTR("肉欲/征服欲")%。
+			PRINTL
+			PRINTFORML 在肌肤相贴、粘膜相磨交换快感之际，%CALLNAME:PLAYER%的%TEXTR("本能/冲动")%在脑内叫嚣着想要更多感受%CALLNAME:対象キャラ%。
+			PRINTL
+			PRINTFORMW 当%CALLNAME:PLAYER%攫住眼前甜软的唇瓣，%CALLNAME:対象キャラ%瞪大双眼发出可爱的抗议声。
+			PRINTL
+			PRINTFORML %CALLNAME:対象キャラ%摇头抗拒的模样，反而更加刺激%CALLNAME:PLAYER%的%TEXTR("征服欲/施虐心")%。
+			PRINTL
+			PRINTFORMW %CALLNAME:PLAYER%边叩击子宫口边耐心索吻，最终%CALLNAME:対象キャラ%放弃抵抗接受深吻，在唇舌交缠中共赴极乐。
+			PRINTL
+			CALL 初体験日登録処理(PLAYER, TARGET, "ファーストキス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 1)
+			CALL 初体験日登録処理(TARGET, PLAYER, "ファーストキス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 1)
+			IF RESULT
+				RCVAR:TARGET:ファーストキス中フラグ = 1
+				CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>在被%CALLNAME:PLAYER%买下身体的性爱过程中，%CALLNAME:PLAYER%强行夺走了[嘴唇]的初吻……</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>在买下%CALLNAME:TARGET%身体时趁乱夺取了其初吻</font><img src='えっちハート'>","うふふ")
+				キス = 1
+				ファーストキス = 1
+			ELSE
+				キス = 1
+			ENDIF
+			CALL 初体験日登録処理(PLAYER, TARGET, "キス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 0)
+			CALL 初体験日登録処理(TARGET, PLAYER, "キス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 0)
+		ENDSELECT
+	ELSE
+		SELECTCASE RAND:2
+		CASE 0
+		;キス
+			PRINTFORML %TEXTR("刮擦阴道壁/顶弄子宫口")%的肉棒带来的快愉使%CALLNAME:対象キャラ%%TEXTR("双颊绯红/喘息急促")%，其媚态撩拨着%CALLNAME:PLAYER%的%TEXTR("肉欲/征服欲")%。
+			PRINTL
+			PRINTFORML 在肌肤相贴、粘膜相磨交换快感之际，%CALLNAME:PLAYER%的%TEXTR("本能/冲动")%充斥脑髓渴求更多感受%CALLNAME:対象キャラ%。
+			PRINTL
+			PRINTFORMW 在吐息可及的距离对视时%CALLNAME:PLAYER%请求接吻，最初抗拒的%CALLNAME:対象キャラ%经过言语与鸡巴的多次『说服』，最终闭目献上双唇。
+			PRINTL
+			CALL 初体験日登録処理(PLAYER, TARGET, "ファーストキス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 1)
+			CALL 初体験日登録処理(TARGET, PLAYER, "ファーストキス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 1)
+			IF RESULT
+				RCVAR:TARGET:ファーストキス中フラグ = 1
+				CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>在被%CALLNAME:PLAYER%买下身体的性爱过程中，被其『说服』献出了[嘴唇]的初吻……</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>买下%CALLNAME:TARGET%身体时顺势获得了其初吻</font><img src='えっちハート'>","うふふ")
+				キス = 1
+				ファーストキス = 1
+			ELSE
+				キス = 1
+			ENDIF
+			CALL 初体験日登録処理(PLAYER, TARGET, "キス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 0)
+			CALL 初体験日登録処理(TARGET, PLAYER, "キス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 0)
+		CASE 1
+		;射精煽り
+			PRINTFORML %TEXTR("刮擦阴道壁/顶弄子宫口")%的肉棒带来的快愉使%CALLNAME:対象キャラ%%TEXTR("双颊绯红/喘息急促")%，其媚态撩拨着%CALLNAME:PLAYER%的%TEXTR("肉欲/征服欲")%。
+			PRINTL
+			PRINTFORMW 在肌肤相贴交换快感时，%CALLNAME:PLAYER%被贪婪欲望驱使着想要连%CALLNAME:対象キャラ%的心智都占据。
+			PRINTL
+			PRINTFORM 在吐息交融的距离，%CALLNAME:PLAYER%要求%CALLNAME:対象キャラ%哪怕说谎也要说出爱意，
+			SELECTCASE RAND:3
+			CASE 0
+				PRINTFORML %CALLNAME:対象キャラ%%TEXTR("戏谑地笑着/淘气地笑着")%贴近耳畔，
+				PRINTL
+				CALL PRINT_STR(@"最讨厌了_H_")
+				PRINTFORMW 用甜腻声线说着反话，刻意摆出抗拒姿态%TEXTR("刺激施虐心/挑动凌辱欲/营造强奸游戏氛围")%……
+				PRINTL
+				射精煽り = 2
+			CASEELSE
+				PRINTFORML %CALLNAME:対象キャラ%%TEXTR("无奈苦笑/短暂露出嫌恶表情")%后贴近耳畔──
+				PRINTL
+				PRINTFORMW %TEXTR("刻意地/虚假地/棒读式地")%诉说爱语%TEXTR("催生幸福感/刺激射精欲/给予短暂恋人体验")%……
+				PRINTL
+				射精煽り = 1
+			ENDSELECT
+		ENDSELECT
+	ENDIF
+	PRINTFORML 黏腻的爱液交缠中，%CALLNAME:対象キャラ%%TEXTR("吮吸般/吸附般/绞紧般/阵阵收缩/不规则甜喘紧缩")%的阴道侍奉，令%CALLNAME:PLAYER%下腹逐渐涌起射精冲动。
+	IF 陥落チェック(TARGET)
+	;合意中出し
+		PRINTL
+		PRINTFORMW 粗暴摆动腰肢并在耳畔低语「要射在里面了」，%CALLNAME:対象キャラ%在娇喘中颔首，仿佛用身体表达喜悦般紧拥%CALLNAME:PLAYER%。
+		PRINTL
+		CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+		PRINTL
+		PRINTFORML 将龟头紧抵阴道深处，环抱%CALLNAME:対象キャラ%的身躯，向着子宫口倾泻白浊。
+		PRINTL
+		PRINTFORML 被%CALLNAME:PLAYER%赐予极致快感的%CALLNAME:対象キャラ%小穴如同表达感谢般高潮抽搐，蠕动着将精液尽数纳入子宫。
+		PRINTL
+		PRINTFORMW %CALLNAME:PLAYER%与%CALLNAME:対象キャラ%在粗重喘息中对视，不约而同地深吻交缠，将最后一滴也注入%CALLNAME:対象キャラ%体内……
+		PRINTL
+		PRINTFORMW 事后%CALLNAME:PLAYER%要求%CALLNAME:対象キャラ%今日需带着精液滞留子宫生活，%CALLNAME:対象キャラ%理所当然般欣然应允。
+		PRINTL
+		合意中出し = 1
+		精液お持ち帰り = 1
+	ELSE
+		SELECTCASE RAND:2	;中出しの合意、無許可判定
+		CASE 0
+		;無許可中出し
+			PRINTL
+			PRINTFORML %CALLNAME:PLAYER%紧拥%CALLNAME:対象キャラ%粗暴挺腰，预感射精的%CALLNAME:対象キャラ%哀求外射。
+			PRINTL
+			CALL MESSAGE_性処理_セックス処理_非口上時_射精先選択(対象キャラ, 0)
+			IF RESULT == 0
+				PRINTL
+				PRINTFORMW ……但陷入癫狂的%CALLNAME:PLAYER%兽性岂会因此停歇。
+				PRINTL
+				IF TALENT:種族 == 2 || TALENT:種族 == 3
+				;エルーンかドラフ
+					PRINTFORML 压制住因%CALLNAME:PLAYER%毫无抽离迹象而惊惶挣扎的%CALLNAME:対象キャラ%，噬咬其颈项时，
+					PRINTFORMW %TEXTR("受孕雌体的立场/地位高低排序/此刻的阶级关系/作为受种雌体应有的态度")%被本能认知的%CALLNAME:対象キャラ%顿时驯服，主动挺腰献出子宫主权……
+					PRINTL
+					CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+					PRINTL
+					PRINTFORML 将怒张的肉楔尽根没入，龟头紧抵阴道深处，向着%CALLNAME:対象キャラ%的子宫倾泻白浊。
+					PRINTL
+					PRINTFORML 与口头抗拒相反，%CALLNAME:対象キャラ%的私处高潮抽搐着将精液纳入子宫饮尽，仿佛在感谢%CALLNAME:PLAYER%的款待。
+					PRINTL
+					PRINTFORMW 沉浸于%CALLNAME:対象キャラ%沉溺快感的喘息，感受着%TEXTR("征服成就/支配快感/满足愉悦")%将最后一滴注入其体内……
+					PRINTL
+					PRINTFORML 事后%CALLNAME:PLAYER%试图道歉并支付强制内射的补偿金时，
+					PRINTFORMW %CALLNAME:対象キャラ%仍带着情潮余韵婉拒并原谅了%CALLNAME:PLAYER%，爱怜地轻抚下腹。
+					PRINTL
+					無許可中出し = 1
+					首噛みわからせ = 1
+				ELSEIF TALENT:種族 == 5
+				;星晶獣
+					PRINTFORML 压制住因%CALLNAME:PLAYER%毫无抽离迹象而惊惶挣扎的%CALLNAME:対象キャラ%，噬咬其颈项时，
+					PRINTFORMW 作为为侍奉星之民而创造的仆从种族，%CALLNAME:対象キャラ%%TEXTR("隶属/从属/屈服")%本能被彻底激发，顿时驯服地挺腰献出子宫主权……
+					PRINTL
+					CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+					PRINTL
+					PRINTFORML 将怒张的肉楔尽根没入，龟头紧抵阴道深处，向着%CALLNAME:対象キャラ%的子宫倾泻白浊。
+					PRINTL
+					PRINTFORML 与口头抗拒相反，%CALLNAME:対象キャラ%的私处高潮抽搐着将精液纳入子宫饮尽，仿佛在感谢%CALLNAME:PLAYER%的款待。
+					PRINTL
+					PRINTFORMW 沉浸于%CALLNAME:対象キャラ%沉溺快感的喘息，感受着%TEXTR("征服成就/支配快感/满足愉悦")%将最后一滴注入其体内……
+					PRINTL
+					PRINTFORML 事后%CALLNAME:PLAYER%试图道歉并支付强制内射的补偿金时，
+					PRINTFORMW %CALLNAME:対象キャラ%仍带着%TEXTR("迷离/恍惚")%神情婉拒并原谅了%CALLNAME:PLAYER%，爱怜地轻抚下腹。
+					PRINTL
+					無許可中出し = 1
+					首噛みわからせ = 1
+				ELSE
+					PRINTFORMW %CALLNAME:PLAYER%紧拥挣扎的%CALLNAME:対象キャラ%，以宣告主权般的力度猛烈撞击。
+					PRINTL
+					CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+					PRINTL
+					PRINTFORML 将龟头紧抵阴道深处，环抱%CALLNAME:対象キャラ%的身躯，向着子宫口倾泻白浊。
+					PRINTL
+					IF アイドル判定(対象キャラ)
+						PRINTFORML 作为偶像魅惑众生的%CALLNAME:対象キャラ%%TEXTR("子宫/最深处")%，此刻被%TEXTR("玷污/征服/占有")%的愉悦令%CALLNAME:PLAYER%脉动着射精，
+					ELSEIF 小等部魔法少女判定(対象キャラ)
+						PRINTFORML 在原本世界肩负魔法少女重任的%CALLNAME:対象キャラ%%TEXTR("无垢子宫/稚嫩私处/紧致萝莉幼穴")%，此刻被%TEXTR("玷污/征服/占有")%的愉悦令%CALLNAME:PLAYER%脉动着射精，
+					ENDIF
+					PRINTFORML 与口头抗拒相反，%CALLNAME:対象キャラ%的私处高潮抽搐着将精液纳入子宫饮尽。
+					PRINTL
+					PRINTFORMW 沉浸于%CALLNAME:対象キャラ%%TEXTR("绝望/认命")%的喘息，感受着%TEXTR("征服成就/支配快感/满足愉悦")%将最后一滴注入……
+					PRINTL
+					PRINTFORMW 事后%CALLNAME:PLAYER%支付补偿金时，%CALLNAME:対象キャラ%勉强表现出谅解态度。
+					PRINTL
+					無許可中出し = 1
+				ENDIF
+			ELSE
+				CALL MESSAGE_性処理_セックス処理_非口上時_外出し(対象キャラ, 体位)
+				IF RESULT
+					合意中出し = 1
+					精液大好きホールド = 1
+				ENDIF
+			ENDIF
+		CASE 1
+		;合意中出し
+			PRINTL
+			PRINTFORML %CALLNAME:PLAYER%粗暴挺腰时，预感射精的%CALLNAME:対象キャラ%哀求外射。
+			PRINTL
+			CALL MESSAGE_性処理_セックス処理_非口上時_射精先選択(対象キャラ, 1)
+			IF RESULT == 0
+				PRINTL
+				PRINTFORMW ……但癫狂的%CALLNAME:PLAYER%兽性叫嚣着必须给眼前雌体播种。
+				PRINTL
+				PRINTFORML %CALLNAME:PLAYER%边挺腰边加价请求内射，%CALLNAME:対象キャラ%虽仍抗拒，
+				PRINTFORMW 最终在持续恳求下意识到%CALLNAME:PLAYER%不会罢休，勉强接受阴道内射。
+				PRINTL
+				CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+				PRINTL
+				PRINTFORML 将龟头紧抵阴道深处，环抱%CALLNAME:対象キャラ%的身躯，向着子宫口倾泻白浊。
+				PRINTL
+				SIF アイドル判定(対象キャラ)
+					PRINTFORML 玷污偶像%CALLNAME:対象キャラ%%TEXTR("子宫/最深处")%的愉悦令%CALLNAME:PLAYER%脉动着射精，
+				PRINTFORML 与口头抗拒相反，%CALLNAME:対象キャラ%的私处高潮抽搐着将精液纳入子宫饮尽，仿佛在感谢%CALLNAME:PLAYER%的款待。
+				PRINTL
+				PRINTFORMW 在%CALLNAME:対象キャラ%耳畔低语感谢，对方无奈环抱%CALLNAME:PLAYER%直至最后一滴注入……
+				PRINTL
+				PRINTFORMW 事后%CALLNAME:PLAYER%要求精液滞留子宫，%CALLNAME:対象キャラ%苦笑应允。
+				PRINTL
+				合意中出し = 1
+				精液お持ち帰り = 1
+			ELSE
+				CALL MESSAGE_性処理_セックス処理_非口上時_外出し(対象キャラ, 体位)
+				IF RESULT
+					合意中出し = 1
+					精液大好きホールド = 1
+				ENDIF
+			ENDIF
+		ENDSELECT
+	ENDIF
+ELSE
+;立ちバック
+	PRINTFORML 从后方紧握%CALLNAME:対象キャラ%的腰肢，%CALLNAME:PLAYER%以站立后入姿势摆动腰部，俯瞰%TEXTR("摇曳/颤动")%的臀浪。
+	PRINTL
+		IF RCVAR:対象キャラ:破瓜 == 1
+			PRINTFORM 方才还%TEXTR("保持着纯洁/未经人事/未被使用/未成为女人")%的%CALLNAME:対象キャラ%
+			IF 知識素質:高貴 > 0
+				PRINTFORM %TEXTR("血统纯正的/皇家的/高贵的/尊贵的")%
+			ELSEIF アイドル判定(対象キャラ)
+				;偶像勢
+				IF CSTR:対象キャラ:出演作品 != ""
+					PRINTFORM %TEXTR("异世界偶像的顶点/粉丝们求之不得的异界偶像")%
+				ELSE
+					PRINTFORM %TEXTR("偶像的顶点/粉丝们无法触及的偶像")%
+				ENDIF
+			ENDIF
+			PRINTFORM %TEXTR("处女阴道/纯洁私处")%
+			;買い叩かれたEXキャラ
+			SIF NO:TARGET > 1000
+				PRINTFORM 仅
+			PRINTFORM 用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%向%CALLNAME:PLAYER%献上了自己的纯洁，
+			PRINTFORML %TEXTR("迎来初次入侵者/迎来首位主人")%的%CALLNAME:PLAYER%%TEXTR("阴茎/肉棒")%被%TEXTR("疼痛地/紧密地")%包裹着，
+			PRINTFORM 在%CALLNAME:PLAYER%%TEXTR("黏腻的/淫靡的")%技巧下，%CALLNAME:対象キャラ%%TEXTR("女性特质/雌性本能")%被强行催熟，伴随着抽插
+			CALL PRINT_STR(@"噗啾_H_ 咕啾_H_")
+			PRINTFORMW 的水声昭示着%CALLNAME:対象キャラ%已%TEXTR("明显开始/赤裸裸地")%沉溺快感。
+			PRINTL
+		ENDIF
+	IF 陥落チェック(TARGET)
+		PRINTFORML 每当子宫口被顶弄，%CALLNAME:対象キャラ%便发出甜腻鼻音。%CALLNAME:PLAYER%扳过她的脸庞吮住柔唇，她便欣喜闭目接受深吻。
+		PRINTL
+		PRINTFORMW 在缠绵舌吻中摆动着紧贴的腰肢，翻涌的快感麻痹神经，缺氧般的欣快感充斥%CALLNAME:PLAYER%全身。
+		PRINTL
+		キス = 1
+	ELSEIF (TALENT:TARGET:尻尾あり && RAND:2 == 0) || (TALENT:TARGET:エルーン耳 && RAND:2 == 0)
+		IF (TALENT:TARGET:尻尾あり && TALENT:TARGET:エルーン耳 != 1) || (TALENT:TARGET:尻尾あり && RAND:2 == 0)
+		;尻尾しかない場合は100%こっち。耳もあるなら50%。
+		;ウサギみたいな小さい尻尾については考えないものとする。ごめんねまこーら
+			PRINTFORML 龟头%TEXTR("刮擦G点/挑弄子宫口")%的刺激令%CALLNAME:対象キャラ%的尾巴随快感摇曳。
+			PRINTL
+			PRINTFORM 抓住摇曳的尾巴摆腰，%CALLNAME:対象キャラ%发出%TEXTR("困惑/情动/羞赧")%的甜腻呜咽，
+			CALL PRINT_STRW(@"啾呜_H_地收缩阴道肌肉。")
+			PRINTL
+			尻尾抱きつき = 1
+		ELSE
+		;耳あって尻尾がない場合か↑で50%引かなかった場合
+			PRINTFORML 龟头%TEXTR("刮擦G点/挑弄子宫口")%的刺激令%CALLNAME:対象キャラ%的艾伦耳随快感颤动。
+			PRINTL
+			PRINTFORM 从后方环抱%CALLNAME:対象キャラ%，将鼻尖埋入耳根时，
+			; CALL PRINT_STR(@"「ひゃ、っ_H_」")
+			PRINTFORML %CALLNAME:対象キャラ%发出可爱呜咽，
+			PRINTFORMW %TEXTR("独特的/华美的/兽性的/催情的")%%TEXTR("令人上瘾/甘美深邃/原始野性/馥郁芬芳")%的体香直击%CALLNAME:PLAYER%性欲中枢，令挺腰愈发激烈。
+			PRINTL
+			耳吸い = 1
+		ENDIF
+	ELSEIF TALENT:TARGET:弱味 || (TALENT:PLAYER:性別 == 2 && TALENT:TARGET:性別嗜好 == 1) || TALENT:TARGET:恋人持ち >= 1 || TALENT:TARGET:恋人持ち == -1
+	;嫌がりそうな子セット
+	;キスマークのみ。無理やりのキスは立ちバックだとたぶん逃げられる
+		PRINTFORML 将双手撑在墙面，俯视着只能任由%CALLNAME:PLAYER%%TEXTR("挑弄G点/叩击子宫/侵犯重要部位/凌辱")%而沉溺快感的%CALLNAME:対象キャラ%，
+		PRINTFORMW 这景象令%CALLNAME:PLAYER%产生压倒性优越感，阳具愈发坚挺。
+		PRINTL
+		PRINTFORM 边挺腰边将%CALLNAME:対象キャラ%揽入怀中，
+		IF TALENT:種族 == 2
+			PRINTFORML 在艾伦族裸露的背部肌肤留下吻痕，%CALLNAME:対象キャラ%虽发出甜腻抗拒声，
+			PRINTFORM 爱液泛滥的阴道却违背意志
+			CALL PRINT_STR(@"紧束_H_")
+			PRINTFORMW 紧裹%CALLNAME:PLAYER%的肉棒传递欢愉。
+		ELSE
+			PRINTFORM 在颈侧留下深红印记，%CALLNAME:対象キャラ%战栗着
+			PRINTFORMW 漏出娇嗔般的微弱抵抗。
+		ENDIF
+		見える位置へのキスマーク = 1
+	ELSE
+		SELECTCASE RAND:2
+		CASE 0
+		;キスマーク
+			PRINTFORML 将双手撑在墙面，俯视着只能任由%CALLNAME:PLAYER%%TEXTR("挑弄G点/叩击子宫/侵犯重要部位/凌辱")%而沉溺快感的%CALLNAME:対象キャラ%，
+			PRINTFORMW 这景象令%CALLNAME:PLAYER%产生压倒性优越感，阳具愈发坚挺。
+			PRINTL
+			PRINTFORM 边挺腰边将%CALLNAME:対象キャラ%揽入怀中，
+			IF TALENT:種族 == 2
+				PRINTFORML 在艾伦族裸露的背部留下吻痕，%CALLNAME:対象キャラ%吐露甜美喘息，
+				PRINTFORM 爱液湿润膣肉
+				CALL PRINT_STR(@"紧束_H_")
+				PRINTFORMW 紧裹%CALLNAME:PLAYER%的肉棒传递欢愉。
+			ELSE
+				PRINTFORML 在颈侧留下深红印记，%CALLNAME:対象キャラ%吐露甜息阵阵战栗。
+			ENDIF
+			見える位置へのキスマーク = 1
+		CASE 1
+		;キス
+			PRINTFORML 将双手撑在墙面，俯视着只能任由%CALLNAME:PLAYER%%TEXTR("挑弄G点/叩击子宫/侵犯重要部位/凌辱")%而沉溺快感的%CALLNAME:対象キャラ%，
+			PRINTFORMW 这景象令%CALLNAME:PLAYER%产生压倒性优越感，阳具愈发坚挺。
+			PRINTL
+			PRINTFORML 边挺腰边在%CALLNAME:対象キャラ%耳畔请求接吻，初始抗拒的她最终在言语与鸡巴的『说服』下闭目献唇。
+			PRINTL
+			CALL 初体験日登録処理(PLAYER, TARGET, "ファーストキス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 1)
+			CALL 初体験日登録処理(TARGET, PLAYER, "ファーストキス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 1)
+			IF RESULT
+				RCVAR:TARGET:ファーストキス中フラグ = 1
+				CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>在被%CALLNAME:PLAYER%买下身体的性爱过程中，被其『说服』献出了[嘴唇]的初吻……</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>买下%CALLNAME:TARGET%身体时顺势获得了其初吻</font><img src='えっちハート'>","うふふ")
+				キス = 1
+				ファーストキス = 1
+			ELSE
+				キス = 1
+			ENDIF
+			CALL 初体験日登録処理(PLAYER, TARGET, "キス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 0)
+			CALL 初体験日登録処理(TARGET, PLAYER, "キス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "唇", "", 0)
+		ENDSELECT
+	ENDIF
+	PRINTFORMW 黏腻的爱液交缠中，%CALLNAME:対象キャラ%%TEXTR("吮吸般/吸附般/绞紧般/阵阵收缩/不规则甜喘紧缩")%的阴道侍奉，令%CALLNAME:PLAYER%下腹逐渐涌起射精冲动。
+	IF 陥落チェック(TARGET)
+	;合意中出し
+		PRINTL
+		PRINTFORMW 粗暴摆动腰肢并在耳畔低语「要射在里面了」，%CALLNAME:対象キャラ%在娇喘中颔首，将她的屁股向前挺起，仿佛要接受精液。
+		PRINTL
+		CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+		PRINTL
+		PRINTFORML 紧箍腰肢将身躯紧密贴合丰臀，龟头深抵阴道尽头，向着%CALLNAME:対象キャラ%的子宫倾泻白浊。
+		PRINTL
+		PRINTFORML 被%CALLNAME:PLAYER%赐予极致快感的%CALLNAME:対象キャラ%小穴如同表达感谢般高潮抽搐，蠕动着将精液尽数纳入子宫。
+		PRINTL
+		PRINTFORMW %CALLNAME:PLAYER%与%CALLNAME:対象キャラ%还沉浸在余晖的迷茫之中，不约而同地深吻交缠，将最后一滴也注入%CALLNAME:対象キャラ%体内……
+		PRINTL
+		PRINTFORMW 事后%CALLNAME:PLAYER%要求%CALLNAME:対象キャラ%今日需带着精液滞留子宫生活，%CALLNAME:対象キャラ%理所当然般欣然应允。
+		PRINTL
+		合意中出し = 1
+		精液お持ち帰り = 1
+	ELSE
+		SELECTCASE RAND:2	;中出しの合意、無許可判定
+		CASE 0
+		;無許可中出し
+			PRINTL
+			PRINTFORML 从后方钳制%CALLNAME:対象キャラ%手腕将其压向墙面，%CALLNAME:PLAYER%猛烈撞击腰肢时，
+			PRINTFORML 预感射精的%CALLNAME:対象キャラ%哀求外射。
+			PRINTL
+			CALL MESSAGE_性処理_セックス処理_非口上時_射精先選択(対象キャラ, 0)
+			IF RESULT == 0
+				PRINTL
+				PRINTFORML ……但陷入癫狂的%CALLNAME:PLAYER%兽性岂会因此停歇。
+				PRINTL
+				IF TALENT:種族 == 2 || TALENT:種族 == 3
+				;エルーンかドラフ
+					PRINTFORML 压制住因%CALLNAME:PLAYER%毫无抽离迹象而惊惶挣扎的%CALLNAME:対象キャラ%，噬咬其颈项时，
+					PRINTFORMW %TEXTR("受孕雌体的立场/地位高低排序/此刻的阶级关系/作为受种雌体应有的态度")%被本能认知的%CALLNAME:対象キャラ%顿时驯服，主动翘臀献出子宫主权……
+					PRINTL
+					CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+					PRINTL
+					PRINTFORML 腰胯紧贴弹性十足的臀肉，龟头深埋阴道深处，对准%CALLNAME:対象キャラ%的子宫口喷射白浊。
+					PRINTL
+					PRINTFORML 与口头抗拒相反，%CALLNAME:対象キャラ%的私处高潮抽搐着将精液纳入子宫饮尽，仿佛在感谢%CALLNAME:PLAYER%的款待。
+					PRINTL
+					PRINTFORMW 沉浸于%CALLNAME:対象キャラ%沉溺快感的喘息，感受着%TEXTR("征服成就/支配快感/满足愉悦")%将最后一滴注入其体内……
+					PRINTL
+					PRINTFORML 事后%CALLNAME:PLAYER%试图道歉并支付强制内射的补偿金时，
+					PRINTFORMW %CALLNAME:対象キャラ%仍带着%TEXTR("迷离/恍惚")%神情婉拒并原谅了%CALLNAME:PLAYER%，爱怜地轻抚下腹。
+					PRINTL
+					無許可中出し = 1
+					首噛みわからせ = 1
+				ELSEIF TALENT:種族 == 5
+				;星晶獣
+					PRINTFORML 压制住因%CALLNAME:PLAYER%毫无抽离迹象而惊惶挣扎的%CALLNAME:対象キャラ%，噬咬其颈项时，
+					PRINTFORMW 作为为侍奉星之民而创造的仆从种族，%CALLNAME:対象キャラ%%TEXTR("隶属/从属/屈服")%本能被彻底激发，顿时驯服地挺腰献出子宫主权……
+					PRINTL
+					CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+					PRINTL
+					PRINTFORML 腰胯紧贴弹性十足的臀肉，龟头深埋阴道深处，对准%CALLNAME:対象キャラ%的子宫口喷射白浊。
+					PRINTL
+					PRINTFORML 与口头抗拒相反，%CALLNAME:対象キャラ%的私处高潮抽搐着将精液纳入子宫饮尽，仿佛在感谢%CALLNAME:PLAYER%的款待。
+					PRINTL
+					PRINTFORMW 沉浸于%CALLNAME:対象キャラ%沉溺快感的喘息，感受着%TEXTR("征服成就/支配快感/满足愉悦")%将最后一滴注入其体内……
+					PRINTL
+					PRINTFORML 事后%CALLNAME:PLAYER%试图道歉并支付强制内射的补偿金时，
+					PRINTFORMW %CALLNAME:対象キャラ%仍带着%TEXTR("迷离/恍惚")%神情婉拒并原谅了%CALLNAME:PLAYER%，爱怜地轻抚下腹。
+					PRINTL
+					無許可中出し = 1
+					首噛みわからせ = 1
+				ELSE
+					PRINTFORMW 压制住因%CALLNAME:PLAYER%毫无抽离迹象而惊惶挣扎的%CALLNAME:対象キャラ%，以宣告主权般的力度猛烈撞击，誓不让猎物逃脱。
+					PRINTL
+					CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+					PRINTL
+					PRINTFORML 腰胯紧贴弹性十足的臀肉，龟头深埋阴道深处，对准%CALLNAME:対象キャラ%的子宫口喷射白浊。
+					PRINTL
+					IF アイドル判定(対象キャラ)
+						PRINTFORML 作为偶像魅惑众生的%CALLNAME:対象キャラ%%TEXTR("子宫/最深处")%，此刻被%TEXTR("玷污/征服/占有")%的愉悦令%CALLNAME:PLAYER%脉动着射精，
+					ELSEIF 小等部魔法少女判定(対象キャラ)
+						PRINTFORML 在原本世界肩负魔法少女重任的%CALLNAME:対象キャラ%%TEXTR("无垢子宫/稚嫩私处/紧致萝莉幼穴")%，此刻被%TEXTR("玷污/征服/占有")%的愉悦令%CALLNAME:PLAYER%脉动着射精，
+					ENDIF
+					PRINTFORML 与口头抗拒相反，%CALLNAME:対象キャラ%的私处高潮抽搐着将精液纳入子宫饮尽，仿佛在感谢%CALLNAME:PLAYER%的款待。
+					PRINTL
+					PRINTFORMW 沉浸于%CALLNAME:対象キャラ%%TEXTR("绝望/认命")%的喘息，感受着%TEXTR("征服成就/支配快感/满足愉悦")%将最后一滴注入……
+					PRINTL
+					PRINTFORMW 事后%CALLNAME:PLAYER%支付补偿金时，%CALLNAME:対象キャラ%勉强表现出谅解态度。
+					PRINTL
+					無許可中出し = 1
+				ENDIF
+			ELSE
+				CALL MESSAGE_性処理_セックス処理_非口上時_外出し(対象キャラ, 体位)
+			ENDIF
+		CASE 1
+		;合意中出し
+			PRINTL
+			PRINTFORML %CALLNAME:PLAYER%粗暴挺腰时，预感射精的%CALLNAME:対象キャラ%哀求外射。
+			PRINTL
+			CALL MESSAGE_性処理_セックス処理_非口上時_射精先選択(対象キャラ, 1)
+			IF RESULT == 0
+				PRINTL
+				PRINTFORML ……但癫狂的%CALLNAME:PLAYER%兽性叫嚣着必须给眼前雌体播种。
+				PRINTL
+				PRINTFORML %CALLNAME:PLAYER%边挺腰边加价请求内射，%CALLNAME:対象キャラ%虽仍抗拒，
+				PRINTFORMW 最终在持续恳求下意识到%CALLNAME:PLAYER%不会罢休，勉强接受阴道内射。
+				PRINTL
+				CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+				PRINTL
+				PRINTFORML 紧箍腰肢将身躯紧密贴合丰臀，龟头深抵阴道尽头，向着%CALLNAME:対象キャラ%的子宫倾泻白浊。
+				PRINTL
+				SIF アイドル判定(対象キャラ)
+					PRINTFORML 玷污偶像%CALLNAME:対象キャラ%%TEXTR("子宫/最深处")%的愉悦令%CALLNAME:PLAYER%脉动着射精，
+				PRINTFORML 与口头抗拒相反，%CALLNAME:対象キャラ%的私处高潮抽搐着将精液纳入子宫饮尽，仿佛在感谢%CALLNAME:PLAYER%的款待。
+				PRINTL
+				PRINTFORMW 紧拥允许内射的%CALLNAME:対象キャラ%，在耳畔低语感谢时，她无奈轻抚%CALLNAME:PLAYER%环抱自己的臂膀，纵容着将最后一滴精液注入子宫……
+				PRINTL
+				PRINTFORMW 事后%CALLNAME:PLAYER%要求精液滞留子宫，%CALLNAME:対象キャラ%苦笑应允。
+				PRINTL
+				合意中出し = 1
+				精液お持ち帰り = 1
+			ELSE
+				CALL MESSAGE_性処理_セックス処理_非口上時_外出し(対象キャラ, 体位)
+			ENDIF
+		ENDSELECT
+	ENDIF
+ENDIF
+
+DRAWLINE
+
+IF 合意中出し == 1 || 無許可中出し == 1
+	RFLAG:性処理射精先 = 0 + 10
+	中出し名称 = %性処理_セックス処理_中出し名称(対象キャラ, 合意中出し)%
+	項目幅 = MAX(25, STRLENS(中出し名称) + 1)
+ELSEIF 体位 == 0
+	RFLAG:性処理射精先 = 6 + 10
+ELSE
+	RFLAG:性処理射精先 = 7 + 10
+ENDIF
+
+;最終的な料金　1ルピ＝10円程度という想定で書いてる
+IF RFLAG:コマンド結果受渡し変数２ > 0
+	PRINTFORML %"基础费用", 項目幅, LEFT%：　%NUM_FORMAT(RFLAG:コマンド結果受渡し変数２), 8%卢比
+ELSE
+	PRINTFORM %"基础费用", 項目幅, LEFT%：　%"免费", 8%
+	CALL PRINT_STRL(@"_H_")
+ENDIF
+
+DRAWLINE
+
+値段計算 = 0
+PRINTFORML 附加选项
+
+IF 見える位置へのキスマーク == 1
+;キスマーク1500円
+	値段計算 += 150
+	PRINTFORML %"吻痕", 項目幅, LEFT%：＋%NUM_FORMAT(150), 8%卢比
+ENDIF
+IF キス == 1
+	IF ファーストキス == 1
+		IF 知識素質:高貴 > 0
+		;ロイヤルキッス100まんえん
+			値段計算 += 100000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"高贵纯洁的嘴唇", 項目幅, LEFT%：＋%NUM_FORMAT(100000), 8%卢比
+			RESETCOLOR
+		ELSEIF アイドル判定(対象キャラ)
+			値段計算 += 10000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"偶像的初吻", 項目幅, LEFT%：＋%NUM_FORMAT(10000), 8%卢比
+			RESETCOLOR
+		ELSEIF TALENT:恋人持ち == 2
+		;人妻なのにファーストキス？妙だな……
+			値段計算 += 10000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"人妻唇间纯真", 項目幅, LEFT%：＋%NUM_FORMAT(10000), 8%卢比
+			RESETCOLOR
+		ELSEIF TALENT:恋人持ち == 1
+		;恋人あり
+			値段計算 += 7500
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"本应献给恋人的唇", 項目幅, LEFT%：＋%NUM_FORMAT(7500), 8%卢比
+			RESETCOLOR
+		ELSEIF TALENT:恋人持ち == -1
+			値段計算 += 5000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"初吻", 項目幅, LEFT%：＋%NUM_FORMAT(5000), 8%卢比
+			RESETCOLOR
+		ELSE
+			値段計算 += 4000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"初吻", 項目幅, LEFT%：＋%NUM_FORMAT(4000), 8%卢比
+			RESETCOLOR
+		ENDIF
+	ELSEIF 陥落チェック(TARGET)
+		値段計算 += 10
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"深情舌吻", 項目幅, LEFT%：＋%NUM_FORMAT(10), 8%卢比
+		RESETCOLOR
+	ELSEIF CSTR:対象キャラ:出演作品 != "" && アイドル判定(対象キャラ)
+		値段計算 += 1000
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"异界偶像之吻", 項目幅, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+		RESETCOLOR
+	ELSEIF アイドル判定(対象キャラ)
+		値段計算 += 1000
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"与偶像接吻", 項目幅, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 200
+		PRINTFORML %"接吻", 項目幅, LEFT%：＋%NUM_FORMAT(200), 8%卢比
+	ENDIF
+ENDIF
+IF 射精煽り >= 1
+	IF 射精煽り == 1
+		値段計算 += 500
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"情欲射精挑逗", 項目幅, LEFT%：＋%NUM_FORMAT(500), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 200
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"强奸游戏射精", 項目幅, LEFT%：＋%NUM_FORMAT(200), 8%卢比
+		RESETCOLOR
+	ENDIF
+ENDIF
+IF 尻尾抱きつき == 1
+	値段計算 += 100
+	PRINTFORML %"抱尾交合", 項目幅, LEFT%：＋%NUM_FORMAT(100), 8%卢比
+ENDIF
+IF 耳吸い == 1
+;恥ずかしいからちょっと高め
+	値段計算 += 300
+	PRINTFORML %"艾伦耳吮吸", 項目幅, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+ENDIF
+IF 合意中出し == 1 || 無許可中出し == 1
+	中出し価格 = 性処理_セックス処理_中出し価格(対象キャラ, 合意中出し)
+	IF 合意中出し == 1
+		SETCOLOR カラーパレット("ピンク")
+	ELSE
+		SETCOLOR カラーパレット("赤ピンク")
+	ENDIF
+	PRINTFORML %中出し名称, 項目幅, LEFT%：＋%NUM_FORMAT(中出し価格), 8%卢比
+	RESETCOLOR
+
+	;中出しオプション費用キャンセル
+	IF 首噛みわからせ == 1
+	;エルーンとドラフは首筋を嚙まれると本能的に屈服し、脳がバグって幸せでいっぱいになってしまう。……という独自設定。
+	;今回は追加で星晶獣、参戦！星の民によって作られた被造物、命令に従う奉仕種族として造物主に刷り込まれた隷属本能スイッチが入っちゃう感じ。星の民の手から離れれば裏切ったりもできるけど、スイッチ入れられちゃうともうダメ、みたいな。
+	;無許可中出しの値段と打ち消しあうので実質無料！
+	;なんなら「セックスしてくださって、ありがとうございましたっ♡」って逆にお金払わせたいまである。癖。
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"颈部咬痕", 項目幅, LEFT%：－%NUM_FORMAT(中出し価格), 8%卢比
+		RESETCOLOR
+	ELSEIF 精液大好きホールド == 1
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"喜欢充满精液", 項目幅, LEFT%：－%NUM_FORMAT(中出し価格), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 中出し価格
+	ENDIF
+ENDIF
+IF 精液お持ち帰り == 1
+;精液でお腹たぷたぷさせながら日常に戻ってもらうやつ。いい言い回しが思いつかない
+;下着ぐっしょりだしこぼれてきてそこそこ不快だろうから高め
+	値段計算 += 1000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"把精液带去", 項目幅, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+	RESETCOLOR
+ENDIF
+;オプションは基本的に割引クーポン対象外となっております～
+;恋慕は完全無料
+IF TALENT:対象キャラ:恋慕
+	DRAWLINE
+	PRINTFORML 折扣
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORM %"挚爱特惠", 項目幅, LEFT%：　　　　　%CALLNAME:PLAYER%专属100％折扣
+	RESETCOLOR
+	CALL PRINT_STRL(@"_H_")
+	値段計算 *= 0
+ELSEIF TALENT:対象キャラ:弱味
+	DRAWLINE
+	PRINTFORML 折扣
+	SETCOLOR カラーパレット("赤")
+	PRINTFORM %"弱点折扣", 項目幅, LEFT%：　　　　　99％折扣
+	RESETCOLOR
+	CALL PRINT_STRL(@"_H_")
+	値段計算 /= 100
+ENDIF
+DRAWLINE
+値段計算 = MAX(0, 値段計算)
+;オプション分のMONEY処理
+MONEY -= 値段計算
+
+オプション込み最終価格 = 値段計算 + RFLAG:コマンド結果受渡し変数２
+IF オプション込み最終価格 > 0
+	PRINTFORML %"含附加选项最终价格", 項目幅, LEFT%：　%NUM_FORMAT(オプション込み最終価格), 8%卢比
+ELSE
+	PRINTFORM %"含附加选项最终价格", 項目幅, LEFT%：　%"免费", 8%
+	CALL PRINT_STRL(@"_H_")
+ENDIF
+DRAWLINE
+
+PRINTFORML %NUM_FORMAT(MONEY + オプション込み最終価格)% - %NUM_FORMAT(オプション込み最終価格)% = %NUM_FORMAT(MONEY)%卢比
+
+@MESSAGE_性処理_セックス処理_非口上時_射精先選択(対象キャラ, 合意中出し)
+#DIM 対象キャラ
+#DIM 合意中出し
+
+;とりあえず射精先設定0が膣内射精の場合のみ選択表示省略
+SIF オート射精先オプション:0 == 0
+	RETURN 0
+
+PRINTFORML 持有卢比：%MON_FORMAT(MONEY)%
+LOCALS = [0] 内射（%性処理_セックス処理_中出し名称(対象キャラ, 合意中出し)%：%MON_FORMAT(性処理_セックス処理_中出し価格(対象キャラ, 合意中出し))%）
+PRINTBUTTON LOCALS, 0
+PRINTL
+PRINTBUTTON "[1] 外射", 1
+PRINTL
+BINPUT
+RETURN RESULT
+
+@MESSAGE_性処理_セックス処理_非口上時_外出し(対象キャラ, 体位)
+#DIM 対象キャラ
+#DIM 体位
+#DIM 射精箇所
+IF 体位 == 0
+;お腹
+	IF RAND:(ABL:対象キャラ:精液中毒 + 1)	;適当な条件思いつかなかったので仮判定
+	;精液大好きホールド
+		PRINTL
+		PRINTFORML %CALLNAME:対象キャラ%嘴上说着不要，却用双腿禁锢住试图抽身的%CALLNAME:PLAYER%，含着肉棒继续挑逗直至爆发。
+		PRINTL
+		CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+		PRINTL
+		PRINTFORML 被%CALLNAME:PLAYER%充分满足的%CALLNAME:対象キャラ%蜜穴在高潮中阵阵收缩，蠕动着将精液压向阴道深处。
+		PRINTL
+		PRINTFORMW %CALLNAME:対象キャラ%发出浸满愉悦的喘息，直到榨取最后一滴……
+		PRINTL
+		PRINTFORML 事后%CALLNAME:PLAYER%正要支付内射的附加费用，
+		PRINTFORMW %CALLNAME:対象キャラ%却带着%TEXTR("恍惚/迷乱/陶醉")%的神情婉拒，确认精液存量般轻抚自己微微隆起的小腹。
+		PRINTL
+		射精箇所 = 1
+	ELSE
+		PRINTL
+		PRINTFORMW %CALLNAME:PLAYER%宣告腹部射精，%CALLNAME:対象キャラ%甜笑着卷起衣摆。
+		PRINTL
+		CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+		PRINTL
+		PRINTFORM 将龟头抵住
+		IF 固有素質チェック(TARGET, "褐色肌")
+			PRINTFORM 褐色的%TEXTR("腹部/肌肤")%
+		ELSE
+			PRINTFORM 裸露的腹部
+		ENDIF
+		PRINTFORML 涂抹式倾泻精液。
+		PRINTL
+		PRINTFORMW %CALLNAME:対象キャラ%%TEXTR("窃笑精液量/如释重负喘息/为榨取量窃喜")%凝视着玷污肌肤的白浊……
+		PRINTL
+		射精箇所 = 0
+	ENDIF
+ELSE
+;お尻
+	PRINTL
+	PRINTFORMW 「要射在臀部」的宣告使%CALLNAME:対象キャラ%甜笑着瘫软身躯。
+	PRINTL
+	CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+	PRINTL
+	PRINTFORM 将龟头抵住
+	IF 固有素質チェック(TARGET, "褐色肌")
+		PRINTFORM 褐色的
+	ENDIF
+	PRINTFORML 丰腴臀肉，以涂抹方式倾泻精液。
+	PRINTL
+	IF 固有素質チェック(TARGET, "褐色肌")
+		PRINTFORM 巧克力色的
+	ENDIF
+	PRINTFORMW 光滑肌肤沾满了白浊，%CALLNAME:対象キャラ%%TEXTR("窃笑精液量/如释重负喘息/为榨取量窃喜")%凝视着玷污肌肤的白浊……
+	PRINTL
+	射精箇所 = 0
+ENDIF
+RETURN 射精箇所
+
+@性処理_セックス処理_中出し価格(対象キャラ, 合意中出し = 0)
+#FUNCTION
+#DIM 対象キャラ
+#DIM 合意中出し
+#DIM 中出し価格
+
+;合意を得ているし気持ちよくしてくれたので総じてそんなに高くない
+IF 知識素質:対象キャラ:高貴 > 0
+;ロイヤル子宮
+	IF TALENT:対象キャラ:恋人持ち == 1 || TALENT:対象キャラ:恋人持ち == 2
+		中出し価格 = 10000
+	ELSE
+		中出し価格 = 5000
+	ENDIF
+ELSEIF TALENT:対象キャラ:恋人持ち == 1 || TALENT:対象キャラ:恋人持ち == 2
+;恋人持ちと人妻
+	中出し価格 = 3000
+ELSEIF アイドル判定(対象キャラ)
+	中出し価格 = 3000
+ELSEIF 小等部魔法少女判定(対象キャラ) || 固有素質チェック(対象キャラ, "魔法少女")
+	中出し価格 = 2000
+ELSEIF 固有素質チェック(対象キャラ, "女高中生")
+	中出し価格 = 2000
+ELSEIF 固有素質チェック(対象キャラ, "初中生")
+	中出し価格 = 2000
+ELSEIF 固有素質チェック(対象キャラ, "小学生")
+	中出し価格 = 2000
+ELSE
+	中出し価格 = 1500
+ENDIF
+IF 合意中出し == 0
+;無許可では合意の10倍のお値段
+;無許可ではあるが無責任ではないオーナー
+	中出し価格 *= 10
+ENDIF
+;もともと中出しになる確率が2分の1だっただめ射精箇所選択処理追加のついでに雑に2倍
+中出し価格 *= 2
+RETURNF 中出し価格
+
+@性処理_セックス処理_中出し名称(対象キャラ, 合意中出し)
+#FUNCTIONS
+#DIM 対象キャラ
+#DIM 合意中出し
+#DIMS 中出し名称
+
+中出し名称 =
+
+IF 知識素質:対象キャラ:高貴 > 0
+;ロイヤル子宮
+	IF TALENT:対象キャラ:恋人持ち == 1 || TALENT:対象キャラ:恋人持ち == 2
+		中出し名称 = \@ 合意中出し ? 高贵子宫播种射精 # 高贵子宫擅自播种射精 \@
+	ELSE
+		中出し名称 = \@ 合意中出し ? 王室继承人受孕射精 # 王室继承人受孕强暴内射 \@
+	ENDIF
+ELSEIF TALENT:対象キャラ:恋人持ち == 1 || TALENT:対象キャラ:恋人持ち == 2
+;恋人持ちと人妻
+	中出し名称 = \@ 合意中出し ? 播种无套内射 # 强迫播种无套内射 \@
+ELSE
+	IF アイドル判定(対象キャラ)
+		中出し名称 = 偶像
+	ELSEIF 小等部魔法少女判定(対象キャラ) || 固有素質チェック(対象キャラ, "魔法少女")
+		中出し名称 = 魔法少女
+	ELSEIF 固有素質チェック(対象キャラ, "女高中生")
+		中出し名称 = 女高中生
+	ELSEIF 固有素質チェック(対象キャラ, "初中生")
+		中出し名称 = 初中生
+	ELSEIF 固有素質チェック(対象キャラ, "小学生")
+		中出し名称 = 小学生
+	ENDIF
+	IF 中出し名称 == "" 
+		中出し名称 = \@ 合意中出し ? 无套内射 # 無許可无套内射 \@
+	ELSE
+		中出し名称 += \@ 合意中出し ? %TEXTR("合意生内射/合意受孕射精/合意造人亲热")% # %TEXTR("强制生内射/强制受孕射精/强制造人射精")% \@
+	ENDIF
+ENDIF
+IF あなた特殊能力:危険日感知
+	SELECTCASE RISKY_DAY(対象キャラ)
+	CASE 1
+		中出し名称 = 危険日%中出し名称%
+	CASE 2
+		中出し名称 = 超危険日%中出し名称%
+	ENDSELECT
+ENDIF
+RETURNF 中出し名称

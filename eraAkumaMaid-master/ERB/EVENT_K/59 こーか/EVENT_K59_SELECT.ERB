@@ -1,0 +1,208 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;59は角色番号に置換してください
+;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+;ここで TFLAG:取引可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K59_ADDSELECT
+IF COND("性転換可能")
+	IF TALENT:男性
+		STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("女性化して", 16)% … 女になってもらう/
+	ELSE
+		STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("男性化して", 16)% … 男になってもらう/
+	ENDIF
+ENDIF
+IF CEVENT("目指せ！あの子のラストワン！") && TALENT:女性
+	IF TALENT:Ｖ妊娠不能
+		STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("妊娠できるようにして", 16)% … 妊娠できるようになってもらう/
+	ELSE
+		STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("妊娠できないようにして", 16)% … 妊娠できないようになってもらう/
+	ENDIF
+ENDIF
+;お願い・取引で増やした選択肢の地の文と台詞
+@KOJO_WISH_K59_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "男性化して"
+	IF COND("妊娠中") || COND("受精確認")
+		PRINTFORMW 「ごめんねぇ%CNAME("二人称")%。今は……無理なんだ」
+		CALL PRINT_STRW, @"「……どうしてだろうねぇ？むふふ_H_」"
+		PRINTL
+		PRINTFORMW ……被%CALLNAME:TARGET%拒绝了。
+	ELSE
+		IF CEVENT("男性化：初回") == 0
+			PRINTFORMW 「お、かっこいい%CNAME("一人称")%をご所望だね、おっけー！」
+			CALL SET_CEVENT, "男性化：初回"
+		ELSE
+			PRINTFORMW 「かっこいい%CNAME("一人称")%がいいんだね？おっけーおっけー！」
+		ENDIF
+		PRINTL
+		CALL CHANGE_SEX, TARGET
+		;男になると背がでかくなる
+		CALL SETFLAG_3SIZE, "高大化", TARGET
+		PRINTFORMW %CALLNAME:TARGET%は男性变成了。
+		PRINTL
+		CALL PRINT_STRW, @"変化に伴い、%CALLNAME:TARGET%の体型は_黄色_[%CONDS("体型", TARGET)%]_となりました。"
+	ENDIF
+CASE "女性化して"
+	IF CEVENT("女性化：初回") == 0
+		PRINTFORMW 「お、可爱%CNAME("一人称")%をご所望だね、おっけー！」
+	ELSE
+		PRINTFORMW 「可爱%CNAME("一人称")%がいいんだね？おっけーおっけー！」
+	ENDIF
+	PRINTL
+	CALL CHANGE_SEX, TARGET
+	PRINTFORMW %CALLNAME:TARGET%は女性变成了。
+	PRINTL
+	CALL PRINT_STRW, @"変化に伴い、%CALLNAME:TARGET%の体型は_黄色_[%CONDS("体型", TARGET)%]_となりました。"
+		SIF TALENT:Ｖ妊娠不能 == 0
+			TALENT:Ｖ妊娠不能 = 1
+CASE "妊娠できるようにして"
+	IF CEVENT("妊娠できるようにして：初回") == 0
+		CALL PRINT_STRW, @"「……ふふふ、もちろん、楽しみにしてるね%CNAME("二人称")%_H_」"
+	ELSE
+		IF TALENT:出産経験
+			CALL PRINT_STRW, @"「……むふふ、また孕ませてね？%CNAME("二人称")%_H_」"
+		ELSE
+			CALL PRINT_STRW, @"「……ふふふ、今度こそ、孕ませてくれる？%CNAME("二人称")%_H_」"
+		ENDIF
+	ENDIF
+	PRINTFORMW %CALLNAME:TARGET%は妊娠できるよう变成了。
+	PRINTFORMW ※男性にするとＶ妊娠不能が再びつきます。
+	TALENT:Ｖ妊娠不能 = 0
+CASE "妊娠できないようにして"
+	IF CEVENT("妊娠できないようにして：初回") == 0
+		PRINTFORMW 「ふぅん……やーい、臆病者ーちんぽし无なーへたれー」
+		CALL PRINT_STRW, @"「%CNAME("一人称")%を期待させといてなーんにもしなかった%CNAME("二人称")%には……いっぱい射精してもらわないとね_H_」"
+	ELSE
+		IF TALENT:出産経験
+			CALL PRINT_STRW, @"「子宮にどぷどぷしたくなった？いいよ_H_子宮を赤酱じゃなくて%CNAME("二人称")%専用にして给_H_」"
+		ELSE
+			CALL PRINT_STRW, @"「無問題射精が恋しくなっちゃった？しょうがないなぁ……いいよ、その代わりい～っぱい注いでね_H_」"
+		ENDIF
+	ENDIF
+	PRINTFORMW %CALLNAME:TARGET%は妊娠できなくなった。
+	TALENT:Ｖ妊娠不能 = 1
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+	;フラグを弄る場合はそれもここで行う
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+	;フラグを弄る場合はそれもここで行う
+ENDSELECT
+
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K59_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K59_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+ENDSELECT
+
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K59_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;睡眠時の互动指令の選択肢を追加
+@DAILY2_SLEEP_K59_ADDSELECT
+;STR:選択肢 += "睡眠時追加選択肢その１/"
+;STR:選択肢 += "睡眠時追加選択肢之２/"
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K59_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "睡眠時追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "睡眠時追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+ENDSELECT
+
+;-------------------------------------------------
+;约会行き先の選択肢を追加。
+@DATE_K59_ADDSELECT
+;ここで増やした選択肢を選ぶと、それがSAVESTR:约会 に代入される仕組みです
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+@KOJO_DATE_K59_ADDSELECT
+SELECTCASE SAVESTR:约会
+CASE "追加選択肢その１"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応存疑
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+CASE "追加選択肢之２"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応存疑
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+ENDSELECT
+
+;-------------------------------------------------
+;場所を変える指令の選択肢を追加
+@MOVE_K59_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"

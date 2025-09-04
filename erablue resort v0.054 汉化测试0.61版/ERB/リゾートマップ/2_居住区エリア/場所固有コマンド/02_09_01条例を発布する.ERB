@@ -1,0 +1,149 @@
+﻿
+;-------------------------------------------------
+;村役場で颁布条例
+;-------------------------------------------------
+@COMNAME_PLACE_380_2_9
+#FUNCTION
+TSTR:コマンド名受渡 = 颁布条例
+RETURNF 1
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_380_2_9
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+		
+@COM380_2_9
+#DIM 画面表示用変数
+DRAWLINE
+
+LOCALS = 
+LOCALS += "<div rect='81,0,1937,2812' border='31' bcolor='#C0C0C0' padding='25,50,25'>"
+LOCALS += "<br>"
+IF 画面表示用変数 == 100
+	LOCALS += @"<font color='#%カラーパレット_HTML("黄")%'>[100] 居住区基本方针</font>"
+ELSE
+	LOCALS += "<button value='100'>[100] 居住区基本方针</button>"
+ENDIF
+LOCALS += "<br>"
+LOCALS += "<br>"
+; LOCALS += "<button value='998'>[998] システムの説明</button>"
+; LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+LOCALS += "</div>"
+
+
+LOCALS += "<div rect='2050,0,3875,2812' border='31' bcolor='#C0C0C0' padding='25,50,25'>"
+SELECTCASE 画面表示用変数
+	CASE 0
+		LOCALS += "对度假村整体颁布具有影响力的条例。<br>"
+		LOCALS += "基本上每个条目都设有多个选项，需从中择一执行。<br>"
+		LOCALS += "此外，切换条例形式不会产生任何负面影响或成本。<br>"
+	CASE 100
+		LOCALS += 条例関数_居住区の基本方針()
+ENDSELECT
+LOCALS += "</div>"
+
+HTML_PRINT LOCALS
+FOR LOCAL, 0, 30
+	PRINTL
+NEXT
+
+BINPUT
+SELECTCASE RESULT
+	CASE 100
+		画面表示用変数 = RESULT
+	CASE 200 TO 210
+		CALLFORM 条例関数_操作_{画面表示用変数}(RESULT)
+	CASE 999
+		画面表示用変数 = 0
+		RETURN -1
+ENDSELECT
+
+
+RESTART
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE380_2_9
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(380)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM380_2_9
+;ここには到達しない
+
+
+@条例関数_居住区の基本方針()
+#FUNCTIONS
+#DIMS HTML文字列
+
+HTML文字列 = <br>■居住区基本方针<br>
+HTML文字列 += "　当前方针："
+SELECTCASE 条例発布:0
+	CASE 0
+		HTML文字列 += "放任自主管理<br>"
+		HTML文字列 += "　　不进行任何指示，完全交由居住者自主管理的方针。<br>"
+		HTML文字列 += "　　效果：无<br>"
+	CASE 1
+		HTML文字列 += "重视上镜效果的旅游城市<br>"
+		HTML文字列 += "　　着力打造氛围感十足的街景，禁止破坏景观的建筑物和摆设的方针。<br>"
+		HTML文字列 += "　　效果：每日结束时由普通游客带来的评价提升。<br>"
+	CASE 2
+		HTML文字列 += "重视经济的商业都市<br>"
+		HTML文字列 += "　　优先招商引资，促进岛屿经济循环的方针。<br>"
+		HTML文字列 += "　　效果：每日结束时若度假区卢比收支为盈余，<br>　　　　　则增收部分提升至1.2倍。<br>"
+	CASE 3
+		HTML文字列 += "自给自足的农业都市<br>"
+		HTML文字列 += "　　致力于提高粮食产量，提升岛屿自给率的方针。<br>"
+		HTML文字列 += "　　效果：开发菜单时料理等级＋１。强化「进行烧烤」指令效果。<br>"
+ENDSELECT
+HTML文字列 += "<br>"
+
+IF 条例発布:0 == 0
+	HTML文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[200] 放任自主管理</font>"
+ELSE
+	HTML文字列 += "<button value='200'>[200] 放任自主管理</button>"
+ENDIF
+HTML文字列 += "<br>"
+IF 条例発布:0 == 1
+	HTML文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[201] 重视上镜效果的旅游城市</font>"
+ELSE
+	HTML文字列 += "<button value='201'>[201] 重视上镜效果的旅游城市</button>"
+ENDIF
+HTML文字列 += "<br>"
+IF 条例発布:0 == 2
+	HTML文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[202] 重视经济的商业都市</font>"
+ELSE
+	HTML文字列 += "<button value='202'>[202] 重视经济的商业都市</button>"
+ENDIF
+HTML文字列 += "<br>"
+IF 条例発布:0 == 3
+	HTML文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[203] 自给自足的农业都市</font>"
+ELSE
+	HTML文字列 += "<button value='203'>[203] 自给自足的农业都市</button>"
+ENDIF
+HTML文字列 += "<br>"
+
+RETURNF HTML文字列
+
+@条例関数_操作_100(受け渡し数値)
+#DIM 受け渡し数値
+
+条例発布:0 = 受け渡し数値 - 200
+
+RETURN 0

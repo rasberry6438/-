@@ -1,0 +1,417 @@
+﻿
+;-------------------------------------------------
+;魚周りの処理をまとめる
+;-------------------------------------------------
+;魚の効力
+;-------------------------------------------------
+@食材効力(ARGS)
+#FUNCTION
+
+;食材を食事に追加した際、歓楽ソースがどのくらい増えるかを返す
+SELECTCASE ARGS
+	CASE "小鱼"
+		RETURNF 20
+	CASE "紫纹蓝壳蟹"
+		RETURNF 30
+	CASE "巨颚鲳"
+		RETURNF 40
+	CASE "虹鳟鱼"
+		RETURNF 100
+	CASE "三文鱼"
+		RETURNF 120
+	CASE "鳗鱼"
+		RETURNF 140
+	CASE "香鱼"
+		RETURNF 160
+	CASE "山女鱼"
+		RETURNF 180
+	CASE "红点鲑"
+		RETURNF 200
+	CASE "蛋白石虾"
+		RETURNF 250
+	CASEELSE
+		;未設定時の食材は50を返す
+		RETURNF 50
+ENDSELECT
+
+;-------------------------------------------------
+;解説表示
+;-------------------------------------------------
+@簡易釣りモード説明
+DRAWLINE
+PRINTL 
+PRINTL 立即获得钓鱼结果
+PRINTL 钓获鱼种将从已解锁鱼类中随机选择
+PRINTL 注意：在未解锁任何鱼类的钓点使用简易模式将无法获得收获
+PRINTL 
+PRINTFORML 可钓获鱼种数量取决于%CALLNAME:MASTER%的钓鱼技能及同行角色的钓鱼技能
+PRINTL 钓鱼技能会随着累计钓鱼经验达到阈值后提升
+PRINTW 拥有「垂钓精通」天赋的角色可增加可钓获鱼种数量
+
+@ちゃんと釣りモード説明
+DRAWLINE
+PRINTL 
+PRINTL 通过记忆翻牌小游戏进行钓鱼
+PRINTL 在规定翻牌次数内配对卡牌，根据成功配对的稀有度获得对应鱼类
+PRINTW 可单人进行，但组队钓鱼将增加翻牌次数
+DRAWLINE
+PRINTL 
+PRINTL 卡牌总数为２４张１２组
+PRINTL 包含：Ｎ卡１２张６组・Ｒ卡６张３组
+PRINTL ＳＲ卡４张２组・ＳＳＲ卡２张１组
+PRINTL 
+PRINTW 成功配对的卡组稀有度越高，获得珍稀鱼类的概率越大
+DRAWLINE
+PRINTL 
+PRINTFORML 翻牌次数取决于%CALLNAME:MASTER%的钓鱼技能及同行角色的钓鱼技能
+PRINTL 钓鱼技能会随着累计钓鱼经验达到阈值后提升
+PRINTW 拥有「垂钓精通」天赋的角色可增加翻牌次数
+
+
+
+;-------------------------------------------------
+;簡易釣りモード処理
+;-------------------------------------------------
+@簡易釣りモード(場所番号)
+#DIM 場所番号
+#DIMS 釣れる魚種類, 20
+#DIM 魚候補, 20
+#DIM 総確率
+#DIM 個別確率, 20
+#DIM 候補の数
+#DIM 釣果, 50
+
+VARSET 釣れる魚種類
+VARSET 魚候補
+VARSET 総確率
+VARSET 個別確率
+VARSET 候補の数
+VARSET 釣果
+VARSET LOCAL
+
+;場所ごとに釣れる魚をセット
+;釣れる魚種類:0が最も釣れ易く、数字が増えるにつれ釣れづらくなる
+SELECTCASE 場所番号
+	CASE 305
+		釣れる魚種類:1 = 小鱼
+		釣れる魚種類:2 = 紫纹蓝壳蟹
+		釣れる魚種類:3 = 巨颚鲳
+		釣れる魚種類:4 = 虹鳟鱼
+		釣れる魚種類:5 = 三文鱼
+		釣れる魚種類:6 = 鳗鱼
+		釣れる魚種類:7 = 香鱼
+		釣れる魚種類:8 = 山女鱼
+		釣れる魚種類:9 = 红点鲑
+		釣れる魚種類:10 = 蛋白石虾
+	CASE 6
+		釣れる魚種類:1 = 小鱼
+		釣れる魚種類:2 = 紫纹蓝壳蟹
+		釣れる魚種類:3 = 巨颚鲳
+		釣れる魚種類:4 = 海胆
+		釣れる魚種類:5 = 飞蚝
+		釣れる魚種類:6 = 乌贼
+		釣れる魚種類:7 = 跃鲑
+		釣れる魚種類:8 = 飞鲔
+		釣れる魚種類:9 = 鲣鱼
+		釣れる魚種類:10 = 长鳍金枪鱼
+ENDSELECT
+
+;釣ったことがあるかどうか判定
+FOR LOCAL, 1, 20
+	SIF 釣れる魚種類:LOCAL == ""
+		BREAK
+	IF 素材アイテム_数値データ取得("累計入手素材数", 釣れる魚種類:LOCAL)
+		候補の数 += 1
+		魚候補:候補の数 = LOCAL
+	ENDIF
+NEXT
+
+IF 候補の数 == 0
+	PRINTW 什么都没钓到
+	RETURN 0
+ENDIF
+
+;釣れる魚の数を産出
+RFLAG:コマンド結果受渡し変数２ = RAND:5 + ABL:PLAYER:釣り技能
+RFLAG:コマンド結果受渡し変数２ += (知識素質:PLAYER:釣り好き * 3)
+IF TARGET
+	RFLAG:コマンド結果受渡し変数２ += RAND:5 + ABL:TARGET:釣り技能
+	RFLAG:コマンド結果受渡し変数２ += (知識素質:TARGET:釣り好き * 3)
+ENDIF
+;最低１保障
+RFLAG:コマンド結果受渡し変数２ = MAX(RFLAG:コマンド結果受渡し変数２, 1)
+
+;確率の作成
+総確率 = SUMARRAY(魚候補, 1, 20)
+FOR LOCAL, 1, 21
+	SIF !魚候補:LOCAL
+		BREAK
+	個別確率:LOCAL = 魚候補:(候補の数 - LOCAL + 1)
+NEXT
+
+;魚種類の決定
+FOR LOCAL, 0, RFLAG:コマンド結果受渡し変数２
+	LOCAL:1 = RAND:総確率
+	LOCAL:3 = 0
+	FOR LOCAL:2, 候補の数, 0, -1
+		LOCAL:3 += 個別確率:(LOCAL:2)
+		IF LOCAL:1 < LOCAL:3
+			釣果:(魚候補:(LOCAL:2)) += 1
+			BREAK
+		ENDIF
+	NEXT
+NEXT
+
+;入手物記述
+FOR LOCAL, 0, 20
+	IF 釣果:LOCAL
+		PRINTFORML 收获了{釣果:LOCAL}条%釣れる魚種類:LOCAL%！
+		CALL 素材入手処理(釣れる魚種類:LOCAL, 釣果:LOCAL)
+	ENDIF
+NEXT
+
+EXP:MASTER:釣り経験 += RFLAG:コマンド結果受渡し変数２
+SIF TARGET
+	EXP:TARGET:釣り経験 += RFLAG:コマンド結果受渡し変数２
+
+;-------------------------------------------------
+;ちゃんと釣りモード処理
+;-------------------------------------------------
+@ちゃんと釣りモード(場所番号)
+#DIM 場所番号
+#DIMS 釣れる魚種類, 20
+#DIM 候補の数
+#DIM 配置カード, 24
+#DIM 表カード位置, 2
+#DIM 釣り回数
+#DIM 釣果, 50
+#DIM クリア基準
+
+VARSET 釣れる魚種類
+VARSET 配置カード
+VARSET 釣果
+VARSET LOCAL
+
+;場所ごとに釣れる魚をセット
+;釣れる魚種類:0が最も釣れ易く、数字が増えるにつれ釣れづらくなる
+SELECTCASE 場所番号
+	CASE 305
+		釣れる魚種類:1 = 小鱼
+		釣れる魚種類:2 = 紫纹蓝壳蟹
+		釣れる魚種類:3 = 巨颚鲳
+		釣れる魚種類:4 = 虹鳟鱼
+		釣れる魚種類:5 = 三文鱼
+		釣れる魚種類:6 = 鳗鱼
+		釣れる魚種類:7 = 香鱼
+		釣れる魚種類:8 = 山女鱼
+		釣れる魚種類:9 = 红点鲑
+		釣れる魚種類:10 = 蛋白石虾
+		候補の数 = 10
+	CASE 6
+		釣れる魚種類:1 = 小鱼
+		釣れる魚種類:2 = 紫纹蓝壳蟹
+		釣れる魚種類:3 = 巨颚鲳
+		釣れる魚種類:4 = 海胆
+		釣れる魚種類:5 = 飞蚝
+		釣れる魚種類:6 = 乌贼
+		釣れる魚種類:7 = 跃鲑
+		釣れる魚種類:8 = 飞鲔
+		釣れる魚種類:9 = 鲣鱼
+		釣れる魚種類:10 = 长鳍金枪鱼
+		候補の数 = 10
+ENDSELECT
+
+;何回カードをめくれるかをセット
+釣り回数 = (ABL:PLAYER:釣り技能 * 2) + 3
+釣り回数 += (知識素質:PLAYER:釣り好き * 3)
+IF TARGET
+	釣り回数 += (ABL:TARGET:釣り技能 * 2) + 1
+	釣り回数 += (知識素質:TARGET:釣り好き * 3)
+ENDIF
+
+;神経衰弱カード配置を設定
+FOR LOCAL, 0, 24
+	$CARD_LOOP
+	SELECTCASE RAND:24
+		CASE IS < 12
+			SIF LOCAL:1 >= 12
+				GOTO CARD_LOOP
+			配置カード:LOCAL = 1
+			LOCAL:1 += 1
+		CASE IS < 18
+			SIF LOCAL:2 >= 6
+				GOTO CARD_LOOP
+			配置カード:LOCAL = 2
+			LOCAL:2 += 1
+		CASE IS < 22
+			SIF LOCAL:3 >= 4
+				GOTO CARD_LOOP
+			配置カード:LOCAL = 3
+			LOCAL:3 += 1
+		CASEELSE
+			SIF LOCAL:4 >= 2
+				GOTO CARD_LOOP
+			配置カード:LOCAL = 4
+			LOCAL:4 += 1
+	ENDSELECT
+NEXT
+
+;どこを表にしているかの数値をリセット
+表カード位置:0 = -1
+表カード位置:1 = -1
+
+;カードの描画
+$描画_LOOP
+クリア基準 = LINECOUNT
+
+DRAWLINE
+PRINTL 
+
+PRINTFORML 剩余钓鱼次数：{釣り回数}
+
+LOCAL:1 = 0
+LOCAL:2 = 0
+FOR LOCAL, 0, 24
+	IF 配置カード:LOCAL == -1
+		CALL ダミーセット( 0, 5, 50)
+		LOCAL:1 += 1
+		LOCAL:2 += 1
+	ELSEIF 表カード位置:0 == LOCAL
+		SELECTCASE 配置カード:LOCAL
+			CASE 1
+				CALL 画像セット("ノーマル", 0, 5, 200)
+			CASE 2
+				CALL 画像セット("レア", 0, 5, 200)
+			CASE 3
+				CALL 画像セット("ＳＲ", 0, 5, 200)
+			CASE 4
+				CALL 画像セット("ＳＳＲ", 0, 5, 200)
+		ENDSELECT
+	ELSEIF 表カード位置:1 == LOCAL
+		SELECTCASE 配置カード:LOCAL
+			CASE 1
+				CALL 画像セット("ノーマル", 0, 5, 200)
+			CASE 2
+				CALL 画像セット("レア", 0, 5, 200)
+			CASE 3
+				CALL 画像セット("ＳＲ", 0, 5, 200)
+			CASE 4
+				CALL 画像セット("ＳＳＲ", 0, 5, 200)
+		ENDSELECT
+	ELSE
+		CALL 画像セット_P("白抜き", 0, 5, 100, 100, 1, TOSTR(LOCAL))
+	ENDIF
+	IF ((LOCAL + 1) % 6) == 0
+		CALL 画像一斉表示("left", 0, 1)
+		IF LOCAL:2 == 6
+			PRINTL 
+			PRINTL 
+			PRINTL 
+			PRINTL 
+		ENDIF
+		LOCAL:2 = 0
+	ENDIF
+NEXT
+
+
+;カードが全部なくなったら残り回数分魚を手に入れて終了
+IF LOCAL:1 == 24
+	PRINTL 该区域的鱼似乎已被钓尽！
+	GOTO 釣りリザルト
+ENDIF
+
+
+DRAWLINE
+PRINTL 
+
+
+IF 表カード位置:1 >= 0
+	;二枚空いてるはずなので次へ進む
+ELSEIF 表カード位置:0 >= 0
+	INPUT
+	;一枚空いてるハズなので二枚目をめくって描画へ
+	SIF RESULT >= 0 && RESULT <= 23 && 配置カード:RESULT != -1
+			表カード位置:1 = RESULT
+	CLEARLINE LINECOUNT - クリア基準
+	GOTO 描画_LOOP
+ELSEIF 表カード位置:0 == -1
+	INPUT
+	;どこも空いて無いはずなので一枚目をめくって描画へ
+	SIF RESULT >= 0 && RESULT <= 23 && 配置カード:RESULT != -1
+			表カード位置:0 = RESULT
+	CLEARLINE LINECOUNT - クリア基準
+	GOTO 描画_LOOP
+ENDIF
+
+;カードの当たり外れ判定
+LOCAL = 0
+IF 配置カード:(表カード位置:0) == 配置カード:(表カード位置:1)
+	;当たり
+	SELECTCASE 配置カード:(表カード位置:0)
+		CASE 1
+			PRINTL 普通的鱼
+			;候補のうち、下位４割が登場
+			LOCAL = (候補の数 * 2) / 5
+			LOCAL = RAND:LOCAL + 1
+		CASE 2
+			PRINTL 不错的鱼！
+			;候補のうち、上位６割が登場（最上位は出ない）
+			LOCAL = (候補の数 / 3) + 1
+			LOCAL = RAND:(候補の数 - LOCAL) + LOCAL + 1
+			SIF LOCAL == 10
+				LOCAL -= RAND:2 + 1
+		CASE 3
+			PRINTL 较为珍稀的鱼！
+			;候補のうち、上位３割が登場
+			LOCAL = (候補の数 / 3) * 2 + 1
+			LOCAL = RAND:(候補の数 - LOCAL) + LOCAL + 1
+		CASE 4
+			PRINTL 非常罕见的鱼！！
+			;候補の最上位確定
+			LOCAL = 候補の数
+	ENDSELECT
+	
+	LOCAL:1 = RAND:2 + 1
+	PRINTFORMW 钓获{LOCAL:1}条%釣れる魚種類:LOCAL%！
+	釣果:LOCAL += LOCAL:1
+	
+	;当たったカードを削除
+	配置カード:(表カード位置:0) = -1
+	配置カード:(表カード位置:1) = -1
+	釣り回数 -= 1
+ELSE
+	;ハズレ
+	PRINTW 什么都没钓到…
+	釣り回数 -= 1
+ENDIF
+
+;回数がまだあるなら再チャレンジ
+IF 釣り回数 > 0
+	表カード位置:0 = -1
+	表カード位置:1 = -1
+	CLEARLINE LINECOUNT - クリア基準
+	GOTO 描画_LOOP
+ENDIF
+
+$釣りリザルト
+;回数かカードが枯渇したらリザルト
+DRAWLINE
+
+PRINTL 本次钓鱼总计
+FOR LOCAL, 0, 20
+	IF 釣果:LOCAL
+		PRINTFORML 收获了{釣果:LOCAL}条%釣れる魚種類:LOCAL%！
+		CALL 素材入手処理(釣れる魚種類:LOCAL, 釣果:LOCAL)
+		RFLAG:コマンド結果受渡し変数２ += 釣果:LOCAL
+	ENDIF
+NEXT
+
+EXP:MASTER:釣り経験 += RFLAG:コマンド結果受渡し変数２
+SIF RFLAG:コマンド結果受渡し変数２ == 0
+	EXP:MASTER:釣り経験 += 1
+IF TARGET
+	EXP:TARGET:釣り経験 += RFLAG:コマンド結果受渡し変数２
+	SIF RFLAG:コマンド結果受渡し変数２ == 0
+		EXP:MASTER:釣り経験 += 1
+ENDIF
+

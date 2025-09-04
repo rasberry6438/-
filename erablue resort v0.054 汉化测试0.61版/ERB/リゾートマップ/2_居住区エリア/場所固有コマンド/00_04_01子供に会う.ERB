@@ -1,0 +1,390 @@
+﻿
+;-------------------------------------------------
+;与孩子见面
+;-------------------------------------------------
+@COMNAME_PLACE_380_2_4
+#FUNCTION
+TSTR:コマンド名受渡 = 与孩子见面
+RETURNF 1
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_380_2_4
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+
+@COM_TOOLTIP_380_2_4
+LOCALS = <br>■与孩子见面<br>
+LOCALS += "前往托儿所与孩子互动的指令。"
+LOCALS += "<br>COM类型：可单独执行<br>获取来源：欢乐(一定条件時)・爱情(一定条件時)・征服"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM380_2_4
+#DIM ページ
+
+ページ = 0
+$INPUT_LOOP
+
+DRAWLINE
+PRINTL 要见哪个孩子呢？
+PRINTL 
+
+CALL 子供一覧表示(TARGET, ページ)
+BINPUT
+SELECTCASE RESULT
+	CASE -1
+		RFLAG:コマンド結果受渡し変数 = -999
+		RETURN -1
+	CASE -2
+		CLEARLINE 1
+		ページ ++
+		GOTO INPUT_LOOP
+	CASE -3
+		CLEARLINE 1
+		ページ --
+		GOTO INPUT_LOOP
+	CASE IS > 0
+		RFLAG:コマンド結果受渡し変数２ = RESULT
+		CLEARLINE 1
+		SIF !保育所子供_チェック(TARGET, RFLAG:コマンド結果受渡し変数２)
+			GOTO INPUT_LOOP
+	CASEELSE
+		GOTO INPUT_LOOP
+ENDSELECT
+
+CALL 子供アクション(RFLAG:コマンド結果受渡し変数２)
+RFLAG:コマンド結果受渡し変数 = RESULT
+
+TIME += 30
+
+SIF TARGET <= 0
+	RETURN 1
+
+;歓楽or愛情強度
+LOCAL:0 = 500
+;征服
+LOCAL:1 = 100
+
+SELECTCASE RFLAG:コマンド結果受渡し変数
+	CASE -1
+		;失敗
+		TIMES LOCAL:0 , 0.10
+		TIMES LOCAL:1 , 0.50
+	CASE 0
+		;成功
+		TIMES LOCAL:0 , 1.00
+		TIMES LOCAL:1 , 1.00
+	CASE 1
+		;大成功
+		TIMES LOCAL:0 , 2.00
+		TIMES LOCAL:1 , 2.00
+	CASE 9
+		;眠っていた
+		TIMES LOCAL:0 , 0.80
+		TIMES LOCAL:1 , 1.50
+ENDSELECT
+
+IF RFLAG:コマンド結果受渡し変数 == 9
+	;子供が寝ていた場合、愛情ソースに変化
+	CALL SOURCE_CALC_愛情(TARGET, PLAYER, LOCAL:0)
+ELSE
+	CALL SOURCE_CALC_歓楽(TARGET, PLAYER, LOCAL:0)
+ENDIF
+CALL SOURCE_CALC_征服(TARGET, PLAYER, LOCAL:1)
+
+CALL SOURCE_CALC_好感度要素_信頼度UP(TARGET, PLAYER, LOCAL:0)
+CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, LOCAL:0 / 4)
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE380_2_4
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(380)
+	RETURN RESULT
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+;7時～18時まで
+SIF TIME < 420 || 1080 < TIME
+	RETURN 0
+;子供がいないとダメ
+SIF !保育所子供_チェック(TARGET)
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM380_2_4
+#DIM MASTERの子
+
+SIF RFLAG:コマンド結果受渡し変数 == -999
+	RETURN 1
+
+MASTERの子 = (GET_PERSON_母親(RFLAG:コマンド結果受渡し変数２) == CFLAG:MASTER:人物番号) || (GET_PERSON_父親(RFLAG:コマンド結果受渡し変数２) == CFLAG:MASTER:人物番号)
+IF TARGET > 0 && MASTERの子
+	PRINTFORML %CALLNAME:PLAYER%与%CALLNAME:TARGET%前去探望孩子。
+	SELECTCASE RFLAG:コマンド結果受渡し変数
+		CASE -1
+			;失敗
+			PRINTFORML %GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%突然哭闹起来，两人慌忙哄劝……
+		CASE 0
+			;成功
+			PRINTFORML 望着%GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%活泼玩耍的模样，两人促膝长谈良久……
+		CASE 1
+			;大成功
+			PRINTFORML 看到%GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%欢欣雀跃的样子，两人也感到由衷喜悦……
+		CASE 9
+			;眠っていた
+			PRINTFORML 凝视%GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%安详入睡的容颜，两人内心充满宁静……
+	ENDSELECT
+ELSEIF TARGET > 0
+	PRINTFORML %CALLNAME:PLAYER%与%CALLNAME:TARGET%前去探望孩子。
+	SELECTCASE RFLAG:コマンド結果受渡し変数
+		CASE -1
+			;失敗
+			PRINTFORML %GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%开始闹脾气，被%CALLNAME:TARGET%训斥了……
+		CASE 0
+			;成功
+			PRINTFORML %CALLNAME:TARGET%温柔抚摸嬉闹的%GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%，%CALLNAME:PLAYER%从中感受到生命的美好……
+		CASE 1
+			;大成功
+			PRINTFORML 因%GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%展露笑颜，%CALLNAME:TARGET%向%CALLNAME:PLAYER%表达了谢意……
+		CASE 9
+			;眠っていた
+			PRINTFORML %CALLNAME:TARGET%轻抚安睡的%GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%，%CALLNAME:PLAYER%在此情此景中体悟到生命的奇迹……
+	ENDSELECT
+ELSE
+	PRINTFORML %CALLNAME:PLAYER%独自前去探望孩子。
+	SELECTCASE RFLAG:コマンド結果受渡し変数
+		CASE -1
+			;失敗
+			PRINTFORML %GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%突然哭闹，急忙安抚照料……
+		CASE 0
+			;成功
+			PRINTFORML 饶有兴致地观赏%GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%活力四射的玩耍模样……
+		CASE 1
+			;大成功
+			PRINTFORML %GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%天真烂漫的笑容让%CALLNAME:PLAYER%倍感欣慰……
+		CASE 9
+			;眠っていた
+			PRINTFORML 凝视%GET_PERSON_呼び名(RFLAG:コマンド結果受渡し変数２)%恬静安眠的姿态，%CALLNAME:PLAYER%心中泛起温柔涟漪……
+	ENDSELECT
+ENDIF
+
+
+@保育所子供_フィルタ(対象キャラ = -1, 対象ID = -1)
+#FUNCTIONS
+#DIM 対象キャラ
+#DIM 対象ID
+#DIMS FILTER
+
+;呼び名付き、生年日がある、ナンバーのない人物（非キャラクタ）だけが保育所にいる
+FILTER '= "呼び名 Is Not Null And 生年日 Is Not Null And ナンバー Is Null"
+
+SIF 対象ID > 0
+	FILTER '= @"id = {対象ID} And " + FILTER
+
+IF 対象キャラ > 0
+	;キャラと一緒ならその子供とだけ会える
+	FILTER += @" And (母親 = {CFLAG:対象キャラ:人物番号} Or 父親 = {CFLAG:対象キャラ:人物番号})"
+ELSE
+	;単独なら任意の子供と会える
+	FILTER += " And (母親 Is Not Null Or 父親 Is Not Null)"
+ENDIF
+
+RETURNF FILTER
+
+@保育所子供_チェック(対象キャラ = -1, 対象ID = -1)
+#FUNCTION
+#DIM 対象キャラ
+#DIM 対象ID
+#DIM CHILD_COUNT
+#DIM TMP_CHILDREN, 1
+
+CHILD_COUNT = DT_SELECT("人物データベース", 保育所子供_フィルタ(対象キャラ, 対象ID), , TMP_CHILDREN)
+SIF CHILD_COUNT > 0
+	RETURNF 1
+RETURNF 0
+
+
+@子供一覧表示(対象キャラ, ページ, 追加条件 = "")
+#DIM CONST 子供表示人数 = 20
+#DIM 対象キャラ
+#DIM ページ
+#DIMS 追加条件
+#DIM CHILD_COUNT
+#DIM BIRTHDAY
+#DIM LAP
+#DIM MOTHER
+#DIM FATHER
+
+DT_SELECT "人物データベース", 保育所子供_フィルタ(対象キャラ), "出生順 DESC, 出会った周回 ASC, 生年日 ASC, 母親 ASC, 父親 ASC"
+CHILD_COUNT = RESULT
+
+FOR LOCAL, (1 + 子供表示人数 * ページ), MIN(1 + CHILD_COUNT, 1 + 子供表示人数 * (ページ + 1))
+	LOCALS '= GET_PERSON_呼び名(RESULT:LOCAL)
+	LOCALS += " "
+	SELECTCASE GET_PERSON_性別(RESULT:LOCAL)
+		CASE 1
+			LOCALS += "(♀)"
+		CASE 2
+			LOCALS += "(♂)"
+		CASE 3
+			LOCALS += "(♀?)"
+		CASEELSE
+			LOCALS += "(？)"
+	ENDSELECT
+	LOCALS = %LOCALS, 24, LEFT%
+
+	BIRTHDAY = GET_PERSON_生年日(RESULT:LOCAL)
+	LAP = GET_PERSON_出会った周回(RESULT:LOCAL)
+	SIF LAP >= 0 && LAP != 周回回数累計:0
+		LOCALS += @" 第{LAP + 1}周目"
+	LOCALS += @" 第{BIRTHDAY / 120 + 1}年 %月登録:((BIRTHDAY / 30) % 4)% {BIRTHDAY % 30 + 1}日(%曜日登録:(BIRTHDAY % 7)%)诞生"
+
+	MOTHER = GET_PERSON_母親(RESULT:LOCAL)
+	FATHER = GET_PERSON_父親(RESULT:LOCAL)
+	IF FATHER != 0
+		SIF MOTHER != 0 && MOTHER != FATHER
+			LOCALS += @"%GET_PERSON_呼び名_代替あり(MOTHER)%与"
+		LOCALS += @"%GET_PERSON_呼び名_代替あり(FATHER)%的孩子"
+	ELSEIF MOTHER != 0
+		LOCALS += @"%GET_PERSON_呼び名_代替あり(MOTHER)%的孩子"
+	ELSE
+		LOCALS += "某人的孩子"
+	ENDIF
+
+	IF 追加条件 != ""
+		CALLFORM 子供一覧表示_追加条件_%追加条件%(RESULT:LOCAL)
+		IF !RESULT
+			SETCOLOR カラーパレット("グレーアウト")
+			PRINTPLAINFORM %LOCALS%
+			RESETCOLOR
+		ELSE
+			PRINTBUTTON LOCALS, RESULT:LOCAL
+		ENDIF
+	ELSE
+		PRINTBUTTON LOCALS, RESULT:LOCAL
+	ENDIF
+	PRINTL 
+NEXT
+
+IF ページ > 0
+	PRINTBUTTONLC "[上一页]", -3
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTLC [上一页]
+	RESETCOLOR
+ENDIF
+IF RESULT:(1 + 子供表示人数 * (ページ + 1)) > 0
+	PRINTBUTTONLC "[下一页]", -2
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTLC [下一页]
+	RESETCOLOR
+ENDIF
+PRINTBUTTONLC "[取消]", -1
+PRINTL
+
+
+@子供アクション(CHILD_ID)
+#DIM CHILD_ID
+#DIM MASTERの子
+
+MASTERの子 = (GET_PERSON_母親(CHILD_ID) == CFLAG:MASTER:人物番号) || (GET_PERSON_父親(CHILD_ID) == CFLAG:MASTER:人物番号)
+
+IF (510 <= TIME && TIME <= 570) || (780 <= TIME && TIME <= 900)
+	PRINTL 
+	;8時半～9時半、13時～15時は寝ている
+	PRINTFORML %GET_PERSON_呼び名(CHILD_ID)%正甜甜地酣睡着。
+	RETURN 9
+ENDIF
+
+$INPUT_LOOP
+PRINTL 
+PRINTFORML %GET_PERSON_呼び名(CHILD_ID)%正活力满满地玩耍。
+PRINTBUTTONLC "[1]搭话", 1
+PRINTBUTTONLC "[2]赠送礼物", 2
+PRINTL 
+
+BINPUT
+
+PRINTL 
+IF RESULT == 1
+	IF MASTERの子 || RAND:2
+		PRINTFORML %GET_PERSON_呼び名(CHILD_ID)%朝你绽开了笑容！
+		;成功
+		RETURN 0
+	ELSE
+		PRINTFORML %GET_PERSON_呼び名(CHILD_ID)%突然哭了起来…
+		;失敗
+		RETURN -1
+	ENDIF
+ELSEIF RESULT == 2
+	CALL 子供プレゼント(CHILD_ID)
+	SIF RESULT == -1
+		GOTO INPUT_LOOP
+	SELECTCASE RESULTS
+		CASE "興味なし"
+			PRINTFORML %GET_PERSON_呼び名(CHILD_ID)%对礼物毫无兴趣…
+			;失敗
+			RETURN -1
+		CASE "興味あり"
+			PRINTFORML %GET_PERSON_呼び名(CHILD_ID)%兴致勃勃地打量着礼物
+			IF !MASTERの子 || RAND:2
+				PRINTFORML 但很快注意力就被其他事物吸引走了…
+				;失敗
+				RETURN -1
+			ELSE
+				PRINTFORML …%GET_PERSON_呼び名(CHILD_ID)%玩得很开心！
+				;成功
+				RETURN 0
+			ENDIF
+		CASE "好み"
+			PRINTFORML %GET_PERSON_呼び名(CHILD_ID)%笑逐颜开！
+			PRINTFORML 看来非常中意这份礼物…
+			;大成功
+			RETURN 1
+	ENDSELECT
+ENDIF
+
+
+@子供プレゼント(CHILD_ID)
+#DIM CHILD_ID
+#DIMS カテゴリ配列, 10
+#DIM 選択プレゼント番号
+#DIMS プレゼントアイテム名
+#DIM プレゼント成功率
+
+;まずプレゼントアイテム一覧を出す（食べ物と酒はダメ）
+CALL 素材アイテム一覧表示("プレゼントカテゴリ not in ('', '飲食系', '酒') and 所持素材数 > 0", 1)
+SIF RESULT == -1
+	RETURN -1
+;選択プレゼント番号には行ではなくIDが入っているので注意
+選択プレゼント番号 = RESULT
+DT_CELL_SET "所持素材データベース", 選択プレゼント番号, "所持素材数", DT_CELL_GET("所持素材データベース", 選択プレゼント番号, "所持素材数", 1) - 1, 1
+
+プレゼントアイテム名 '= DT_CELL_GETS("所持素材データベース", 選択プレゼント番号, "素材アイテム名", 1)
+;子供の評価はプレゼントランクに依存しない
+
+;子供の好みカテゴリを取得
+VARSET カテゴリ配列
+SPLIT GET_PERSON_プレゼント好み(CHILD_ID), "_", カテゴリ配列
+
+;好みに含まれているか判定
+IF プレゼントアイテム名 == "电动按摩器"
+	RESULTS = 興味なし
+ELSEIF MATCH(カテゴリ配列, DT_CELL_GETS("所持素材データベース", 選択プレゼント番号, "プレゼントカテゴリ", 1))
+	RESULTS = 好み
+ELSE
+	RESULTS = 興味あり
+ENDIF
+RETURN 0

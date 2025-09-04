@@ -1,0 +1,886 @@
+﻿;-------------------------------------------------
+;３围の関数はそこそこ複雑なので全部ここに置く
+;数値についてはゴールデンカノン (胸圍 = 身高*0.54, 腰圍 = 身高*0.38, 臀圍 = 身高*0.54)を参考
+;池面の3sizeは胸圍 = 身高*0.52, 腰圍 = 身高*0.41, 臀圍 = 身高*0.51とする
+;-------------------------------------------------
+;平常時の３围を記録する関数。
+;変化している場合は再計測が入ってBASEとTALENTが設定し直される。
+;-------------------------------------------------
+@MEMO_3SIZE, ARG
+#DIM LCOUNT
+#DIMS TEXT_3SIZE
+
+;最初に、記録されていた３围を消去する。以下の文字列の要素が記録されるものの種類
+TEXT_3SIZE = 身高/胸圍/罩杯/腰圍/臀圍/娇小/高大/貧乳/巨乳/小尻/巨尻
+VARSET LOCALS
+SPLIT TEXT_3SIZE, "/", LOCALS
+
+FOR LCOUNT, 0, 50
+	SELECTCASE LOCALS:LCOUNT
+	CASE ""
+		BREAK
+	CASEELSE
+		CALL DEL_CEVENT_GROUP, LOCALS:LCOUNT, ARG
+	ENDSELECT
+NEXT
+
+;BASE群の記録
+CALL SET_CEVENT, @"身高：{BASE:ARG:身高}", ARG
+CALL SET_CEVENT, @"胸圍：{BASE:ARG:胸圍}", ARG
+CALL SET_CEVENT, @"罩杯：{BASE:ARG:罩杯}", ARG
+CALL SET_CEVENT, @"腰圍：{BASE:ARG:腰圍}", ARG
+CALL SET_CEVENT, @"臀圍：{BASE:ARG:臀圍}", ARG
+
+;TALENT群の記録
+CALL SET_CEVENT, @"娇小：{TALENT:ARG:娇小}", ARG
+CALL SET_CEVENT, @"高大：{TALENT:ARG:高大}", ARG
+CALL SET_CEVENT, @"貧乳：{TALENT:ARG:貧乳}", ARG
+CALL SET_CEVENT, @"巨乳：{TALENT:ARG:巨乳}", ARG
+CALL SET_CEVENT, @"小尻：{TALENT:ARG:小尻}", ARG
+CALL SET_CEVENT, @"巨尻：{TALENT:ARG:巨尻}", ARG
+
+
+
+;-------------------------------------------------
+;CSVに記述された[娇小],[高大],[貧乳],[巨乳],[小尻],[巨尻],[苗条],[豐腴]のみから身高と３围を算出する関数
+;各角色の初期設定で、一度のみ呼ばれる。
+;-------------------------------------------------
+@SET_3SIZE, ARG
+;身高素質からBASE:身高 を算出する。
+;CALL SETFLAG_3SIZE で身高を弄った場合は関数内で CALL CHECK_BWHされて３围が決定される。
+IF TALENT:ARG:高大 == 3
+	CALL SETFLAG_3SIZE, "高大Ⅲ化", ARG
+ELSEIF TALENT:ARG:高大 == 2
+	CALL SETFLAG_3SIZE, "高大Ⅱ化", ARG
+ELSEIF TALENT:ARG:高大
+	CALL SETFLAG_3SIZE, "高大化", ARG
+ELSEIF TALENT:ARG:娇小 == 3
+	CALL SETFLAG_3SIZE, "娇小Ⅲ化", ARG
+ELSEIF TALENT:ARG:娇小 == 2
+	CALL SETFLAG_3SIZE, "娇小Ⅱ化", ARG
+ELSEIF TALENT:ARG:娇小
+	CALL SETFLAG_3SIZE, "娇小化", ARG
+ELSE
+	CALL SETFLAG_3SIZE, "普通体型化", ARG
+ENDIF
+
+;最後にメモ
+CALL MEMO_3SIZE, ARG
+
+
+
+;-------------------------------------------------
+;角色ARGの３围を、BASE:身高と素質の[貧乳],[巨乳], [小尻], [巨尻], [苗条], [豐腴]を元に計測する関数。
+;身高を大きく変更した際に必ず呼ばれる。
+;腰圍を決定したのちに、臀圍と胸圍を素質に応じて決定する。
+;-------------------------------------------------
+@CHECK_BWH, ARG
+;腰圍補正。基準値は380
+#DIM DYNAMIC VALUE_WAIST
+#DIM LCOUNT
+
+IF TALENT:ARG:男性 && COND("伪娘", ARG) == 0
+	VALUE_WAIST = 410
+;少女以下は体のラインがそれほど際立たない
+ELSEIF TALENT:ARG:娇小
+	VALUE_WAIST = 400
+ELSE
+	SELECTCASE AGE(ARG)
+	;大人
+	CASE IS >= 4
+		VALUE_WAIST = 420 + RAND:6
+	;大姐姐
+	CASE 3
+		VALUE_WAIST = 410 + RAND:6
+	CASE 2
+		VALUE_WAIST = 400
+	CASEELSE
+		VALUE_WAIST = 410
+	ENDSELECT
+ENDIF
+
+;腰靈活による腰のくびれ
+VALUE_WAIST -= MIN(RAND:(1 + TALENT:ARG:天性の腰靈活*10), 30)
+;大力士は腰が細め
+SIF TALENT:ARG:大力士
+	VALUE_WAIST -= 10
+;随机変化
+VALUE_WAIST = MULTIPLY(VALUE_WAIST, 90 + RAND:26)
+
+;腰圍の計算。誤差は95～120%+α(理想値よりもちょっと太めが平均)
+BASE:ARG:腰圍 = LIMIT(BASE:ARG:身高*VALUE_WAIST/1000, BASE:ARG:身高*34/100, BASE:ARG:身高*(45 + AGE(ARG))/100)
+;[苗条], [豐腴], [並腹]の指定があるならその範囲内に収める
+IF TALENT:ARG:苗条
+	FOR LCOUNT, 0, 100
+		SIF COND("苗条", ARG)
+			BREAK
+		BASE:ARG:腰圍 -= 1 + RAND:3
+	NEXT
+ELSEIF TALENT:ARG:豐腴
+	FOR LCOUNT, 0, 100
+		SIF COND("豐腴", ARG)
+			BREAK
+		BASE:ARG:腰圍 += 1 + RAND:3
+	NEXT
+ELSEIF TALENT:並腹
+	IF COND("豐腴", ARG)
+		FOR LCOUNT, 0, 100
+			SIF COND("豐腴", ARG) == 0
+				BREAK
+			BASE:ARG:腰圍 -= 1 + RAND:3
+		NEXT
+	ELSEIF COND("苗条", ARG)
+		FOR LCOUNT, 0, 100
+			SIF COND("苗条", ARG) == 0
+				BREAK
+			BASE:ARG:腰圍 += 1 + RAND:3
+		NEXT
+	ENDIF
+ELSE
+	SIF TALENT:ARG:筋肉
+		BASE:ARG:腰圍 += BASE:ARG:身高/50
+	;大姐姐や大人は豐腴したりする
+	IF AGE(ARG) >= 3
+		SELECTCASE RAND:20 + (AGE(ARG) == 3) * RAND:10
+		CASE 0
+			BASE:ARG:腰圍 += BASE:ARG:身高*5/100
+		CASE 1, 2
+			BASE:ARG:腰圍 += BASE:ARG:身高*4/100
+		CASE 3, 4
+			BASE:ARG:腰圍 += BASE:ARG:身高*3/100
+		CASE 5, 6
+			BASE:ARG:腰圍 += BASE:ARG:身高*2/100
+		ENDSELECT
+	ENDIF
+ENDIF
+
+;腰圍を元にBASE:アンダー胸圍 を計算する
+CALL SETFLAG_3SIZE, "アンダー胸圍", ARG
+
+;[男性],[貧乳],[巨乳]でBASE:胸圍, BASE:罩杯 を計算
+IF TALENT:ARG:男性
+	CALL SETFLAG_3SIZE, "男乳化", ARG
+ELSEIF TALENT:ARG:巨乳 >= 3
+	CALL SETFLAG_3SIZE, "超乳化", ARG
+ELSEIF TALENT:ARG:巨乳 == 2
+	CALL SETFLAG_3SIZE, "爆乳化", ARG
+ELSEIF TALENT:ARG:巨乳 == 1
+	CALL SETFLAG_3SIZE, "巨乳化", ARG
+ELSEIF TALENT:ARG:貧乳
+	CALL SETFLAG_3SIZE, "貧乳化", ARG
+ELSE
+	CALL SETFLAG_3SIZE, "並乳化", ARG
+ENDIF
+
+;[小尻], [巨尻]でBASE:臀圍 を計算
+IF TALENT:ARG:巨尻 >= 3
+	CALL SETFLAG_3SIZE, "超尻化", ARG
+ELSEIF TALENT:ARG:巨尻 == 2
+	CALL SETFLAG_3SIZE, "爆尻化", ARG
+ELSEIF TALENT:ARG:巨尻 == 1
+	CALL SETFLAG_3SIZE, "巨尻化", ARG
+ELSEIF TALENT:ARG:小尻
+	CALL SETFLAG_3SIZE, "小尻化", ARG
+ELSE
+	CALL SETFLAG_3SIZE, "並尻化", ARG
+ENDIF
+
+
+;-------------------------------------------------
+;3サイズの変更に伴う調整を行う。先にBASE変化を見て素質を設定し直し、のちに素質を見てBASEを設定し直す（どちらか片方のみが発生する）。
+;-------------------------------------------------
+@CHECK_3SIZE, ARG
+#DIM MEMOBASE_B
+#DIM MEMOBASE_C
+#DIM MEMOBASE_W
+#DIM MEMOBASE_H
+#DIM DYNAMIC CHANGE_B
+#DIM DYNAMIC CHANGE_C
+#DIM DYNAMIC CHANGE_W
+#DIM DYNAMIC CHANGE_H
+
+;現在的３围をメモ
+MEMOBASE_B = BASE:ARG:胸圍
+MEMOBASE_C = BASE:ARG:罩杯
+MEMOBASE_W = BASE:ARG:腰圍
+MEMOBASE_H = BASE:ARG:臀圍
+
+;前回記録した３围と現在値が異なる場合にはTALENTを変更する
+SIF BASE:ARG:胸圍 != TOINT(CEVENTS("胸圍", ARG) )
+	CHANGE_B = 1
+SIF BASE:ARG:罩杯 != TOINT(CEVENTS("罩杯", ARG) )
+	CHANGE_C = 1
+SIF BASE:ARG:腰圍 != TOINT(CEVENTS("腰圍", ARG) )
+	CHANGE_W = 1
+SIF BASE:ARG:臀圍 != TOINT(CEVENTS("臀圍", ARG) )
+	CHANGE_H = 1
+
+
+;まずは身高絡み
+IF BASE:ARG:身高 != TOINT(CEVENTS("身高", ARG) )
+	SIF TFLAG:システム文スキップ == 0
+		PRINTFORML （重新测量%CALLNAME:ARG%的身高、腰围等）
+
+	SELECTCASE BASE:ARG:身高
+	CASE IS <= NUM("娇小Ⅲの上限")
+		TALENT:ARG:高大 = 0
+		TALENT:ARG:娇小 = 3
+	CASE IS <= NUM("娇小Ⅱの上限")
+		TALENT:ARG:高大 = 0
+		TALENT:ARG:娇小 = 2
+	CASE IS <= NUM("娇小の上限")
+		TALENT:ARG:高大 = 0
+		TALENT:ARG:娇小 = 1
+	CASE IS <= NUM("普通の上限")
+		TALENT:ARG:高大 = 0
+		TALENT:ARG:娇小 = 0
+	CASE IS <= NUM("高大の上限")
+		TALENT:ARG:高大 = 1
+		TALENT:ARG:娇小 = 0
+	CASE IS <= NUM("高大Ⅱの上限")
+		TALENT:ARG:高大 = 2
+		TALENT:ARG:娇小 = 0
+	CASEELSE
+		TALENT:ARG:高大 = 3
+		TALENT:ARG:娇小 = 0
+	ENDSELECT
+ELSEIF TALENT:ARG:高大 == 3 && TOINT(CEVENTS("高大", ARG) ) != 3
+	CALL SETFLAG_3SIZE, "高大Ⅲ化", ARG
+ELSEIF TALENT:ARG:高大 == 2 && TOINT(CEVENTS("高大", ARG) ) != 2
+	CALL SETFLAG_3SIZE, "高大Ⅱ化", ARG
+ELSEIF TALENT:ARG:高大 == 1 && TOINT(CEVENTS("高大", ARG) ) != 1
+	CALL SETFLAG_3SIZE, "高大化", ARG
+ELSEIF TALENT:ARG:娇小 == 3 && TOINT(CEVENTS("娇小", ARG) ) != 3
+	CALL SETFLAG_3SIZE, "娇小Ⅲ化", ARG
+ELSEIF TALENT:ARG:娇小 == 2 && TOINT(CEVENTS("娇小", ARG) ) != 2
+	CALL SETFLAG_3SIZE, "娇小Ⅱ化", ARG
+ELSEIF TALENT:ARG:娇小 == 1 && TOINT(CEVENTS("娇小", ARG) ) != 1
+	CALL SETFLAG_3SIZE, "娇小化", ARG
+ELSEIF TALENT:ARG:高大 + TALENT:ARG:娇小 == 0 && TOINT(CEVENTS("高大", ARG) ) + TOINT(CEVENTS("娇小", ARG) ) != 0
+	CALL SETFLAG_3SIZE, "普通体型化", ARG
+ENDIF
+
+;もしも３围のBASE指定がある場合は、体型変化で３围が変化していたなら戻す
+SIF CHANGE_B
+	BASE:ARG:胸圍 = MEMOBASE_B
+SIF CHANGE_C
+	BASE:ARG:罩杯 = MEMOBASE_C
+SIF CHANGE_W
+	BASE:ARG:腰圍 = MEMOBASE_W
+SIF CHANGE_H
+	BASE:ARG:臀圍 = MEMOBASE_H
+
+;次に胸圍絡み。罩杯よりも胸圍優先
+IF BASE:ARG:胸圍 != TOINT(CEVENTS("胸圍", ARG) )
+	SIF TFLAG:システム文スキップ == 0
+		PRINTFORML （%CALLNAME:ARG%の罩杯サイズを測り直します）
+	;胸圍に合った罩杯を再計算する
+	CALL SETFLAG_3SIZE, "罩杯", ARG
+	CALL SETFLAG_3SIZE, "胸圍の素質設定", ARG
+ELSEIF BASE:ARG:罩杯 != TOINT(CEVENTS("罩杯", ARG) )
+	SIF TFLAG:システム文スキップ == 0
+		PRINTFORML （重新测量%CALLNAME:ARG%的胸圍）
+	;罩杯数に合わせて胸圍変更
+	CALL SETFLAG_3SIZE, "胸圍", ARG
+	CALL SETFLAG_3SIZE, "胸圍の素質設定", ARG
+ELSEIF TALENT:ARG:巨乳 == 3 && TOINT(CEVENTS("巨乳", ARG) ) != 3
+	CALL SETFLAG_3SIZE, "超乳化", ARG
+ELSEIF TALENT:ARG:巨乳 == 2 && TOINT(CEVENTS("巨乳", ARG) ) != 2
+	CALL SETFLAG_3SIZE, "爆乳化", ARG
+ELSEIF TALENT:ARG:巨乳 == 1 && TOINT(CEVENTS("巨乳", ARG) ) != 1
+	CALL SETFLAG_3SIZE, "巨乳化", ARG
+ELSEIF TALENT:ARG:貧乳 == 1 && TOINT(CEVENTS("貧乳", ARG) ) != 1
+	CALL SETFLAG_3SIZE, "貧乳化", ARG
+ELSEIF TALENT:ARG:巨乳 + TALENT:ARG:貧乳 == 0 && TOINT(CEVENTS("巨乳", ARG) ) + TOINT(CEVENTS("貧乳", ARG) )!= 0
+	CALL SETFLAG_3SIZE, "並乳化", ARG
+ENDIF
+
+;そしてお尻
+IF BASE:ARG:臀圍 != TOINT(CEVENTS("臀圍", ARG) )
+	SIF TFLAG:システム文スキップ == 0
+		PRINTFORML （%CALLNAME:ARG%の臀圍を測り直します）
+	CALL SETFLAG_3SIZE, "臀圍の素質設定", ARG
+ELSEIF TALENT:ARG:巨尻 == 3 && TOINT(CEVENTS("巨尻", ARG) ) != 3
+	CALL SETFLAG_3SIZE, "超尻化", ARG
+ELSEIF TALENT:ARG:巨尻 == 2 && TOINT(CEVENTS("巨尻", ARG) ) != 2
+	CALL SETFLAG_3SIZE, "爆尻化", ARG
+ELSEIF TALENT:ARG:巨尻 == 1 && TOINT(CEVENTS("巨尻", ARG) ) != 1
+	CALL SETFLAG_3SIZE, "巨尻化", ARG
+ELSEIF TALENT:ARG:小尻 == 1 && TOINT(CEVENTS("小尻", ARG) ) != 1
+	CALL SETFLAG_3SIZE, "小尻化", ARG
+ELSEIF TALENT:ARG:巨尻 + TALENT:ARG:小尻 == 0 && TOINT(CEVENTS("巨尻", ARG) ) + TOINT(CEVENTS("小尻", ARG) )!= 0
+	CALL SETFLAG_3SIZE, "並尻化", ARG
+ENDIF
+
+;最後にメモ
+CALL MEMO_3SIZE, ARG
+
+
+;-------------------------------------------------
+;３围に関するフラグを弄る関数
+;-------------------------------------------------
+@SETFLAG_3SIZE, ARGS, ARG
+#DIM LCOUNT
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+SELECTCASE ARGS
+;"娇小Ⅲ化"～"高大Ⅲ化"は素質を合わせるために呼ばれるので、もしもBASEが適正範囲内だったら変更しない
+;118cm～130cm
+CASE "娇小Ⅲ化"
+	TALENT:ARG:高大 = 0
+	TALENT:ARG:娇小 = 3
+
+	SELECTCASE BASE:ARG:身高
+	CASE 118 TO 130
+	CASEELSE
+		BASE:ARG:身高 = 118 + RAND:13
+	ENDSELECT
+
+	CALL CHECK_BWH, ARG
+
+;131cm～143cm
+CASE "娇小Ⅱ化"
+	TALENT:ARG:高大 = 0
+	TALENT:ARG:娇小 = 2
+
+	SELECTCASE BASE:ARG:身高
+	CASE 131 TO 143
+	CASEELSE
+		BASE:ARG:身高 = 131 + RAND:13
+	ENDSELECT
+
+	CALL CHECK_BWH, ARG
+
+;144cm～152cm
+CASE "娇小化"
+	TALENT:ARG:高大 = 0
+	TALENT:ARG:娇小 = 1
+
+	SELECTCASE BASE:ARG:身高
+	CASE 144 TO 152
+	CASEELSE
+		BASE:ARG:身高 = 144 + RAND:9
+	ENDSELECT
+
+	CALL CHECK_BWH, ARG
+
+;153cm～165cm
+CASE "普通体型化"
+	TALENT:ARG:高大 = 0
+	TALENT:ARG:娇小 = 0
+
+	SELECTCASE BASE:ARG:身高
+	CASE 153 TO 165
+	CASEELSE
+		BASE:ARG:身高 = 153 + RAND:13
+	ENDSELECT
+
+	CALL CHECK_BWH, ARG
+
+;166cm～182cm
+CASE "高大化"
+	TALENT:ARG:高大 = 1
+	TALENT:ARG:娇小 = 0
+
+	SELECTCASE BASE:ARG:身高
+	CASE 166 TO 182
+	CASEELSE
+		BASE:ARG:身高 = 166 + RAND:17
+	ENDSELECT
+
+	CALL CHECK_BWH, ARG
+
+;183cm～199cm
+CASE "高大Ⅱ化"
+	TALENT:ARG:高大 = 2
+	TALENT:ARG:娇小 = 0
+
+	SELECTCASE BASE:ARG:身高
+	CASE 183 TO 199
+	CASEELSE
+		BASE:ARG:身高 = 183 + RAND:17
+	ENDSELECT
+
+	CALL CHECK_BWH, ARG
+
+;200cm～220cm
+CASE "高大Ⅲ化"
+	TALENT:ARG:高大 = 3
+	TALENT:ARG:娇小 = 0
+
+	SELECTCASE BASE:ARG:身高
+	CASE 200 TO 220
+	CASEELSE
+		BASE:ARG:身高 = 200 + RAND:21
+	ENDSELECT
+
+	CALL CHECK_BWH, ARG
+
+
+;身高と腰圍と性別により算出
+CASE "アンダー胸圍"
+	;既に設定されている場合は適正範囲内に調整するのみ
+	IF BASE:ARG:アンダー胸圍
+		BASE:ARG:アンダー胸圍 = LIMIT(BASE:ARG:アンダー胸圍, BASE:ARG:腰圍, BASE:ARG:身高*600/1000)
+	ELSE
+		;身高*0.432は～20代女性の平均値。男性だとそれよりも太めになる（腰圍未満にはならない）
+		IF COND("伪娘", ARG)
+			BASE:ARG:アンダー胸圍 = MAX(BASE:ARG:身高*450/1000, BASE:ARG:腰圍)
+		ELSEIF TALENT:ARG:男性
+			BASE:ARG:アンダー胸圍 = MAX(BASE:ARG:身高*480/1000, BASE:ARG:腰圍*120/100)
+		ELSE
+			BASE:ARG:アンダー胸圍 = MAX(BASE:ARG:身高*432/1000, BASE:ARG:腰圍)
+		ENDIF
+	ENDIF
+;胸圍とアンダー胸圍により算出
+CASE "罩杯"
+	IF TALENT:ARG:乳房 == 0
+		BASE:ARG:罩杯 = 0
+	ELSE
+		BASE:ARG:罩杯 = MAX(0, (BASE:ARG:胸圍 - BASE:ARG:アンダー胸圍)/5*2 + (BASE:ARG:胸圍 - BASE:ARG:アンダー胸圍)%5/3 - 1)
+	ENDIF
+CASE "胸圍"
+	BASE:ARG:胸圍 = BASE:ARG:アンダー胸圍 + RAND_CUP(CONDS("罩杯サイズ", ARG) )
+CASE "胸圍の素質設定"
+	IF TALENT:ARG:乳房 == 0
+		TALENT:ARG:貧乳 = 0
+		TALENT:ARG:巨乳 = 0
+	ELSE
+		SELECTCASE BASE:ARG:罩杯
+		CASE IS <= NUM("貧乳の上限")
+			TALENT:ARG:貧乳 = 1
+			TALENT:ARG:巨乳 = 0
+		CASE IS <= NUM("並乳の上限")
+			TALENT:ARG:貧乳 = 0
+			TALENT:ARG:巨乳 = 0
+		CASE IS <= NUM("巨乳の上限")
+			TALENT:ARG:貧乳 = 0
+			TALENT:ARG:巨乳 = 1
+		CASE IS <= NUM("爆乳の上限")
+			TALENT:ARG:貧乳 = 0
+			TALENT:ARG:巨乳 = 2
+		CASEELSE
+			TALENT:ARG:貧乳 = 0
+			TALENT:ARG:巨乳 = 3
+		ENDSELECT
+	ENDIF
+
+;"男乳化"～"超乳化"は素質を合わせるために呼ばれるので、もしもBASEが適正範囲内だったら変更しない
+;胸のサイズは罩杯依存なので、罩杯を決めたのちにトップ胸圍を決める
+CASE "男乳化"
+	TALENT:ARG:乳房 = 0
+	TALENT:ARG:貧乳 = 0
+	TALENT:ARG:巨乳 = 0
+	BASE:ARG:罩杯 = 0
+
+	SELECTCASE BASE:ARG:胸圍 - BASE:ARG:アンダー胸圍
+	CASE 0 TO BASE:ARG:身高*200/1000
+	CASEELSE
+		BASE:ARG:胸圍 = BASE:ARG:アンダー胸圍 + RAND_CUP(CONDS("罩杯サイズ", ARG) ) + RAND:6
+		SIF TALENT:ARG:筋肉
+			BASE:ARG:胸圍 += 5 + RAND:6 + RAND:6
+	ENDSELECT
+CASE "貧乳化"
+	TALENT:ARG:乳房 = 1
+	TALENT:ARG:貧乳 = 1
+	TALENT:ARG:巨乳 = 0
+	;(1,AAA,5cm)以上(4,Ｂ,13cm)未満
+	SELECTCASE BASE:ARG:罩杯
+	CASE 1 TO 3
+	CASEELSE
+		BASE:ARG:罩杯 = 1 + RAND:3
+	ENDSELECT
+
+	SELECTCASE BASE:ARG:胸圍 - BASE:ARG:アンダー胸圍
+	CASE CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯) ) TO (CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯 + 1) ) - 1)
+	CASEELSE
+		BASE:ARG:胸圍 = BASE:ARG:アンダー胸圍 + RAND_CUP(CONDS("罩杯サイズ", ARG) )
+	ENDSELECT
+CASE "並乳化"
+	TALENT:ARG:乳房 = 1
+	TALENT:ARG:貧乳 = 0
+	TALENT:ARG:巨乳 = 0
+	;(4,Ｂ,13cm)以上(7,Ｅ,20cm)未満
+	SELECTCASE BASE:ARG:罩杯
+	CASE 4 TO 6
+	CASEELSE
+		BASE:ARG:罩杯 = 4 + RAND:3
+	ENDSELECT
+
+	SELECTCASE BASE:ARG:胸圍 - BASE:ARG:アンダー胸圍
+	CASE CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯) ) TO (CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯 + 1) ) - 1)
+	CASEELSE
+		BASE:ARG:胸圍 = BASE:ARG:アンダー胸圍 + RAND_CUP(CONDS("罩杯サイズ", ARG) )
+	ENDSELECT
+CASE "巨乳化"
+	TALENT:ARG:乳房 = 1
+	TALENT:ARG:貧乳 = 0
+	TALENT:ARG:巨乳 = 1
+	;(7,Ｅ,20cm)以上(9～11,Ｇ～Ｉ,25～30cm)未満
+	SELECTCASE BASE:ARG:罩杯
+	CASE 7 TO 8 + CONFIG("巨乳補正")
+	CASEELSE
+		BASE:ARG:罩杯 = 7 + RAND:(CONFIG("巨乳補正") + 2)
+	ENDSELECT
+
+	SELECTCASE BASE:ARG:胸圍 - BASE:ARG:アンダー胸圍
+	CASE CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯) ) TO (CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯 + 1) ) - 1)
+	CASEELSE
+		BASE:ARG:胸圍 = BASE:ARG:アンダー胸圍 + RAND_CUP(CONDS("罩杯サイズ", ARG) )
+	ENDSELECT
+CASE "爆乳化"
+	TALENT:ARG:乳房 = 1
+	TALENT:ARG:貧乳 = 0
+	TALENT:ARG:巨乳 = 2
+	;(9～11,Ｇ～Ｉ,25～30cm)以上(15,Ｍ,40cm)未満
+	SELECTCASE BASE:ARG:罩杯
+	CASE 9 + CONFIG("巨乳補正") TO 14
+	CASEELSE
+		BASE:ARG:罩杯 = 9 + CONFIG("巨乳補正") + RAND:(6 - CONFIG("巨乳補正") )
+	ENDSELECT
+
+	SELECTCASE BASE:ARG:胸圍 - BASE:ARG:アンダー胸圍
+	CASE CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯) ) TO (CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯 + 1) ) - 1)
+	CASEELSE
+		BASE:ARG:胸圍 = BASE:ARG:アンダー胸圍 + RAND_CUP(CONDS("罩杯サイズ", ARG) )
+	ENDSELECT
+CASE "超乳化"
+	TALENT:ARG:乳房 = 1
+	TALENT:ARG:貧乳 = 0
+	TALENT:ARG:巨乳 = 3
+	;(15,Ｍ,40cm)以上
+	SELECTCASE BASE:ARG:罩杯
+	CASE IS >= 15
+	CASEELSE
+		BASE:ARG:罩杯 = 15 + RAND:6
+	ENDSELECT
+
+	SELECTCASE BASE:ARG:胸圍 - BASE:ARG:アンダー胸圍
+	CASE CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯) ) TO (CUPSIZE(TOSTR_CUP(BASE:ARG:罩杯 + 1) ) - 1)
+	CASEELSE
+		BASE:ARG:胸圍 = BASE:ARG:アンダー胸圍 + RAND_CUP(CONDS("罩杯サイズ", ARG) )
+	ENDSELECT
+
+CASE "臀圍の素質設定"
+	;身高比で出す。
+	;(100*BASE:臀圍/BASE:身高)の値が(50以下, 51～53, 54～56, 57～59, 60以上) = (小尻, 並尻, 巨尻, 爆尻, 超尻)
+	SELECTCASE 100*BASE:ARG:臀圍/BASE:ARG:身高
+	CASE IS <= 50
+		TALENT:ARG:小尻 = 1
+		TALENT:ARG:巨尻 = 0
+	CASE IS <= 53
+		TALENT:ARG:小尻 = 0
+		TALENT:ARG:巨尻 = 0
+	CASE IS <= 56
+		TALENT:ARG:小尻 = 0
+		TALENT:ARG:巨尻 = 1
+	CASE IS <= 59
+		TALENT:ARG:小尻 = 0
+		TALENT:ARG:巨尻 = 2
+	CASEELSE
+		TALENT:ARG:小尻 = 0
+		TALENT:ARG:巨尻 = 3
+	ENDSELECT
+;"小尻化"～"超尻化"は素質を合わせるために呼ばれるので、もしもBASEが適正範囲内だったら変更しない
+CASE "小尻化"
+	TALENT:ARG:小尻 = 1
+	TALENT:ARG:巨尻 = 0
+	SELECTCASE BASE:ARG:臀圍
+	CASE 47*BASE:ARG:身高/100 TO (51*BASE:ARG:身高/100 - 1)
+	CASEELSE
+		BASE:ARG:臀圍 = RAND_HIP("小尻", ARG)
+	ENDSELECT
+CASE "並尻化"
+	TALENT:ARG:小尻 = 0
+	TALENT:ARG:巨尻 = 0
+	SELECTCASE BASE:ARG:臀圍
+	CASE 51*BASE:ARG:身高/100 TO (54*BASE:ARG:身高/100 - 1)
+	CASEELSE
+		BASE:ARG:臀圍 = RAND_HIP("並尻", ARG)
+	ENDSELECT
+CASE "巨尻化"
+	TALENT:ARG:小尻 = 0
+	TALENT:ARG:巨尻 = 1
+	SELECTCASE BASE:ARG:臀圍
+	CASE 54*BASE:ARG:身高/100 TO (57*BASE:ARG:身高/100 - 1)
+	CASEELSE
+		BASE:ARG:臀圍 = RAND_HIP("巨尻", ARG)
+	ENDSELECT
+CASE "爆尻化"
+	TALENT:ARG:小尻 = 0
+	TALENT:ARG:巨尻 = 2
+	SELECTCASE BASE:ARG:臀圍
+	CASE 57*BASE:ARG:身高/100 TO (60*BASE:ARG:身高/100 - 1)
+	CASEELSE
+		BASE:ARG:臀圍 = RAND_HIP("爆尻", ARG)
+	ENDSELECT
+CASE "超尻化"
+	TALENT:ARG:小尻 = 0
+	TALENT:ARG:巨尻 = 3
+	SELECTCASE BASE:ARG:臀圍
+	CASE IS >= 60*BASE:ARG:身高/100
+	CASEELSE
+		BASE:ARG:臀圍 = RAND_HIP("超尻", ARG)
+	ENDSELECT
+CASE "豐腴化"
+
+CASE "苗条化"
+
+
+;それ以外は雑多なやつ
+CASEELSE
+	;罩杯サイズ指定
+	IF STRCOUNT(ARGS, "罩杯")
+		ARGS = %REPLACE(ARGS, "罩杯", "")%
+		BASE:ARG:罩杯 = TOINT_CUP(ARGS)
+	ENDIF
+ENDSELECT
+
+
+
+;-------------------------------------------------
+;角色ARGの尻のデカさ区分ARGSに対応した, {BASE:臀圍}を乱数有些で返す関数。
+;(100*BASE:臀圍/BASE:身高)の値が(50以下, 51～53, 54～56, 57～59, 60以上) = (小尻, 並尻, 巨尻, 爆尻, 超尻)
+;-------------------------------------------------
+@RAND_HIP(ARGS, ARG)
+#FUNCTION
+#DIM VALUE_HIP
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+SELECTCASE ARGS
+;初期値は(100*BASE:臀圍/BASE:身高)の値で小尻が50以下なのを踏まえて、47になる値とする
+CASE "小尻"
+	VALUE_HIP = 47*BASE:ARG:身高/100 + RAND:(51*BASE:ARG:身高/100 - 47*BASE:ARG:身高/100)
+CASE "並尻"
+	VALUE_HIP = 51*BASE:ARG:身高/100 + RAND:(54*BASE:ARG:身高/100 - 51*BASE:ARG:身高/100)
+CASE "巨尻"
+	VALUE_HIP = 54*BASE:ARG:身高/100 + RAND:(57*BASE:ARG:身高/100 - 54*BASE:ARG:身高/100)
+CASE "爆尻"
+	VALUE_HIP = 57*BASE:ARG:身高/100 + RAND:(60*BASE:ARG:身高/100 - 57*BASE:ARG:身高/100)
+;最大値は(100*BASE:臀圍/BASE:身高)の値で小尻が60以上なのを踏まえて、64になる値とする
+CASE "超尻"
+	VALUE_HIP = 60*BASE:ARG:身高/100 + RAND:(64*BASE:ARG:身高/100 - 60*BASE:ARG:身高/100)
+ENDSELECT
+
+RETURNF VALUE_HIP
+
+
+;-------------------------------------------------
+;罩杯サイズを表す文字列ARGSに対応した数字を返す
+;-------------------------------------------------
+@TOINT_CUP(ARGS)
+#FUNCTION
+#DIM LCOUNT
+
+VARSET LOCALS
+SPLIT "---, AAA, AA, Ａ, Ｂ, Ｃ, Ｄ, Ｅ, Ｆ, Ｇ, Ｈ, Ｉ, Ｊ, Ｋ, Ｌ, Ｍ, Ｎ, Ｏ, Ｐ, Ｑ, Ｒ, Ｓ, Ｔ, Ｕ, Ｖ, Ｗ, Ｘ, Ｙ, Ｚ, ＺＺ", ", ", LOCALS
+
+FOR LCOUNT, 0, 30
+	SELECTCASE LOCALS:LCOUNT
+	CASE ARGS
+		RETURNF LCOUNT
+	ENDSELECT
+NEXT
+RETURNF 0
+
+;-------------------------------------------------
+;罩杯サイズARGに対応した文字列を返す
+;-------------------------------------------------
+@TOSTR_CUP(ARG)
+#FUNCTIONS
+
+SELECTCASE ARG
+CASE IS <= 0
+	RETURNF "---"
+CASE IS >= 29
+	RETURNF "ＺＺ"
+CASEELSE
+	VARSET LOCALS
+	SPLIT "---, AAA, AA, Ａ, Ｂ, Ｃ, Ｄ, Ｅ, Ｆ, Ｇ, Ｈ, Ｉ, Ｊ, Ｋ, Ｌ, Ｍ, Ｎ, Ｏ, Ｐ, Ｑ, Ｒ, Ｓ, Ｔ, Ｕ, Ｖ, Ｗ, Ｘ, Ｙ, Ｚ", ", ", LOCALS
+	RETURNF LOCALS:ARG
+ENDSELECT
+
+
+;-------------------------------------------------
+;ARGS罩杯に対応した, {BASE:胸圍 - BASE:アンダー胸圍}を返す関数。
+;ARGSには罩杯サイズに対応した字母表顺序を文字列で入れること。
+;字母表顺序と数字の対応が瞬間的に出てきづらいので敢えて羅列形式にする。
+;-------------------------------------------------
+@CUPSIZE(ARGS)
+#FUNCTION
+#DIM VALUE_CUP
+
+;BASE:罩杯に対応した値を５刻みで添えておく
+SELECTCASE ARGS
+CASE ""
+	RETURNF 0
+
+;0
+CASE "---"
+	VALUE_CUP = 1
+CASE "AAA"
+	VALUE_CUP = 5
+CASE "AA"
+	VALUE_CUP = 8
+CASE "Ａ"
+	VALUE_CUP = 10
+CASE "Ｂ"
+	VALUE_CUP = 13
+
+;5
+CASE "Ｃ"
+	VALUE_CUP = 15
+CASE "Ｄ"
+	VALUE_CUP = 18
+CASE "Ｅ"
+	VALUE_CUP = 20
+CASE "Ｆ"
+	VALUE_CUP = 23
+CASE "Ｇ"
+	VALUE_CUP = 25
+
+;10
+CASE "Ｈ"
+	VALUE_CUP = 28
+CASE "Ｉ"
+	VALUE_CUP = 30
+CASE "Ｊ"
+	VALUE_CUP = 33
+CASE "Ｋ"
+	VALUE_CUP = 35
+CASE "Ｌ"
+	VALUE_CUP = 38
+
+;15
+CASE "Ｍ"
+	VALUE_CUP = 40
+CASE "Ｎ"
+	VALUE_CUP = 43
+CASE "Ｏ"
+	VALUE_CUP = 45
+CASE "Ｐ"
+	VALUE_CUP = 48
+CASE "Ｑ"
+	VALUE_CUP = 50
+
+;20
+CASE "Ｒ"
+	VALUE_CUP = 53
+CASE "Ｓ"
+	VALUE_CUP = 55
+CASE "Ｔ"
+	VALUE_CUP = 58
+CASE "Ｕ"
+	VALUE_CUP = 60
+CASE "Ｖ"
+	VALUE_CUP = 63
+
+;25
+CASE "Ｗ"
+	VALUE_CUP = 65
+CASE "Ｘ"
+	VALUE_CUP = 68
+CASE "Ｙ"
+	VALUE_CUP = 70
+CASE "Ｚ"
+	VALUE_CUP = 73
+CASEELSE
+	VALUE_CUP = 75
+ENDSELECT
+
+RETURNF VALUE_CUP
+
+
+;-------------------------------------------------
+;ARGS罩杯に対応した, {BASE:胸圍 - BASE:アンダー胸圍}を乱数有些で返す関数。
+;ARGSには罩杯サイズに対応した字母表顺序を文字列で入れること。
+;字母表顺序と数字の対応が瞬間的に出てきづらいので敢えて羅列形式にする。
+;-------------------------------------------------
+@RAND_CUP(ARGS)
+#FUNCTION
+#DIM VALUE_CUP
+
+;BASE:罩杯に対応した値を５刻みで添えておく
+SELECTCASE ARGS
+CASE ""
+	RETURNF 0
+
+;0
+CASE "---"
+	VALUE_CUP = 1 + RAND:4
+CASE "AAA"
+	VALUE_CUP = 5 + RAND:3
+CASE "AA"
+	VALUE_CUP = 8 + RAND:2
+CASE "Ａ"
+	VALUE_CUP = 10 + RAND:3
+CASE "Ｂ"
+	VALUE_CUP = 13 + RAND:2
+
+;5
+CASE "Ｃ"
+	VALUE_CUP = 15 + RAND:3
+CASE "Ｄ"
+	VALUE_CUP = 18 + RAND:2
+CASE "Ｅ"
+	VALUE_CUP = 20 + RAND:3
+CASE "Ｆ"
+	VALUE_CUP = 23 + RAND:2
+CASE "Ｇ"
+	VALUE_CUP = 25 + RAND:3
+
+;10
+CASE "Ｈ"
+	VALUE_CUP = 28 + RAND:2
+CASE "Ｉ"
+	VALUE_CUP = 30 + RAND:3
+CASE "Ｊ"
+	VALUE_CUP = 33 + RAND:2
+CASE "Ｋ"
+	VALUE_CUP = 35 + RAND:3
+CASE "Ｌ"
+	VALUE_CUP = 38 + RAND:2
+
+;15
+CASE "Ｍ"
+	VALUE_CUP = 40 + RAND:3
+CASE "Ｎ"
+	VALUE_CUP = 43 + RAND:2
+CASE "Ｏ"
+	VALUE_CUP = 45 + RAND:3
+CASE "Ｐ"
+	VALUE_CUP = 48 + RAND:2
+CASE "Ｑ"
+	VALUE_CUP = 50 + RAND:3
+
+;20
+CASE "Ｒ"
+	VALUE_CUP = 53 + RAND:2
+CASE "Ｓ"
+	VALUE_CUP = 55 + RAND:3
+CASE "Ｔ"
+	VALUE_CUP = 58 + RAND:2
+CASE "Ｕ"
+	VALUE_CUP = 60 + RAND:3
+CASE "Ｖ"
+	VALUE_CUP = 63 + RAND:2
+
+;25
+CASE "Ｗ"
+	VALUE_CUP = 65 + RAND:3
+CASE "Ｘ"
+	VALUE_CUP = 68 + RAND:2
+CASE "Ｙ"
+	VALUE_CUP = 70 + RAND:3
+CASE "Ｚ"
+	VALUE_CUP = 73 + RAND:2
+CASEELSE
+	VALUE_CUP = 75 + RAND:3
+ENDSELECT
+
+RETURNF VALUE_CUP
+

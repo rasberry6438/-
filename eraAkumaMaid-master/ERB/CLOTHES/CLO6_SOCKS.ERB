@@ -1,0 +1,200 @@
+﻿;-------------------------------------------------
+;角色ARGにARGSを着せる。ARGS == ""なら脱がす
+;-------------------------------------------------
+@SET_SOCKS, ARGS, ARG
+#DIMS MEMO_CLO
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+MEMO_CLO = %CSTR:ARG:襪子%
+;汚れ＆移開たりしたフラグ等を初期化して新品にする
+STAIN:ARG:襪子 = 0
+IF COND("脚の使用", ARG)
+	CALL PALAM_SOCKS, ARGS, ARG
+ELSE
+	CSTR:ARG:襪子 = 
+ENDIF
+EQUIP:ARG:襪子 = STRLENS(CSTR:ARG:襪子)
+SIF MEMO_CLO != CSTR:ARG:襪子
+	TFLAG:着替えた = 1
+
+;-------------------------------------------------
+;ARGの襪子の名前。ARGSに"略"と入れると略称になる
+;-------------------------------------------------
+@SOCKS(ARG, ARGS)
+#FUNCTIONS
+#DIMS COLOR_ABOUT
+#DIMS CIPTYPE
+
+VARSET LOCALS
+SELECTCASE ARGS
+CASE "CIP正面"
+	IF CHECK_SOCKS("吊帯", ARG)
+		LOCALS = 吊帯内衣
+	ELSE
+		RETURNF ""
+	ENDIF
+CASE "CIP贴身"
+	SIF CHECK_SOCKS("逆兔女郎裤襪", ARG)
+		RETURNF "紧身逆兔女郎裤襪"
+	RETURNF ""
+CASE "CIPMicro"
+	SIF CHECK_SOCKS("逆兔女郎裤襪", ARG)
+		RETURNF "Micro逆兔女郎裤襪"
+	RETURNF ""
+CASE "CIP正面カラー", "CIP背面カラー"
+	SELECTCASE ARGS
+	CASE "CIP正面カラー"
+		CIPTYPE = CIP正面
+	CASE "CIP背面カラー"
+		CIPTYPE = CIP背面
+	ENDSELECT
+	RETURNF CLOCOLOR_MAIDFACE(SOCKS(ARG, CIPTYPE), CHECK_CLOCOLOR(CSTR:ARG:襪子), ARG)
+CASE "略"
+	IF CHECK_SOCKS("短布襪", ARG)
+		LOCALS = 短布襪
+	ELSEIF CHECK_SOCKS("裤襪", ARG)
+		LOCALS = 裤襪
+	ELSEIF CHECK_SOCKS("连褲襪", ARG)
+		LOCALS = 连褲襪
+	ELSEIF CHECK_SOCKS("打底褲", ARG)
+		LOCALS = 打底褲
+	ELSEIF CHECK_SOCKS("長筒襪", ARG)
+		LOCALS = 長筒襪
+	ELSEIF CHECK_SOCKS("襪", ARG)
+		LOCALS = 襪
+	ELSEIF EQUIP:ARG:襪子
+		LOCALS = 襪子
+	ENDIF
+CASE "種類"
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:襪子, "/", LOCALS
+CASE ""
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:襪子, "/", LOCALS
+	COLOR_ABOUT = %CLOCOLOR(CSTR:ARG:襪子, "形容詞")%
+
+	SELECTCASE COLOR_ABOUT
+	CASE ""
+	CASEELSE
+		LOCALS = %CLOCOLOR(CSTR:ARG:襪子, "形容詞")%%LOCALS%
+	ENDSELECT
+ENDSELECT
+RETURNF LOCALS
+
+;-------------------------------------------------
+;ARG番の襪子の名称。換装などで表を作る際に使う
+;-------------------------------------------------
+@NAME_SOCKS(ARG)
+#FUNCTIONS
+VARSET LOCALS
+
+SELECTCASE ARG
+CASE 0
+	LOCALS = 短襪
+CASE 1
+	LOCALS = 膝下襪
+CASE 2
+	LOCALS = 及膝襪
+CASE 3
+	LOCALS = 褶边襪
+CASE 4
+	LOCALS = 高筒襪
+CASE 5
+	LOCALS = 短布襪
+CASE 6
+	LOCALS = 長筒襪
+CASE 7
+	LOCALS = 网纹長筒襪
+CASE 8
+	LOCALS = 吊帯長筒襪
+CASE 9
+	LOCALS = 吊帯襪
+ENDSELECT
+
+RETURNF LOCALS
+
+;-------------------------------------------------
+;角色ARGに襪子ARGSを着せた場合のCSTR処理
+;-------------------------------------------------
+@PALAM_SOCKS, ARGS, ARG
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+STR_ADD = %EXTSTR(ARGS, "/")%
+ARGS = %EXTSTR(ARGS, "", "/")%
+
+SELECTCASE ARGS
+CASE "", "没有"
+	CSTR:ARG:襪子 = 
+CASE "短襪"
+	CSTR:ARG:襪子 = 短襪/直到脚腕/
+CASE "膝下襪"
+	CSTR:ARG:襪子 = 膝下襪/
+CASE "及膝襪"
+	CSTR:ARG:襪子 = 及膝襪/
+CASE "高筒襪"
+	CSTR:ARG:襪子 = 高筒襪/直到大腿/
+
+CASE "長筒襪"
+	CSTR:ARG:襪子 = 長筒襪/直到大腿/
+CASE "网纹長筒襪"
+	CSTR:ARG:襪子 = 网纹長筒襪/蕾丝/直到大腿/
+CASE "吊帯長筒襪"
+	CSTR:ARG:襪子 = 吊帯長筒襪/直到大腿/
+CASE "吊帯襪"
+	CSTR:ARG:襪子 = 吊帯襪/直到大腿/
+
+CASE "逆兔女郎裤襪"
+	CSTR:ARG:襪子 = 逆兔女郎裤襪/直到大腿/
+
+CASE "褶边短襪"
+	CSTR:ARG:襪子 = 褶边短襪/直到脚腕/
+CASE "褶边襪"
+	CSTR:ARG:襪子 = 褶边襪/
+CASE "褶边过膝襪"
+	CSTR:ARG:襪子 = 褶边过膝襪/直到大腿/
+
+CASE "短布襪"
+	CSTR:ARG:襪子 = 短布襪/直到脚腕/
+
+CASE "黑色及膝襪"
+	CSTR:ARG:襪子 = 黑色及膝襪/
+CASE "襪子"
+	CSTR:ARG:襪子 = 襪子/
+CASEELSE
+	CSTR:ARG:襪子 = %ARGS%/
+ENDSELECT
+
+CSTR:ARG:襪子 = %MERGE_STR(CSTR:ARG:襪子, STR_ADD)%
+
+;-------------------------------------------------
+;襪子ARGSの番号
+;-------------------------------------------------
+@NUM_SOCKS(ARGS)
+#FUNCTION
+#DIM LCOUNT
+
+FOR LCOUNT, 100, 400
+	SELECTCASE NAME_SOCKS(LCOUNT)
+	CASE ARGS
+		RETURNF LCOUNT
+	ENDSELECT
+NEXT
+RETURNF 100
+
+;-------------------------------------------------
+;ARGの襪子が条件ARGSを満たすか確認する
+;-------------------------------------------------
+@CHECK_SOCKS(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+SIF EQUIP:ARG:襪子 == 0
+	RETURNF 0
+SIF STRCOUNT(CSTR:ARG:襪子, ARGS)
+	RETURNF 1
+RETURNF 0
+

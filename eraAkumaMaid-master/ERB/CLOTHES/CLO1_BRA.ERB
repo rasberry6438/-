@@ -1,0 +1,529 @@
+﻿;-------------------------------------------------
+;角色ARGに胸罩ARGSを着せる。ARGS == ""なら脱がす
+;-------------------------------------------------
+@SET_BRA, ARGS, ARG
+#DIMS MEMO_CLO
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+MEMO_CLO = %CSTR:ARG:胸罩%
+CALL PALAM_BRA, ARGS, ARG
+
+;コモンフラグを設定する
+CSTR:ARG:胖次 = %SET_CLO_COMMON(CSTR:ARG:胖次, ARG)%
+CSTR:ARG:胸罩 = %SET_CLO_COMMON(CSTR:ARG:胸罩, ARG)%
+
+EQUIP:ARG:胸罩 = STRLENS(CSTR:ARG:胸罩)
+EQUIP:ARG:胖次 = STRLENS(CSTR:ARG:胖次)
+
+;胖次と色を揃える
+CALL EQ_CLOCOLOR, ARG
+
+;贴身制服は脱がす
+SIF EQUIP:ARG:胸罩 && EQUIP:ARG:贴身制服
+	CALL SET_BODYS, "", ARG
+SIF MEMO_CLO != CSTR:ARG:胸罩
+	TFLAG:着替えた = 1
+
+;-------------------------------------------------
+;ARGの付けている胸罩の名前。ARGSに"略"と入れると略称になる
+;-------------------------------------------------
+@BRA(ARG, ARGS)
+#FUNCTIONS
+#DIMS COLOR_ABOUT
+
+VARSET LOCALS
+SELECTCASE ARGS
+CASE "略"
+	IF CHECK_BRA("貝殻", ARG)
+		LOCALS = 貝殻胸罩
+	ELSEIF CHECK_BRA("拘束衣", ARG)
+		LOCALS = 拘束衣胸罩
+	ELSEIF CHECK_BRA("帷子", ARG)
+		LOCALS = 帷子
+	ELSEIF CHECK_BRA("前掛け", ARG)
+		LOCALS = 前掛け
+	ELSEIF CHECK_BRA("吊帯背心", ARG)
+		LOCALS = 吊帯背心
+	;ELSEIF CHECK_BRA("Micro", ARG)
+	;	LOCALS = Micro胸罩
+	ELSEIF CHECK_BRA("泳装", ARG)
+		IF CHECK_BRA("Micro", ARG)
+			LOCALS = Micro比基尼
+		ELSE
+			LOCALS = 比基尼
+		ENDIF
+	ELSEIF CHECK_BRA("吊帯衫", ARG)
+		LOCALS = 吊帯衫
+	ELSEIF CHECK_BRA("抹胸", ARG)
+		LOCALS = 抹胸
+	ELSEIF CHECK_BRA("胸垫", ARG)
+		LOCALS = 胸垫
+	ELSEIF CHECK_BRA("裹胸布", ARG)
+		LOCALS = 裹胸布
+	ELSEIF CHECK_BRA("運動胸罩", ARG)
+		LOCALS = スポ胸罩
+	ELSEIF CHECK_BRA("乳贴", ARG)
+		LOCALS = 乳贴
+	ELSE
+		LOCALS = 文胸
+	ENDIF
+CASE "種類"
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:胸罩, "/", LOCALS
+CASE "大体の形状"
+	IF CHECK_BRA("三明治リヨン", ARG)
+		LOCALS = 褶边吊罩
+	ELSEIF CHECK_BRA("拘束衣", ARG)
+		LOCALS = 拘束衣胸罩
+	ELSEIF CHECK_BRA("３／４杯", ARG)
+		LOCALS = ３／４杯胸罩
+	ELSEIF CHECK_BRA("半杯", ARG)
+		LOCALS = 半杯胸罩
+	ELSEIF CHECK_BRA("１／４杯胸罩", ARG)
+		LOCALS = １／４杯胸罩
+	ELSEIF CHECK_BRA("褶边比基尼", ARG)
+		LOCALS = 褶边比基尼胸罩
+	ELSEIF CHECK_BRA("Micro比基尼", ARG)
+		LOCALS = Micro比基尼
+	ELSEIF CHECK_BRA("比基尼", ARG)
+		LOCALS = 比基尼胸罩
+	ELSEIF CHECK_BRA("抹胸", ARG)
+		LOCALS = 抹胸
+	ELSEIF CHECK_BRA("吊帯背心", ARG)
+		LOCALS = 吊帯背心
+	ELSEIF CHECK_BRA("運動胸罩", ARG)
+		LOCALS = 運動胸罩
+	ELSEIF CHECK_BRA("胸垫", ARG)
+		LOCALS = 胸垫
+	ELSEIF CHECK_BRA("開放型胸罩", ARG)
+		LOCALS = 開放型胸罩
+	ELSEIF CHECK_BRA("Micro胸罩", ARG)
+		LOCALS = Micro胸罩
+	ELSEIF CHECK_BRA("蕾丝", ARG)
+		LOCALS = 蕾丝胸罩ジャー
+	ELSEIF CHECK_BRA("褶边", ARG)
+		LOCALS = 褶边の文胸
+	ELSEIF CHECK_BRA("裹胸布", ARG)
+		LOCALS = 裹胸布
+	ELSEIF CHECK_BRA("吊帯衫", ARG)
+		LOCALS = 吊帯衫
+	ELSE
+		LOCALS = 普通胸罩
+	ENDIF
+CASE ""
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:胸罩, "/", LOCALS
+	COLOR_ABOUT = %CHECK_CLOCOLOR(CSTR:ARG:胸罩)%
+
+	;名称と色が被ってる場合は省略
+	IF STRCOUNT(LOCALS, COLOR_ABOUT)
+		RETURNF LOCALS
+	;一部の柄物
+	ELSEIF STRCOUNTS(CSTR:ARG:胸罩, "條紋", "水玉模様", "豹纹")
+		SELECTCASE COLOR_ABOUT
+		CASE ""
+		CASE "赤", "青", "黒", "白"
+			LOCALS = %COLOR_ABOUT%い%LOCALS%
+		CASE "水玉粉紅", "水玉黒", "水玉黄色", "水玉水色", "水玉白黒", "水玉白"
+			LOCALS = %EXTSTR(COLOR_ABOUT, "水玉")%の%LOCALS%
+		CASEELSE
+			LOCALS = %COLOR_ABOUT%の%LOCALS%
+		ENDSELECT
+	ELSE
+		LOCALS = %CLOCOLOR(CSTR:ARG:胸罩, "形容詞")%%LOCALS%
+	ENDIF
+
+ENDSELECT
+RETURNF LOCALS
+
+
+;-------------------------------------------------
+;ARG番の胸罩の名称。換装などで表を作る際に使う
+;-------------------------------------------------
+@NAME_BRA(ARG)
+#FUNCTIONS
+VARSET LOCALS
+
+SELECTCASE ARG
+CASE 0
+	LOCALS = 简约胸罩
+CASE 1
+	LOCALS = 满杯胸罩
+CASE 2
+	LOCALS = ３／４杯胸罩
+CASE 3
+	LOCALS = 半杯胸罩
+CASE 4
+	LOCALS = １／４杯胸罩
+CASE 5
+	LOCALS = 抹胸
+CASE 6
+	LOCALS = 吊帯背心
+CASE 7
+	LOCALS = 運動胸罩
+CASE 8
+	LOCALS = 胸垫
+CASE 9
+	LOCALS = 開放型胸罩
+CASE 10
+	LOCALS = Micro胸罩
+CASE 11
+	LOCALS = 吊帯衫
+CASE 12
+	LOCALS = 褶边吊罩
+
+CASE 15
+	LOCALS = 條紋胸罩
+
+CASE 20
+	LOCALS = 蕾丝胸罩
+CASE 21
+	LOCALS = 透明胸罩
+CASE 22
+	LOCALS = 褶边の胸罩
+CASE 23
+	LOCALS = 皮革胸罩
+CASE 24
+	LOCALS = 猫型胸罩
+CASE 25
+	LOCALS = 裹胸布
+
+CASE 30
+	LOCALS = 比基尼胸罩
+CASE 31
+	LOCALS = Micro比基尼胸罩
+
+CASE 39
+	LOCALS = Ｈ的胸罩
+	
+CASE 40
+	LOCALS = 心形乳貼
+CASE 41
+	LOCALS = 圆形乳贴
+CASE 42
+	LOCALS = ×型乳贴
+CASE 43
+	LOCALS = 星型乳贴
+ENDSELECT
+
+RETURNF LOCALS
+
+;-------------------------------------------------
+;角色ARGに胸罩ARGSを着せた場合のCSTR処理
+;名前/色/属性/…/属性/ というルールで記述される(一番左は名前、次は色で固定)
+;後で属性を追加したい際には CSTR:胸罩 += "泳装/" のように単純に追加すればよい。同じ属性が複数あっても問題ない
+;-------------------------------------------------
+@PALAM_BRA, ARGS, ARG
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+STR_ADD = %EXTSTR(ARGS, "/")%
+ARGS = %EXTSTR(ARGS, "", "/")%
+
+;Ｈ的内衣に関しては最初に別のものに変換してしまう
+SELECTCASE ARGS
+CASE "Ｈ的胸罩"
+	ARGS = %TEXTR("半杯胸罩/１／４杯胸罩/開放型胸罩/Micro胸罩/蕾丝胸罩")%
+	STR_ADD += "/Ｈ的颜色/"
+ENDSELECT
+
+SELECTCASE ARGS
+CASE "", "无胸罩", "没有"
+	CSTR:ARG:胸罩 = 
+CASE "简约胸罩"
+	CSTR:ARG:胸罩 = 简约胸罩/淡色/满杯/
+CASE "文胸"
+	CSTR:ARG:胸罩 = 文胸/淡色/满杯/
+CASE "满杯胸罩"
+	CSTR:ARG:胸罩 = 满杯胸罩/淡色/
+CASE "３／４杯胸罩"
+	CSTR:ARG:胸罩 = ３／４杯胸罩/淡色/
+CASE "半杯胸罩"
+	CSTR:ARG:胸罩 = 半杯胸罩/Ｈ的颜色/
+CASE "１／４杯胸罩"
+	CSTR:ARG:胸罩 = １／４杯胸罩/Ｈ的颜色/乳頭露出/乳房露出/
+CASE "抹胸"
+	CSTR:ARG:胸罩 = 抹胸/淡色/
+CASE "吊帯背心"
+	CSTR:ARG:胸罩 = 吊帯背心/淡色/
+CASE "運動胸罩"
+	CSTR:ARG:胸罩 = 運動胸罩/淡色/
+CASE "胸垫"
+	CSTR:ARG:胸罩 = 胸垫/隨機顏色/
+CASE "開放型胸罩"
+	CSTR:ARG:胸罩 = 開放型胸罩/Ｈ的颜色/乳頭露出/满杯/
+CASE "Micro胸罩"
+	CSTR:ARG:胸罩 = Micro胸罩/隨機顏色/
+
+CASE "條紋胸罩"
+	CSTR:ARG:胸罩 = 條紋胸罩/條紋色/满杯/
+
+CASE "褶边吊罩"
+	CSTR:ARG:胸罩 = 褶边吊罩/淡色/褶边/蕾丝情趣内衣/
+CASE "蕾丝胸罩"
+	CSTR:ARG:胸罩 = 蕾丝胸罩/Ｈ的颜色/透明/蕾丝情趣内衣/
+CASE "透明胸罩"
+	CSTR:ARG:胸罩 = 透明胸罩/淡色/蕾丝情趣内衣/
+CASE "褶边の胸罩"
+	CSTR:ARG:胸罩 = 褶边の胸罩/淡色/蕾丝情趣内衣/
+CASE "皮革胸罩"
+	CSTR:ARG:胸罩 = 皮革胸罩/黒/
+CASE "拘束衣胸罩"
+	CSTR:ARG:胸罩 = 拘束衣胸罩/黒/皮革/谷間露出/
+CASE "紐拘束衣胸罩"
+	CSTR:ARG:胸罩 = 紐拘束衣胸罩/黒/皮革/谷間露出/乳頭露出/乳房露出/
+
+CASE "比基尼胸罩"
+	CSTR:ARG:胸罩 = 比基尼胸罩/隨機顏色/紐/满杯/
+CASE "褶边比基尼胸罩"
+	CSTR:ARG:胸罩 = 褶边比基尼胸罩/隨機顏色/紐/
+CASE "Micro比基尼胸罩"
+	CSTR:ARG:胸罩 = Micro比基尼胸罩/隨機顏色/紐/
+
+;特殊
+CASE "裹胸布"
+	CSTR:ARG:胸罩 = 裹胸布/白/
+CASE "吊帯衫"
+	CSTR:ARG:胸罩 = 吊帯衫/淡色/蕾丝情趣内衣/
+	
+CASE "心形乳貼"
+	CSTR:ARG:胸罩 = 心形乳貼/隨機顏色/
+CASE "圆形乳贴"
+	CSTR:ARG:胸罩 = 圆形乳贴/隨機顏色/
+CASE "×型乳贴"
+	CSTR:ARG:胸罩 = ×型乳贴/隨機顏色/
+CASE "星型乳贴"
+	CSTR:ARG:胸罩 = 星型乳贴/隨機顏色/
+
+CASE "白色比基尼胸罩"
+	CSTR:ARG:胸罩 = 白色比基尼胸罩/白/紐/满杯/
+CASE "黑色比基尼胸罩"
+	CSTR:ARG:胸罩 = 黑色比基尼胸罩/黒/紐/满杯/
+CASE "虎紋比基尼胸罩"
+	CSTR:ARG:胸罩 = 虎紋比基尼胸罩/虎紋/紐/
+CASE "奶牛比基尼胸罩"
+	CSTR:ARG:胸罩 = 奶牛比基尼胸罩/奶牛/紐/
+	
+CASE "猫型胸罩"
+	CSTR:ARG:胸罩 = 猫型胸罩/黒/紐/蕾丝情趣内衣/
+CASEELSE
+	CSTR:ARG:胸罩 = %ARGS%/隨機顏色/
+ENDSELECT
+
+CSTR:ARG:胸罩 = %MERGE_STR(CSTR:ARG:胸罩, STR_ADD)%
+
+;-------------------------------------------------
+;ARGの着けている胸罩の詳細
+;-------------------------------------------------
+@DETAIL_BRA(ARG, ARGS)
+#FUNCTIONS
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+VARSET LOCALS
+SELECTCASE ARGS
+;触っただけで類推する場合
+CASE "感触"
+
+CASEELSE
+	;Ｈ的内衣
+	IF CHECK_BRA("Ｈ的胸罩", ARG)
+		LOCALS = 洋溢著情色氣息的
+		IF CHECK_BRA("透明", ARG)
+			LOCALS += "透明素材的"
+		ELSEIF CHECK_BRA("蕾丝", ARG)
+			LOCALS += "帶著彩色的蕾絲花邊的"
+		ELSEIF CHECK_BRA("絲綢", ARG)
+			LOCALS += "輕薄的絲制的"
+		ENDIF
+		IF CHECK_BRA("開放型胸罩", ARG)
+			LOCALS += "興奮勃起的乳頭周圍、完全暴露出來的文胸(？)"
+		ELSEIF CHECK_BRA("１／４杯胸罩", ARG)
+			LOCALS += "一直到乳房的下端都一覽無遺的文胸(？)"
+		ELSEIF CHECK_BRA("Micro", ARG)
+			LOCALS += "布料麵積異常的少的文胸"
+		ELSEIF CHECK_BRA("半杯", ARG)
+			LOCALS += "能看見一半乳暈、几乎是靠乳頭抵住上端的文胸"
+		ELSE
+			LOCALS += "文胸"
+		ENDIF
+
+	ELSEIF CHECK_BRA("Micro比基尼", ARG)
+		IF RAND:2
+			LOCALS = 用碎布來形容會更恰當一些的、用料非常緊張的比基尼
+		ELSE
+			LOCALS = 幾乎只蓋住勃起的乳頭的、重要的地方完全沒有被遮掩的用料極少的泳衣
+		ENDIF
+
+	ELSEIF CHECK_BRA("比基尼", ARG)
+		LOCALS = 風格大膽的比基尼泳衣式的文胸
+	ELSEIF CHECK_BRA("開放型胸罩", ARG)
+		LOCALS = 乳頭週邊完全沒有被隱藏起來的文胸
+	ELSEIF CHECK_BRA("吊帯背心", ARG)
+		LOCALS = 適合運動的吊帶背心
+	ELSEIF CHECK_BRA("運動胸罩", ARG)
+		LOCALS = 能有效地防止胸部搖晃的運動文胸
+	ELSEIF CHECK_BRA("裹胸布", ARG)
+		LOCALS = 恰好將整個胸部包裹住的熱情的抹胸
+	ELSEIF CHECK_BRA("吊帯衫", ARG)
+		LOCALS = 可愛風格的吊帶式文胸
+	ELSEIF CHECK_BRA("乳贴", ARG)
+		LOCALS = 乳頭だけを隠すように貼られた
+		IF CHECK_BRA("心型")
+			LOCALS += "心型の"
+		ELSEIF CHECK_BRA("丸型")
+			LOCALS += "丸い"
+		ELSEIF CHECK_BRA("×型")
+			LOCALS += "叉叉印の"
+		ELSEIF CHECK_BRA("星型")
+			LOCALS += "星型の"
+		ENDIF
+		LOCALS += "乳贴"
+
+	ELSEIF CHECK_BRA("條紋", ARG)
+		LOCALS = 保守主義式的樸素橫條紋文胸
+	ELSEIF CHECK_BRA("水玉模様", ARG)
+		LOCALS = 可愛的水玉様式的%TEXTR("胸罩/内衣")%
+	ELSEIF CHECK_BRA("豹纹胸罩", ARG)
+		SELECTCASE AGE(ARG)
+		CASE IS >= 4
+			LOCALS = %TEXTR("風格性感的/洋溢著情色氣息的/飄蕩著成熟氣息的")%
+		CASE 3
+			LOCALS = %TEXTR("風格性感的/帶著挑起慾望的暗示的/作為辣妹這一群體的象徵物一樣的")%
+		CASE 2
+			LOCALS = %TEXTR("具備成熟風韻的/帶著微妙可愛感的/帶著挑起慾望的暗示的/")%
+		CASE 1
+			LOCALS = %TEXTR("與現在的氣氛十分相稱的/帶著微妙可愛感的/帶著挑起慾望的暗示的")%
+		ENDSELECT
+		LOCALS += "豹纹胸罩"
+
+	ELSEIF CHECK_BRA("皮革", ARG)
+		LOCALS = 散發著奇妙的氛圍的、黑色的皮革文胸
+
+	ELSEIF CHECK_BRA("蕾丝胸罩", ARG)
+		IF RAND:4 == 0
+			LOCALS = 彰顯女性魅力的%CLOCOLOR(CSTR:胸罩, "形容詞")%蕾絲質地的文胸
+		ELSEIF RAND:3 == 0
+			LOCALS = 飄蕩著成熟氣息的%CLOCOLOR(CSTR:ARG:胸罩, "形容詞")%蕾絲花邊胸罩
+		ELSEIF RAND:2
+			LOCALS = 風格典雅的美麗的蕾絲質地的胸罩
+		ELSE
+			LOCALS = 具備成熟風韻而不失可愛的蕾絲花邊胸罩
+		ENDIF
+	ELSEIF CHECK_BRA("褶边の胸罩", ARG)
+		LOCALS = 被%TEXTR("可愛的/清純的")%褶皺%TEXTR("装飾著的/點綴著邊緣的")%文胸
+	ELSEIF CHECK_BRA("透明胸罩", ARG)
+		IF RAND:2 == 0
+			LOCALS = 風格大膽的透明材質的文胸
+		ELSE
+			LOCALS = 洋溢著淫靡氛圍的透明的胸罩
+		ENDIF
+
+	ELSEIF CHECK_BRA("半杯", ARG)
+		LOCALS = 能看見一半乳暈、几乎是靠乳頭抵住上端的%CLOCOLOR(CSTR:ARG:胸罩, "形容詞")%文胸
+	ELSEIF CHECK_BRA("１／４杯", ARG)
+		LOCALS = 一直到乳房的下端都一覽無遺的文胸
+	ELSEIF CHECK_BRA("胸垫", ARG)
+		LOCALS = 連肩帶和吊繩也沒有的、清楚地勾勒出胸部輪廓的胸罩
+	ELSEIF CHECK_BRA("抹胸", ARG)
+		LOCALS = 恰好遮住胸膛的抹胸
+	ELSEIF CHECK_BRA("简约", ARG)
+		LOCALS = 装飾感較低的%CLOCOLOR(CSTR:胸罩, "形容詞")%文胸
+	ELSE
+		LOCALS = %BRA(ARG)%
+	ENDIF
+ENDSELECT
+
+RETURNF LOCALS
+
+
+;-------------------------------------------------
+;ARGが胸罩ARGSを好きor嫌いか格子する
+;-------------------------------------------------
+@FAV_BRA(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+RETURNF STRCOUNT(CSTR:ARG:喜欢的胸罩, ARGS)
+
+@DISLIKE_BRA(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+RETURNF STRCOUNT(CSTR:ARG:讨厌的胸罩, ARGS)
+
+;-------------------------------------------------
+;ARGの胸罩が条件ARGSを満たすか確認する
+;-------------------------------------------------
+@CHECK_BRA(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+SIF EQUIP:ARG:胸罩 == 0
+	RETURNF 0
+
+SELECTCASE ARGS
+CASE "半脱可"
+	;既に露出している場合
+	SIF STRCOUNTS(CSTR:ARG:胸罩, "胸露出", "乳頭露出", "半脱的", "半脱不可")
+		RETURNF 0
+	RETURNF 1
+CASE "乳頭露出"
+	SIF STRCOUNTS(CSTR:ARG:胸罩, "胸露出", "乳頭露出")
+		RETURNF 1
+CASE "乳輪露出"
+	SIF STRCOUNTS(CSTR:ARG:胸罩, "胸露出", "乳頭露出", "乳輪露出")
+		RETURNF 1
+CASE "性感"
+	SIF STRCOUNTS(CSTR:ARG:胸罩, "胸露出", "乳頭露出", "乳輪露出", "Micro")
+		RETURNF 1
+CASE "見栄え良し"
+	SIF STRCOUNTS(CSTR:ARG:胸罩, "蕾丝", "透明", "褶边")
+		RETURNF 1
+CASEELSE
+	SIF STRCOUNT(CSTR:ARG:胸罩, ARGS)
+		RETURNF 1
+ENDSELECT
+
+RETURNF 0
+
+
+;-------------------------------------------------
+;角色ARGが今身に着けている胖次にふさわしい胸罩を（あれば）選ぶ
+;-------------------------------------------------
+@COORDINATE_BRA, ARG
+;男物だと変更无
+IF CHECK_PANTIES("男物", ARG)
+	;胖次と色を揃える
+	CALL EQ_CLOCOLOR, ARG
+ELSEIF CHECK_PANTIES("Ｈ的内衣", ARG)
+	CALL SET_BRA, "Ｈ的胸罩", ARG
+ELSEIF CHECK_PANTIES("開放型開洞", ARG)
+	CALL SET_BRA, "開放型胸罩", ARG
+ELSEIF CHECK_PANTIES("兜襠布", ARG)
+	CALL SET_BRA, "裹胸布", ARG
+ELSEIF CHECK_PANTIES("Micro比基尼", ARG)
+	CALL SET_BRA, "Micro比基尼胸罩", ARG
+ELSEIF CHECK_PANTIES("比基尼", ARG)
+	CALL SET_BRA, "比基尼胸罩", ARG
+
+ELSEIF CHECK_PANTIES("條紋", ARG)
+	CALL SET_BRA, "條紋胸罩", ARG
+
+ELSEIF CHECK_PANTIES("蕾丝", ARG)
+	CALL SET_BRA, "蕾丝胸罩", ARG
+ELSEIF CHECK_PANTIES("透明", ARG)
+	CALL SET_BRA, "透明胸罩", ARG
+ELSEIF CHECK_PANTIES("褶边", ARG)
+	CALL SET_BRA, "褶边の胸罩", ARG
+ELSEIF CHECK_PANTIES("皮革", ARG)
+	CALL SET_BRA, "皮革胸罩", ARG
+ELSE
+	;胖次と色を揃える
+	CALL EQ_CLOCOLOR, ARG
+ENDIF
+

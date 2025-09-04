@@ -1,0 +1,280 @@
+﻿;-------------------------------------------------
+;セックス系コマンド
+;-------------------------------------------------
+@RAPE_COMNAME23
+#FUNCTIONS
+TSTR:コマンド名受渡 = 肛交侵犯肉棒
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@RAPE_COMTYPE_23
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = RAPE_COMTYPE("Ａ系")
+
+
+@RAPE_COM_TOOLTIP_23
+LOCALS = <br>■肛交侵犯肉棒<br>
+LOCALS += "将对方阴茎插入肛门进行肛交的指令。<br>因属强制行为仅限骑乘位执行。<br>进入Ａ插入模式，在模式变更或性行为结束前持续产生快感。"
+LOCALS += "<br>强奸指令类型：Ａ系<br>获取来源：快Ａ・暴露・接触・痛苦"
+LOCALS += "<br>专属经验值：Ｃ性交经验_Ａ插入(TARGET)・Ａ性交经验(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@RAPE_COM23
+
+	$体位_LOOP
+	DRAWLINE
+	PRINTL ■请选择体位
+	PRINTL
+	FOR LOCAL, 0, 20
+		TRYCCALLFORM RAPE_COM_ABLE23_{LOCAL}
+			IF RESULT
+				PRINTBUTTONLC "[5]Ａ骑乘位", 5
+			ENDIF
+		CATCH
+			CONTINUE
+		ENDCATCH
+	NEXT
+
+	PRINTL
+	PRINTL
+	PRINTBUTTONLC "[999]返回", 999
+
+	$INPUT_LOOP
+	INPUT
+
+	LOCAL = RESULT
+	SELECTCASE LOCAL
+		CASE 0 TO 11
+			TRYCALLFORM RAPE_COM_ABLE23_{LOCAL}
+			IF RESULT
+				IF TARGET == MASTER
+					TARGET = PLAYER
+					PLAYER = MASTER
+					RFLAG:指示モード対象あなたフラグ = 1
+					TRYCALLFORM CAN_Ａ体位{LOCAL}(1)
+					IF !RESULT
+						TRYCALLFORM CAN_Ａ体位{LOCAL}(0)
+						PLAYER = TARGET
+						TARGET = MASTER
+						GOTO 体位_LOOP
+					ENDIF
+					RFLAG:指示モード対象あなたフラグ = 0
+					PLAYER = TARGET
+					TARGET = MASTER
+				ELSE
+					TRYCALLFORM CAN_Ａ体位{LOCAL}(1)
+					IF !RESULT
+						TRYCALLFORM CAN_Ａ体位{LOCAL}(0)
+						GOTO 体位_LOOP
+					ENDIF
+				ENDIF
+				TRYCALLFORM RAPE_COM23_{LOCAL}
+				;メッセージ用に体位の種類を保存
+				RFLAG:コマンド結果受渡し変数 = LOCAL
+				RETURN 1
+			ENDIF
+			GOTO INPUT_LOOP
+		CASE 999
+			RETURN -1
+		CASEELSE
+			GOTO INPUT_LOOP
+	ENDSELECT
+
+
+@RAPE_COM23_5
+;騎乗位
+CALL Ａ体位逆RAPE_COM(500, 120, 150)
+CALL SOURCE_CALC_奉仕(TARGET, PLAYER, 250)
+CALL MODE_CHANGE("Ａ騎乗位", TARGET, PLAYER)
+RETURN RESULT
+
+
+
+
+@Ａ体位逆RAPE_COM(ARG, ARG:1, ARG:2)
+;-------------------------------------------------
+;RAPE_COM別FLAGの設定
+;-------------------------------------------------
+
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+CALL SOURCE_CALC_快Ａ(PLAYER ,TARGET, ARG)
+CALL SOURCE_CALC_露出(PLAYER, TARGET, ARG:1)
+CALL SOURCE_CALC_接触(PLAYER, TARGET, ARG:2)
+
+IF MODE_確認_ターゲット側("假阳具", PLAYER) < 0
+	CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, ARG)
+ELSE
+	CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, ARG / 3)
+ENDIF
+
+;苦痛
+LOCAL = 800 * PAIN_CHECK_A(TARGET) / 1000
+CALL SOURCE_CALC_苦痛(PLAYER, TARGET, LOCAL)
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+IF EXP:Ａ性交経験 == 0
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>向%CALLNAME:TARGET%献上肛门处女</font><img src='えっちハート'>","うふふ")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>夺取%CALLNAME:PLAYER%的肛门处女</font><img src='えっちハート'>","うふふ")
+ENDIF
+EXP:TARGET:Ｃ性交経験_Ａ挿入 ++
+EXP:Ａ性交経験 ++
+CALL LOST_A_VIRGIN(PLAYER, TARGET, 1)
+CALL LOST_MAN_A_VIRGIN(TARGET, PLAYER)
+;同性愛　レズなら戻り値1ゲイなら戻り値2
+IF HETEROSEX(TARGET,PLAYER)
+	EXP:同性愛経験 += 4
+	EXP:PLAYER:同性愛経験 += 4
+ENDIF
+
+
+;愛情経験
+EXP:愛情経験 += TALENT:恋慕
+
+RETURN 1
+
+
+
+;-------------------------------------------------
+;実行判定処理
+;-------------------------------------------------
+;レイプなので素通し
+
+RETURN 1
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@RAPE_COM_ABLE23
+;Ａ挿入共通実行判定
+;一括管理
+SIF GLOBAL_RAPE_COMABLE(23)
+	RETURN RESULT
+;Aがない場合駄目
+SIF TALENT:PLAYER:Ａ感度 == -2
+	RETURN 0
+;調教者がオトコ、半人半妖、ふたなりの場合はある程度勃起してないとダメ
+SIF (TALENT:TARGET:性別 & 2) && BASE:TARGET:勃起 < 1000
+	RETURN 0
+;肛门振动棒挿入中はダメ
+SIF TEQUIP:14
+	RETURN 0
+;肛门拉珠使用中は不可
+SIF TEQUIP:15
+	RETURN 0
+;普通の浣腸使用中は不可
+SIF TEQUIP:21
+	RETURN 0
+;バルーン使用中は不可
+SIF TEQUIP:22
+	RETURN 0
+;電極使用中は不可
+SIF TEQUIP:23
+	RETURN 0
+;一定のＡ経験が必要　無理やりなのでボーダーを下げた
+SIF EXP:2 < EXPLV:2
+	RETURN 0
+
+;調教者がオトコ、半人半妖、ふたなり、もしくは假阳具がないとダメ
+SIF !(TALENT:TARGET:性別 & 2) && MODE_確認_ターゲット側("假阳具", TARGET) < 0
+	RETURN 0
+
+;下半身着衣
+;前鎧、めくれない服、タイツがあると無理
+SIF TEQUIP:下腹部前鎧あり
+	RETURN 0
+SIF TEQUIP:下半身服あり && (!TEQUIP:スカートめくり可 && !TEQUIP:ずらし可)
+	RETURN 0
+SIF TEQUIP:下タイツあり && !TEQUIP:下タイツ破れ
+	RETURN 0
+
+IF MODE_確認_完全一致("Ａ挿入系", TARGET, TARGET) < 0 && MODE_確認_完全一致("Ａ挿入系", TARGET, TARGET) < 0
+	;ちんこを何かに使ってる・届かないなら無理
+	SIF TEQUIP:TARGET:ペニス
+		RETURN 0
+	SIF TEQUIP:PLAYER:アナル
+		RETURN 0
+ENDIF
+
+;オートコマンド中の制限
+IF FLAG:オートコマンド判定中フラグ
+	SIF EXP:PLAYER:Ａ経験 == 0 || EXP:TARGET:Ａ経験 == 0
+		RETURN 0
+	SIF MODE_確認_完全一致("Ａ挿入系", PLAYER, TARGET) > -1 && MODE_確認_完全一致("Ａ挿入系", TARGET, PLAYER) > -1
+		RETURN 0
+ENDIF
+
+RETURN 1
+
+@RAPE_COM_ABLE23_5
+;騎乗位
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@RAPE_MESSAGE_COM23
+
+
+PRINTFORM %CALLNAME:PLAYER%以骑乘姿势%TEXTR("跨坐在/骑乘在/压在")%%CALLNAME:TARGET%身上，
+
+IF MODE_確認_ターゲット側("假阳具", TARGET) < 0
+
+	;おちんぽ冠詞群……いる？
+	;「パーシヴァルの高貴な童贞ちんぽ」とか「ウーノの小さな童贞おちんちん」とか出てきたら興奮とかより笑いが出てきちゃわない？
+	;高貴は流石に面白すぎちゃいそうだからいったん候補から外す
+
+	IF TALENT:男性器サイズ <= -1
+	;短小以下
+		PRINTFORM 挺立的%TEXTR("娇小/一口尺寸/迷你型")%
+	ELSEIF TALENT:男性器サイズ == 2
+	;デカい
+		PRINTFORM %TEXTR("/完全勃起的/威武耸立的")%异常尺寸
+	ELSE
+		PRINTFORM %TEXTR("完全勃起/坚硬挺立")%
+	ENDIF
+	
+	SIF CFLAG:TARGET:発情期フラグ < 0
+		PRINTFORM 发情
+	
+	;GETBITのほうがいいんだろうけど結局のところよくわかってないのでTALENTで
+	SIF TALENT:非童貞 == 0
+		PRINTFORM 童贞
+	
+	IF TALENT:イキやすさ == 1
+		PRINTFORM %TEXTR("弱鸡/孱弱")%
+	ELSEIF TALENT:Ｃ感度 == 1
+		PRINTFORM 敏感
+	ENDIF
+	
+	IF TALENT:男性器サイズ <= -1
+		PRINTFORM %TEXTR("鸡鸡/小鸡鸡/迷你鸡巴")%
+	ELSEIF TALENT:男性器サイズ == 0
+		PRINTFORM %TEXTR("鸡巴/鸡鸡/阴茎")%
+	ELSEIF TALENT:男性器サイズ == 1
+		PRINTFORM %TEXTR("大肉棒/大鸡巴")%
+	ELSEIF TALENT:男性器サイズ == 2
+		PRINTFORM %TEXTR("大肉棒/大鸡巴")%
+	ENDIF
+ELSE
+	PRINTFORM 假阳具
+ENDIF
+
+PRINTFORM 对准%TEXTR("肛门/菊穴")%，%TEXTR("缓缓/完全/深深")%地%TEXTR("吞入/坐下/贯穿")%…
+
+;ここまでを全て繋げると
+;「%CALLNAME:PLAYER%は%CALLNAME:TARGET%%TEXTRに馬乗りになり"、硬くそそり立ったよわよわちんちんをアナルにあてがって、そのままゆっくりと咥えこんでいった…」
+;となる。
+;Q.この場合、%CALLNAME:TARGET%にあたるのはいったい誰ームニルでしょうか？
+

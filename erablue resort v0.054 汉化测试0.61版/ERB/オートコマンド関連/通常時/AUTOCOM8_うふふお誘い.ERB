@@ -1,0 +1,86 @@
+﻿;------------------------------------------------------------------------------
+;合意済みの相手
+;ムード・性欲一定以上で二人きりだとうふふのお誘いが来る
+;------------------------------------------------------------------------------
+@AUTOCOM8
+;チラ見せと時間共通
+DRAWLINE
+PRINTFORML %CALLNAME:AUTOCOM_実行番号保存%向%CALLNAME:PLAYER%发出亲密接触的邀请……
+TRYCALLFORM KOJO_AUTOCOM_お誘い口上_{NO:AUTOCOM_実行番号保存}(AUTOCOM_実行番号保存)
+PRINTL
+PRINTL 是否接受邀请？
+PRINTBUTTON "[0] 确定", 0
+PRINTL
+PRINTBUTTON "[1] 取消", 1
+PRINTL
+TIME_うふふお誘い:AUTOCOM_実行番号保存:0 = TIME
+BINPUT
+IF RESULT == 0
+	;許可
+	RFLAG:コマンド結果受渡し変数 = 1
+	IF TFLAG:調教モード == 3
+		CALL 飲み会終了処理
+	ENDIF
+	CALL うふふ開始キャラ処理(AUTOCOM_実行番号保存, "キャラからお誘い")
+	CFLAG:MASTER:うふふ = 1
+
+	;管理フラグを初期化
+	FLAG:モード管理 = 0
+ELSE
+	;拒否
+	RFLAG:コマンド結果受渡し変数 = 0
+ENDIF
+
+RETURN 1
+
+@AUTOCOM_ABLE8(対象キャラ)
+#DIM 対象キャラ
+;あなたが必要
+SIF GETBIT(AUTOCOM_相手判別関数(対象キャラ), 0) == 0
+	RETURN 0
+;ターゲットが陥落済み
+SIF 陥落チェック_性的(対象キャラ) == 0
+	RETURN 0
+;初うふふ済
+SIF 初体験日取得("初うふふ", 対象キャラ, MASTER) == 0
+	RETURN 0
+;二人っきりのみ
+SIF GET_TARGETNUM() > 1
+	RETURN 0
+;隠密一致
+SIF CFLAG:MASTER:隠密 != CFLAG:対象キャラ:隠密
+	RETURN 0
+;馴れ合い強度2
+SIF TCVAR:MASTER:馴れ合い強度 < 2
+	RETURN 0
+;うふふ中ではない
+SIF CFLAG:対象キャラ:うふふ
+	RETURN 0
+;２時間に１回のみ発動
+SIF TIME - TIME_うふふお誘い:対象キャラ:0 < 120
+	RETURN 0
+;性欲一定以上
+SIF BASE:対象キャラ:性欲 < 700
+	RETURN 0
+;無関心があるとアウト
+SIF TALENT:対象キャラ:無関心 > 0
+	RETURN 0
+;性知識-1必要
+SIF 知識素質:対象キャラ:性知識 < -1
+	RETURN 0
+RETURN 1
+
+@MESSAGE_AUTOCOM8
+
+IF RFLAG:コマンド結果受渡し変数
+	;許可時
+	PRINTFORML %CALLNAME:PLAYER%欣然接受%CALLNAME:AUTOCOM_実行番号保存%的邀请
+	PRINTFORML %CALLNAME:AUTOCOM_実行番号保存%用手臂搂住%CALLNAME:PLAYER%的肩膀拉近距离……
+ELSE
+	;拒否時
+	PRINTFORML %CALLNAME:PLAYER%婉拒了%CALLNAME:AUTOCOM_実行番号保存%的邀请
+	PRINTFORML %CALLNAME:AUTOCOM_実行番号保存%露出遗憾的神情……
+ENDIF
+
+
+

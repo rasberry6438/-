@@ -1,0 +1,149 @@
+﻿
+;-------------------------------------------------
+;玩抢滩旗游戏
+;-------------------------------------------------
+@COMNAME_PLACE_383_3_3
+#FUNCTION
+TSTR:コマンド名受渡 = 玩抢滩旗游戏
+RETURNF 1
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_383_3_3
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+
+@COM_TOOLTIP_383_3_3
+LOCALS = <br>■玩抢滩旗游戏<br>
+LOCALS += "与对方进行抢滩旗游戏的指令。触发迷你游戏『抢滩旗』。"
+LOCALS += "<br>指令类型：日常<br>获取来源：欢乐・征服"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+		
+@COM383_3_3
+RFLAG:コマンド結果受渡し変数 = 0 ;勝敗
+RFLAG:コマンド結果受渡し変数２ = 0 ;難易度
+RFLAG:コマンド結果受渡し変数３ = 0
+
+SIF GETBIT(ミニゲーム初回説明フラグ, 1)
+	GOTO 初回説明スキップ
+SETBIT ミニゲーム初回説明フラグ, 1
+PRINTL 
+PRINTL 迷你游戏『抢滩旗』
+PRINTL 
+PRINTW 
+PRINTL 当出现READY提示时选择目标旗帜，等待GO信号
+PRINTW 信号发出后请快速输入指令
+PRINTL
+PRINTL 比对手更快输入即可获胜
+PRINTW 若在信号前提前输入会被判定抢跑而失败
+PRINTL 
+PRINTL 
+PRINTL 
+$INPUT
+PRINTBUTTON "[0]开始游戏 ", 0
+PRINTBUTTON "[1]放弃游戏 ", 1
+BINPUT
+SELECTCASE RESULT 
+CASE 0
+CASE 1
+	PRINTFORML %CALLNAME:PLAYER%离开了现场…
+	RETURN
+ENDSELECT
+
+$初回説明スキップ
+
+
+CALL ビーチフラッグ
+RFLAG:コマンド結果受渡し変数 = RESULT;0=遊ばない 1=フライング 2=押し負け 3=勝ち 4=ズル
+
+CALL COM383_3_3_追加処理(TARGET)
+;全員が楽しむ
+LOCAL = 1
+RFLAG:コマンド結果受渡し変数 = -1 ;ギャラリー
+WHILE TARGET:LOCAL > 0
+	IF CFLAG:(TARGET:LOCAL):睡眠 || CFLAG:(TARGET:LOCAL):隠密 || TARGET:LOCAL == TARGET:0
+	ELSE
+		CALL COM383_3_3_追加処理(TARGET:LOCAL)
+	ENDIF
+	LOCAL ++
+WEND
+
+TIME += 60
+RETURN 1
+
+@COM383_3_3_追加処理(ARG)
+LOCAL:0 = 0
+LOCAL:1 = 0
+
+SELECTCASE RFLAG:コマンド結果受渡し変数
+	CASE -1 ;ギャラリー
+		LOCAL:0 = 500
+	CASE 3
+		;勝ちは征服が上がる
+		;歓楽強度
+		LOCAL:0 = 500
+		;征服強度
+		LOCAL:1 = 100
+	CASEELSE
+		;勝ち以外
+		LOCAL:0 = 500
+ENDSELECT
+;関係性基本上昇量
+LOCAL:2 = 1
+
+;難易度一段上昇につき２割のボーナス
+IF RFLAG:コマンド結果受渡し変数２ > 0
+	FOR LOCAL:10, 0, 3
+		LOCAL:(LOCAL:10) = LOCAL:(LOCAL:10) * (5 + RFLAG:コマンド結果受渡し変数２) / 5
+	NEXT
+ENDIF
+
+;勝利でさらに２倍 ズルでも盛り上がる
+SELECTCASE RFLAG:コマンド結果受渡し変数 == 3
+CASE 3
+	FOR LOCAL:10, 0, 3
+		TIMES LOCAL:(LOCAL:10), 2
+	NEXT
+CASE 4
+	FOR LOCAL:10, 0, 3
+		TIMES LOCAL:(LOCAL:10), 1.5
+	NEXT
+ENDSELECT
+
+
+CALL SOURCE_CALC_歓楽(ARG, PLAYER, LOCAL:0)
+CALL SOURCE_CALC_征服(ARG, PLAYER, LOCAL:1)
+CALL SOURCE_CALC_好感度要素_友情度UP(ARG, PLAYER, LOCAL:0 / 2)
+
+CALL 関係性一括上昇(ARG, 4, LOCAL:2)
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE383_3_3
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(383)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM383_3_3
+
+SIF !RFLAG:コマンド結果受渡し変数 ;遊べなかった
+	RETURN
+
+PRINTFORM %CALLNAME:PLAYER%与%CALLNAME:TARGET%\@ GET_TARGETNUM() > 1 ? 们 # \@
+PRINTW 通过抢滩旗游戏玩得热火朝天
+

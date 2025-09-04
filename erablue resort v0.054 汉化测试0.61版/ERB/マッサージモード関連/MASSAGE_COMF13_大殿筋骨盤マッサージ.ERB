@@ -1,0 +1,124 @@
+﻿;-------------------------------------------------
+;臀大肌深层按摩
+;-------------------------------------------------
+@MASSAGE_COMNAME13
+#FUNCTIONS
+TSTR:コマンド名受渡 = 臀大肌深层按摩
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_13
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("微エロマッサージ")
+
+@MASSAGE_COM_TOOLTIP_13
+LOCALS = <br>■臀大肌深层按摩<br>
+LOCALS += "运用全手掌对臀大肌区域进行深度揉捏"
+LOCALS += "<br>通过促进血液循环消除浮肿，塑造优美臀型"
+LOCALS += "<br>指令类型：轻度情色按摩<br>获取来源：快Ａ・接触・暴露・欢乐・不快(特定条件)・反感(特定条件)"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@MASSAGE_COM13
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+IF 知識素質:TARGET:性知識 <= -1
+;性知識がない場合、そもそも警戒することができない。そういうもんかって受け入れるため理性は下がり続けるし、快感を伴うから警戒も下がり続ける。
+;……シヴァお前……
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -50)
+	BASE:TARGET:性欲 += 60
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -70)
+	CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 100)
+	CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 40)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 67)
+ELSE
+;気持ちいいから理性は下がるし、性欲も煽られるが、ケツを揉むため少し警戒される。
+;でも普通に真っ当な施術であり、卑猥が一切ないのは確定的に明らか。
+	CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 100)
+	CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 40)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 67)
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -50)
+	BASE:TARGET:性欲 += 60
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 20)
+ENDIF
+
+;セクハラ尻揉みとだいたい同じ。快Ａは丁寧にやる分でちょい強め。
+CALL SOURCE_CALC_快Ａ(TARGET, PLAYER, 80)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 200)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 250)
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 200)
+
+IF TARGET == MASTER
+	CALL ちんイラ増加処理(PLAYER, 35)
+ELSE
+	CALL ちんイラ増加処理(TARGET, 70)
+ENDIF
+
+;下半身服がある場合は……どうしよ？服着てても揉めるけど、オイルも使う。でも施術着だから服の上からオイル使っても問題はなさそう。
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE13
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(13)
+	RETURN RESULT
+
+;仰向けだとダメ
+SIF TCVAR:TARGET:マッサージ_うつ伏せフラグ == 0
+	RETURN 0
+
+;警戒が800以下でないとダメ
+SIF BASE:TARGET:警戒 > 800
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM13
+IF TALENT:TARGET:性別 == 2
+	PRINTFORM %CALLNAME:PLAYER%用沾满按摩精油的掌心对%CALLNAME:TARGET%
+		IF TALENT:TARGET:体格 >= 1
+		;長身以上
+			PRINTFORM 紧致饱满的
+		ELSEIF TALENT:TARGET:体格 <= -1
+		;小柄以下
+			PRINTFORM 脂肪稀薄的
+		ENDIF
+	PRINTFORM 臀部肌群进行细致揉捏按摩。
+ELSE
+	PRINTFORM %CALLNAME:PLAYER%倾倒精油后，用整个手掌对%CALLNAME:TARGET%
+		IF 下半身体型(TARGET) >= 1
+		;肉感的以上
+			PRINTFORM %TEXTR("丰腴饱满的/弹性十足的/肉感紧致的/浑圆性感的")%
+		ELSEIF 下半身体型(TARGET) <= -2
+		;細身以下
+			PRINTFORM 脂肪稀薄的
+		ENDIF
+		SIF CFLAG:TARGET:発情期フラグ < 0
+			PRINTFORM %TEXTR("发情期的/情欲高涨的/燥热难耐的")%
+		IF TALENT:TARGET:恋人持ち == 2
+			PRINTFORM 人妻
+		ELSEIF TALENT:TARGET:恋人持ち == 3
+			PRINTFORM 寡妇
+		ENDIF
+	PRINTFORML %TEXTR("臀瓣/臀部/臀肉")%进行深度揉捏把玩。
+		IF PALAM:欲情  >= PALAMLV:2
+			PRINTL
+			PRINTFORML 每当%CALLNAME:PLAYER%施加揉捏力度，被爱液浸透的理疗服便发出细微水声，%CALLNAME:TARGET%面红耳赤地喘息着聆听这羞人的声响…
+		ENDIF
+ENDIF

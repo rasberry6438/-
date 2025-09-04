@@ -1,0 +1,147 @@
+﻿;-------------------------------------------------
+;电动按摩器
+;道具使用コマンド、レベル2
+;-------------------------------------------------
+@COMNAME41
+#FUNCTIONS
+
+TSTR:コマンド名受渡 = 电动按摩器
+
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_41
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("道具系")
+弱点コマンドカテゴリ = C
+オートコマンド許可 = 1
+
+
+@COM_TOOLTIP_41
+LOCALS = <br>■电动按摩器<br>
+LOCALS += "使用手持振动按摩器具对阴蒂或阴茎施加强烈刺激的指令。"
+LOCALS += "<br>指令类型：道具系<br>获取来源：快Ｃ・暴露・接触"
+LOCALS += "<br>专属经验值：道具使用经验(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM41
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER,500)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 40)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 30)
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;同性愛
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 1
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 1
+
+EXP:PLAYER:道具使用経験 ++
+RCVAR:TARGET:道具コマンドフラグ = 1
+
+RETURN 1
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE41
+;电动按摩器実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(41)
+	RETURN RESULT
+;クリがない場合駄目
+SIF TALENT:TARGET:Ｃ感度 == -2
+	RETURN 0
+;アイテムを持っているか、アイテムなし設定でないとダメ
+SIF ITEM:1 == 0 && NOITEM == 0
+	RETURN 0
+
+;下半身着衣
+;前鎧、めくれない服があると無理
+SIF TEQUIP:下腹部前鎧あり
+	RETURN 0
+SIF TEQUIP:下半身服あり && (!TEQUIP:スカートめくり可 && !TEQUIP:ずらし可)
+	RETURN 0
+
+;使用者が指を何かに使ってるなら無理
+SIF TEQUIP:PLAYER:指
+	RETURN 0
+;クリトリスを何かに使ってる・届かないなら無理
+SIF TEQUIP:PLAYER:クリトリス
+	RETURN 0
+CALL MODE_部位届く判定(部位_クリトリス, PLAYER, TARGET)
+SIF RESULT == 0
+	RETURN 0
+
+;ベッドルームでないとダメ
+SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+	
+;オートコマンド中の制限
+SIF FLAG:オートコマンド判定中フラグ && OPTION変数:玩具プレイ禁止
+	RETURN 0
+	
+;オートコマンド中の制限
+SIF FLAG:オートコマンド判定中フラグ && TALENT:TARGET:性別 == 2 &&  OPTION変数:男性への愛撫禁止
+	RETURN 0	
+	
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM41
+PRINTFORM %CALLNAME:PLAYER%将
+IF GETBIT(TALENT:TARGET:性別, 1)
+	PRINTFORM 电动按摩器对准%CALLNAME:TARGET%的阴茎
+ELSE
+	PRINTFORM 电动按摩器对准%CALLNAME:TARGET%的私处
+ENDIF
+IF TEQUIP:下半身服あり && TEQUIP:スカートめくり可
+	PRINT 掀开裙摆
+ELSEIF TEQUIP:下半身服あり && TEQUIP:ずらし可
+	PRINT 隔着衣服
+ELSEIF TEQUIP:下タイツあり && !TEQUIP:下タイツ破れ
+	PRINT 隔着裤袜
+ELSEIF TEQUIP:下半身下着あり
+	PRINT 隔着内裤
+ENDIF
+
+PRINTL 施加震动刺激
+PRINTFORM %CALLNAME:TARGET%
+;Ｃ感覚LV3未満＋欲情のPALAMLV3未満
+IF ABL:Ｃ感覚 < 3 && PALAM:欲情 < PALAMLV:3
+	PRINT 因瘙痒感不断扭动
+;Ｃ感覚LV3未満＋欲情のPALAMLV3以上
+ELSEIF ABL:Ｃ感覚 < 3 && PALAM:欲情 >= PALAMLV:3
+	PRINT ，陷入失语状态
+;恋慕か親愛＋Ｃ感覚LV4以上＋欲情のPALAMLV3未満
+ELSEIF TALENT:恋慕 && ABL:Ｃ感覚 >= 4 && PALAM:欲情 < PALAMLV:3 && PLAYER == MASTER
+	PRINT 主动张开双腿迎接刺激
+;恋慕か親愛＋Ｃ感覚LV4以上＋欲情のPALAMLV3以上＋欲情のPALAMLV5未満
+ELSEIF TALENT:恋慕 && ABL:Ｃ感覚 >= 4 && PALAM:欲情 >= PALAMLV:3 && PALAM:欲情 < PALAMLV:5 && PLAYER == MASTER
+	PRINTFORM 愉悦地流着口水反复呼唤%CALLNAME:PLAYER%的名字
+;恋慕か親愛＋Ｃ感覚LV4以上＋欲情のPALAMLV5以上
+ELSEIF TALENT:恋慕 && ABL:Ｃ感覚 >= 4 && PALAM:欲情 >= PALAMLV:5 && PLAYER == MASTER
+	PRINTFORM 紧抱着%CALLNAME:PLAYER%沉浸在高潮余韵中
+;Ｃ感覚LV3以上＋欲情のPALAMLV3未満
+ELSEIF ABL:Ｃ感覚 >= 3 && PALAM:欲情 < PALAMLV:3
+	PRINT 因强烈快感而面泛潮红
+;Ｃ感覚LV3以上＋欲情のPALAMLV3以上＋欲情のPALAMLV5未満
+ELSEIF ABL:Ｃ感覚 >= 3 && PALAM:欲情 >= PALAMLV:3 && PALAM:欲情 < PALAMLV:5
+	PRINT 眼神迷离地享受快感
+;Ｃ感覚LV3以上＋欲情のPALAMLV5以上
+ELSEIF ABL:Ｃ感覚 >= 3 && PALAM:欲情 >= PALAMLV:5
+	PRINT 濒临高潮的恍惚模样
+ENDIF
+PRINTL …
+
+

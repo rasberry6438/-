@@ -1,0 +1,94 @@
+﻿;-------------------------------------------------
+;背部美肌护理
+;-------------------------------------------------
+@MASSAGE_COMNAME4
+#FUNCTIONS
+TSTR:コマンド名受渡 = 背部美肌护理
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_4
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("通常マッサージ")
+
+@MASSAGE_COM_TOOLTIP_4
+LOCALS = <br>■背部美肌护理<br>
+LOCALS += "使用特质精油进行背部肌肤养护，具有保湿与美容效果"
+LOCALS += "<br>对习惯展露背部的艾伦族客人效果尤为显著"
+LOCALS += "<br>指令类型：按摩<br>获取来源：快Ｓ・接触・欢愉・暴露(非艾伦族)"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@MASSAGE_COM4
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+;素肌に触れるので警戒削りはそこそこ止まり。気持ちいいから理性はまあまあ削れる
+;歓楽強め。リラックス効果も強め。
+;エルーンに対して効果が高い。背中のケアがうまいオトコは加点対象でしょ絶対。
+IF TALENT:TARGET:種族 == 2
+	CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 100)
+	CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 60)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 60)
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -60)
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -60)
+	CALL SOURCE_CALC_快Ｓ(TARGET, PLAYER, 150)
+	CALL SOURCE_CALC_接触(TARGET, PLAYER, 100)
+	CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 300)
+ELSE
+;エルーン以外だとちょっと露出が増える。愛撫が100だから……とりあえず50くらい？
+	CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 50)
+	CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 20)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 30)
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -40)
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -40)
+	CALL SOURCE_CALC_快Ｓ(TARGET, PLAYER, 100)
+	CALL SOURCE_CALC_接触(TARGET, PLAYER, 100)
+	CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 200)
+	CALL SOURCE_CALC_露出(TARGET, PLAYER, 50)
+ENDIF
+
+;上半身服がある場合は脱がす。浴衣とかバスローブみたいな施術着に、今後しないとも限らないため
+IF TEQUIP:上半身服あり == 1
+	TEQUIP:上半身服あり = 0
+	SIF TEQUIP:上下一体服
+		TEQUIP:下半身服あり = 0
+	RFLAG:コマンド結果受渡し変数 = 1
+ENDIF
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE4
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(4)
+	RETURN RESULT
+
+;仰向けだとダメ
+SIF TCVAR:TARGET:マッサージ_うつ伏せフラグ == 0
+	RETURN 0
+
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM4
+PRINTFORM %CALLNAME:PLAYER%
+	IF RFLAG:コマンド結果受渡し変数 == 1
+		PRINTFORML 解开%CALLNAME:TARGET%的理疗服露出背部，将植物精油缓缓倾注于肌肤表面，边按摩边细致涂抹开来。
+	ELSE
+		PRINTFORML 将植物精油滴落在%CALLNAME:TARGET%的背部，通过按摩手法均匀细致地延展开来。
+	ENDIF

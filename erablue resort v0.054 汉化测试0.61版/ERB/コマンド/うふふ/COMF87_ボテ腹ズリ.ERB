@@ -1,0 +1,282 @@
+﻿;-------------------------------------------------
+;ボテ腹ズリ
+;奉仕系コマンド
+;-------------------------------------------------
+@COMNAME87
+#FUNCTIONS
+TSTR:コマンド名受渡 = 孕腹摩擦
+SIF GETBIT(FLAG:モード管理, モードビット_同時)
+	TSTR:コマンド名受渡 = 双重孕腹摩擦
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_87
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ&奉仕")
+同時モード許可 = 2
+同時モード拡張許可 = 0
+オートコマンド許可 = 3
+
+@COM_TOOLTIP_87
+IF RFLAG:奉仕逆転時ツールチップフラグ
+	LOCALS = <br>■孕腹摩擦侍奉<br>
+	LOCALS += "用怀孕隆起的腹部爱抚对方阴茎的指令。<br>进入孕腹摩擦模式，在切换模式或结束性行为前将持续触发特定效果。"
+ELSE
+	LOCALS = <br>■孕腹摩擦<br>
+	LOCALS += "要求对方用怀孕隆起的腹部爱抚阴茎的指令。<br>进入孕腹摩擦模式，在切换模式或结束性行为前将持续触发特定效果。"
+ENDIF
+LOCALS += "<br>指令类型：嘿咻<br>获取来源：快Ｓ・暴露・接触・侍奉・不洁"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM87
+;-------------------------------------------------
+;モードの設定
+;-------------------------------------------------
+CALL MODE_CHANGE("ボテ腹ズリ", TARGET, PLAYER)
+;-------------------------------------------------
+;COM別FLAGの設定
+;-------------------------------------------------
+;奉仕快楽
+RCVAR:TARGET:奉仕コマンドフラグ = 1
+RCVAR:TARGET:汎用喘ぎ_文節低減フラグ = 1
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+
+
+
+CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 100)
+CALL SOURCE_CALC_快Ｓ(TARGET, PLAYER, 50)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 50)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 150)
+CALL SOURCE_CALC_奉仕(TARGET, PLAYER, 400)
+
+CALL SOURCE_CALC_不潔(TARGET, PLAYER, 150)
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;同性愛
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 7
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 7
+
+;愛情経験
+SIF TALENT:恋慕
+	EXP:愛情経験 += 2
+RETURN 1
+
+;-------------------------------------------------
+;実行判定処理
+;-------------------------------------------------
+@CAN_COM87(ARG)
+#DIM CONST 必要実行値 = 25
+#DIM 実行値
+#DIM ＋表示フラグ
+
+SKIPDISP ARG
+PRINTFORML 孕腹摩擦(%CALLNAME:TARGET%)
+
+実行値 = 0
+＋表示フラグ = 0
+
+;すべての命令に共通の要素を考慮
+CALL COM_ORDER
+実行値 = RESULT
+＋表示フラグ = RESULT:1
+
+;ABL:欲望
+IF ABL:欲望
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:欲望 * 1
+	PRINTFORM 欲望LV{ABL:欲望}({ABL:欲望 * 1})
+	＋表示フラグ = 1
+ENDIF
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:奉仕精神 * 4
+	PRINTFORM 侍奉精神LV{ABL:奉仕精神}({ABL:奉仕精神 * 4})
+	＋表示フラグ = 1
+ENDIF
+;ABL:精液中毒
+IF ABL:精液中毒
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:精液中毒 * 3
+	PRINTFORM 精液成瘾LV{ABL:精液中毒}({ABL:精液中毒 * 3})
+	＋表示フラグ = 1
+ENDIF
+
+IF MARK:快楽刻印
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += MARK:快楽刻印 * 1
+	PRINTFORM 快乐刻印LV{MARK:快楽刻印}({MARK:快楽刻印 * 1})
+	＋表示フラグ = 1
+ENDIF
+;PALAM:欲情
+IF GETPALAMLV(PALAM:欲情, 5)
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += GETPALAMLV(PALAM:欲情, 5) * 1
+	PRINTFORM 情欲LV{GETPALAMLV(PALAM:欲情, 5)}({GETPALAMLV(PALAM:欲情, 5) * 1})
+	＋表示フラグ = 1
+ENDIF
+;恥じらい
+IF TALENT:羞恥心 > 0
+	PRINT  - 
+	実行値 -= 4
+	PRINT 害羞(4)
+	＋表示フラグ = 1
+ENDIF
+;汚臭鈍感
+IF TALENT:汚臭耐性 > 0
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 1
+	PRINT 污臭钝感(1)
+	＋表示フラグ = 1
+ENDIF
+;汚臭敏感
+IF TALENT:汚臭耐性 < 0
+	PRINT  - 
+	実行値 -= 2
+	PRINT 污臭敏感(2)
+	＋表示フラグ = 1
+ENDIF
+;献身的
+IF TALENT:献身的
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 8
+	PRINT 献身(8)
+	＋表示フラグ = 1
+ENDIF
+;男嫌い（恋慕，親愛で無効）
+IF TALENT:性別嗜好 & 1 && !(TALENT:PLAYER:性別 & 1) && (!TALENT:恋慕 || PLAYER != MASTER)
+	PRINT  - 
+	実行値 -= 12
+	PRINT 厌男(12)
+	＋表示フラグ = 1
+ENDIF
+;恋慕
+IF TALENT:恋慕
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 5
+	PRINT 爱慕(5)
+	＋表示フラグ = 1
+ENDIF
+;親愛
+IF TALENT:恋慕 > 1
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 5
+	PRINT 挚爱(5)
+	＋表示フラグ = 1
+ENDIF
+
+;言いなり
+IF TCVAR:言いなり
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 999
+	PRINT 绝对服从(999)
+	＋表示フラグ = 1
+ENDIF
+
+;合計を表示(25以上で実行)
+PRINTFORM  = {実行値}
+
+SIF 実行値 < 必要実行値
+	PRINT  < 
+SIF 実行値 == 必要実行値
+	PRINT  = 
+SIF 実行値 > 必要実行値
+	PRINT  > 
+PRINTFORM 执行值{必要実行値}
+
+WAIT
+SKIPDISP 0
+
+;実行できない
+SIF 実行値 < 必要実行値
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE87
+;ボテ腹ズリ実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+SIF GLOBAL_COMABLE(87)
+	RETURN RESULT
+;ちんこがない場合駄目
+SIF TALENT:PLAYER:Ｃ感度 == -2
+	RETURN 0
+;ある程度の妊娠進行度が必要
+SIF PREGNANCY_SIZE(TARGET) < 2
+	RETURN 0
+;調教者がオトコか半人半妖かふたなりじゃないとダメ
+SIF !(TALENT:PLAYER:性別 & 2)
+	RETURN 0
+;縄使用中は不可
+; SIF TEQUIP:縄
+; 	RETURN 0
+;上半身着衣(TARGET)
+;鎧，差し込めないorはだけない服があると無理
+SIF TEQUIP:上半身鎧あり
+	RETURN 0
+SIF TEQUIP:上半身服あり && (!TEQUIP:はだけ可)
+	RETURN 0
+;下半身着衣(PLAYER)
+;前鎧，タイツ，前張りがあると無理
+SIF TEQUIP:PLAYER:下腹部前鎧あり
+	RETURN 0
+SIF TEQUIP:PLAYER:下タイツあり && !TEQUIP:PLAYER:下タイツ破れ
+	RETURN 0
+SIF TEQUIP:PLAYER:下半身下着あり == 2
+	RETURN 0
+;ペニスを何かに使ってるなら無理
+SIF TEQUIP:PLAYER:ペニス
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM87
+#DIMS 腹部描写
+#DIM 同時キャラ番号
+
+IF GETBIT(FLAG:モード管理, モードビット_同時)
+	FOR 同時キャラ番号, 0, 同時モード_選択数
+		SIF 同時キャラ番号 > 0
+			PRINT ，
+		PRINTFORM %CALLNAME:(同時モード_選択キャラ:同時キャラ番号)%
+	NEXT
+	PRINTFORML 们紧贴腹部，用孕肚摩擦%CALLNAME:PLAYER%的阴茎…
+	RETURN 0
+ENDIF
+
+SELECTCASE PREGNANCY_SIZE(TARGET)
+	CASE IS >= 5
+		腹部描写 = 高高隆起的孕肚
+	CASE 4
+		腹部描写 = 明显膨大的孕肚
+	CASEELSE
+		腹部描写 = 山丘般隆起的腹部
+ENDSELECT
+IF GETBIT(FLAG:モード管理, モードビット_同時) == 0
+	PRINTFORML %CALLNAME:TARGET%用%腹部描写%压在%CALLNAME:PLAYER%的阴茎上，以全身重量摩擦着…
+ENDIF

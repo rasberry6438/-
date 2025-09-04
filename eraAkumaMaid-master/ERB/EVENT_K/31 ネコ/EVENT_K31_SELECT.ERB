@@ -1,0 +1,572 @@
+﻿
+;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;X1は角色番号に置換してください
+;-------------------------------------------------
+
+;-------------------------------------------------
+;追加お願い系
+;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+;ここで TFLAG:取引可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K31_ADDSELECT
+SIF (TALENT:恋慕 && CEVENT("ネコイベント：圣诞猫")) == 0 && (DAYEV("圣诞节前夕","游戏内") || DAYEV("圣诞节","游戏内"))
+	STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("Cosplayのお願い:圣诞节", 16)% … %NAME:TARGET%に圣诞节の日にCosplayして要ようお願いします/
+
+;お願い・取引で増やした選択肢の地の文と台詞
+@KOJO_WISH_K31_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "Cosplayのお願い:圣诞节"
+	PRINTL 
+	PRINTFORMW 「はぁ？ 圣诞节にぃ、トクベツなカッコォ……？」
+	PRINTL 
+	PRINTFORMW 圣诞节にCosplayをして欲しいと拜托了と、%CALLNAME:TARGET%正在认真地读着标题为無言のまま渋い顔をしている…
+	PRINTFORMW これは望み薄だろうか？
+	PRINTL 
+	PRINTFORMW 「いや…………どんなカッコすりゃ良いんだろって純粋な疑問がね」
+	PRINTL 
+	PRINTFORMW どうやら前向きに考えてくれるようだ。これは圣诞节が楽しみだ！！
+	PRINTL 
+	PRINTFORMW 「いや、良いとは言ってないよ？ ちょ、聞いてる？ おい！ こら！？」
+	PRINTL 
+	CALL SET_CEVENT, "ネコイベント：圣诞猫"
+ENDSELECT
+
+;-------------------------------------------------
+;追加Talk系
+;-------------------------------------------------
+@DAILY1_K31_ADDSELECT
+
+SIF MARK:屈服刻印 >= 2 && COND("発情期") == 0
+	STR:選択肢 += "話題：マタタビ/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K31_ADDSELECT, ARGS
+SELECTCASE ARGS
+
+;-----------------------------------
+;マタタビのヤツ　相変わらずアイリ酱からパクパク有がとうございます
+	;CFLAG:マタタビ
+	;1 イベントトリガー
+	;2 初回お試し済み
+	;3 偽酔酒経験済み
+	;4 本日マタタビ選択済み(偽酔酒経験没有)
+	;5 本日マタタビ選択済み
+	;4以上の場合終日にフラグを-2する。
+;------------------------------------
+CASE "話題：マタタビ"
+	SELECTCASE CFLAG:マタタビ
+	;マタタビ仕入れ前後
+	CASE IS <= 1
+		IF CEVENT("ネコイベント：マタタビ話題") == 0
+			CALL EMOTION_PLUS, "重置/小口", TARGET
+			PRINTFORMW 「……マタタビ？ 嗅いだらどうなる…ったってね」
+			CALL EMOTEFACE, "重置/闭眼２/半開", TARGET
+			PRINTFORMW 「別に%CNAME("一人称")%マジで猫ってワケじゃないし、面白色事にはなんないと思うけど」
+			CALL EMOTEFACE, "重置/左闭眼２/半開", TARGET
+			PRINTFORMW 「それに…猫みたいに扱われるのは……いや、別に良いんだけどさ」
+			CALL SET_CEVENT, "ネコイベント：マタタビ話題"
+		ELSE
+			IF RAND:3 == 0
+				CALL EMOTION_PLUS, "重置/半開", TARGET
+				PRINTFORMW 「まぁ、嗅いでみないと分かんないけど……気ぃ進まんなぁ…」
+			ELSEIF RAND:2
+				CALL EMOTION_PLUS, "重置/小口", TARGET
+				PRINTFORMW 「頭のちゅーすーしんけーっての？ が、やられて酔っ払ったみたいになるんだってね」
+				CALL EMOTEFACE, "重置/闭眼２/困扰眉/半開", TARGET
+				PRINTFORMW 「……猫の話ね、猫の。頷いてこっちみんな%CNAME("一人称")%は猫じゃないっつの」
+			ELSE
+				CALL EMOTION_PLUS, "重置/闭眼２/困扰眉/半開", TARGET
+				PRINTFORMW 「是是、試してみたいのは解ったから…」
+				CALL EMOTEFACE, "重置/左闭眼２/困扰眉/栗口２", TARGET
+				PRINTFORMW 「持ってきたら考えとくから、持ってきたらね……そうそう手に入らないとは思うけどさ」
+			ENDIF
+		ENDIF
+	;本日マタタビ未選択(マタタビ初回体験後)
+	CASE 2
+		IF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/闭眼２/困扰眉/半開", TARGET
+			PRINTFORMW 「また仕入れたとか要らん情報は良いから…猫扱いやめろっつの……」
+		ELSEIF RAND:2
+			CALL EMOTION_PLUS, "重置/小口", TARGET
+			PRINTFORMW 「まぁ气味はそんなni↘て感じ？ もっと酷い气味なのかと思ったけどさ」
+			CALL EMOTEFACE, "重置/闭眼２/困扰眉/半開", TARGET
+			PRINTFORMW 「……言っとくけど今度もっかい嗅がせろってコトじゃないからね？」
+		ELSE
+			CALL EMOTION_PLUS, "重置/闭眼２/半開", TARGET
+			PRINTFORMW 「是是、酔っ払わなかったのは見たでしょー？」
+			CALL EMOTEFACE, "重置/憤怒眉/小口２", TARGET
+			PRINTFORMW 「%CNAME("一人称")%は猫じゃない、以上、終わり。馬鹿なコトしな桑なっての」
+		ENDIF
+	;本日マタタビ未選択(偽酔酒経験済み)
+	CASE 3
+		IF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/飘忽/困扰眉/半開/赤面", TARGET
+			PRINTFORMW 「うぇっ…い、いやぁ…酔っ払ってる時の記憶は、無い、なぁ…」
+			CALL EMOTEFACE, "重置/◯◯/憤怒眉/哈欠大/赤面", TARGET
+			PRINTFORMW 「……な、何さその目。うっさい！ ホントに覚えてないんだって！ 覚えてないんだよ！！」
+		ELSEIF RAND:2
+			CALL EMOTION_PLUS, "重置/飘忽/笑顔２/赤面", TARGET
+			PRINTFORMW 「いやー、意外とさ……思ったより、猫だったみたいで」
+			PRINTFORMW 「は、ははは……いや、でも猫扱いされんのはヤだけど、うん」
+		ELSE
+			CALL EMOTION_PLUS, "重置/小口", TARGET
+			PRINTFORMW 「よ、酔っ払うって解ったんだしさ、もう嗅がせる必要無いよね？」
+			CALL EMOTEFACE, "重置/飘忽/困扰眉/半開/赤面", TARGET
+			PRINTFORMW 「……たまになら、まぁその……吝かでも無いけど」
+		ENDIF
+	;4 本日マタタビ選択済み(偽酔酒経験没有)
+	CASE 4
+		IF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/闭眼２/半開", TARGET
+			PRINTFORMW 「で、酔ってるように見える？」
+			PRINTFORMW 「見えない？ そりゃあね、酔っ払うわけないし」
+		ELSEIF RAND:2
+			CALL EMOTION_PLUS, "重置/闭眼２/半開", TARGET
+			PRINTFORMW 「猫扱いした件について何か言うことは？ ……宜しい」
+		ELSE
+			CALL EMOTION_PLUS, "重置/左闭眼２/半開", TARGET
+			PRINTFORMW 「ったく、マジモンの猫じゃないんだからさ…」
+			PRINTFORMW 「言っとくけど、あんまし良い気分じゃないんだからね」
+		ENDIF
+	;本日マタタビ選択済み
+	CASE 5
+		IF CEVENT("ネコイベント：偽酔酒")
+			IF RAND:3 == 0
+				CALL EMOTION_PLUS, "重置/◯◯/笑顔２/困扰眉/赤面", TARGET
+				PRINTFORMW 「い、いや、ホントに酔ってるから！ あ、いや、酔ってるにゃん！」
+				PRINTFORMW 「この顔見なよめっちゃ熱いし！ 红色し！？ これはもう酔っ払ってる以外無くない！？」
+			ELSEIF RAND:2
+				CALL EMOTION_PLUS, "重置/半開３/困扰眉/赤面", TARGET
+				PRINTFORMW 「も、もう酔ってるんだからさ、そんな何度も嗅がせようとしなくても……」
+				CALL EMOTEFACE, "重置/◯◯/哈欠小/憤怒眉/赤面", TARGET
+				PRINTFORMW 「…………ｽﾝｽﾝ……う、うん……えと…………にゃ、にゃーん！！」
+				PRINTFORMW %CALLNAME:TARGET%正在认真地读着标题为何度か鼻を鳴らすと、どうすれば良いか逡巡したようだが結局抱き着いて来た…
+			ELSE
+				CALL EMOTION_PLUS, "重置/困扰眉/半開２/赤面", TARGET
+				PRINTFORMW 「ああ、待って、ちょっと疲惫……いや、酔っ払ってても普通疲れるよね…？」
+				CALL EMOTEFACE, "重置/闭眼２/斜眉/半開/赤面", TARGET
+				PRINTFORMW 「にゃんはどうしたって…………う、ぐ……にゃ、にゃん…」
+			ENDIF
+		ELSE
+			IF RAND:3 == 0
+				CALL EMOTION_PLUS, "重置/飘忽/困扰眉/半開/赤面", TARGET
+				PRINTFORMW 「うぇっ…い、いやぁ…酔っ払ってる時の記憶は、無い、なぁ…」
+				CALL EMOTEFACE, "重置/◯◯/憤怒眉/哈欠大/赤面", TARGET
+				PRINTFORMW 「……な、何さその目。うっさい！ ホントに覚えてないんだって！ 覚えてないんだよ！！」
+			ELSEIF RAND:2
+				CALL EMOTION_PLUS, "重置/飘忽/笑顔２/赤面", TARGET
+				PRINTFORMW 「いやー、意外とさ……思ったより、猫だったみたいで」
+				PRINTFORMW 「は、ははは……いや、でも猫扱いされんのはヤだけど、うん」
+			ELSE
+				CALL EMOTION_PLUS, "重置/小口", TARGET
+				PRINTFORMW 「よ、酔っ払うって解ったんだしさ、もう嗅がせる必要無いよね？」
+				CALL EMOTEFACE, "重置/飘忽/困扰眉/半開/赤面", TARGET
+				PRINTFORMW 「……たまになら、まぁその……吝かでも無いけど」
+			ENDIF
+		ENDIF
+	ENDSELECT
+	CALL NEKO_POINT
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%说了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%后%CALLNAME:TARGET%的反応
+ENDSELECT
+
+
+
+
+;-------------------------------------------------
+;追加互动系
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K31_ADDSELECT
+SIF CFLAG:じゃれつき具合_寧子 != 0 && STATE("酔酒") == 0
+	STR:選択肢 += "逗猫棒/"
+
+
+;IF CEVENT("ネコイベント：偽酔酒") == 0 && COND("夜") && MARK:屈服刻印 >= 2 && CFLAG:マタタビ > 0 && CFLAG:マタタビ < 4
+;	SIF COND("発情期") == 0
+;		STR:選択肢 += "让她闻木天蓼/"
+;ENDIF
+;本体側でのVerUP後此方に差し替え
+SIF CEVENT("ネコイベント：偽酔酒") == 0 && COND("夜") && MARK:屈服刻印 >= 2 && CFLAG:マタタビ > 0 && CFLAG:マタタビ < 4
+	STR:選択肢 += "让她闻木天蓼/"
+
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K31_ADDSELECT, ARGS
+SELECTCASE ARGS
+;-------------------------------------------------
+;ねこじゃらしで逗猫棒
+;構文や最初の地の文に関してはアイリ酱とこから圆圈パクパクごっ君ご馳走様です。感謝。
+;許可らしきものは頂けたのだ。多分。
+;
+;CFLAG:じゃれつき具合_寧子
+;0=やだ 1=うわ、出してきた 2,3=むきになってきた 4>=うぉおおおおお！！ 
+;-------------------------------------------------
+CASE "逗猫棒"
+	PRINTFORM 想要把%CALLNAME:MASTER%把%CALLNAME:TARGET%的目の前で猫じゃらしを%TEXTR("ゆらゆらと/小刻みに/＿")%動かし
+	IF CSTR:PREV_DAILYCOM != STR:日常イベント名
+		PRINTFORMW てみた…
+	ELSE
+		PRINTFORMW 続けた…
+	ENDIF
+	PRINTL 
+	;hokaguru add
+	;そも恋慕じゃないとまともに一直陪着我くれない
+	SIF TALENT:恋慕 == 0
+		CFLAG:じゃれつき具合_寧子 = 0
+	;発情中はえろいことしたいからそれどころではない
+	SIF COND("発情中")
+		CFLAG:じゃれつき具合_寧子 = 0
+	;途中でやめる（この時間に初回でない、かつ連続実行でない）と飽きちゃう
+	SIF CHOSE_DEVENT(STR:日常イベント名) && CSTR:PREV_DAILYCOM != STR:日常イベント名
+		CFLAG:じゃれつき具合_寧子 = 0
+;原本だとこの後気紛れ分岐があるけど恋慕の時点で気紛れとか発生し無さそうなので置いておく
+	SELECTCASE CFLAG:じゃれつき具合_寧子
+	;0=やだ
+	CASE 0
+		IF COND("発情中")
+			PRINTFORMW 似乎%CALLNAME:MASTER%比%CALLNAME:TARGET%眼前的逗猫棒更加有吸引力、%CALLNAME:TARGET%一直盯着%CALLNAME:MASTER%。
+			CALL EMOTION_PLUS, "重置/半開/赤面", TARGET
+			PRINTFORMW 「……那个、现在是発情期哟。知道的吗」
+			IF TALENT:恋慕
+				CALL EMOTEFACE, "重置/左闭眼２/赤面", TARGET
+				PRINTFORMW 「……想要做……所以……不想玩这个啦」
+			ELSE
+				CALL EMOTEFACE, "重置/闭眼２/小口", TARGET
+				PRINTFORMW 「…………现在没有做这种事情的心情」
+			ENDIF
+		;どうやってか出したいけど擅長い事行く分岐を思いつかない
+		;ELSEIF TALENT:恋慕
+		;	PRINTFORMW 「…………并不是很喜欢被当作猫那样对待、这种事情知道的吧？」
+		;	PRINTFORMW %CALLNAME:TARGET%好像有点难以启齿的样子地挤出了一句、啪的一下轻轻地拍在了%CALLNAME:MASTER%手里握着的逗猫棒上
+		;	PRINTFORMW 「那ー那个……今天到此为止可以吗？」
+		;	PRINTFORMW 吐出舌頭做着鬼脸苦笑着。
+		ELSE
+			IF TALENT:恋慕
+				CALL EMOTION_PLUS, "重置/半開", TARGET
+				PRINTFORMW 「……诶多、还要玩吗？」
+				CALL EMOTEFACE, "重置/飘忽", TARGET
+				PRINTFORMW 「%CNAME("一人称")%ー……%TEXTR("倒是觉得已经可以了/感觉已经冷静下来了")%」
+				CALL EMOTEFACE, "重置", TARGET
+				PRINTFORMW 「下次还有机会的」
+			ELSE
+				IF RAND:3 == 0
+					CALL EMOTION_PLUS, "重置", TARGET
+					PRINTFORMW %CALLNAME:TARGET%用厌烦了一样的眼神盯着%CALLNAME:MASTER%手里拿着的逗猫棒。
+					PRINTFORMW 「想要玩吗？」
+					CALL EMOTEFACE, "重置/闭眼２/半開/叹气", TARGET
+					PRINTFORMW 「……哈」
+					PRINTFORMW 最终长长地吐出一气转向了另一边。
+				ELSEIF RAND:2
+					CALL EMOTION_PLUS, "重置/半開", TARGET
+					PRINTFORMW 「…………呜啊」
+					PRINTFORMW 歪着頭看着%CALLNAME:MASTER%拿出的逗猫棒的%CALLNAME:TARGET%…
+					CALL EMOTEFACE, "重置/闭眼２", TARGET
+					PRINTFORMW 「无视」
+					PRINTFORMW 就说了两个字便看向了别的地方。
+				ELSE
+					CALL EMOTION_PLUS, "重置", TARGET
+					PRINTFORMW 「觉得很好玩吗？」
+					CALL EMOTEFACE, "重置/闭眼２/半開", TARGET
+					PRINTFORMW 「唔、嘛……虽然%CNAME("二人称")%可能玩得很開心……」
+					CALL EMOTEFACE, "重置/左闭眼２", TARGET
+					PRINTFORMW 「……但%CNAME("一人称")%讨厌被像猫那样对待。おーらい、知道了吗？」
+				ENDIF
+			ENDIF
+		ENDIF
+	;1=うわ、出してきた
+	CASE 1
+		IF RAND:2
+			CALL EMOTION_PLUS, "重置/半開", TARGET
+			PRINTFORMW 「不不不……那个啊」
+			PRINTFORMW 「都说了多少次不要把逗猫棒拿出来了。还没有记住吗？」
+			PRINTFORMW 一边这样说着%CALLNAME:TARGET%像是被吓到了一样弓起肩膀、视线一直左右摇晃着追逐眼前的逗猫棒。
+		ELSE
+			CALL EMOTION_PLUS, "重置/困扰眉/小口", TARGET
+			PRINTFORMW 「把那个拿出来是打算干什么啊」
+			CALL EMOTEFACE, "重置/闭眼２/困扰眉/半開", TARGET
+			PRINTFORMW 「……啊啊、唔、嘛、唔嗯……好呀……不对、一点也不好」
+		ENDIF
+	;2,3=むきになってきた
+	CASE 2, 3
+		IF RAND:2
+			CALL EMOTION_PLUS, "重置/憤怒眉", TARGET
+			PRINTFORMW 「――――呼嗯っ」
+			CALL EMOTEFACE, "重置/闭眼２/憤怒眉/半開", TARGET
+			PRINTFORMW 「ﾁｯ……」
+			PRINTFORMW 抓住时机伸出手去挠的抓了一个空、%CALLNAME:TARGET%轻轻地咂了一下嘴…
+			PRINTFORMW 之后便装作出一副毫无兴趣的样子转过身去、但耳朵还是高高地竖了起来警戒着周围的情况…
+		ELSE
+			CALL EMOTION_PLUS, "重置/闭眼２/半開３/憤怒眉", TARGET
+			PRINTFORML 「所ー以ー说……逗猫棒这种东西――」
+			PRINTFORMW 突然一瞬间从侧面伸出一只手去抓。
+			CALL EMOTEFACE, "重置/◯◯/憤怒眉/小口", TARGET
+			PRINTFORMW 「大概、这样……」
+			PRINTFORMW 结果抓了一个空…
+			CALL EMOTEFACE, "重置/对话框憤怒", TARGET
+			PRINTFORMW 「……%TEXTR("不是、我还没有拿出真本事而已/没得手吗")%」
+		ENDIF
+	;4 >=うぉおおおおお！！ 
+	CASEELSE
+		;獲ったどー！！
+		IF RAND:4 == 0
+			IF RAND:2
+				CALL EMOTION_PLUS, "重置/〇〇/憤怒眉/哈欠小/对话框憤怒", TARGET
+				PRINTFORMW 「――――nyaっ!」
+				PRINTFORMW 等%CALLNAME:MASTER%回过神来时%CALLNAME:MASTER%手里的逗猫棒已经不见了。
+				CALL EMOTEFACE, "重置/蹙眉/小口２", TARGET
+				PRINTFORMW 「…………哦、哦嗯？」
+				PRINTFORMW 一瞬间本人也呆住了、不断来回看着自己手里的逗猫棒和%CALLNAME:MASTER%。
+				PRINTFORMW 最终注意到自己已经成功地夺走了逗猫棒的%CALLNAME:TARGET%、
+				CALL EMOTEFACE, "重置/闭眼２/小口/紅潮", TARGET
+				PRINTFORMW 「呼、呼哼……嘛、嘛啊ーー、%CNAME("一人称")%拿着的话、也就这种程度而已」
+				PRINTFORMW 一边慌张地甩动逗猫棒一边羞耻地说…
+			ELSE
+				CALL EMOTION_PLUS, "重置/〇〇/憤怒眉/哈欠小/对话框憤怒", TARGET
+				PRINTFORMW 「……得手了！」
+				PRINTFORMW 一瞬间没有注意%CALLNAME:TARGET%便乘机夺走了%CALLNAME:MASTER%的逗猫棒。
+				CALL EMOTEFACE, "重置/笑颜４/笑顔２", TARGET
+				PRINTFORMW 「嘿嘿、胜利」
+				PRINTFORMW 「呀啊、发生了意外的事情呢……」
+				CALL EMOTEFACE, "重置/憤怒眉/紅潮", TARGET
+				PRINTFORMW 「……因、因为好好地陪%CNAME("二人称")%玩了、要记得感谢哦？」
+			ENDIF
+			CFLAG:じゃれつき具合_寧子 = 0
+		;獲れなかったどー！？
+		ELSE
+			IF RAND:4 == 0
+				CALL EMOTION_PLUS, "重置/〇〇/憤怒眉/無口系", TARGET
+				PRINTFORMW 「这样……就っ！」
+				PRINTFORMW 锐利的指尖迅速向%CALLNAME:MASTER%摇晃着的逗猫棒靠近。
+				CALL EMOTEFACE, "重置/〇〇/憤怒眉/哈欠大", TARGET
+				PRINTFORMW 「――――抓到啦、啊啊！？」
+				PRINTFORMW 可是因为用力过猛、%CALLNAME:TARGET%的身体就这样冲进了%CALLNAME:MASTER%的怀里…
+				CALL EMOTEFACE, "重置/蹙眉/半開", TARGET
+				PRINTFORMW 「停……唔ー……可恶」
+				IF RAND:5 == 0
+					CALL EMOTION_PLUS, "重置/困扰眉/半開/赤面", TARGET
+					PRINTFORMW 「……唔、啊？」
+					PRINTFORMW 回过神来时才发现压在了%CALLNAME:MASTER%的身上、
+					PRINTFORMW 变成了双手撑着趴在床上的姿势、%CALLNAME:TARGET%的身体因为惊慌而僵硬了起来…
+					PRINTFORMW 近距离地脸对着脸鼻尖相互磨蹭着、就连呼吸也能听得到。
+					IF CEVENT("ネコイベント:じゃらし事故") == 0
+						PRINTFORMW 「…………呃……啊……这、这个是……」
+						PRINTFORMW 就这样无声地静止的相互盯了数十秒、脸迅速变得通红额頭上也開始出现细小的汗珠。
+						PRINTFORMW 慢慢地、脸、嘴唇的距离越来越近…
+						PRINTFORML
+						PRINTFORML
+						CALL EMOTION_PLUS, "重置/闭眼/無口系/困扰眉/赤面", TARGET
+						PRINTFORMW 「……嗯」 
+						PRINTFORML 
+						PRINTFORML
+						CALL EMOTION_PLUS, "重置/飘忽/半開２/困扰眉/赤面", TARGET
+						PRINTFORMW 「那个……补、补偿……这个是、补偿啦」
+						PRINTFORMW 「所以……那个、抱歉……拜托……就这样、结束」
+						CALL SET_CEVENT, "ネコイベント:じゃらし事故"
+					ELSE
+						PRINTFORMW 「…………诶ー、啊ー……」
+						PRINTFORMW 又变成了之前那样的状况、%CALLNAME:TARGET%飘逸着害羞的视线、
+						CALL EMOTION_PLUS, "重置/飘忽/半開２/困扰眉/赤面", TARGET
+						PRINTFORMW 视线不知道应该放在那里比较好、犹豫不决地四处移动。
+						PRINTFORMW 「……」
+						PRINTFORMW 然后…
+						CALL EMOTEFACE,  "重置/半開/困扰眉/赤面", TARGET
+						PRINTFORMW 「……眼睛」
+						PRINTFORMW 像是放弃了一样的%CALLNAME:TARGET%直直地跟%CALLNAME:MASTER%对视着、
+						CALL EMOTION_PLUS, "重置/闭眼/無口系/困扰眉/赤面", TARGET
+						PRINTFORMW 「眼睛……可以闭上吗？」
+						PRINTFORMW 原本就非常狭小的距离变得更小了。
+					ENDIF
+					FLAG:情緒 += 10
+					CALL TEXT, "情緒変化＆爱心個数表示", 10
+					EXP:接吻経験 += 1
+					PRINTFORML
+					PRINTFORMW 接吻経験＋１
+					CFLAG:じゃれつき具合_寧子 = 0
+					RETURN 1
+				ELSE
+					PRINTFORMW 立即翻身站起来的%CALLNAME:TARGET%像是什么都没有发生过一样再次拉開适当的距离。
+					CALL EMOTION_PLUS, "重置/〇〇/憤怒眉/哈欠大", TARGET
+					PRINTFORMW 「好、再来一次」
+					PRINTFORMW 看起来干劲满满的样子…
+				ENDIF
+			ELSEIF RAND:3 == 0
+				CALL EMOTION_PLUS, "重置/困扰眉/半開", TARGET
+				PRINTFORMW 「啊啊……虽然知道%CNAME("二人称")%在逗弄……只是在逗弄啦」
+				CALL EMOTEFACE, "重置/〇〇/憤怒眉/哈欠大", TARGET
+				PRINTFORMW 「……っ……嘿呀っ！」
+				PRINTFORMW %CALLNAME:TARGET%的%TEXTR("右勾拳/左直拳/高速扑闪")%抓空了。
+				CALL EMOTEFACE, "重置/◯◯/憤怒眉/哈欠小/对话框憤怒", TARGET
+				PRINTFORMW 「…………总感觉有点生气了！！」
+			ELSEIF RAND:2
+				CALL EMOTION_PLUS, "重置/〇〇/憤怒眉/哈欠大", TARGET
+				PRINTFORMW 「唔噢噢噢噢哦哦哦！」
+				PRINTFORMW 伴随着凶猛的咆哮%CALLNAME:TARGET%发出了会心一击――
+				CALL EMOTEFACE, "重置/闭眼２/斜眉/半開", TARGET
+				PRINTFORMW 「唔…那个…不要看这边啊」
+				PRINTFORMW 完美地抓了一个空…
+			ELSE
+				CALL EMOTION_PLUS, "重置/憤怒眉/栗口", TARGET
+				PRINTFORMW 「……っ嘿呀！？……在这……哈！啊、啊吓！？」
+				CALL EMOTEFACE, "重置/〇〇/憤怒眉/哈欠大", TARGET
+				PRINTFORMW 「哈…哈啊…嘿啊、%CNAME("二人称")%！不要摇晃了啦！」
+			ENDIF
+		ENDIF
+	ENDSELECT
+	SIF CFLAG:じゃれつき具合_寧子 > 0
+		CFLAG:じゃれつき具合_寧子 += 1
+;--------------------------------------------------
+;マタタビのヤツ　相変わらずアイリ酱からパクパク有がとうございます
+	;CFLAG:マタタビ
+	;1 イベントトリガー
+	;2 初回お試し済み
+	;3 偽酔酒経験済み
+	;4 本日マタタビ選択済み(偽酔酒経験没有)
+	;5 本日マタタビ選択済み
+	;4以上の場合終日にフラグを-2する。
+;--------------------------------------------------
+CASE "让她闻木天蓼"
+	;前編
+	IF CFLAG:マタタビ == 3 && COND("発情期")
+		IF CEVENTS("追加選択肢からＨ") == ""
+			PRINTFORMW 用意したマタタビが懐で出陣の時を待ち侘びている…
+			PRINTFORMW そう言えば%CALLNAME:TARGET%正在认真地读着标题为今日発情期だが…
+			PRINTL [0]胆量だ、試してみる
+			PRINTL [1]やめておこう…
+			CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+			FLAG:SELECT_USERSHOP = 100
+		ELSE
+			IF TFLAG:床イン
+				;既に酔ってるようなもんじゃないか你
+				PRINTFORMW 「あの……今、嗅いだらきっと大変な事になっちゃうけどさ」
+				CALL PRINT_STRW, "「……そーゆーコトで、良いんだよね_BH_」"
+				PRINTFORML ……
+				PRINTFORML …………
+				PRINTFORMW ………………
+				PRINTFORML 
+				IF RAND:3 == 0
+					PRINTFORMW マタタビに向けていた顔がスッと上がる。
+					CALL PRINT_STRW, "「ﾊｧー…_HH_ ﾊｧー…_HH_ ……出来上がっちゃった_HH_」"
+					PRINTFORMW 宣言が早いか%CALLNAME:MASTER%の肩に手を掛けた%CALLNAME:TARGET%正在认真地读着标题为慣れた手付きで%CALLNAME:MASTER%を推倒てしまった…
+				ELSEIF RAND:2
+					CALL PRINT_STRW, "「あーあ……嗅いじゃった……嗅がせちゃった……_HH_」"
+					PRINTFORMW 淫靡な笑みは発情期由来だと一見して解る。決して、マタタビのものでは無いことも。
+					CALL PRINT_STRW, "「しょーがないじゃん、ね_HH_」"
+					PRINTFORMW トン、と胸に顔を押し付けた%CALLNAME:TARGET%正在认真地读着标题为就这様体重に任せて%CALLNAME:MASTER%を推倒た…
+				ELSE
+					CALL PRINT_STRW, "「大変なコトになるよってさ……言ったよね_HH_」"
+					PRINTFORMW 鼻を鳴らしながら呟く%CALLNAME:TARGET%の意識は最早マタタビの方には無い。
+					CALL PRINT_STRW, "「ｽﾝ…ｽﾝ…ｽﾝｽﾝ………くひっ_HH_」"
+					PRINTFORMW 彼女は股間から腹、胸、首筋へ。粘性すら感じる、嗅覚の愛撫。
+					CALL PRINT_STRW, "「シちゃおっか……大変なコト_HH_」"
+					PRINTFORMW 逃げ場はない。
+				ENDIF
+				CALL SET_CEVENT, "ネコイベント：偽酔酒発情期"
+			ELSE
+				PRINTFORMW 流石に発情期にまで無理はさせられない…今日はやめておこう。
+				CFLAG:マタタビ += 2
+			ENDIF
+		ENDIF
+	ELSE
+		PRINTFORMW 用意したマタタビが懐で出陣の時を待ち侘びている…
+		IF CFLAG:マタタビ == 3
+			PRINTFORMW 嗅がせれば例によって凄いモノを見ることになるだろうがどうしようか？
+		ELSEIF CFLAG:マタタビ == 2
+			PRINTFORMW おそらくは呆れられて終わりという結果になるだろうが…
+		ELSE
+			PRINTFORMW 万が一がある。もしかすれば、面白色結果になるかも知れない。
+		ENDIF
+		PRINTFORML %CALLNAME:TARGET%に嗅がせて見ますか？
+		CALL PRINT_SELECT, "試してみる/今天就算了"
+		SELECTCASE RESULT
+		CASE 0
+			IF TALENT:恋慕
+				IF CFLAG:マタタビ == 3
+					CALL EMOTION_PLUS, "重置/笑顔２/斜眉/紅潮", TARGET
+					PRINTFORMW 「ま、まぁ？ 折角用意して出されたもんだし……？」
+					PRINTFORMW 怯生生地%CALLNAME:MASTER%の手元に鼻を寄せた%CALLNAME:TARGET%正在认真地读着标题为わざとらしく大号的呼吸でマタタビの气味をかぎ始める…
+				ELSE
+					IF CFLAG:マタタビ == 2
+						CALL EMOTION_PLUS, "重置/半開/叹气", TARGET
+						PRINTFORMW 「だぁから…はぁ……酔っ不支付っての知ってるよね？ いや、別に良いんだけど…」
+						CALL EMOTEFACE, "重置/憤怒眉/栗口/对话框！", TARGET
+						PRINTFORMW 「…はぁ、ホントに酔っ払えれば世話無いってのに……ん？ いや、待てよ」
+						PRINTFORMW 何かを閃いたのか%CALLNAME:TARGET%正在认真地读着标题为%CALLNAME:MASTER%の手にあるマタタビに顔を近づける…
+						CALL EMOTION_PLUS, "重置/笑顔２/斜眉/紅潮", TARGET
+						PRINTFORMW 「いや、ほら、体質とかって変わるモン……じゃん？」
+						PRINTFORMW そんな曖昧な事を言いながら%CALLNAME:TARGET%正在认真地读着标题为鼻を鳴らして气味を嗅ぎ始めた…
+						CFLAG:マタタビ += 1
+					ELSE
+						CALL EMOTION_PLUS, "重置/半開", TARGET
+						PRINTFORMW 「マタタビ？ ……いや、ホントにんなモン出されても%CNAME("一人称")%は別に…」
+						CALL EMOTEFACE, "重置/憤怒眉/栗口/对话框！", TARGET
+						PRINTFORMW 「だぁから、マジモンの猫じゃないんだから嗅がされても困っ……あ」
+						PRINTFORMW 何かに気付いたように%CALLNAME:TARGET%正在认真地读着标题为%CALLNAME:MASTER%が差し出すマタタビの气味を深く嗅ぎ始めた…
+						CFLAG:マタタビ += 2
+					ENDIF
+				ENDIF
+				PRINTFORML ……
+				PRINTFORML …………
+				PRINTFORMW ………………
+				PRINTFORML 
+				IF RAND:3 == 0
+					CALL EMOTION_PLUS, "重置/笑颜４/笑顔２/斜眉/赤面", TARGET
+					PRINTFORMW 「あー……えっと……にゃ、にゃ～ん♪」
+					CALL EMOTEFACE, "重置/微笑２/斜眉/赤面", TARGET
+					PRINTFORMW 「これは、うん……よ、酔払っちゃった、かなぁ…？ は、ははは」
+				ELSEIF RAND:2
+					CALL EMOTION_PLUS, "重置/笑颜４/笑顔２/斜眉/赤面", TARGET
+					PRINTFORMW 「こ、これは……キク、ね。うん、酔った、超酔ったぁ～♪」
+					CALL EMOTEFACE, "重置/笑颜４/会話口/赤面/頬汗", TARGET
+					PRINTFORMW 「……いや、ホントに酔ってるから……あ、違う、えっと…マジ酔ってるにゃん？」
+				ELSE
+					CALL EMOTION_PLUS, "重置/闭眼２/無口系/赤面", TARGET
+					PRINTFORMW 「ん……あ、結構良い气味……じゃなくって……」
+					CALL EMOTEFACE, "重置/笑颜/笑顔２/困扰眉/赤面", TARGET
+					PRINTFORMW 「……変に、なっちゃうな…仕方ないけどさ……もう…これ、程々にしないと駄目だかんね…？」
+				ENDIF
+				PRINTFORML 
+				CALL SET_CEVENT, "ネコイベント：偽酔酒"
+				CALL PRINT_STRW, @"%CALLNAME:TARGET%が[_爱心粉紅_酔酒_]成为了……？"
+			ELSEIF MARK:屈服刻印 >= 2
+				IF CFLAG:マタタビ == 2
+					CALL EMOTION_PLUS, "重置/闭眼２/半開/叹气", TARGET
+					PRINTFORMW 「何度嗅がされても意味無いんだから困るっての……はぁ」
+					CALL EMOTEFACE, "重置", TARGET
+					PRINTFORMW 「ｽﾝ……ｽﾝ…………終わり。いや、だからんな残念そうな顔されても別に酔うとか無いから」
+				ELSE
+					CALL EMOTION_PLUS, "重置/憤怒眉/对话框憤怒", TARGET
+					PRINTFORMW 「ええと、何これマタタビ？ ……もしかして猫だからとか喧嘩を売ってらっしゃる？」
+					CALL EMOTEFACE, "重置/闭眼２/半開/叹气", TARGET
+					PRINTFORMW 「はぁ…ほんっと馬鹿…馬鹿野郎…脳みそちんこ…スットコドッコイ…」
+					CALL EMOTEFACE, "重置/憤怒眉", TARGET
+					PRINTFORMW 「ｽﾝｽﾝ……是嗅いだ。 酔っ払ったかって？ さぁ、%CNAME("二人称")%の方が酔っ払ってんじゃん？」
+					CFLAG:マタタビ += 1
+				ENDIF
+			ENDIF
+		CASE 1
+			IF CFLAG:マタタビ >= 3
+				CALL EMOTION_PLUS, "重置/困扰眉/小口/赤面", TARGET
+				PRINTFORMW 「あっ…」
+				PRINTFORMW %CALLNAME:MASTER%が何かを取り出そうとする气息を察した%CALLNAME:TARGET%正在认真地读着标题为一瞬期待の表情を見せる。
+				CALL EMOTEFACE, "重置/飘忽/憤怒眉/赤面", TARGET
+				PRINTFORMW 「……怎么」
+				PRINTFORMW しかし結局望みの物は出てこず、解りやすく不満げに唇を尖らせて肩を落とした…
+			ELSE
+				CALL EMOTION_PLUS, "重置/半開/斜眉", TARGET
+				PRINTFORMW 「%TEXTR("まーた何かロクでもないこと考えてた顔だ…/今何か隠したよねぇ…？ いや出桑で良いから")%」
+			ENDIF
+		ENDSELECT
+		CFLAG:マタタビ += 2
+	ENDIF
+	CALL NEKO_POINT
+
+ENDSELECT
+
+

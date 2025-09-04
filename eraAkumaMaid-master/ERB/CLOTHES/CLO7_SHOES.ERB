@@ -1,0 +1,188 @@
+﻿;-------------------------------------------------
+;角色ARGにARGSを着せる。ARGS == ""なら脱がす
+;-------------------------------------------------
+@SET_SHOES, ARGS, ARG
+#DIMS MEMO_CLO
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+MEMO_CLO = %CSTR:ARG:靴%
+
+;汚れ＆移開たりしたフラグ等を初期化して新品にする
+STAIN:ARG:靴 = 0
+IF COND("靴の着用", ARG)
+	CALL PALAM_SHOES, ARGS, ARG
+ELSE
+	CSTR:ARG:靴 = 
+ENDIF
+EQUIP:ARG:靴 = STRLENS(CSTR:ARG:靴)
+SIF MEMO_CLO != CSTR:ARG:靴
+	TFLAG:着替えた = 1
+
+;-------------------------------------------------
+;ARGの靴の名前。ARGSに"略"と入れると略称になる
+;-------------------------------------------------
+@SHOES(ARG, ARGS)
+#FUNCTIONS
+
+VARSET LOCALS
+SELECTCASE ARGS
+CASE "略"
+	IF CHECK_SHOES("平底鞋", ARG)
+		LOCALS = 平底鞋
+	ELSEIF CHECK_SHOES("小皮靴", ARG)
+		LOCALS = 小皮靴
+	ELSEIF CHECK_SHOES("凉鞋", ARG)
+		LOCALS = 凉鞋
+	ELSEIF CHECK_SHOES("靴", ARG)
+		LOCALS = 靴
+	ELSEIF CHECK_SHOES("高跟鞋", ARG)
+		LOCALS = 高跟鞋
+	ELSEIF CHECK_SHOES("草履", ARG)
+		LOCALS = 草履
+	ELSEIF CHECK_SHOES("无后跟鞋", ARG)
+		LOCALS = 无后跟鞋
+	ELSEIF CHECK_SHOES("運動鞋", ARG)
+		LOCALS = 運動鞋
+	ELSEIF CHECK_SHOES("木屐", ARG)
+		LOCALS = 木屐
+	ELSEIF CHECK_SHOES("莫卡辛软皮鞋", ARG)
+		LOCALS = 莫卡辛软皮鞋
+	ELSEIF EQUIP:ARG:靴
+		LOCALS = 靴
+	ELSE
+		LOCALS = 足
+	ENDIF
+CASE "種類"
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:靴, "/", LOCALS
+CASE ""
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:靴, "/", LOCALS
+ENDSELECT
+RETURNF LOCALS
+
+;-------------------------------------------------
+;ARG番の靴の名称。換装などで表を作る際に使う
+;-------------------------------------------------
+@NAME_SHOES(ARG)
+#FUNCTIONS
+VARSET LOCALS
+
+SELECTCASE ARG
+CASE 0
+	LOCALS = 小皮靴
+CASE 1
+	LOCALS = 運動鞋
+CASE 2
+	LOCALS = 平底鞋
+CASE 3
+	LOCALS = 无后跟鞋
+CASE 4
+	LOCALS = 凉鞋
+CASE 5
+	LOCALS = 高跟鞋
+
+CASE 6
+	LOCALS = 靴
+CASE 7
+	LOCALS = 短靴
+CASE 8
+	LOCALS = 短筒女靴
+CASE 9
+	LOCALS = 長靴
+
+CASE 10
+	LOCALS = 草履
+CASE 11
+	LOCALS = 木屐
+ENDSELECT
+
+RETURNF LOCALS
+
+;-------------------------------------------------
+;角色ARGに靴ARGSを着せた場合のCSTR処理
+;-------------------------------------------------
+@PALAM_SHOES, ARGS, ARG
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+STR_ADD = %EXTSTR(ARGS, "/")%
+ARGS = %EXTSTR(ARGS, "", "/")%
+
+SELECTCASE ARGS
+CASE "", "没有"
+	CSTR:ARG:靴 = 
+CASE "平底鞋"
+	CSTR:ARG:靴 = 平底鞋/直到脚腕/
+CASE "小皮靴"
+	CSTR:ARG:靴 = 小皮靴/直到脚腕/
+CASE "凉鞋"
+	CSTR:ARG:靴 = 凉鞋/直到脚腕/足指露出/
+CASE "短靴"
+	CSTR:ARG:靴 = 短靴/直到脚腕/
+CASE "靴"
+	CSTR:ARG:靴 = 靴/
+CASE "長靴"
+	CSTR:ARG:靴 = 長靴/
+CASE "高跟鞋"
+	CSTR:ARG:靴 = 高跟鞋/直到脚腕/
+CASE "草履"
+	CSTR:ARG:靴 = 草履/直到脚腕/
+CASE "无后跟鞋"
+	CSTR:ARG:靴 = 无后跟鞋/直到脚腕/
+CASE "運動鞋"
+	CSTR:ARG:靴 = 運動鞋/直到脚腕/
+CASE "短筒女靴"
+	CSTR:ARG:靴 = 短筒女靴/直到脚腕/
+CASE "木屐"
+	CSTR:ARG:靴 = 木屐/直到脚腕/足指露出/
+CASE "芭蕾舞鞋"
+	CSTR:ARG:靴 = 芭蕾舞鞋/直到脚腕/
+CASE "莫卡辛软皮鞋"
+	CSTR:ARG:靴 = 莫卡辛软皮鞋/直到脚腕/
+CASE "靴"
+	CSTR:ARG:靴 = 靴/直到脚腕/
+CASE "皮靴"
+	CSTR:ARG:靴 = 皮靴/直到脚腕/
+CASEELSE
+	CSTR:ARG:靴 = %ARGS%/
+ENDSELECT
+
+CSTR:ARG:靴 = %MERGE_STR(CSTR:ARG:靴, STR_ADD)%
+
+;-------------------------------------------------
+;ARGの靴が条件ARGSを満たすか確認する
+;-------------------------------------------------
+@CHECK_SHOES(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+SIF EQUIP:ARG:靴 == 0
+	RETURNF 0
+SIF STRCOUNT(CSTR:ARG:靴, ARGS)
+	RETURNF 1
+RETURNF 0
+
+;靴を脱いで記憶させる処理
+@SET_SHOES_MEMO, ARG
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+SIF CSTR:ARG:靴 == "" || CONFIG("在家里脱鞋") == 0 || PLACE("自宅") == 0
+	RETURN 0
+CSTR:ARG:脱掉的靴 = %CSTR:ARG:靴%
+CSTR:ARG:靴 = 
+EQUIP:ARG:靴 = 0
+
+;脱いでいた靴を履かせる処理
+@SET_SHOES_RE, ARG
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+SIF CSTR:ARG:脱掉的靴 == ""
+	RETURN 0
+STAIN:ARG:靴 = 0
+CSTR:ARG:靴 = %CSTR:ARG:脱掉的靴%
+CSTR:ARG:脱掉的靴 = 
+EQUIP:ARG:靴 = STRLENS(CSTR:ARG:靴)

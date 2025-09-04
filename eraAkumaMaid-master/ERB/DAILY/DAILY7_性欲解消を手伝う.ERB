@@ -1,0 +1,448 @@
+﻿;-------------------------------------------------
+;帮忙消除性欲。Ｈではないので、partnerの躁动难忍の解消だけが目的です
+;でも你も楽しみたいに決まっているのだった
+;相手が望んだPLAYが STR:PLAY要望 に、你が望んだ内容がSTR:PLAY内容 に入る
+;STR:PLAY内容 と STR:PLAY要望 が異なる場合には、STR:PLAY要望"も"できる限り応える
+;-------------------------------------------------
+@MESSAGE_DAILY_SELECT7
+#DIM LCOUNT
+;起きうるイベントの判定に使う
+#DIMS EVENT_TABLE
+#DIMS EVENT_TABLE_SUB
+#DIM MEMO_LINECOUNT
+#DIMS WANT_POSITION
+#DIMS TEXT_GUGEN
+
+EVENT_TABLE = 
+EVENT_TABLE_SUB = 
+WANT_POSITION = 
+TEXT_GUGEN = 
+SAVESTR:夢中 = 
+STR:日常イベント名 = 
+STR:PLAY要望 = 
+STR:PLAY内容 = 
+
+;まずは出来る事の判定。何を求められるかな？
+CALL CHECK_COM_ABLE, TARGET
+
+SIF CANSS("性欲解消正常位")
+	EVENT_TABLE += "Ｖ性交/"
+SIF CANSS("性欲解消肛門後背位")
+	EVENT_TABLE += "Ａ性交/"
+SIF CANSS("性欲解消尿道正常位")
+	EVENT_TABLE += "尿道性交/"
+SIF CANSS("性欲解消口交")
+	EVENT_TABLE += "口交/"
+SIF CANSS("性欲解消舐陰莖")
+	EVENT_TABLE += "舐陰莖/"
+SIF CANSS("性欲解消正常位奉仕")
+	EVENT_TABLE += "Ｖ性交する/"
+SIF CANSS("性欲解消Ａ正常位奉仕")
+	EVENT_TABLE += "Ａ性交する/"
+
+SIF CANSS("性欲解消舐陰")
+	EVENT_TABLE_SUB += "舐陰/"
+SIF CANSS("性欲解消舐陰莖")
+	EVENT_TABLE_SUB += "舐陰莖/"
+;SIF CANSS("性欲解消六九式")
+;	EVENT_TABLE_SUB += "六九式/"
+
+STR:選択肢 = %EVENT_TABLE%%EVENT_TABLE_SUB%
+
+;性欲を持て余している時には挿入行為優先
+SIF (COND("発情期") == 0 && COND("欲求不満") < 2) || EVENT_TABLE == "" || PENIS(PLAYER) == 0
+	EVENT_TABLE += @"%EVENT_TABLE_SUB%"
+
+STR:PLAY要望 = %TEXTR(EVENT_TABLE)%
+
+IF PLACE("野外") && COND("合意：露出PLAY") == 0
+	;これは現在だと死に分岐だけどいつか使うかもしれないので消さずにおいておく
+	IF PLACE("Ｈ目的")
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW 看起来没有单纯的只进行性処理就能了事的自信……%CALLNAME:TARGET%用余光瞟了一眼%NAMES("床")%。
+	ELSE
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了……看起来很不高兴的样子。
+		CALL PRINT_STRW, "黄色_(※没有[露出PLAY]的合意的对象不能在外面的地方进行性処理)"
+	ENDIF
+	RETURN 0
+;他に人がいると普通は嫌がる
+ELSEIF FLAG:二人きり == 0 && COND("合意：露出PLAY") == 0
+	PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+	CALL PRINT_STRW, "黄色_(※在有别人的情况下没有合意[露出PLAY]是不行的)"
+	RETURN 0
+ELSEIF CFLAG:性欲解消済
+	PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+	PRINTFORMW 看起来没有单纯的只进行性処理就能了事的自信……%CALLNAME:TARGET%用余光瞟了一眼%NAMES("床")%。
+	RETURN 0
+;干劲がしない
+ELSEIF STR:PLAY要望 == "" || COND("帮忙消除性欲可能") == 0
+	IF COND("発情期") || COND("欲求不満") >= 2
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW 看起来没有单纯的只进行性処理就能了事的自信……%CALLNAME:TARGET%用余光瞟了一眼%NAMES("床")%。
+	ELSE
+		PRINTFORMW 被%CALLNAME:TARGET%直接地拒绝了……好像没有积存太多压力的样子。
+	ENDIF
+	RETURN 0
+ENDIF
+
+TFLAG:指令中止 = 0
+TFLAG:地の文スキップ = 0
+MEMO_LINECOUNT = LINECOUNT
+CALL KOJO_DAILYCOM, "性欲解消を申し出た際の反応", "改行没有"
+IF LINECOUNT == MEMO_LINECOUNT
+	IF COND("帮忙消除性欲可能") == 2
+		CALL PRINT_STRW, "「……_／／／_」"
+	ELSE
+		PRINTFORMW 「…………」
+	ENDIF
+ENDIF
+
+CALL BLANKLINE
+
+IF TFLAG:指令中止
+	RETURN 0
+ELSEIF TFLAG:地の文スキップ == 0
+	PRINTFORM 提议之后、%CALLNAME:TARGET%は
+	SELECTCASE STR:PLAY要望
+	CASE "舐陰"
+		PRINTFORM 用舌的奉仕(舐陰)
+	CASE "舐陰莖"
+		PRINTFORM 用口的奉仕(口交)
+	CASE "口交"
+		PRINTFORM 用%CALLNAME:PLAYER%的精液潤喉的事
+	CASE "六九式"
+		PRINTFORM 六九式
+	CASE "Ｖ性交"
+		IF COND("女性主導生性交") || COND("合意：危険日生性交")
+			PRINTFORM 前穴的中出性交
+		ELSE
+			PRINTFORM 前穴的戴套性交
+		ENDIF
+	CASE "Ａ性交"
+		PRINTFORM 尻穴的性交
+	CASE "尿道性交"
+		PRINTFORM 使用尿道的性交
+	CASE "Ｖ性交する"
+		PRINTFORM %TEXTR(@"挿入%CALLNAME:PLAYER%的前穴/使用%CALLNAME:PLAYER%的前穴的性処理/用%CALLNAME:PLAYER%的前穴的中出性交")%
+	CASE "Ａ性交する"
+		PRINTFORM %TEXTR(@"挿入%CALLNAME:PLAYER%的尻穴/使用%CALLNAME:PLAYER%的尻穴的性処理/用%CALLNAME:PLAYER%的尻穴性交")%
+	ENDSELECT
+	PRINTFORMW 好像想要的样子。
+ENDIF
+
+SELECTCASE STR:PLAY要望
+CASE "舐陰", "六九式", "Ｖ性交", "Ａ性交", "尿道性交"
+	IF TALENT:絶頂失禁体質
+		CALL PRINT_STR, @"%CALLNAME:TARGET%有_黄色_[絶頂失禁体質]_＆"
+		CALL TEXT, "尿意", TARGET
+		PRINTFORM ですが
+	ENDIF
+ENDSELECT
+SELECTCASE STR:PLAY要望
+CASE "Ｖ性交", "Ａ性交", "尿道性交"
+	SIF PENIS(PLAYER) == 0
+		TEXT_GUGEN = (使用具现让%CALLNAME:MASTER%长出%NAMES("サイズ別阴茎名", MASTER)%一起玩)
+CASE "Ｖ性交する", "Ａ性交する"
+	SIF PENIS(TARGET) == 0
+		TEXT_GUGEN = (使用具现让%CALLNAME:TARGET%长出%NAMES("サイズ別阴茎名", TARGET)%一起玩)
+ENDSELECT
+CALL PRINT_STRL, @"……怎么办呢？_黄色_%TEXT_GUGEN%"
+
+EVENT_TABLE = 请多指教！/果然还是算了/
+SELECTCASE STR:PLAY要望
+CASE "Ｖ性交する"
+	IF COND("女性主導生性交", PLAYER) == 0
+		EVENT_TABLE = 使用避孕套就好了/今天很危险所以不行/
+	ENDIF
+ENDSELECT
+
+IF STRCOUNTS(STR:選択肢, "六九式/", "性交/") == 0
+	IF STR:PLAY要望 != "舐陰" && STRCOUNT(STR:選択肢, "舐陰/")
+		IF TALENT:扶她
+			EVENT_TABLE += "希望用舐陰/"
+		ELSE
+			EVENT_TABLE += "希望用口的奉仕(舐陰)/"
+		ENDIF
+	ENDIF
+	IF STR:PLAY要望 != "舐陰莖" && STRCOUNT(STR:選択肢, "舐陰莖/")
+		IF TALENT:扶她
+			EVENT_TABLE += "希望用口交/"
+		ELSE
+			EVENT_TABLE += "希望用口的奉仕(口交)/"
+		ENDIF
+	ENDIF
+ENDIF
+
+SELECTCASE STR:PLAY要望
+CASE "口交"
+	IF COND("自発清洁口交可能")
+		SIF STRCOUNT(STR:選択肢, "Ｖ性交/") && COND("女性主導生性交") + COND("合意：危険日生性交")
+			EVENT_TABLE += "在那之前先来一発如何？/"
+		SIF STRCOUNT(STR:選択肢, "Ａ性交/") && COND("Ａ清洁口交可能")
+			EVENT_TABLE += "在那之前先用屁股如何？/"
+		SIF STRCOUNT(STR:選択肢, "尿道性交/")
+			EVENT_TABLE += "在那之前先用尿道如何？/"
+	ENDIF
+ENDSELECT
+
+;選択肢の一括処理
+VARSET LOCALS
+SPLIT EVENT_TABLE, "/", LOCALS
+CALL PRINT_SELECT, EVENT_TABLE
+
+SELECTCASE LOCALS:RESULT
+;性処理のお願いを取り下げる選択
+CASE "果然还是算了", "今天很危险所以不行"
+	RETURN 0
+CASE "请多指教！", "使用避孕套就好了"
+	;PLAY内容は相手の望んだもの
+	STR:PLAY内容 = %STR:PLAY要望%
+;それ以外は你の要求
+CASEELSE
+	SELECTCASE LOCALS:RESULT
+	CASE "希望用舐陰", "希望用口的奉仕(舐陰)"
+		STR:PLAY内容 = 舐陰
+	CASE "希望用口交", "希望用口的奉仕(口交)"
+		STR:PLAY内容 = 舐陰莖
+	CASE "在那之前先来一発如何？"
+		STR:PLAY内容 = Ｖ性交
+	CASE "在那之前先用屁股如何？"
+		STR:PLAY内容 = Ａ性交
+	CASE "在那之前先用尿道如何？"
+		STR:PLAY内容 = 尿道性交
+	CASE "六九式をさせて欲しい"
+		STR:PLAY内容 = 六九式
+	ENDSELECT
+
+	MEMO_LINECOUNT = LINECOUNT
+	;ここの中で STR:PLAY内容 を変更する事で提案を蹴る事も出来る。什麼也不做場合は你の提案が通る
+	CALL KOJO_DAILYCOM, "性欲解消の内容変更を頼んだ際の反応", "改行没有"
+	IF LINECOUNT == MEMO_LINECOUNT
+		PRINTFORMW 「…………」
+		PRINTFORMW ……似乎ＯＫ的样子！
+	ENDIF
+	CALL BLANKLINE
+ENDSELECT
+
+;性処理実行中フラグON
+SETBIT FLAG:状況判定, 36
+
+;フラグ建て＆履歴に行為を残す
+CSTR:DAILYCOM履歴 = %CSTR:DAILYCOM履歴%＠%STR:PLAY内容%性欲解消\/
+STR:日常イベント名 = %DAILYCOMNAME(7)%
+
+;何をするか決定
+SELECTCASE STR:PLAY内容
+CASE "Ｖ性交"
+	SELECTCOM = GETNUM(TRAINNAME, "正常位")
+	WANT_POSITION = %CONDS("好きなＶ性交")%
+
+	;避孕套付けたり
+	SIF COND("女性主導生性交") + COND("合意：危険日生性交") == 0
+		TEQUIP:PLAYER:避孕套 = 1
+CASE "Ａ性交"
+	SELECTCOM = GETNUM(TRAINNAME, "肛門正常位")
+	WANT_POSITION = %CONDS("好きなＡ性交")%
+CASE "尿道性交"
+	SELECTCOM = GETNUM(TRAINNAME, "尿道正常位")
+	WANT_POSITION = %CONDS("好きな尿道性交")%
+CASE "Ｖ性交する"
+	SELECTCOM = GETNUM(TRAINNAME, "正常位奉仕")
+	WANT_POSITION = "正常位奉仕"
+	SIF COND("女性主導生性交", PLAYER) == 0
+		TEQUIP:避孕套 = 1
+CASE "Ａ性交する"
+	SELECTCOM = GETNUM(TRAINNAME, "Ａ正常位奉仕")
+	WANT_POSITION = "Ａ正常位奉仕"
+;指令名=PLAY内容の物
+CASEELSE
+	SELECTCOM = GETNUM(TRAINNAME, STR:PLAY内容)
+ENDSELECT
+
+;喜欢的体位があるなら変わるかも
+;SIF RAND:3 && WANT_POSITION != "" && CANSS(WANT_POSITION)
+;	SELECTCOM = GETNUM(TRAINNAME, WANT_POSITION)
+
+;ちんこ無い人がちんこ必要なPLAYする場合は具現処理
+SELECTCASE NAMES("性処理")
+CASE "舐陰莖", "Ｖ性交する", "Ａ性交する"
+	SIF PENIS(TARGET) == 0
+		CALL ADD_STATE, TARGET, "具現"
+CASE "口交", "Ｖ性交", "Ａ性交", "尿道性交"
+	SIF PENIS(PLAYER) == 0
+		CALL ADD_STATE, PLAYER, "具現"
+ENDSELECT
+
+;-------------------------------------------------
+;ここにはセリフのみを置く
+;-------------------------------------------------
+@MESSAGE_DAILY7
+#DIM LCOUNT
+#DIM MEMO_ABL
+
+IF TFLAG:地の文スキップ == 0
+	SELECTCASE NAMES("性処理")
+	CASE "口交"
+		CALL DAILY_MESSAGE, "性処理"
+	;PLAYの主導が変化するので分ける
+	CASE "Ｖ性交する", "Ａ性交する"
+		CALL DAILY_MESSAGE, "性欲解消：逆挿入"
+	CASEELSE
+		CALL DAILY_MESSAGE, "性欲解消"
+	ENDSELECT
+ENDIF
+
+;避孕套を使ったならその解説
+SIF TEQUIP:PLAYER:避孕套
+	CALL PRINT_STRW, @"黄色_（遵从%CALLNAME:TARGET%的想法\@ COND("中出し嫌い") ? # 、这一次 \@使用了避孕套）"
+
+SELECTCASE NAMES("性処理")
+CASE "口交"
+CASEELSE
+	CALL SETFLAG, "薄着化：性処理", TARGET
+ENDSELECT
+
+
+;それでは行為開始
+;絶頂度合いを重置
+VARSET EX
+VARSET NOWEX
+VARSET EX:PLAYER:0
+VARSET NOWEX:PLAYER:0
+
+MEMO_ABL = ABL:技巧
+;技巧を身をゆだねているという事で低く
+ABL:技巧 = MAX(MIN(ABL:技巧, ABL:PLAYER:技巧) - 3, 1)
+
+;前準備開始
+CALL SIMULATE_TRAIN_FIRST
+
+;性処理なのでみんな一回イったら終わり
+FOR LCOUNT, 0, 100
+	CALL SIMULATE_TRAIN_COM, SELECTCOM, 1
+
+	SELECTCASE NAMES("性処理")
+	CASE "口交"
+		SIF COND("射精増分", PLAYER) >= COND("帮忙消除性欲可能")
+			BREAK
+	CASE "Ｖ性交", "Ａ性交", "尿道性交"
+		SIF COND("射精増分", PLAYER) == 0
+			CONTINUE
+		SIF NOWEX:絶頂数合計 && COND("絶頂増分") >= COND("帮忙消除性欲可能")
+			BREAK
+	CASE "Ｖ性交する", "Ａ性交する"
+		SIF COND("絶頂増分", PLAYER) == 0
+			CONTINUE
+		SIF NOWEX:射精 && COND("射精増分")
+			BREAK
+	CASEELSE
+		SIF NOWEX:絶頂数合計 && COND("絶頂増分") >= COND("帮忙消除性欲可能")
+			BREAK
+	ENDSELECT
+NEXT
+
+;経験や珠などの獲得量計算
+CALL SIMULATE_TRAIN_CALC
+
+;結果発表
+CALL SIMULATE_TRAIN_SHOW
+
+;流石に目に見えるほど的污垢は拭く
+CALL RESET_STAIN_EX, "Ｐ", PLAYER
+
+;フラグの変化＆履歴に行為を残す
+SELECTCASE NAMES("性処理")
+CASE "Ｖ性交", "Ａ性交", "尿道性交"
+	;履歴に行為を残す
+	IF TEQUIP:PLAYER:避孕套
+		CSTR:DAILYCOM履歴 += @"＠性欲解消%SUBSTRING(NAMES("性処理"), 0, STRLENS(NAMES("性処理")) - 8)%避孕套射精\/"
+	ELSE
+		CSTR:DAILYCOM履歴 += @"＠性欲解消%SUBSTRING(NAMES("性処理"), 0, STRLENS(NAMES("性処理")) - 8)%中出し\/"
+	ENDIF
+	;Ｐ汚れを設定
+	SELECTCASE NAMES("性処理")
+	CASE "Ｖ性交"
+		CALL SETFLAG, "Ｐ汚れ：Ｖ"
+	CASE "Ａ性交"
+		CALL SETFLAG, "Ｐ汚れ：Ａ"
+	CASE "尿道性交"
+		CALL SETFLAG, "Ｐ汚れ：尿"
+	ENDSELECT
+CASE "Ｖ性交する", "Ａ性交する"
+	CSTR:DAILYCOM履歴 += @"＠性欲解消%SUBSTRING(NAMES("性処理"), 0, STRLENS(NAMES("性処理")) - 12)%逆中出し\/"
+	SELECTCASE NAMES("性処理")
+	CASE "Ｖ性交する"
+		CALL SETFLAG, "Ｐ汚れ：Ｖ", PLAYER
+	CASE "Ａ性交する"
+		CALL SETFLAG, "Ｐ汚れ：Ａ", PLAYER
+	ENDSELECT
+ENDSELECT
+
+IF TFLAG:地の文スキップ == 0
+	SELECTCASE NAMES("性処理")
+	CASE "口交"
+		CALL SAMEN_SHOOT_MESSAGE
+	CASE "Ｖ性交", "Ａ性交", "尿道性交"
+		IF COND("絶頂", PLAYER) && PENIS(PLAYER)
+			PRINTFORML %TEXTS("絶頂", PLAYER)%
+			;受精確率の変動を表示
+			CALL CHECK_NINSHIN_ALLACTOR
+		ENDIF
+		CALL TRAIN_MESSAGE_A
+	CASE "Ｖ性交する", "Ａ性交する"
+		;上の構文を就这様パクった
+		IF COND("絶頂") && PENIS(TARGET)
+			PRINTFORML %TEXTS("絶頂")%
+			CALL CHECK_NINSHIN_ALLACTOR
+		ENDIF
+		CALL DAILY_MESSAGE, "性欲解消：射精"
+	CASEELSE
+		CALL TRAIN_MESSAGE_A
+	ENDSELECT
+ENDIF
+
+IF NOWEX:絶頂漏尿
+	CALL EVENT_OMORASHI, NOWEX:絶頂漏尿
+	IF COND("飲尿フラグ", PLAYER)
+		PRINTFORML 聖水経験+1
+		PRINTFORML 飲尿経験+1（%CALLNAME:MASTER%）
+	ENDIF
+ENDIF
+;追加PLAY有？
+SELECTCASE STR:PLAY要望
+CASE STR:PLAY内容
+CASE "口交"
+	CALL SIMULATE_TRAIN_FIRST
+
+	FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, GETNUM(TRAINNAME, STR:PLAY要望), 1
+
+		SIF COND("射精増分", PLAYER)
+			BREAK
+	NEXT
+	;経験や珠などの獲得量計算
+	CALL SIMULATE_TRAIN_CALC
+	;結果発表
+	CALL SIMULATE_TRAIN_SHOW
+
+	CALL SAMEN_SHOOT_MESSAGE
+
+	;履歴に行為を残す
+	CSTR:DAILYCOM履歴 += @"＠%STR:PLAY要望%性欲解消\/"
+ENDSELECT
+
+;具現を元に戻す
+FOR LCOUNT, 1, CHARANUM
+	SIF STATE("具現", LCOUNT)
+		CALL REMOVE_STATE, LCOUNT, "具現"
+NEXT
+;技巧を元に戻す
+ABL:技巧 = MEMO_ABL
+CALL BLANKLINE
+
+;-------------------------------------------------
+;主に性欲解消後の描写などをする。STR:日常イベント名 は決定後。
+;-------------------------------------------------
+@AFTERMESSAGE_DAILY7
+#DIM MEMO_LINECOUNT
+

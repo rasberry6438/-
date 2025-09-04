@@ -1,0 +1,109 @@
+﻿;-------------------------------------------------
+;ZPショップ：EXシナリオの解放
+;-------------------------------------------------
+@ZP_SHOP_EXシナリオ()
+#DIMS 表示用リスト, 200
+#DIM 表示候補数
+#DIMS 一時イベント名
+#DIM 配列番号
+#DIM 表示キー
+#DIM ZP消費量
+#DIM DYNAMIC 初回起動
+VARSET LOCALS
+
+PRINTL
+DRAWLINE
+PRINTL 消耗ZP，触发原本不应发生的事件。
+PRINTL 要触发哪个事件？
+PRINTFORML 持有ZP:%ZP所持量全文字列()%
+DRAWLINE
+
+IF 初回起動 == 0
+	;存在するEXシナリオを突っ込む
+	VARSET RESULTS
+	VARSET 表示用リスト
+	表示候補数 = ENUMFUNCBEGINSWITH("ZP開放時イベント解説_")
+	ARRAYCOPY "RESULTS", "表示用リスト"
+	表示キー = -1
+	初回起動 = 1
+ENDIF
+
+DRAWLINE
+PRINTL 消耗ZP，触发原本不应发生的事件。
+PRINTL 要触发哪个事件？
+PRINTFORML 持有ZP:%ZP所持量全文字列()%
+DRAWLINE
+FOR 配列番号, 0, 表示候補数
+	一時イベント名 '= REPLACE(表示用リスト:配列番号, "ZP開放時イベント解説_", "")
+	SIF STRFIND(EXシナリオ解放記録, @"___%一時イベント名%___") >= 0
+		CONTINUE
+	CALLFORM %表示用リスト:配列番号%()
+	SIF RESULT == 0
+		CONTINUE
+
+	IF 表示キー == 配列番号
+		LOCALS:1 += @"<font color='#%カラーパレット_HTML("黄")%'><button value='{配列番号}'>[{配列番号}]%一時イベント名%</button></font><br>"
+	ELSE
+		LOCALS:1 += @"%LOCALS:10%<button value='{配列番号}'>[{配列番号}]%一時イベント名%</button><br>"
+	ENDIF
+NEXT
+
+LOCALS = <div rect='81,31,1937,2812' border='31' bcolor='#C0C0C0'></div><div rect='156,156,1837,2712'><nobr>%LOCALS:1%</nobr></div>
+LOCALS += "<div width='1050' height='125' xpos='337' ypos='0' color='#101010'>结局事件</div>"
+LOCALS += "<div rect='2081,31,3937,2812' border='31' bcolor='#C0C0C0' padding='50,25,50'>"
+IF 表示キー == -1
+	LOCALS += "请从左侧列表中选择任意事件。<br>"
+	LOCALS += "本栏将显示事件详情及是否解锁该事件的确认按钮。<br>"
+ELSE
+	CALLFORM %表示用リスト:表示キー%
+	ZP消費量 = RESULT
+	LOCALS += TSTR:ツールチップ受渡
+	LOCALS += "<br>"
+
+	一時イベント名 '= REPLACE(表示用リスト:表示キー, "ZP開放時イベント解説_", "")
+	IF EXISTFUNCTION(@"ZP開放時イベント詳細解説_%一時イベント名%")
+		LOCALS += "<button value='-1'>[-1]详情解说</button><br><br>"
+	ENDIF
+	IF ZP消費量 <= FLAG:ZP所持量
+		LOCALS += @"<button value='10000'>[10000]解锁该事件</button>　需要ZP：%NUM_FORMAT(ZP消費量)%<br>"
+	ELSE
+		LOCALS += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[10000]解锁该事件</font>　需要ZP：%NUM_FORMAT(ZP消費量)%<br>"
+	ENDIF
+ENDIF
+LOCALS += "</div>"
+
+HTML_PRINT LOCALS
+
+FOR 配列番号, 0, 25
+	PRINTL
+NEXT
+
+PRINTBUTTON "[9999]返回", 9999
+PRINTL
+
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE -1
+		DRAWLINE
+		CALLFORM %REPLACE(表示用リスト:表示キー, "ZP開放時イベント解説_", "ZP開放時イベント詳細解説_")%
+		WAIT
+		RESTART
+	CASE IS < 表示候補数
+		表示キー = LOCAL
+		RESTART
+	CASE 9999
+		表示キー = -1
+		RETURN 0
+	CASE 10000
+		IF ZP消費量 > FLAG:ZP所持量
+			PRINTW ZP不足。
+			RESTART
+		ENDIF
+		一時イベント名 '= REPLACE(表示用リスト:表示キー, "ZP開放時イベント解説_", "")
+		EXシナリオ解放記録 += @"%一時イベント名%___"
+		PRINTFORMW 已解锁事件「%一時イベント名%」。
+		FLAG:ZP所持量 -= ZP消費量
+		初回起動 = 0
+		RESTART
+ENDSELECT

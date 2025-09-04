@@ -1,0 +1,136 @@
+﻿
+;-------------------------------------------------
+;03_305_01渓流エリアで进行钓鱼
+;-------------------------------------------------
+@COMNAME_PLACE_380_0_305
+#FUNCTION
+
+IF 施設改造度:3:0 == 0
+	TSTR:コマンド名受渡 = 
+	RETURNF 0
+ENDIF
+TSTR:コマンド名受渡 = 进行钓鱼
+RETURNF 1
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_380_0_305
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+		
+@COM380_0_305
+;RFLAG:コマンド結果受渡し変数　釣りモードの種類
+
+
+$INPUT_LOOP
+;釣りの種類を決定
+DRAWLINE
+PRINTL 
+PRINTL 你想怎么钓鱼？
+PRINTBUTTONLC "[1]简易钓鱼模式", 1
+PRINTBUTTON "[说明]", 10
+PRINTL 
+PRINTBUTTONLC "[2]完整钓鱼模式", 2
+PRINTBUTTON "[说明]", 20
+PRINTL 
+PRINTBUTTON "[999]取消钓鱼", 999
+INPUT
+
+
+
+SELECTCASE RESULT
+	CASE 1
+		RFLAG:コマンド結果受渡し変数 = RESULT
+		CALL 簡易釣りモード(305)
+	CASE 10
+		CALL 簡易釣りモード説明
+		GOTO INPUT_LOOP
+	CASE 2
+		RFLAG:コマンド結果受渡し変数 = RESULT
+		CALL ちゃんと釣りモード(305)
+	CASE 20
+		CALL ちゃんと釣りモード説明
+		GOTO INPUT_LOOP
+	CASE 999
+		RETURN -1
+	CASEELSE
+		GOTO INPUT_LOOP
+ENDSELECT
+
+;歓楽強度
+LOCAL:0 = 500
+;征服強度
+LOCAL:1 = 100
+
+IF RFLAG:コマンド結果受渡し変数２ >= 10
+	;大漁
+	TIMES LOCAL:0 , 2.00
+	TIMES LOCAL:1 , 2.00
+ELSEIF RFLAG:コマンド結果受渡し変数２ >= 5
+	;そこそこ釣れた
+	TIMES LOCAL:0 , 1.50
+	TIMES LOCAL:1 , 1.50
+ELSEIF  RFLAG:コマンド結果受渡し変数２ > 0
+	;とりあえず０じゃない
+	TIMES LOCAL:0 , 1.00
+	TIMES LOCAL:1 , 1.00
+ELSE
+	;ボウズ
+	TIMES LOCAL:0 , 0.50
+	TIMES LOCAL:1 , 0.50
+ENDIF
+
+IF TARGET
+	
+	
+	CALL SOURCE_CALC_歓楽(TARGET, PLAYER, LOCAL:0)
+	CALL SOURCE_CALC_征服(TARGET, PLAYER, LOCAL:1)
+	CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, LOCAL:0 / 2)
+ENDIF
+
+TIME += 60
+RETURN 1
+
+
+
+;-------------------------------------------------
+;実行判定
+;------------------------------------------------
+@COM_ABLE380_0_305
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(380)
+	RETURN RESULT
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM380_0_305
+SIF RFLAG:コマンド結果受渡し変数 == 999
+	RETURN 1
+IF TARGET
+	PRINTFORML %CALLNAME:PLAYER%与%CALLNAME:TARGET%\@ GET_TARGETNUM() > 1 ? 们 # \@享受了钓鱼乐趣
+	IF RFLAG:コマンド結果受渡し変数２ >= 10
+		;大漁
+		PRINTL 钓到堆积如山的渔获！
+		PRINTFORML 与%CALLNAME:TARGET%欢天喜地地满载而归。
+	ELSEIF RFLAG:コマンド結果受渡し変数２ >= 5
+		;そこそこ釣れた
+		PRINTFORML 收获颇丰，%CALLNAME:TARGET%也露出欣喜神情。
+	ELSEIF  RFLAG:コマンド結果受渡し変数２ > 0
+		;とりあえず０ではない
+		PRINTL 虽然成果有限，但度过了愉快时光。
+	ELSE
+		;ボウズ
+		PRINTL 但遗憾地连一尾鱼都没能钓到…
+	ENDIF
+ELSE
+	PRINTFORML %CALLNAME:PLAYER%独自享受钓鱼时光。
+ENDIF
+

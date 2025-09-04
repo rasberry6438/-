@@ -1,0 +1,159 @@
+﻿
+@COMNAME_S60_7
+#FUNCTIONS
+TSTR:コマンド名受渡 = 乳房缰绳正常位
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_S_60_7
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("Ｖ系")
+弱点コマンドカテゴリ = V
+オートコマンド許可 = 1
+
+@COM_TOOLTIP_S60_7
+LOCALS = <br>■乳房缰绳正常位<br>
+LOCALS += "抓握巨乳作为缰绳进行骑乘的指令。<br>需正常位且乳房足够硕大。<br>受虐倾向将提升效果。"
+LOCALS += "<br>反复执行将引发特殊变化……"
+LOCALS += "<br>指令类型：Ｖ系<br>获取来源：征服・快Ｂ・快Ｖ・接触・痛苦"
+LOCALS += "<br>专属经验值：Ｖ性交经验(TARGET)・Ｃ性交经验_Ｖ插入(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM_S60_7
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+
+CALL SOURCE_CALC_征服(PLAYER, TARGET, 150)
+CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 400)
+CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, 400)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 150)
+
+IF !MODE_存在判定_ターゲット側("假阳具", PLAYER)
+	CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 400)
+ELSE
+	CALL SOURCE_CALC_快Ｖ(PLAYER, TARGET, 150)
+ENDIF
+
+;苦痛
+LOCAL = 200 * PAIN_CHECK_V(TARGET) / 1000
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, LOCAL)
+
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, 180)
+RCVAR:TARGET:苦痛コマンドフラグ = 1
+RCVAR:PLAYER:嗜虐コマンドフラグ = 1
+
+;マゾに効果大。ただし苦痛の量が増すのではなくそのほかが増える。
+;痛みで締まるので快Ｖも盛っちゃお
+IF ABL:TARGET:マゾ性感 > 2
+	CALL SOURCE_CALC_征服(PLAYER, TARGET, 80)
+	CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, 80)
+	CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 100)
+	CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 100)
+	EXP:TARGET:苦痛快楽経験 += 1
+ELSE
+	CALL SOURCE_CALC_反感(TARGET, PLAYER, 60)
+ENDIF
+
+;サドは嗜虐快楽
+SIF ABL:PLAYER:サド性感
+	EXP:PLAYER:嗜虐快楽経験 ++
+
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+EXP:PLAYER:Ｃ性交経験_Ｖ挿入 ++
+EXP:Ｖ性交経験 ++
+
+;同性愛
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 4
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 4
+
+;EXPにしたほうがえっちかもしれないんだけど、強い経験名が浮かばなかったのでやむなくCFLAGに格納
+CFLAG:TARGET:おっぱい引っぱりカウント += 1
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE_S60_7
+;実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE_S("60_7")
+	RETURN RESULT
+;あなたが指を何かに使ってるなら無理
+SIF TEQUIP:PLAYER:指
+	RETURN 0
+;巨乳以上でなければ実行不可
+SIF TALENT:TARGET:バストサイズ < 1
+	RETURN 0
+;体格差はあっても多分実行できそうなのでヨシ
+
+;正常位じゃない時はアウト。対面座位とかでも出来はするんだけど、対面まで包括したグッとくるコマンド名が思い浮かばずやむなく正常位限定とする
+SIF !MODE_存在判定_完全一致("正常位", PLAYER, TARGET)
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM_S60_7
+#DIM 同時キャラ番号
+PRINTFORM %CALLNAME:PLAYER%
+IF TALENT:TARGET:長乳
+	PRINTFORM 被%CALLNAME:PLAYER%%TEXTR("反复/多次/持续")%拉扯导致%TEXTR("下流地/淫靡地")%伸长
+ELSE
+	PRINTFORM %TEXTR("平躺时/每次顶撞时眼前晃动的/诱人摇曳的")%
+ENDIF
+PRINTFORM %CALLNAME:TARGET%的
+IF TALENT:TARGET:バストサイズ == 3
+	;魔乳
+	;「あまりにもデカすぎるデカパイ」、頭悪すぎて好き
+	;「下品に育ちきった」とか「だらしなく実った」とかもアリかもしれないけど……純愛シチュの時に貶すようなワード出てもアレかもなぁってことで一応保留
+	PRINTFORM %TEXTR("特大号/过于巨大的/人头大小的/超规格的")%%TEXTR("胸部/大胸/魔乳")%
+ELSEIF TALENT:TARGET:バストサイズ == 2
+	;爆乳
+	PRINTFORM %TEXTR("溢出掌心的/引人注目的/满载梦想的")%%TEXTR("胸部/大胸/爆乳")%
+ELSEIF TALENT:TARGET:バストサイズ == 1
+	;巨乳
+	IF TALENT:TARGET:種族 == 3
+	;ドラフ
+	;「小さめな巨乳」という矛盾したワード
+		PRINTFORM 多拉夫族中相对娇小的%TEXTR("大雄/巨乳")%
+	ELSE
+		PRINTFORM %TEXTR("饱满的/恰到好处的")%%TEXTR("胸部/大胸/巨乳")%
+	ENDIF
+ENDIF
+PRINTFORM 被%TEXTR("狠狠/用力")%
+CALL PRINT_STR("_H_")
+PRINTFORML %TEXTR("紧握/抓取/握在手中")%，
+PRINTFORM %TEXTR("嗯呜～～♡/咕啾～～♡")%
+CALL PRINT_STR("_H__H__H_")
+PRINTFORML 伴随着拉扯%TEXTR("猛烈/激烈/粗暴")%地撞击腰肢……
+
+IF CFLAG:TARGET:おっぱい引っぱりカウント >= 20 && TALENT:TARGET:長乳 == 0
+	PRINTW
+	PRINTFORM 因频繁被%CALLNAME:PLAYER%作为性交缰绳使用的%CALLNAME:TARGET%的
+	IF TALENT:TARGET:バストサイズ == 3
+		PRINTFORM 魔乳
+	ELSEIF TALENT:TARGET:バストサイズ == 2
+		PRINTFORM 爆乳
+	ELSEIF TALENT:TARGET:バストサイズ == 1
+		PRINTFORM 巨乳
+	ENDIF
+	PRINTFORML  ，
+	PRINTFORM 在持续拉扯下淫靡地纵向延伸，
+	SETCOLOR カラーパレット("えっちな色")
+		PRINT [长乳]
+	RESETCOLOR
+	PRINTFORML 发生了永久性变形……
+	TALENT:TARGET:長乳 = 1
+ENDIF

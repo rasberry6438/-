@@ -1,0 +1,117 @@
+﻿
+;-------------------------------------------------
+;05_506_01卓球場で遊ぶ
+;-------------------------------------------------
+@COMNAME_PLACE_380_0_506
+#FUNCTION
+IF 施設改造度:5:6 == 0
+	TSTR:コマンド名受渡 = 
+	RETURNF 0
+ENDIF
+TSTR:コマンド名受渡 = 学习性知识
+RETURNF 1
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_380_0_506
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+		
+
+@COM_TOOLTIP_380_0_506
+LOCALS = <br>■学习性知识<br>
+LOCALS += "与对方共同学习性知识的指令<br>"
+LOCALS += "<br>COM类型：日常<br>获取来源：欢乐・征服(特定条件)"
+LOCALS += "<br>专属经验值：性知识经验值(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM380_0_506
+
+LOCAL:2 = RAND:100
+LOCAL:1 = 教える上手さ(PLAYER, TARGET, 0)
+IF LOCAL:2 <= LOCAL:1 / 2
+	;上手さ / 2以下で超成功
+	RFLAG:コマンド結果受渡し変数 = 1
+	EXP:MASTER:会話経験 ++
+	性知識経験値:TARGET:0 += 9 + RAND:3
+ELSEIF LOCAL:2 <= LOCAL:1
+	;上手さ以下で成功
+	RFLAG:コマンド結果受渡し変数 = 0
+	性知識経験値:TARGET:0 += 7 + RAND:2
+ELSE
+	;残りは失敗
+	RFLAG:コマンド結果受渡し変数 = -1
+	性知識経験値:TARGET:0 += 3 + RAND:2
+ENDIF
+
+;歓楽強度
+LOCAL:0 = 100
+
+IF RFLAG:コマンド結果受渡し変数 == -1
+	TIMES LOCAL:0 , 0.10
+ELSEIF RFLAG:コマンド結果受渡し変数 == 0
+	TIMES LOCAL:0 , 1.00
+ELSE
+	TIMES LOCAL:0 , 2.00
+ENDIF
+
+
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, LOCAL:0)
+CALL SOURCE_CALC_好感度要素_信頼度UP(TARGET, PLAYER, LOCAL:0 / 2)
+CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, LOCAL:0 / 2)
+
+TCVAR:TARGET:学習フラグ += 80
+
+TIME += 60
+EXP:MASTER:会話経験 ++
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE380_0_506
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(380)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+;口を何かに使ってるなら無理
+SIF TEQUIP:PLAYER:口
+	RETURN 0
+SIF TEQUIP:TARGET:口
+	RETURN 0
+;ある程度好感度が必要
+SIF CFLAG:TARGET:好感度レベル <= 関係閾値:3
+	RETURN 0
+;友人は一日一回まで、親友になると２回まで教えてくれる
+SIF CFLAG:TARGET:好感度レベル <= TCVAR:TARGET:学習フラグ
+	RETURN 0
+;相手の性知識は0以下であること
+SIF 知識素質:TARGET:性知識 > 0
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM380_0_506
+;RFLAG:コマンド結果受渡し変数=１大成功　０成功　-１失敗
+
+PRINTFORML %CALLNAME:PLAYER%与%CALLNAME:TARGET%共同进行了性知识学习
+SELECTCASE RFLAG:コマンド結果受渡し変数
+	CASE 1
+		PRINTFORML %CALLNAME:PLAYER%的教学方式通俗易懂，%CALLNAME:TARGET%获得了显著进步！
+	CASE 0
+		PRINTFORML 针对若干疑问点，%CALLNAME:TARGET%掌握了正确知识
+	CASE -1
+		PRINTFORML 因注意力不集中，%CALLNAME:TARGET%几乎没学到东西…
+ENDSELECT
+
+PRINTL 
+PRINTFORML 性知识LvUP还需：{性知識経験値:TARGET:0, 2} / 21

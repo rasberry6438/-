@@ -1,0 +1,604 @@
+﻿;互动指令の選択肢を追加
+@DAILY2_K1_ADDSELECT
+;暫し封印
+RETURN 0
+[IF_DEBUG]
+	STR:選択肢 += "一騎打ちで玩遊戲/"
+	STR:選択肢 += "SUCCUBUS ESCAPE/"
+	STR:選択肢 += "ヒットアンドブロ―/"
+	STR:選択肢 += "ターンを終わらせる/"
+[ENDIF]
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K1_ADDSELECT, ARGS
+SELECTCASE ARGS
+;直接ターンエンドしたい場合
+CASE "ターンを終わらせる"
+	;前編
+	IF CEVENTS("追加選択肢からターンエンド") == ""
+		PRINTFORMW テ接吻ト
+		PRINTL [0]選択肢１(これを選ぶとターンエンドします)
+		PRINTL [1]選択肢２(これを選ぶとターンエンドしません)
+		CALL SET_CEVENT, @"追加選択肢からターンエンド：%ARGS%"
+		FLAG:SELECT_USERSHOP = 998
+	ELSE
+		IF TFLAG:ターンエンド
+			PRINTFORMW ターンエンドする場合の展開です
+		ELSE
+			PRINTFORMW こっちはターンエンドしない場合の展開です
+		ENDIF
+	ENDIF
+
+CASE "一騎打ちで玩遊戲"
+	PRINTFORML 画面中央に「！！」が出たら左阴蒂ックかエンターキー
+	PRINTFORML 相手より早く反応しよう！
+	CALL PRINT_SELECT, "就這樣吧/再想想吧"
+	IF RESULT == 0
+		CALL ONE_ON_ONE, 5
+	ENDIF
+
+CASE "SUCCUBUS ESCAPE"
+	PRINTFORML %CALLNAME:TARGET%が推倒てきた！
+	PRINTL
+	PRINTFORML 【左阴蒂ック、Enterキー連打で抵抗】
+	CALL SUCCUBUS_ESCAPE, 5
+	TWAIT 500, 1
+	PRINTL
+	IF RESULT == 0
+		PRINTFORML %CALLNAME:MASTER%は抵抗した！
+	ELSE
+		PRINTFORML %CALLNAME:TARGET%に組み伏せられた！
+	ENDIF
+CASE "ヒットアンドブロ―"
+	CALL HITANDBLOW
+ENDSELECT
+
+
+;口上用のダミー
+@DUMMYKOJO_DAILYCOM_K1, ARGS
+SELECTCASE ARGS
+CASE "一騎打ち"
+	SELECTCASE STR:日常イベント名
+	CASE "游戏開始"
+		STR:1 = 「フフ。負けませんよ」
+		CSTR:颜绘変化 = 重置
+	CASE "待機中"
+		STR:1 = 「……」
+		CSTR:颜绘変化 = 重置/对话框・・・
+	CASE "勝負"
+		STR:1 = 「！！！」
+		CSTR:颜绘変化 = 重置/对话框！
+	CASE "一騎打ちで勝利"
+		STR:1 = 「もう一回です！もう一回！」
+		CSTR:颜绘変化 = 重置/憤怒眉/嘟嘴
+	CASE "一騎打ちで引き分け"
+		STR:1 = 「むむ……引き分けですか」
+		STR:2 = 「%CNAME("二人称")%もなかなかやりますね」
+		CSTR:颜绘変化 = 重置
+	CASE "一騎打ちで敗北"
+		STR:1 = 「今回は%CNAME("一人称")%の勝ちです。」
+		CSTR:颜绘変化 = 重置/对话框開心
+	CASE "一騎打ちでお手付き"
+		STR:1 = 「お手付きで%CNAME("一人称")%の勝ちですね。」
+		CSTR:颜绘変化 = 重置/闭眼/对话框兴奋
+	ENDSELECT
+CASE "ヒットアンドブロ―"
+	SELECTCASE STR:日常イベント名
+	CASE "游戏開始"
+		STR:1 = 「さて、よく考えてくださいね」
+		CSTR:颜绘変化 = 重置
+	CASE "ヒットアンドブロ―正解"
+		STR:1 = 「正解です！祝贺您！！」
+		STR:2 = 「%CNAME("二人称")%にはかんたんでしたか？」
+		CSTR:颜绘変化 = 重置/对话框兴奋
+	CASE "ヒットアンドブロ―リ領帯ア"
+		STR:1 = 「答えは%EXTSTR(STR:19, "答え：", "/")%です」
+		STR:2 = 「次は当ててくださいね」
+		CSTR:颜绘変化 = 重置/
+	CASE "ヒットアンドブロ―降参"
+		STR:1 = 「難しかったですか？」
+		STR:2 = 「答えは%EXTSTR(STR:19, "答え：", "/")%です」
+		CSTR:颜绘変化 = 重置/
+	CASEELSE
+		IF EXTSTR(STR:19, "解答：", "/") == "0721"
+			STR:1 = 「その数入れると思っていました」
+			CSTR:颜绘変化 = 重置/紅潮
+		ELSEIF EXTSTR(STR:日常イベント名, "", "回目") == "9"
+			STR:1 = 「次で最後です。答えは我明白了か？」
+			CSTR:颜绘変化 = 重置/
+		ELSE
+			STR:1 = 「%EXTSTR(STR:19, "解答：", "/")%は%EXTSTR(STR:19, "ヒット：", "/")%ヒット、%EXTSTR(STR:19, "ブロー：", "/")%ブローです」
+			CSTR:颜绘変化 = 重置/
+		ENDIF
+	ENDSELECT
+ENDSELECT
+
+
+;-------------------------------------------------
+;ヒットアンドブロ―
+;ARG:0で桁(最大5まで)、ARG:1が解答回数（最大20回）
+;4桁までは10回、5桁は15回+ちょっとくらいがいいかも
+;口上を書くときはSTR:19に様々なデータを入れてます
+;答え：、解答：、ヒット：、ブロー：
+;解答、ヒット、ブローは一個前に答えた内容です
+;-------------------------------------------------
+@HITANDBLOW, ARG:0 = 4, ARG:1 = 10
+#DIM DYNAMIC LCOUNT, 2
+#DIM DYNAMIC MEMO_LINECOUNT
+#DIM DYNAMIC MEMO_TIME
+#DIM DYNAMIC HIT
+#DIM DYNAMIC BLOW
+#DIM DYNAMIC SLOT, 5
+#DIM DYNAMIC FLAG_INPUTS
+#DIM DYNAMIC FLAG_CONTINUE
+#DIM DYNAMIC RESCOUNT
+#DIM DYNAMIC SPACE
+#DIMS DYNAMIC TEMP
+#DIMS DYNAMIC STATUS
+#DIMS DYNAMIC SPIN_BUTTON
+#DIMS DYNAMIC QUESTIONS, 5
+#DIMS DYNAMIC ANSWERS, 5
+#DIMS DYNAMIC HISTORY, 20
+#DIMS DYNAMIC HANDOVER
+
+SIF ARG:0 >= 6
+	ARG = 5
+SIF ARG:1 >= 21
+	ARG = 20
+
+PRINTL
+MEMO_LINECOUNT = LINECOUNT
+MEMO_TIME = GETSECOND()
+
+;答えの4桁を作成
+TEMP = 0123456789
+FOR LCOUNT:0, 0, ARG:0
+	ANSWERS:(LCOUNT:0) = %SUBSTRING(TEMP, RAND:(10 - LCOUNT:0), 1)%
+	TEMP = %REPLACE(TEMP, ANSWERS:(LCOUNT:0), "")%
+NEXT
+
+;游戏開始
+WHILE RESCOUNT < ARG:1
+
+	;各種フラッグの重置
+	FLAG_INPUTS = 1
+	FLAG_CONTINUE = 0
+	HIT = 0
+	BLOW = 0
+	TEMP =
+
+	;前の表示は消す
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+
+	;TARGETのセリフ
+	;いろいろなデータをSTR:19入れて渡して给
+	STR:19 = %HANDOVER%
+	IF RESCOUNT == 0
+		STR:日常イベント名 = 游戏開始
+	ELSE
+		STR:日常イベント名 = {RESCOUNT}回目
+	ENDIF
+	TRYCALLFORM DUMMYKOJO_DAILYCOM_K{NO:TARGET}, "ヒットアンドブロ―"
+	;変な挙動を防ぐため空にする
+	STR:19 = 
+	CALL DIALOGUE_FRAME_NAME, TARGET, CSTR:颜绘変化
+	DRAWLINE
+	
+	;ノルマ表示と降参ボタン
+	HTML_PRINT @"<p align='right'>残り：{ARG:1 - RESCOUNT}回 <button value='降参'>[ 降参 ]</button>　</p>"
+
+	;5行以上で下にスペースがない場合は右の行に移動する
+	SPACE = MAX(WINDOWROWS()-(LINECOUNT - MEMO_LINECOUNT) - 3, 0)
+	FOR LCOUNT:0, 0, MAX(SPACE, 5)
+		SIF (LCOUNT:0 < 20 && SPACE) || LCOUNT:0 <= 5
+			PRINTFORM %HISTORY:(LCOUNT:0)%
+		;2行必要
+		SIF SPACE < 20 && LCOUNT:0 + MAX(SPACE, 5) < 20
+			PRINTFORM 　%HISTORY:( LCOUNT:0 + MAX(SPACE, 5) )%
+		;3行必要
+		SIF SPACE < 10 && LCOUNT:0 + MAX(SPACE * 2, 10) < 20
+			PRINTFORM 　%HISTORY:( LCOUNT:0 + MAX(SPACE * 2, 10) )%
+		;4行必要
+		SIF SPACE < 5 && LCOUNT:0 + MAX(SPACE * 3, 15) < 20
+			PRINTFORM 　%HISTORY:( LCOUNT:0 + MAX(SPACE * 3, 15) )%
+		PRINTL
+	NEXT
+
+	PRINTL
+	PRINTFORML 同じ数字を含まない{ARG:0}桁の数を答えてください。"降参"と入力すると降参します
+
+	;マウスの入力欄の作成
+	;[<] 0 [>] [<] 0 [>] [<] 0 [>] [<] 0 [>] [ OK ]
+	SPIN_BUTTON = <nobr>
+	FOR LCOUNT:0, 0, ARG:0
+		SPIN_BUTTON += @"<button value='DOWN：{LCOUNT:0}'>%HTML_ESCAPE("[<]")%</button> {SLOT:(LCOUNT:0)} <button value='UP：{LCOUNT:0}'>%HTML_ESCAPE("[>]")%</button> "
+	NEXT
+	SPIN_BUTTON += "<button value='OK'>[ OK ]</button>"
+	HTML_PRINT SPIN_BUTTON
+
+	WHILE FLAG_INPUTS
+		INPUTS
+		SIF RESULTS != ""
+			CLEARLINE 1
+		;入力に対する処理
+		IF STRCOUNT(RESULTS, "DOWN：")
+			IF SLOT:( TOINT( EXTSTR(RESULTS, "：") ) ) == 0
+				SLOT:( TOINT( EXTSTR(RESULTS, "：") ) ) = 9
+			ELSE
+				SLOT:( TOINT( EXTSTR(RESULTS, "：") ) ) -= 1
+			ENDIF
+			FLAG_CONTINUE = 1
+			FLAG_INPUTS = 0
+		ELSEIF STRCOUNT(RESULTS, "UP：")
+			IF SLOT:( TOINT( EXTSTR(RESULTS, "：") ) ) == 9
+				SLOT:( TOINT( EXTSTR(RESULTS, "：") ) ) = 0
+			ELSE
+				SLOT:( TOINT( EXTSTR(RESULTS, "：") ) ) += 1
+			ENDIF
+			FLAG_CONTINUE = 1
+			FLAG_INPUTS = 0
+		ELSEIF RESULTS == "降参"
+			STATUS = 降参
+			BREAK
+		ELSEIF RESULTS == "OK" || RESULTS == ""
+			FOR LCOUNT:0, 0, ARG:0
+				TEMP += TOSTR(SLOT:LCOUNT)
+			NEXT
+			FLAG_INPUTS = 0
+		ELSEIF STRCOUNT(RESULTS, "[0-9]") == ARG:0
+			TEMP = %RESULTS%
+			FLAG_INPUTS = 0
+		ENDIF
+
+		;数が入力されていた場合、内容を確認
+		IF TEMP != ""
+			;答えを数字ごとに分解する
+			FOR LCOUNT:0, 0, ARG:0
+				QUESTIONS:(LCOUNT:0) = %SUBSTRING(TEMP, LCOUNT:0, 1)%
+			NEXT
+
+			;回答の中に同じ数字が含まれていないか格子
+			FOR LCOUNT:0, 0, ARG:0 - 1
+				SIF FLAG_INPUTS
+					BREAK
+				FOR LCOUNT:1, (LCOUNT:0 + 1), ARG:0
+					IF QUESTIONS:(LCOUNT:0) == QUESTIONS:(LCOUNT:1)
+						PRINTFORML %TEMP%
+						PRINTFORMW 解答に同じ数字が含まれています
+						CLEARLINE 2
+						TEMP =
+						FLAG_INPUTS = 1
+						BREAK
+					ENDIF	
+				NEXT
+			NEXT
+		ENDIF
+	WEND
+
+	SIF FLAG_CONTINUE
+		CONTINUE
+	SIF STATUS == "降参"
+		BREAK
+
+	;答え合わせ
+	FOR LCOUNT:0, 0, ARG:0
+		FOR LCOUNT:1, 0, ARG:0
+			IF QUESTIONS:(LCOUNT:0) == ANSWERS:(LCOUNT:1)
+				IF LCOUNT:0 == LCOUNT:1
+					HIT += 1
+				ELSE
+					BLOW += 1
+				ENDIF
+			ENDIF
+		NEXT
+	NEXT
+
+	RESCOUNT += 1
+
+	;結果を保存
+	IF RESCOUNT < 10
+		HISTORY:(RESCOUNT -1) = 　 {RESCOUNT}： 
+	ELSE
+		HISTORY:(RESCOUNT -1) = 　{RESCOUNT}： 
+	ENDIF
+	FOR LCOUNT:0, 0, ARG:0
+		HISTORY:(RESCOUNT -1) += @"%QUESTIONS:(LCOUNT:0)%"
+	NEXT
+	HISTORY:(RESCOUNT -1) += @"　{HIT}H　{BLOW}B"
+
+	;口上に渡す内容を作成
+	HANDOVER = 答え：
+	FOR LCOUNT:0, 0, ARG:0
+		HANDOVER += @"%ANSWERS:(LCOUNT:0)%"
+	NEXT
+	HANDOVER += "\/解答："
+	FOR LCOUNT:0, 0, ARG:0
+		HANDOVER += @"%QUESTIONS:(LCOUNT:0)%"
+	NEXT
+	HANDOVER += @"\/ヒット：{HIT}\/ブロー：{BLOW}\/"
+
+	;すべてHITなら正解
+	IF HIT == ARG:0
+		STATUS = 正解
+		BREAK
+	ENDIF
+
+	;ここまで正解できなかったらリ領帯ア
+	SIF RESCOUNT >= ARG:1
+		STATUS = リ領帯ア
+WEND
+
+;ここから結果発表
+
+;口上に渡す内容を作成
+HANDOVER = 答え：
+FOR LCOUNT:0, 0, ARG:0
+	HANDOVER += @"%ANSWERS:(LCOUNT:0)%"
+NEXT
+HANDOVER += "\/解答："
+FOR LCOUNT:0, 0, ARG:0
+	HANDOVER += @"%QUESTIONS:(LCOUNT:0)%"
+NEXT
+HANDOVER += @"\/ヒット：{HIT}\/ブロー：{BLOW}\/解答回数：{RESCOUNT}\/時間：{GETSECOND() - MEMO_TIME}"
+
+CLEARLINE LINECOUNT - MEMO_LINECOUNT
+
+;TARGETのセリフ
+STR:日常イベント名 = ヒットアンドブロ―%STATUS%
+STR:19 = %HANDOVER%
+TRYCALLFORM DUMMYKOJO_DAILYCOM_K{NO:TARGET}, "ヒットアンドブロ―"
+
+;変な挙動を防ぐため空にする
+STR:19 = 
+CALL DIALOGUE_FRAME_NAME, TARGET, CSTR:颜绘変化
+
+DRAWLINE
+IF STATUS == "正解"
+	HTML_PRINT @"<p align='right'>解答回数：{RESCOUNT}　阴蒂我ム：{GETSECOND() - MEMO_TIME}秒　</p>"
+ELSE
+	PRINTL
+ENDIF
+SPACE = MAX(WINDOWROWS()-(LINECOUNT - MEMO_LINECOUNT) - 3, 0)
+FOR LCOUNT:0, 0, MAX(SPACE, 5)
+	SIF (LCOUNT:0 < 20 && SPACE) || LCOUNT:0 <= 5
+		PRINTFORM %HISTORY:(LCOUNT:0)%
+	;2行必要
+	SIF SPACE < 20 && LCOUNT:0 + MAX(SPACE, 5) < 20
+		PRINTFORM 　%HISTORY:( LCOUNT:0 + MAX(SPACE, 5) )%
+	;3行必要
+	SIF SPACE < 10 && LCOUNT:0 + MAX(SPACE * 2, 10) < 20
+		PRINTFORM 　%HISTORY:( LCOUNT:0 + MAX(SPACE * 2, 10) )%
+	;4行必要
+	SIF SPACE < 5 && LCOUNT:0 + MAX(SPACE * 3, 15) < 20
+		PRINTFORM 　%HISTORY:( LCOUNT:0 + MAX(SPACE * 3, 15) )%
+	PRINTL
+NEXT
+
+SIF WINDOWROWS()-(LINECOUNT - MEMO_LINECOUNT) - 3
+	CALL MULTILINE, WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT) - 3
+
+PRINTL
+IF STATUS == "正解"
+	PRINTFORML 正解です！
+ELSEIF STATUS == "リ領帯ア"
+	PRINTFORML 規定回数までに答えられなかったのでリ領帯アとなります
+ELSEIF STATUS == "降参"
+	PRINTFORML 降参しました
+ENDIF
+PRINTL
+WAIT
+
+;-------------------------------------------------
+;左阴蒂ックかエンターキー連打でバーが右まで行かない様にする游戏
+;2秒間の間にARGより多い数を押せれば成功となる（GETMILLISECOND()の挙動からかちょっとぶれる）
+;RESULTの値が 0 → 成功、1 → 失敗
+;これの後に"TWAIT 500"ほど入力を受け付けない時間を作るのを推奨
+;-------------------------------------------------
+@SUCCUBUS_ESCAPE, ARG
+#DIM DYNAMIC MEMO_TIME
+#DIM DYNAMIC MEMO_REDRAW
+#DIM DYNAMIC PRINT_BAR
+#DIM DYNAMIC BAR_MAX
+#DIM DYNAMIC CORRECTION
+#DIM DYNAMIC NOW_TIME
+#DIM DYNAMIC CLICK_COUNT
+#DIM DYNAMIC GAMESET
+
+MEMO_TIME = GETMILLISECOND()
+MEMO_REDRAW = CURRENTREDRAW()
+BAR_MAX = CLIENTWIDTH () / GETCONFIG("フォントサイズ") * 100
+CORRECTION = 500 / ARG
+SIF 500 % CORRECTION
+	CORRECTION += 1
+
+REDRAW 0
+PRINTL
+
+;2秒経てば勝ち
+WHILE MEMO_TIME + 2000 >= GETMILLISECOND()
+
+	NOW_TIME = GETMILLISECOND() - MEMO_TIME
+
+	CLEARLINE 1
+	PRINT_BAR = (BAR_MAX * NOW_TIME) / (1500 + (CLICK_COUNT * CORRECTION))
+	IF PRINT_BAR
+		HTML_PRINT @"<nobr><shape type='rect' param='0,30,{PRINT_BAR},60'>"
+	ELSE
+		PRINTL
+	ENDIF
+
+	;この条件を満たすと負け
+	IF NOW_TIME > (1500 + (CLICK_COUNT * CORRECTION))
+		GAMESET = 1
+		BREAK
+	ENDIF
+
+	INPUTMOUSEKEY 100
+	IF RESULT:0 == 1
+		SIF RESULT:1 == 0x100000
+			CLICK_COUNT += 1
+	ELSEIF RESULT:0 == 3
+		SIF RESULT:1 == 13
+			CLICK_COUNT += 1
+	ENDIF
+WEND
+
+REDRAW MEMO_REDRAW
+
+RETURN GAMESET
+;-------------------------------------------------
+;画面中央に「！！」が出たら左阴蒂ックかエンターキー
+;相手より早く反応しよう！
+;ARGで相手の勝つラインを操作できます
+;-------------------------------------------------
+@ONE_ON_ONE, ARG = 5
+#DIM DYNAMIC LCOUNT
+#DIM DYNAMIC GAME_CENTERLINE
+#DIM DYNAMIC MEMO_LINECOUNT
+#DIM DYNAMIC MEMO_REDRAW
+#DIM DYNAMIC TIMER
+#DIMS DYNAMIC STATUS
+
+;文字が見切れない様に一回改行
+PRINTL
+
+MEMO_LINECOUNT = LINECOUNT
+MEMO_REDRAW = CURRENTREDRAW()
+
+REDRAW 0
+
+;<--游戏開始前のカウントダウン-->
+TIMER = 0
+
+;角色の会話
+STR:日常イベント名 = 游戏開始
+TRYCALLFORM DUMMYKOJO_DAILYCOM_K{NO:TARGET}, "一騎打ち"
+CALL DIALOGUE_FRAME_NAME, TARGET, CSTR:颜绘変化
+
+DRAWLINE
+GAME_CENTERLINE = (WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT)) / 2
+CALL MULTILINE, WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT)
+CLEARLINE GAME_CENTERLINE
+
+;カウントダウン開始
+FOR LCOUNT, 1, 4
+	HTML_PRINT @"<p align='center'>{4-LCOUNT}</p>"
+	CALL MULTILINE, WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT)
+	TWAIT 1000, 1
+	CLEARLINE GAME_CENTERLINE
+NEXT
+
+;<--計測開始前の待機時間-->
+CLEARLINE LINECOUNT - MEMO_LINECOUNT
+
+;角色の会話
+
+STR:日常イベント名 = 待機中
+TRYCALLFORM DUMMYKOJO_DAILYCOM_K{NO:TARGET}, "一騎打ち"
+SIF CSTR:颜绘変化 == ""
+		CSTR:颜绘変化 = 重置/对话框・・・
+CALL DIALOGUE_FRAME_NAME, TARGET, CSTR:颜绘変化
+DRAWLINE
+CALL MULTILINE, WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT) - 1
+;領帯マーの設置
+HTML_PRINT @"<p align='right'>%TOSTR(TIMER, "00")% </p>"
+
+;待機開始、時間は随机で変化させる
+FOR LCOUNT, 0, 30+RAND:50
+	INPUTMOUSEKEY 100
+	IF RESULT:0 == 1
+		IF RESULT:1 == 0x100000
+			STATUS = お手付き
+			BREAK
+		ENDIF
+	ELSEIF RESULT:0 == 3
+		IF RESULT:1 == 13
+			STATUS = お手付き
+			BREAK
+		ENDIF
+	ENDIF
+NEXT
+
+;お手付きしてないなら勝負
+IF STATUS != "お手付き"
+
+	;<--計測開始-->
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+
+	;角色の会話
+	STR:日常イベント名 = 勝負
+	TRYCALLFORM DUMMYKOJO_DAILYCOM_K{NO:TARGET}, "一騎打ち"
+	SIF CSTR:颜绘変化 == ""
+		CSTR:颜绘変化 = 重置/对话框！
+	CALL DIALOGUE_FRAME_NAME, TARGET, CSTR:颜绘変化
+	DRAWLINE
+	CALL MULTILINE, WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT)
+	CLEARLINE GAME_CENTERLINE
+	HTML_PRINT @"<p align='center'><B>！！</B></p>"
+	CALL MULTILINE, WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT)
+
+	FOR LCOUNT, 0, ARG
+		CLEARLINE 1
+		HTML_PRINT @"<p align='right'>%TOSTR(TIMER, "00")% </p>"
+		INPUTMOUSEKEY 100
+		IF RESULT:0 == 1
+			IF RESULT:1 == 0x100000
+				IF LCOUNT == ARG - 1
+					STATUS = 引き分け
+					BREAK
+				ELSE
+					STATUS = 勝利
+					BREAK
+				ENDIF
+			ENDIF
+		ELSEIF RESULT:0 == 3
+			IF RESULT:1 == 13
+				IF LCOUNT == ARG - 1
+					STATUS = 引き分け
+					BREAK
+				ELSE
+					STATUS = 勝利
+					BREAK
+				ENDIF
+			ENDIF
+		ENDIF
+
+		;100ms秒ごとに領帯マー加算
+		TIMER += 1
+	NEXT
+
+	;ここまで勝敗が決まってなかったら負け
+	SIF STATUS == ""
+		STATUS = 敗北
+ENDIF
+
+CLEARLINE LINECOUNT - MEMO_LINECOUNT
+
+;角色の会話
+
+STR:日常イベント名 = 一騎打ちで%STATUS%
+TRYCALLFORM DUMMYKOJO_DAILYCOM_K{NO:TARGET}, "一騎打ち"
+CALL DIALOGUE_FRAME_NAME, TARGET, CSTR:颜绘変化
+
+DRAWLINE
+CALL MULTILINE, WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT)
+CLEARLINE GAME_CENTERLINE
+
+SELECTCASE STATUS
+CASE "勝利"
+	HTML_PRINT @"<p align='center'>YOU WIN!!</p>"
+CASE "引き分け"
+	HTML_PRINT @"<p align='center'>DRAW</p>"
+CASE "敗北", "お手付き"
+	HTML_PRINT @"<p align='center'>YOU LOSE..</p>"
+ENDSELECT
+CALL MULTILINE, WINDOWROWS() - (LINECOUNT - MEMO_LINECOUNT) - 1
+HTML_PRINT @"<p align='right'>%TOSTR(TIMER, "00")% </p>"
+
+;負けた場合は少しの間操作不能の時間を作っておく
+SIF STATUS == "敗北"
+	TWAIT 500, 1
+WAIT
+
+REDRAW MEMO_REDRAW
+RETURN 0

@@ -1,0 +1,180 @@
+﻿;-------------------------------------------------
+;刺激乳头
+;愛撫系コマンド，レベル1
+;-------------------------------------------------
+@COMNAME7
+#FUNCTIONS
+IF TALENT:陥没乳首 && !TCVAR:陥没乳首露出フラグ
+	TSTR:コマンド名受渡 = 挑逗乳头
+	SIF GETBIT(FLAG:モード管理, モードビット_同時)
+		TSTR:コマンド名受渡 = 同时挑逗乳头
+ELSE
+	TSTR:コマンド名受渡 = 刺激乳头
+	SIF GETBIT(FLAG:モード管理, モードビット_同時)
+		TSTR:コマンド名受渡 = 同时刺激乳头
+ENDIF
+
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_7
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ_被挿入中")
+弱点コマンドカテゴリ = B
+同時モード許可 = 2
+同時モード拡張許可 = 1
+オートコマンド許可 = 1
+連続オート許可 = 1
+
+@COM_TOOLTIP_7
+LOCALS = <br>■刺激乳头<br>
+LOCALS += "刺激并爱抚对方乳头的指令。"
+LOCALS += "<br>指令类型：嘿咻or被插入中<br>获取来源：快Ｂ・暴露・接触・痛苦"
+LOCALS += "<br>专属经验值：乳头开发(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM7
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+RCVAR:乳首開発フラグ = 2
+
+CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 120)
+
+;勃起直後であるパターンの時，フラグを確保
+SIF TCVAR:陥没乳首露出フラグ == 10
+	RFLAG:コマンド結果受渡し変数 = 1
+
+SIF TALENT:PLAYER:器用な指
+	CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 50)
+
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 60)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 60)
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, 20)
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;同性愛
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 5
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 5
+;手淫経験
+EXP:PLAYER:手淫経験 += 1
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@COM_ABLE7
+;刺激乳头
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(7)
+	RETURN RESULT
+;Bがない場合駄目
+SIF TALENT:TARGET:Ｂ感度 == -2
+	RETURN 0
+	
+;上半身着衣
+;鎧，差し込めないorはだけない服，タイツ，ブラ等があると無理
+SIF TEQUIP:上半身鎧あり
+	RETURN 0
+SIF TEQUIP:上半身服あり && (!TEQUIP:手差し込み可 && !TEQUIP:はだけ可)
+	RETURN 0
+SIF TEQUIP:上タイツあり && !TEQUIP:上タイツ破れ
+	RETURN 0
+SIF TEQUIP:上半身下着あり
+	RETURN 0
+IF !MODE_存在判定_完全一致("授乳手コキ", TARGET, PLAYER) && !MODE_存在判定_完全一致("乳首吸い", PLAYER, TARGET)
+	;指を何かに使ってるなら無理
+	SIF TEQUIP:PLAYER:指
+		RETURN 0
+	;胸を何かに使ってるなら無理（パイズリ中は許可）
+	IF !MODE_存在判定_プレイヤー側("パイズリ系", TARGET)
+		SIF TEQUIP:TARGET:胸
+			RETURN 0
+	ENDIF
+	;胸に届かないなら無理
+	CALL MODE_部位届く判定(部位_胸, PLAYER, TARGET)
+	SIF RESULT == 0
+		RETURN 0
+ENDIF
+
+;オートコマンド中の制限
+SIF FLAG:オートコマンド判定中フラグ && TALENT:TARGET:性別 == 2 &&  OPTION変数:男性への愛撫禁止
+	RETURN 0	
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM7
+#DIM 同時キャラ番号
+PRINTFORM %CALLNAME:PLAYER%
+IF GETBIT(FLAG:モード管理, モードビット_同時)
+	FOR 同時キャラ番号, 0, 同時モード_選択数
+		SIF 同時キャラ番号 > 0
+			PRINT ，
+		PRINTFORM %CALLNAME:(同時モード_選択キャラ:同時キャラ番号)%
+	NEXT
+	PRINT 的乳尖突起用手指捻转…
+	RETURN 0
+ENDIF
+
+IF MODE_存在判定_順不同("ＶＡ挿入系", PLAYER, TARGET)
+	PRINTFORM 在与%CALLNAME:TARGET%保持插入的状态下，对%OPPAI_DESCRIPTION(TARGET)%
+ELSE
+	PRINTFORM 对%CALLNAME:TARGET%的%OPPAI_DESCRIPTION(TARGET)%
+ENDIF
+SELECTCASE TALENT:陥没乳首
+	CASE 0
+		;欲情のPALAMLV3以上
+		IF PALAM:欲情 >= PALAMLV:3
+			PRINT 顶端完全硬挺的突起
+			IF MODE_存在判定_完全一致("授乳手コキ", TARGET, PLAYER) || MODE_存在判定_完全一致("乳首吸い", PLAYER, TARGET)
+				PRINTL 用舌尖滚动…
+			ELSE
+				PRINTL 用手指捏起…
+			ENDIF
+		ELSE
+			PRINT 尚且柔软的突起
+			IF MODE_存在判定_完全一致("授乳手コキ", TARGET, PLAYER) || MODE_存在判定_完全一致("乳首吸い", PLAYER, TARGET)
+				PRINTL 用舌尖滚动…
+			ELSE
+				PRINTL 用手指捏起…
+			ENDIF
+		ENDIF
+	CASE 1
+		IF !TCVAR:陥没乳首露出フラグ
+			PRINT 的凹陷处探入手指，将隐藏的乳头
+			SIF MODE_存在判定_完全一致("授乳手コキ", TARGET, PLAYER) || MODE_存在判定_完全一致("乳首吸い", PLAYER, TARGET)
+				PRINT 用舌尖
+			PRINTL 抠挖挑弄…
+		ELSEIF RFLAG:コマンド結果受渡し変数
+			;勃起直後パターン
+			PRINT 的凹痕中
+			IF MODE_存在判定_完全一致("授乳手コキ", TARGET, PLAYER) || MODE_存在判定_完全一致("乳首吸い", PLAYER, TARGET)
+				PRINT 舌尖
+			ELSE
+				PRINT 指
+			ENDIF
+			PRINTL 深入搅动时，
+			PRINTFORML %CALLNAME:TARGET%硬如小石的乳头完全外露
+		ELSE
+			PRINT 顶端完全硬挺的突起
+			IF MODE_存在判定_完全一致("授乳手コキ", TARGET, PLAYER) || MODE_存在判定_完全一致("乳首吸い", PLAYER, TARGET)
+				PRINTL 用舌尖滚动…
+			ELSE
+				PRINTL 用手指捏起…
+			ENDIF
+		ENDIF
+ENDSELECT
+

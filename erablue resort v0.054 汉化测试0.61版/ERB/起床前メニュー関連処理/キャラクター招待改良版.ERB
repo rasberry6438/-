@@ -1,0 +1,499 @@
+﻿@キャラクター招待
+#DIMS 左側表示文字列
+#DIMS 右側表示文字列
+#DIMS 配列分解文字列, 2
+
+;一日開始時メニューから呼び出し
+
+DRAWLINE
+PRINTL 发布度假村广告
+PRINTL 要发布哪种广告？
+PRINTFORML ・当前持有资金：%NUM_FORMAT(MONEY)%卢比　持有ZP：%ZP所持量全文字列()%
+DRAWLINE
+
+左側表示文字列 = 
+IF 通常キャラ招待:0 || ＤＭキャラ招待
+	左側表示文字列 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[1] 发布常规广告（已执行）</font><br>"
+ELSE
+	IF 表示キー_左 == "通常の広告"
+		左側表示文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[1] 发布常规广告</font><br>"
+	ELSE
+		左側表示文字列 += "<button value='1'>[1] 发布常规广告</button><br>"
+	ENDIF
+ENDIF
+
+;スイートに空きがあるかチェック
+LOCAL:1 = 0
+FOR LOCAL, 0, スイートルーム部屋数
+	SIF スイートルーム招待:LOCAL > 0
+		CONTINUE
+	SIF スイートルーム部屋割り配列:LOCAL != ""
+		CONTINUE
+	LOCAL:1 = 1
+NEXT
+IF LOCAL:1
+	IF MONEY < 20000 && DAY != 1
+		左側表示文字列 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[2] 免费邀请至套房（资金不足）</font><br>"
+	ELSE
+		IF 表示キー_左 == "スイートルーム"
+			左側表示文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[2] 免费邀请至套房</font>"
+		ELSE
+			左側表示文字列 += "<button value='2'>[2] 免费邀请至套房</button>"
+		ENDIF
+		SIF DAY == 1
+			左側表示文字列 +=  @"<font color='#%カラーパレット_HTML("えっちな色")%'>首日免费!!</font>"
+			左側表示文字列 += "<br>"
+	ENDIF
+ELSE
+	左側表示文字列 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[2] 免费邀请至套房（房间已满）</font><br>"
+ENDIF
+
+IF 通常キャラ招待:0 || ＤＭキャラ招待
+	左側表示文字列 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[-] 发布特殊广告（已执行）</font><br>"
+ELSE
+	IF STRFIND(表示キー_左, "特殊") > -1
+		左側表示文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[-] 发布特殊广告</font><br>"
+	ELSE
+		左側表示文字列 += "[-] 发布特殊广告<br>"
+	ENDIF
+	CALL 特殊広告一覧表示(左側表示文字列)
+ENDIF
+
+
+右側表示文字列 = 
+
+SELECTCASE 表示キー_左
+	CASE "通常の広告"
+		右側表示文字列 += "■常规广告<br><br>"
+		右側表示文字列 += "向多个地区投放基础广告的指令。<br>"
+		右側表示文字列 += "投入卢比量将直接影响到访角色数量。<br>"
+		右側表示文字列 += "卢比投入与客流量呈正相关，但无法指定特定目标角色。<br><br>"
+		右側表示文字列 += "要在什么范围投放广告？<br><br>"
+
+		IF MONEY < 3000
+			右側表示文字列 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[100] 邻近岛屿投放　（卢比不足）</font><br>"
+		ELSEIF 表示キー_右 == "近くの島"
+			右側表示文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[100] 邻近岛屿投放</font><br>"
+		ELSE
+			右側表示文字列 += "<button value='100'>[100] 邻近岛屿投放</button><br>"
+		ENDIF
+		右側表示文字列 += @"（需要卢比：3000卢比　　预计吸引：{2 + 招待キャラ数補正算出(), 2}～{3 + 招待キャラ数補正算出(), 2}人）<br><br>"
+
+		IF MONEY < 5000
+			右側表示文字列 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[101] 广域投放　（卢比不足）</font><br>"
+		ELSEIF 表示キー_右 == "広範囲"
+			右側表示文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[102] 广域投放</font><br>"
+		ELSE
+			右側表示文字列 += "<button value='101'>[101] 广域投放</button><br>"
+		ENDIF
+		右側表示文字列 += @"（需要卢比：5000卢比　　预计吸引：{3 + 招待キャラ数補正算出(), 2}～{5 + 招待キャラ数補正算出(), 2}人）<br><br>"
+
+		IF MONEY < 10000
+			右側表示文字列 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[102] 全域投放　（卢比不足）</font><br>"
+		ELSEIF 表示キー_右 == "空域全体"
+			右側表示文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[102] 全域投放</font><br>"
+		ELSE
+			右側表示文字列 += "<button value='102'>[102] 全域投放</button><br>"
+		ENDIF
+		右側表示文字列 += @"（需要卢比：10000卢比　　预计吸引：{5 + 招待キャラ数補正算出(), 2}～{7 + 招待キャラ数補正算出(), 2}人）<br><br>"
+
+		IF 表示キー_右 != ""
+			右側表示文字列 += "<button value='103'>[103] 确认投放广告</button><br>"
+		ENDIF
+	CASE "スイートルーム"
+		右側表示文字列 += "■免费邀请至套房<br><br>"
+		右側表示文字列 += "可向指定角色发送免费入住邀请，费用为20000卢比。<br>"
+		SIF DAY == 1
+			右側表示文字列 += @"……但游戏首日可享受<font color='#%カラーパレット_HTML("えっちな色")%'>免费</font>特权。<br>"
+		右側表示文字列 += "可精准指定目标角色，确保其必定到访。<br>"
+		右側表示文字列 += "独立于常规客房系统，即使普通客房满员仍可执行邀请。<br><br>"
+		右側表示文字列 += "因属免费招待，当日营业结算时不会产生收益贡献。<br><br>"
+
+		右側表示文字列 += "■当前套房使用状态<br>"
+		FOR LOCAL, 0, スイートルーム部屋数
+			右側表示文字列 += @"{LOCAL + 2000}号房："
+			IF スイートルーム部屋割り配列:LOCAL != ""
+				VARSET 配列分解文字列
+				SPLIT スイートルーム部屋割り配列:LOCAL, "_", 配列分解文字列
+				IF STRCOUNT(スイートルーム部屋割り配列:LOCAL, "_") > 2
+					右側表示文字列 += @"%CALLNAME:(TOINT(配列分解文字列:1))%他<br>"
+				ELSE
+					右側表示文字列 += @"%CALLNAME:(TOINT(配列分解文字列:1))%<br>"
+				ENDIF
+			ELSE
+				右側表示文字列 += "未入住<br>"
+			ENDIF
+		NEXT
+		右側表示文字列 += "<br>"
+		IF スイートルーム招待モード == 0
+			右側表示文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>[允许携带同行者]</font> / <button value='101'>[仅邀请单人]</button>"
+		ELSE
+			右側表示文字列 += @"<button value='101'>[允许携带同行者]</button> / <font color='#%カラーパレット_HTML("黄")%'>[仅邀请单人]</font>"
+		ENDIF
+		右側表示文字列 += "<br>"
+		右側表示文字列 += "<button value='100'>[100] 选择邀请至套房的目标角色</button>"
+	CASEELSE
+		詳細文文字列受け渡し変数 = 
+		TRYCALLFORM %表示キー_左%("右側表示")
+		右側表示文字列 += 詳細文文字列受け渡し変数
+ENDSELECT
+
+LOCALS = <div rect='81,31,1937,2812' padding='50, 25, 300' border='31' bcolor='#C0C0C0'>%左側表示文字列%</div>
+LOCALS += @"<div rect='2050,31,3875,2812' padding='50, 25, 50' border='31' bcolor='#C0C0C0'>%右側表示文字列%</div>"
+;下部戻るボタン
+LOCALS += "<div rect='131,2262,1937,500'>"
+LOCALS += "<button value='998'>[998] 性别控制选项</button><br>"
+LOCALS += "<button value='997'>[997] 系统说明</button><br>"
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回主菜单</button><br>"
+LOCALS += "</div>"
+
+
+HTML_PRINT LOCALS
+FOR LOCAL, 0, 26
+	PRINTL
+NEXT
+
+
+$INPUT_LOOP
+IF チュートリアルフラグ:最初の広告 == 0
+	RESULT = 997
+ELSE
+	BINPUT
+ENDIF
+
+SELECTCASE RESULT
+	CASE 1
+		表示キー_左 = 通常の広告
+		表示キー_右 = 
+		RESTART
+	CASE 2
+		表示キー_左 = スイートルーム
+		表示キー_右 = 
+		RESTART
+	CASE 999
+		表示キー_左 = 
+		表示キー_右 = 
+		RETURN 0
+	CASE 998
+		CALL OPTION_招待切り替え
+		RESTART
+	CASE 997
+		DRAWLINE
+		PRINTL ［广告教程］
+		DRAWLINE
+		HTML_PRINT "<img src='顔エラ' height='900' width='900'>"
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		CALL 広告システムチュートリアル
+		DRAWLINE
+		RESTART
+	CASE IS < 100
+		;特殊広告間の切り替え
+		表示キー_左 = %特殊広告関数保存:(RESULT - 10)%
+		表示キー_右 = 
+		RESTART
+ENDSELECT
+
+;100~はそれぞれの詳細画面の操作
+SELECTCASE 表示キー_左
+	CASE "通常の広告"
+		SELECTCASE RESULT
+			CASE 100
+				表示キー_右 = 近くの島
+				RESTART
+			CASE 101
+				表示キー_右 = 広範囲
+				RESTART
+			CASE 102
+				表示キー_右 = 空域全体
+				RESTART
+			CASE 103
+				PRINTL
+				PRINTL
+				SELECTCASE 表示キー_右
+					CASE "近くの島"
+						PRINTW 已在邻近岛屿投放广告。
+						MONEY -= 3000
+						CALL 人気上昇処理(3000)
+						集客人数 = RAND:2 + 2 + 招待キャラ数補正算出()
+					CASE "広範囲"
+						PRINTW 已向远方岛屿投放广告。
+						MONEY -= 5000
+						CALL 人気上昇処理(5000)
+						集客人数 = RAND:3 + 3 + 招待キャラ数補正算出()
+					CASE "空域全体"
+						PRINTW 豪掷万金向全域空域投放了广告！
+						MONEY -= 10000
+						CALL 人気上昇処理(10000)
+						集客人数 = RAND:3 + 5 + 招待キャラ数補正算出()
+				ENDSELECT
+				CALL 通常招待_実処理
+				表示キー_左 = 
+				表示キー_右 = 
+				RESTART
+		ENDSELECT
+	CASE "スイートルーム"
+		IF RESULT == 100
+			CALL スイートルーム招待_実処理
+			IF RESULT == 0
+				;0戻りは広告を発注したパターン
+				表示キー_左 = 
+				表示キー_右 = 
+			ENDIF
+			RESTART
+		ELSEIF RESULT == 101
+			INVERTBIT スイートルーム招待モード, 0
+			RESTART
+		ENDIF
+	CASEELSE
+		TRYCALLFORM %表示キー_左%("実処理", RESULT)
+		IF RESULT == 0
+			;0戻りは広告を発注したパターン
+			表示キー_左 = 
+			表示キー_右 = 
+			SIF 通常キャラ招待:0 == 0
+				通常キャラ招待:0 = -1
+		ENDIF
+		RESTART
+ENDSELECT
+
+RETURN 1
+
+
+
+@通常招待_実処理
+#DIM 集客候補, キャラクタ数上限
+#DIM 候補人数
+VARSET 集客候補
+
+;上限以下にする
+CALL ユニーク客人数チェック()
+集客人数 = MIN(集客人数, (滞在キャラ上限 - 滞在キャラ数))
+
+LOCAL:1 = 0
+FOR LOCAL, 1, CHARANUM
+	;招待不可キャラは排除
+	SIF CFLAG:LOCAL:招待不可フラグ
+		CONTINUE
+	;特别招待券で呼ぶ予定のキャラは排除
+	SIF LOCAL == 特别招待券キャラ招待
+		CONTINUE
+	;オプションによる制御
+	SIF 性別招待制御_実処理(LOCAL)
+		CONTINUE
+	LOCAL:3 = 0
+	FOR LOCAL:2, 0, 100
+		SIF 解放キャラ招待:(LOCAL:2) == 0
+			BREAK
+		IF 解放キャラ招待:(LOCAL:2) == LOCAL
+			LOCAL:3 = 1
+			BREAK
+		ELSEIF LOCAL:2 < 20 && スイートルーム招待:(LOCAL:2) == LOCAL
+			LOCAL:3 = 1
+			BREAK
+		ENDIF
+	NEXT
+	SIF LOCAL:3
+		CONTINUE
+	;滞在状態ではないキャラをカウント
+	IF CFLAG:LOCAL:滞在期間 == -1
+		集客候補:(LOCAL:1) = LOCAL
+		LOCAL:1 += 1
+	ENDIF
+NEXT
+候補人数 = LOCAL:1
+
+;候補人数が０の場合は追加募集出来ないようにしてそのまま終わる
+IF 候補人数 == 0
+	通常キャラ招待:0 = -1
+	RETURN 0
+ENDIF
+
+;候補人数が集客人数より少ない場合は全員登録
+IF 候補人数 <= 集客人数
+	FOR LOCAL, 0, 候補人数
+		通常キャラ招待:LOCAL = 集客候補:LOCAL
+	NEXT
+ELSE
+	LOCAL:2 = 0
+	LOCAL = 候補人数 - 1
+	;集客候補配列をシャッフル
+	WHILE LOCAL > 1
+		LOCAL:1 = RAND:(LOCAL - 1)
+		SWAP 集客候補:LOCAL, 集客候補:(LOCAL:1)
+		LOCAL -= 1
+		LOCAL:2 += 1
+		;必要分集まったらおしまい
+		SIF LOCAL:2 >= 集客人数
+			BREAK
+	WEND
+	;配列の後ろの方にランダムシャッフルされた候補が集まってるはずなので集客人数分取得
+	FOR LOCAL, 0, 集客人数
+		通常キャラ招待:LOCAL = 集客候補:(候補人数 - 1 - LOCAL)
+	NEXT
+ENDIF
+
+
+@スイートルーム招待_実処理
+#DIM 表示候補, キャラクタ数上限
+#DIM 現在ページ
+#DIM 広告対象
+#DIMS ソート情報
+
+VARSET 表示候補, -1
+現在ページ = 0
+
+
+;表示キャラを登録
+LOCAL:1 = 0
+FOR LOCAL, 1, CHARANUM
+	;招待不可キャラは排除
+	SIF CFLAG:LOCAL:招待不可フラグ
+		CONTINUE
+	;DM配達済みは排除
+	SIF ABS(ＤＭキャラ招待) == LOCAL
+		CONTINUE
+	;特别招待券対象は排除
+	SIF 特别招待券キャラ招待 == LOCAL
+		CONTINUE
+	;滞在済みは出さない
+	SIF CFLAG:LOCAL:滞在期間 >= 0
+		CONTINUE
+	;オプションによる制御はスイートルームには出さない
+	; SIF 性別招待制御_実処理(LOCAL)
+	; 	CONTINUE
+	LOCAL:3 = 0
+	FOR LOCAL:2, 0, 100
+		SIF 解放キャラ招待:(LOCAL:2) == 0
+			BREAK
+		IF 解放キャラ招待:(LOCAL:2) == LOCAL
+			LOCAL:3 = 1
+			BREAK
+		ENDIF
+	NEXT
+	SIF LOCAL:3
+		CONTINUE
+	表示候補:(LOCAL:1) = LOCAL
+	LOCAL:1 += 1
+NEXT
+CALL キャラ配列フィルタ処理(表示候補, -1)
+
+$表示_LOOP
+;広告対象の表示
+DRAWLINE
+PRINTL 要免费邀请谁？
+DRAWLINE
+LOCAL:1 = 0
+;キャラの表示（15人まで）
+FOR LOCAL, (現在ページ * 30), ((現在ページ * 30) + 30)
+	;登録が終わったら表示終了
+	IF 表示候補:LOCAL == -1
+		BREAK
+	ENDIF
+	IF 文字色グループ取得(表示候補:LOCAL) >= 0
+		SETCOLOR 同室時_グループ文字色:(文字色グループ取得(表示候補:LOCAL))
+	ELSEIF CFLAG:(表示候補:LOCAL):同室文字色
+		SETCOLOR CFLAG:(表示候補:LOCAL):同室文字色
+	ENDIF
+	ソート情報 '= ソート情報表示(表示候補:LOCAL, 1)
+	IF ソート情報 == ""
+		PRINTBUTTON @"[{LOCAL, 3}] %GET_NAME(表示候補:LOCAL, 1, 50)%", LOCAL
+	ELSE
+		PRINTBUTTON @"[{LOCAL, 3}] %GET_NAME(表示候補:LOCAL, 1, 40)%", LOCAL
+		PRINTFORM 　%ソート情報%　
+	ENDIF
+	RESETCOLOR
+	SIF LOCAL % 2 != 0 && LOCAL
+		PRINTL 
+NEXT
+
+PRINTL 
+DRAWLINE
+
+;ページめくり表示
+IF 現在ページ > 0
+	PRINTBUTTONLC "[9000]上一页", 9000
+ELSE
+	PRINTLC 　
+ENDIF
+PRINTFORM - {現在ページ + 1} -
+IF 表示候補:((現在ページ * 30) + 30) > 0
+	PRINTBUTTONC "[9001]下一页", 9001
+ENDIF
+PRINTL
+DRAWLINE
+CALL フィルタソートボタンセット表示(9020, 9030, 9031, 9040)
+DRAWLINE
+PRINTL 
+PRINTBUTTON "[9999] 返回", 9999
+
+$INPUT_LOOP
+BINPUT
+
+;広告対象のINPUT
+SELECTCASE RESULT
+	CASE 9020, 9030, 9031, 9040
+		CALL フィルタソートボタンセット実行部(RESULT, 9020, 9030, 9031, 9040)
+		現在ページ = 0
+		RESTART
+	CASE 9000
+		現在ページ = MAX(現在ページ - 1, 0)
+		GOTO 表示_LOOP
+	CASE 9001
+		SIF LOCAL:1 == 0
+			現在ページ += 1
+		GOTO 表示_LOOP
+	CASE 9999
+		RETURN -1
+	CASE IS >= CHARANUM, IS < 0
+		REUSELASTLINE 
+		GOTO INPUT_LOOP
+	CASEELSE
+		IF 表示候補:RESULT < 0
+			REUSELASTLINE 
+			GOTO INPUT_LOOP
+		ENDIF
+		広告対象 = 表示候補:RESULT
+ENDSELECT
+
+LOCAL:9 = TFLAG:調教モード
+TFLAG:調教モード = -2
+CALL PRINT_STATE(広告対象, 0)
+LOCAL:1 = RESULT
+SWAP LOCAL:9, TFLAG:調教モード
+
+SIF RESULT != 1
+	GOTO 表示_LOOP
+
+DRAWLINE
+PRINTFORMW %CALLNAME:MASTER%将%CALLNAME:広告対象%免费邀请至套房。
+SIF DAY != 1
+	MONEY -= 20000
+
+FOR LOCAL, 0, スイートルーム部屋数
+	SIF スイートルーム部屋割り配列:LOCAL != ""
+		CONTINUE
+	SIF スイートルーム招待:LOCAL > 0
+		CONTINUE
+	スイートルーム招待:LOCAL = 広告対象
+NEXT
+
+
+
+@招待キャラ数補正算出()
+#FUNCTION
+LOCAL = 0
+
+IF イベント完了フラグ確認("大拡張！空艇港") > 0
+	LOCAL += 1
+ENDIF
+
+RETURNF LOCAL
+
+

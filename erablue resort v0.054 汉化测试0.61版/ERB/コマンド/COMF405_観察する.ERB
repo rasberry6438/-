@@ -1,0 +1,131 @@
+﻿
+@COMNAME405
+#FUNCTIONS
+TSTR:コマンド名受渡 = 观察
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_405
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+
+@COM_TOOLTIP_405
+LOCALS = <br>■观察<br>
+LOCALS += "对周边环境及角色进行细致观察的指令。"
+LOCALS += "<br>指令类型：可单独执行<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+;-------------------------------------------------
+;观察
+;-------------------------------------------------
+@COM405
+#DIM ループ用
+
+;RFLAG:コマンド結果受渡し変数
+;  0 =人の気配はない
+;  1 =人の気配がある
+; 10 =眠っているキャラの観察
+; 11 =ダウンしているキャラの観察
+
+RFLAG:コマンド結果受渡し変数 = 0
+FOR ループ用, 1, VARSIZE("TARGET")
+	SIF TARGET:ループ用 <= 0
+		BREAK
+	IF CFLAG:(TARGET:ループ用):隠密
+		RFLAG:コマンド結果受渡し変数 = 1
+		BREAK
+	ENDIF
+NEXT
+
+IF TARGET > 0 && CFLAG:睡眠
+	;眠った対象がいるとき
+	IF CFLAG:体力限界
+		;対象がダウンしているとき、気絶キャラの観察になる
+		RFLAG:コマンド結果受渡し変数 = 11
+		;RFLAG:コマンド結果受渡し変数２にスコア（体力により補正）
+		RFLAG:コマンド結果受渡し変数２ = EX:スコア * 9999 / MAXBASE:体力
+	ELSE
+		RFLAG:コマンド結果受渡し変数 = 10
+		;RFLAG:コマンド結果受渡し変数２に起床までの残り時間
+		CALL CHARA_ROUTINE_STATUS(TARGET, "起床時刻")
+		RFLAG:コマンド結果受渡し変数２ = MAX(RESULT + TCVAR:行動時間ゆらぎ - TIME, 0)
+	ENDIF
+ENDIF
+
+TIME += 3
+RETURN 1
+
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE405
+;観察実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(405) && GLOBAL_COMABLE_TYPE("隠密")
+	RETURN RESULT
+SIF CFLAG:PLAYER:うふふ
+	RETURN 0
+RETURN 1
+
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM405
+
+SELECTCASE RFLAG:コマンド結果受渡し変数
+	CASE 0
+		PRINTFORML %CALLNAME:PLAYER%环视四周
+		IF TARGET <= 0
+			PRINTL ……未察觉人类活动迹象
+		ELSE
+			PRINTL ……度假村日常景象尽收眼底
+		ENDIF
+	CASE 1
+		PRINTFORML %CALLNAME:PLAYER%环视四周
+		PRINTL ……？
+		PRINTL 发现隐蔽处存在可疑动静
+	CASE 10
+		PRINTFORML %CALLNAME:PLAYER%发现%CALLNAME:TARGET%正在睡觉
+		;起床までの残り時間
+		SELECTCASE RFLAG:コマンド結果受渡し変数２
+			CASE IS > 180
+				PRINTFORML %CALLNAME:TARGET%处于深度睡眠，短期内不会苏醒…
+			CASE IS > 90
+				PRINTFORML %CALLNAME:TARGET%沉睡正酣，距离清醒尚需时间…
+			CASE IS > 30
+				PRINTFORML %CALLNAME:TARGET%对%CALLNAME:PLAYER%制造的细微声响产生反应，即将苏醒…
+			CASEELSE
+				PRINTFORML %CALLNAME:TARGET%%TEXTR("正在辗转反侧/发出梦呓/肢体频繁抽动/呼吸逐渐急促")%，清醒在即…
+		ENDSELECT
+	CASE 11
+		PRINTFORML %CALLNAME:PLAYER%发现%CALLNAME:TARGET%正在睡觉
+		;スコアの多さ
+		SELECTCASE RFLAG:コマンド結果受渡し変数２
+			CASE IS >= 400
+				PRINTFORM %CALLNAME:TARGET%的躯体因承受过量快感，即便在睡梦中仍持续痉挛
+				IF GETBIT(TALENT:性別, 0)
+					IF TEQUIP:下半身服あり
+						PRINT ，阴唇渗出的体液浸染了睡袍
+					ELSEIF TEQUIP:下タイツあり && !TEQUIP:下タイツ破れ
+						PRINT ，阴唇渗出的体液沾染了裤袜
+					ELSEIF TEQUIP:下半身下着あり
+						PRINT ，阴唇渗出的体液渗透了内裤
+					ELSE
+						PRINT ，阴唇持续分泌体液
+					ENDIF
+				ENDIF
+				PRINTL …
+			CASE IS >= 20
+				PRINTFORML %CALLNAME:TARGET%的躯体因快感余韵，在睡梦中间歇性抽搐…
+			CASEELSE
+				PRINTFORML %CALLNAME:TARGET%正发出平稳的呼吸声…
+		ENDSELECT
+ENDSELECT

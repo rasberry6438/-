@@ -1,0 +1,214 @@
+﻿@よろず屋依頼発行処理
+#DIM 表示依頼枠番号
+#DIMS 表示依頼名
+#DIMS 依頼名分割用, 2
+;画像リソースを全解放
+SPRITEDISPOSEALL 0
+
+FOR LOCAL, 1, 依頼同時最大数 + 1
+	GDISPOSE LOCAL
+	GDISPOSE LOCAL + 20
+
+	GCREATE LOCAL, 700, 67
+	GCREATE LOCAL + 20, 700, 67
+	GSETFONT LOCAL, GETFONT(), 16
+	GSETPEN LOCAL, 0x00FFFFFF, 1
+	GSETBRUSH LOCAL, 0xFFC0C0C0
+	GFILLRECTANGLE LOCAL, 0 , 0, 700, 67
+	GSETBRUSH LOCAL, 0xFF101010
+	GFILLRECTANGLE LOCAL, 5, 5, 690, 57
+	GSETBRUSH LOCAL, 0xFFC0C0C0
+
+	CALL リソース登録(@"依頼_{LOCAL}", LOCAL)
+	GDRAWG LOCAL + 20, LOCAL, 0, 0, 700, 67, 0, 0, 700, 67, ボタン化用カラーマトリクス:0:0
+	CALL リソース登録(@"依頼_{LOCAL}_ボタン", LOCAL + 20)
+NEXT
+
+LOCALS = 
+DRAWLINE
+PRINTL ・当前发布委托
+FOR LOCAL, 0, 依頼同時最大数
+	LOCALS += @"<div rect='62,{LOCAL * 450},4375,419'>"
+	LOCALS += @"<button value='{LOCAL + 1}'><img width = '4375' height = '419' src='依頼_{LOCAL + 1}' srcb='依頼_{LOCAL + 1}_ボタン'></button>"
+	LOCALS += "</div>"
+	
+	LOCALS += @"<div rect='125,{LOCAL * 450 + 87},4375,419'>"
+	IF 遂行中依頼:(LOCAL + 1) == ""
+		LOCALS += @"进行中委托：无"
+	ELSE
+		CALL 依頼情報表示処理(LOCAL + 1)
+		LOCALS += @"%詳細文文字列受け渡し変数%"
+	ENDIF
+	LOCALS += "</div>"
+NEXT
+HTML_PRINT LOCALS, 1
+FOR LOCAL, 0, 依頼同時最大数 * 4
+	PRINTL
+NEXT
+
+LOCALS = 
+DRAWLINE
+LOCALS += @"<div rect='62,0,4375,3000' border='31' bcolor='#C0C0C0'></div>"
+LOCALS += @"<div rect='4469,0,1562,625' border='31' bcolor='#C0C0C0'></div>"
+LOCALS += @"<div rect='4531,62,1562,625'>持有卢比：%NUM_FORMAT(MONEY)%卢比<br>持有ZP　：%ZP所持量全文字列()%</div>"
+LOCALS += @"<div rect='125,62,4375,2812'>"
+SELECTCASE 表示依頼枠番号
+	CASE 0
+		LOCALS += "请从上方显示的栏位中选择要使用的委托栏位"
+	CASE 1 TO 10
+		;依頼枠確認
+		LOCALS += "------------------------------------------------------------------------------------<br>"
+		CALL 依頼情報表示処理(表示依頼枠番号)
+		LOCALS += @"%詳細文文字列受け渡し変数%"
+		LOCALS += "------------------------------------------------------------------------------------<br>"
+		IF 遂行中依頼:表示依頼枠番号 != ""
+			LOCALS += "该委托栏已分配其他委托<br>"
+			LOCALS += "是否取消现有委托并发布新委托？<br>"
+			LOCALS += "（报酬不予退还）<br>"
+			LOCALS += "<br>"
+		ELSE
+			LOCALS += "当前该委托栏未分配任何委托<br>"
+			LOCALS += "是否发布新委托？<br><br>"
+		ENDIF
+		ENUMFUNCBEGINSWITH "発注依頼_"
+		FOR LOCAL, 0, RESULT
+			SPLIT RESULTS:LOCAL, "_", 依頼名分割用
+			LOCALS += @"<button value='{100 + LOCAL}'>[{100 + LOCAL}] 发布%依頼名分割用:1%</button><br>"
+		NEXT
+	CASE 101 TO 110
+		;依頼内容表示・決定
+		CALLFORM 発注依頼_%表示依頼名%
+		LOCALS += @"%依頼文章保存%"
+ENDSELECT
+LOCALS += "</div>"
+
+LOCALS += "<div rect='2250,2812,3125,281'>"
+LOCALS += "<button value='998'>[998] 系统说明</button>　　"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "</div>"
+
+HTML_PRINT LOCALS, 1
+FOR LOCAL, 0, 27
+	PRINTL
+NEXT
+
+IF 表示依頼枠番号 >= 101 && 表示依頼枠番号 <= 110
+	CALLFORM 発注実処理_%表示依頼名%(表示依頼枠番号 - 100)
+	IF RESULT == -1
+		表示依頼枠番号 = 表示依頼枠番号 - 100
+		表示依頼名 = 
+	ELSEIF RESULT == 1
+		表示依頼枠番号 = 表示依頼枠番号 - 100
+		遂行中依頼:表示依頼枠番号 = %表示依頼名%
+	ENDIF
+	RESTART
+ENDIF
+
+IF チュートリアルフラグ:よろず屋依頼 == 0
+	RESULT = 998
+ELSE
+	BINPUT
+ENDIF
+SELECTCASE RESULT
+	CASE 1 TO 10
+		表示依頼枠番号 = RESULT
+	CASE 100 TO 110
+		表示依頼枠番号 = 100 + 表示依頼枠番号
+		SPLIT RESULTS:(RESULT - 100), "_", 依頼名分割用:1
+		表示依頼名 = %依頼名分割用:1%
+	CASE 998
+		DRAWLINE
+		PRINTL ［委托发布系统教程］
+		DRAWLINE
+		HTML_PRINT "<img src='顔エラ' height='900' width='900'>"
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		CALL 依頼を出すシステムチュートリアル
+		DRAWLINE
+	CASE 999
+		;画像リソースを全解放
+		SPRITEDISPOSEALL 0
+		表示依頼枠番号 = 0
+		RETURN -1
+ENDSELECT
+
+RESTART
+
+
+@依頼情報表示処理(依頼番号)
+#DIM 依頼番号
+
+LOCALS = 
+IF 遂行中依頼:依頼番号 != ""
+	LOCALS += @"进行中委托：%遂行中依頼:依頼番号%　　"
+	TRYCALLFORM 依頼追加表示情報_%遂行中依頼:依頼番号%(依頼番号)
+	LOCALS += @"%詳細文文字列受け渡し変数%<br>"
+	IF 依頼受注者名:依頼番号 != ""
+		LOCALS += @"委托承接者：%依頼受注者名:依頼番号%　　"
+		IF 依頼残り期間:依頼番号 > 0
+			LOCALS += @"前往当地：剩余%TOFULL(TOSTR(依頼残り期間:依頼番号))%天<br>"
+		ELSE
+			LOCALS += @"今日委托完成概率：%TOFULL(TOSTR(依頼完了確率_初期値:依頼番号))%％<br>"
+		ENDIF
+	ELSE
+		LOCALS += "委托承接者：未承接<br>"
+	ENDIF
+ELSE
+	LOCALS += @"进行中委托：无<br><br>"
+ENDIF
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+
+@依頼受注者決定(依頼番号)
+#DIM 依頼番号
+#DIM 対象キャラ配列, 500
+VARSET 対象キャラ配列
+VARSET LOCAL
+;７割はモブ騎空士、残りは現在島におらず、リゾートに来る可能性のあるキャラ
+
+LOCAL = RAND:100
+IF LOCAL < 30
+	;キャラ受注
+	FOR LOCAL, 0, 500
+		SIF LOCAL >= CHARANUM
+			CONTINUE
+		SIF LOCAL > CHARANUM
+			CONTINUE
+		SIF CFLAG:LOCAL:滞在期間 != -1
+			CONTINUE
+		SIF CFLAG:LOCAL:招待不可フラグ != 0
+			CONTINUE
+		対象キャラ配列:(LOCAL:1) = LOCAL
+		LOCAL:1 += 1
+	NEXT
+	IF LOCAL:1 > 0
+		LOCAL =	RAND:(LOCAL:1)
+		依頼受注者名:依頼番号 = %NAME表示(LOCAL)%
+		RETURN 1
+	ENDIF
+ENDIF
+
+;モブ受注
+SELECTCASE RAND:7
+	CASE 6
+		依頼受注者名:依頼番号 = 新手佣兵
+	CASE 5
+		依頼受注者名:依頼番号 = 见习骑空士
+	CASE 4
+		依頼受注者名:依頼番号 = 怀揣骑士梦的少年
+	CASE 3
+		依頼受注者名:依頼番号 = 新手魔法使
+	CASE 2
+		依頼受注者名:依頼番号 = 修行中的格斗少女
+	CASE 1
+		依頼受注者名:依頼番号 = 猎人学徒青年
+	CASE 0
+		依頼受注者名:依頼番号 = 落魄贵族的前大小姐
+ENDSELECT
+RETURN 0

@@ -1,0 +1,361 @@
+﻿;;;領帯ルの種類毎のデータが欲しい場合
+;;;CALL D20XX_GET_HEXDATA(領帯ル名,欲しい情報)
+;;;例：CALL D20XX_GET_HEXDATA("草","移動コスト")
+;;;
+;;;現在選択中のユ针织
+@D20XX_AI_AsterByUnit(FromUnitID,ToUnitID)
+	#DIM DYNAMIC LCount
+	#DIM DYNAMIC FromUnitID
+	#DIM DYNAMIC ToUnitID
+	#DIM DYNAMIC Y_FromUnit
+	#DIM DYNAMIC X_FromUnit
+	#DIM DYNAMIC Y_ToUnit
+	#DIM DYNAMIC X_ToUnit
+	;Asterで算出した最短経路を格納するキュー ※ERHファイルに書いてる
+	;#DIM D20XX_AstarQueue,10000,2
+	
+
+	;移動するユ针织の座標を尋找
+	CALL D20XX_UnitSearch(FromUnitID) 
+	IF RESULT:0 == 1
+		Y_FromUnit = RESULT:1
+		X_FromUnit = RESULT:2
+		
+		;ユ针织を選択する
+		;D20XX_SelectUnit = LCount
+		CALL D20XX_EnemyTarnViewer
+	ENDIF
+
+	;目指す先となるユ针织の座標を尋找
+	CALL D20XX_UnitSearch(ToUnitID) 
+	IF RESULT:0 == 1
+		Y_ToUnit = RESULT:1
+		X_ToUnit = RESULT:2
+	ENDIF
+
+	CALL D20XX_AI_Aster(Y_FromUnit, X_FromUnit, Y_ToUnit, X_ToUnit)
+	
+
+@D20XX_AI_Aster(Y_Start, X_Start, Y_Goal, X_Goal)
+	#DIM DYNAMIC LCount
+	#DIM DYNAMIC FromUnitID
+	#DIM DYNAMIC Y_Start
+	#DIM DYNAMIC X_Start
+	#DIM DYNAMIC Y_Goal
+	#DIM DYNAMIC X_Goal
+
+	#DIM DYNAMIC Y_Current
+	#DIM DYNAMIC X_Current
+	#DIM DYNAMIC Y_Temp
+	#DIM DYNAMIC X_Temp
+	#DIM DYNAMIC Y_Next
+	#DIM DYNAMIC X_Next
+	#DIM DYNAMIC GScore
+	#DIM DYNAMIC FScore
+	#DIM DYNAMIC MinScore
+
+	#DIM DYNAMIC D20XX_AstarRouteTemp,10000,2
+
+
+
+	;ループ終了処理で使うやつ
+	#DIM DYNAMIC X_Count
+	#DIM DYNAMIC Y_Count
+	#DIM DYNAMIC OpenMapRemaining
+	;
+
+
+	CALL D20XX_AstarMap_Constructor
+
+	VARSET D20XX_AstarRouteTemp:0:0, -1
+
+	;Y_Start,X_StartをD20XX_AstarOpenListに追加する。
+	D20XX_AstarMap:Y_Start:X_Start:0 = 1
+	D20XX_AstarMap:Y_Start:X_Start:1 = Y_Start
+	D20XX_AstarMap:Y_Start:X_Start:2 = X_Start
+	;G値の設定
+	D20XX_AstarMap:Y_Start:X_Start:4 = 0
+	;H値の設定
+	D20XX_AstarMap:Y_Start:X_Start:5 = D20XX_AI_Heuristic(Y_Start,X_Start,Y_Goal,X_Goal);
+	;F値の設定
+	D20XX_AstarMap:Y_Start:X_Start:3 = D20XX_AstarMap:Y_Start:X_Start:4 + D20XX_AstarMap:Y_Start:X_Start:5 
+
+	OpenMapRemaining = 0
+
+	Y_Current = Y_Start
+	X_Current = X_Start
+	[IF_DEBUG]
+		PRINTFORML AStar開始！ Y_Current = {Y_Current} X_Current = {X_Current}
+	[ENDIF]
+
+
+	;下記手順を繰り返す。
+	WHILE OpenMapRemaining != 2
+		
+		;D20XX_AstarOpenListの中で最も低いF値を尋找。これを現在的ノードとします。
+		CALL D20XX_AstarMap_SearchMinF(Y_Start, X_Start, Y_Goal, X_Goal)
+			;ResultData:0が0の場合、一つもF値が99999999999以下の物が見つからなかった、もしくは開放型状態ではなかった事になる
+		SIF RESULT:0 == 0
+			PRINTFORMW 【エラー発生】AsterOpenListで最低F値ノードが見つからなかったわよ！ D20XX_AstarMap_SearchMinF
+		;IF TOINT(D20XX_MAP:Y_Current:X_Current:1 ) != 0
+		;	IF Y_Current == Y_Goal && X_Current == X_Goal
+		;		Y_Current = RESULT:1
+		;		X_Current = RESULT:2
+		;	ELSEIF Y_Current == Y_Start && X_Current == X_Start
+		;		Y_Current = RESULT:1
+		;		X_Current = RESULT:2
+		;	ELSE
+		;	ENDIF
+		;ELSE 
+		;	Y_Current = RESULT:1
+		;	X_Current = RESULT:2
+		;ENDIF
+		
+		Y_Current = RESULT:1
+		X_Current = RESULT:2
+
+		;今のノードをCloseする
+		D20XX_AstarMap:Y_Current:X_Current:0 = 2
+		
+		;F値=G値(スタート地点から領帯ルコスト抜きの移動距離)+H値(現在地点からゴールまでの仮見積もり距離)
+		;これをD20XX_AstarOpenListから削除し、D20XX_AstarClosedListに追加してください。
+		;現在ノードに対して移動可能な6方向ノードの子ノードに対し、
+		;移動不可能位置 or D20XX_AstarClosedListにあるなら無視、それ以外なら次の手順を実行
+
+		;1時方向
+		IF X_Current+1 <= 199 && Y_Current-1 >= 0;MAPの右端でも上端でも無いことの確認
+			X_Next = X_Current + 1
+			Y_Next = Y_Current - 1
+			;D20XX_AstarClosedListに無い事を確認
+			SIF D20XX_AstarMap:Y_Next:X_Next:0 != 2
+				CALL D20XX_AstarChildHexSearch(Y_Current,X_Current,Y_Next,X_Next,Y_Goal,X_Goal)
+		ENDIF
+		;3時方向
+		IF X_Current+2 <= 199;MAPの右端では無いことの確認
+			X_Next = X_Current + 2
+			Y_Next = Y_Current 
+			;D20XX_AstarClosedListに無い事を確認
+			SIF D20XX_AstarMap:Y_Next:X_Next:0 != 2
+				CALL D20XX_AstarChildHexSearch(Y_Current,X_Current,Y_Next,X_Next,Y_Goal,X_Goal)
+		ENDIF
+		;5時方向
+		IF X_Current+1 <= 199 && Y_Current+1 < 200;MAPの右端でも下端でも無いことの確認
+			X_Next = X_Current + 1
+			Y_Next = Y_Current + 1
+			;D20XX_AstarClosedListに無い事を確認
+			SIF D20XX_AstarMap:Y_Next:X_Next:0 != 2
+				CALL D20XX_AstarChildHexSearch(Y_Current,X_Current,Y_Next,X_Next,Y_Goal,X_Goal)
+		ENDIF
+		;7時方向
+		IF X_Current-1 >= 0 && Y_Current+1 < 200;MAPの左端でも下端でも無いことの確認
+			X_Next = X_Current - 1
+			Y_Next = Y_Current + 1
+			;D20XX_AstarClosedListに無い事を確認
+			SIF D20XX_AstarMap:Y_Next:X_Next:0 != 2
+				CALL D20XX_AstarChildHexSearch(Y_Current,X_Current,Y_Next,X_Next,Y_Goal,X_Goal)
+		ENDIF
+		;9時方向
+		IF X_Current-2 >= 0;MAPの左端では無いことの確認
+			X_Next = X_Current - 2
+			Y_Next = Y_Current 
+			;D20XX_AstarClosedListに無い事を確認
+			SIF D20XX_AstarMap:Y_Next:X_Next:0 != 2
+				CALL D20XX_AstarChildHexSearch(Y_Current,X_Current,Y_Next,X_Next,Y_Goal,X_Goal)
+		ENDIF
+		;11時方向
+		IF X_Current-1 >= 0 && Y_Current-1 >= 0;MAPの左端でも上端でも無いことの確認
+			X_Next = X_Current - 1
+			Y_Next = Y_Current - 1
+			;D20XX_AstarClosedListに無い事を確認
+			SIF D20XX_AstarMap:Y_Next:X_Next:0 != 2
+				CALL D20XX_AstarChildHexSearch(Y_Current,X_Current,Y_Next,X_Next,Y_Goal,X_Goal)
+			
+		ENDIF
+		;開放型リストになければ追加する。その際現在ノードを子ノードの親に設定する。そして子ノードのF,G,H値を計算する。
+		;開放型リストに同じ子ノード（同じ位置）が既にあれば、G値を比較してより良い経路かどうか（G値が小さいかどうか）確認する。
+		;小さいG値はより良い経路を意味します。もし、同じ子ノードでより小さいG値であれば、親ノードを現在ノードに設定する。
+		;もし次を満たすならプログラム終了する。
+		;現在ノードがゴールノードだったら（ゴールを見つけたら）、
+		IF (Y_Current == Y_Goal && X_Current == X_Goal)
+			;PRINTFORML 【Debugメッセージ】ゴールにたどり着きました。処理を修了します。
+			OpenMapRemaining = 2
+			BREAK
+		ENDIF
+		
+		;又はゴールノードが見つからず、開放型リストが空っぽ变成了ら。（ゴールへの経路が存在しないケース。）
+		OpenMapRemaining = 0
+		Y_Count = 0
+		X_Count = 0
+		FOR Y_Count,0,200
+			FOR X_Count,0,200
+				IF D20XX_AstarMap:Y_Count:X_Count:0 == 1
+					OpenMapRemaining = 1
+				ENDIF
+			NEXT
+		NEXT
+		IF OpenMapRemaining != 1
+			PRINTFORMW 到達可能ルートが有ません！
+			BREAK
+		ENDIF
+	WEND
+	 
+	;PRINTFORML OpenMapRemaining = {OpenMapRemaining}
+	
+	;スタート地点を白く為の行
+	D20XX_AstarMap:Y_Start:X_Start:0 = 3
+	
+	WHILE OpenMapRemaining == 2
+		[IF_DEBUG]
+			PRINTFORML 【Debugメッセージ】 Y_Current = {Y_Current} X_Current = {X_Current}   Y_Goal = {Y_Goal} X_Goal = {X_Goal}  Y_Start = {Y_Start} X_Start = {X_Start}
+		[ENDIF]
+		;PRINTFORML 【Debugメッセージ】
+		;PRINTFORMW 【Debugメッセージ】 
+		IF X_Current >= 0 && Y_Current >= 0
+			IF D20XX_AstarMap:Y_Current:X_Current:1 == Y_Start && D20XX_AstarMap:Y_Current:X_Current:2 == X_Start
+				;これを追加すると目標地点も移動先として表示する
+				;D20XX_AstarMap:Y_Current:X_Current:0 = 3
+				[IF_DEBUG]
+					PRINTFORMW BREAK
+				[ENDIF]
+				BREAK
+			ENDIF
+
+			[IF_DEBUG]
+				PRINTFORMW 【Debugメッセージ】Astar262 ルート正順計算 D20XX_AstarMap:{Y_Current}:{X_Current} Y={D20XX_AstarMap:Y_Current:X_Current:1} X={D20XX_AstarMap:Y_Current:X_Current:2} 
+			[ENDIF]
+			D20XX_AstarMap:Y_Current:X_Current:0 = 3
+			Y_Temp = D20XX_AstarMap:Y_Current:X_Current:1
+			X_Temp = D20XX_AstarMap:Y_Current:X_Current:2
+
+			Y_Current = Y_Temp
+			X_Current = X_Temp
+			[IF_DEBUG]
+				PRINTFORMW 【Debugメッセージ】Astar268 ルート正順計算 D20XX_AstarMap:{Y_Current}:{X_Current} Y={D20XX_AstarMap:Y_Current:X_Current:1} X={D20XX_AstarMap:Y_Current:X_Current:2} 
+			[ENDIF]
+		ELSEIF X_Current == -1
+			[IF_DEBUG]
+				PRINTFORMW 【Debugメッセージ】Astar272 ルート正順計算 D20XX_AstarMap:{Y_Current}:{X_Current} Y={D20XX_AstarMap:Y_Current:X_Current:1} X={D20XX_AstarMap:Y_Current:X_Current:2} 
+			[ENDIF]
+		ENDIF
+	WEND
+	D20XX_AstarMap:Y_Current:X_Current:0 = 3
+	[IF_DEBUG]
+		PRINTFORMW 【Debugメッセージ】Astarの実施完了！
+	[ENDIF]
+
+
+;;;D20XX_AstarOpenListの中で最も低いF値を尋找。これを現在的ノードとします。
+;;;F値=G値(スタート地点から領帯ルコスト抜きの移動距離)+H値(現在地点からゴールまでの仮見積もり距離)
+;;;これをD20XX_AstarOpenListから削除し、D20XX_AstarClosedListに追加する。
+@D20XX_AstarChildHexSearch(Y_Current,X_Current,Y_Next,X_Next,Y_Goal,X_Goal)
+	#DIM DYNAMIC Y_Current
+	#DIM DYNAMIC X_Current
+	#DIM DYNAMIC Y_Next
+	#DIM DYNAMIC X_Next
+	#DIM DYNAMIC Y_Goal
+	#DIM DYNAMIC X_Goal
+
+	;開放型リストになければ追加する。
+	D20XX_AstarMap:Y_Next:X_Next:0 = 1
+
+	;開放型リストに同じ子ノード（同じ位置）が既にあれば、G値を比較してより良い経路かどうか（G値が小さいかどうか）確認する。
+	;まだ開放型リストにない、もしくはG値比較で悪いルートで設定されていた場合。
+	IF D20XX_AstarMap:Y_Next:X_Next:4 == -1 || D20XX_AstarMap:Y_Next:X_Next:4 > D20XX_AstarMap:Y_Current:X_Current:4 + TOINT(D20XX_GET_HEXDATA(D20XX_MAP:Y_Next:X_Next:0,"移動コスト"))
+		IF Y_Current >= 0 && X_Current >= 0
+			[IF_DEBUG]
+				;PRINTFORML 【Debugメッセージ】 Astar298 Y_Current = {Y_Current} X_Current = {X_Current}
+			[ENDIF]
+			;その際現在ノードを子ノードの親に設定する。
+			D20XX_AstarMap:Y_Next:X_Next:1 = Y_Current
+			D20XX_AstarMap:Y_Next:X_Next:2 = X_Current
+			;F,G,H値を計算する。
+			;G値の設定
+			D20XX_AstarMap:Y_Next:X_Next:4 = D20XX_AstarMap:Y_Current:X_Current:4 + TOINT(D20XX_GET_HEXDATA(D20XX_MAP:Y_Next:X_Next:0,"移動コスト"))
+			;H値の設定
+			D20XX_AstarMap:Y_Next:X_Next:5 = D20XX_AI_Heuristic(Y_Next,X_Next,Y_Goal,X_Goal);
+			;F値の設定
+			D20XX_AstarMap:Y_Next:X_Next:3 = D20XX_AstarMap:Y_Next:X_Next:4 + D20XX_AstarMap:Y_Next:X_Next:5 
+			[IF_DEBUG]
+				PRINTFORML 【Debugメッセージ】 Astar311 Goal = D20XX_AstarMap:{Y_Goal}:{X_Goal}:？？
+				PRINTFORML 【Debugメッセージ】 Astar312 D20XX_AstarMap:{Y_Next}:{X_Next} →  Y = {Y_Current}  X= {X_Current}
+			[ENDIF]
+		ENDIF
+	ENDIF
+
+@D20XX_AstarMap_SearchMinF(Y_Start, X_Start, Y_Goal, X_Goal)
+	#DIM DYNAMIC F_Param
+	#DIM DYNAMIC X_Return
+	#DIM DYNAMIC Y_Return
+	#DIM DYNAMIC X_Temp
+	#DIM DYNAMIC Y_Temp
+
+	#DIM DYNAMIC Y_Start
+	#DIM DYNAMIC X_Start
+	#DIM DYNAMIC Y_Goal
+	#DIM DYNAMIC X_Goal
+	
+
+
+	#DIM DYNAMIC X_Count
+	#DIM DYNAMIC Y_Count
+	#DIM DYNAMIC ResultData,3
+
+
+	ResultData:0 = 0
+	F_Param = 99999999999
+	FOR Y_Count,0,200
+		FOR X_Count,0,200
+			;開放型状態である かつ 現在的最小F値よりも低いF値を持っている領帯ルだった場合
+			IF 1 == D20XX_AstarMap:Y_Count:X_Count:0 && F_Param > D20XX_AstarMap:Y_Count:X_Count:3 && -1 != D20XX_AstarMap:Y_Count:X_Count:1 
+			;	IF TOINT(D20XX_MAP:Y_Count:X_Count:1 ) != 0
+			;		;IF Y_Count == RESULT:1 && X_Count == RESULT:2
+			;		IF Y_Count == Y_Goal && X_Count == X_Goal
+			;			ResultData:0 = 1
+			;			ResultData:1 = Y_Count
+			;			ResultData:2 = X_Count
+			;			;現在発見した最小F値を更新
+			;			F_Param = D20XX_AstarMap:Y_Count:X_Count:3
+			;		ELSEIF Y_Count == Y_Start && X_Count == X_Start
+			;			ResultData:0 = 1
+			;			ResultData:1 = Y_Count
+			;			ResultData:2 = X_Count
+			;			;現在発見した最小F値を更新
+			;			F_Param = D20XX_AstarMap:Y_Count:X_Count:3
+			;		ELSE 
+			;			;ここをどうするか
+			;		ENDIF
+			;	ELSE
+			;		ResultData:0 = 1
+			;		ResultData:1 = Y_Count
+			;		ResultData:2 = X_Count
+			;		;現在発見した最小F値を更新
+			;		F_Param = D20XX_AstarMap:Y_Count:X_Count:3
+			;	ENDIF
+				ResultData:0 = 1
+				ResultData:1 = Y_Count
+				ResultData:2 = X_Count
+				;現在発見した最小F値を更新
+				F_Param = D20XX_AstarMap:Y_Count:X_Count:3
+			ENDIF
+		NEXT
+	NEXT
+	[IF_DEBUG]
+		PRINTFORML D20XX_AstarMap_SearchMinF 見つかったか？ = {ResultData:0} 現在的最小のF値の座標 = {F_Param}
+	[ENDIF]
+
+	RETURN  ResultData:0,ResultData:1,ResultData:2
+
+
+
+	
+;;;ヒューリスティック関数 要するにゴールととの直線距離
+@D20XX_AI_Heuristic(Y_current,X_current,Y_goal,X_goal)
+	#FUNCTION
+	#DIM DYNAMIC Y_Current
+	#DIM DYNAMIC X_Current
+	#DIM DYNAMIC Y_Goal
+	#DIM DYNAMIC X_Goal
+	#DIM DYNAMIC Heuristic
+
+	;Xはヘックス領帯ル制にしている都合上二倍されているので割り算している
+	RETURNF ABS(Y_current - Y_goal) + ABS(X_goal - X_goal)/2

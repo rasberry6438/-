@@ -1,0 +1,152 @@
+﻿;-------------------------------------------------
+;使用消耗品
+;-------------------------------------------------
+@MASSAGE_COMNAME0
+#FUNCTIONS
+TSTR:コマンド名受渡 = 使用消耗品
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_0
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("通常マッサージ")
+
+@MASSAGE_COM_TOOLTIP_0
+LOCALS = <br>■使用消耗品<br>
+LOCALS += "使用可用于按摩的消耗品获取各类效果"
+LOCALS += "<br>指令类型：常规按摩<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@MASSAGE_COM0
+#DIM 消耗品種類数
+#DIMS 選択肢配列  , 10
+#DIM  使用条件配列, 10
+#DIMS 追加情報配列, 10
+#DIM リザルト保存
+#DIM ITEMNAME_LEN
+#DIMS BUTTON_TEXT
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+;使用可能オイルを並べる
+;本来は所持とかを見るべきだが、仮実装なのでとりあえずオイルと媚薬
+消耗品種類数 = 0
+VARSET 選択肢配列
+VARSET 使用条件配列, 1
+VARSET 追加情報配列
+ITEMNAME_LEN = 0
+
+;- 消耗品の情報設定
+; オイル
+選択肢配列:消耗品種類数 = オイル
+ITEMNAME_LEN =MAX(STRLENS(選択肢配列:消耗品種類数), ITEMNAME_LEN)
+消耗品種類数 += 1
+
+; 鬼灯之香
+選択肢配列:消耗品種類数 = 鬼灯之香
+ITEMNAME_LEN =MAX(STRLENS(選択肢配列:消耗品種類数), ITEMNAME_LEN)
+使用条件配列:消耗品種類数 = TFLAG:マッサージ_鬼灯の香使用時間 == 0
+SIF TFLAG:マッサージ_鬼灯の香使用時間
+	追加情報配列:消耗品種類数 = 使用済（{(DAY * 1440 + TIME) - TFLAG:マッサージ_鬼灯の香使用時間}分経過）
+消耗品種類数 += 1
+
+DO
+DRAWLINE
+PRINTL 你想使用哪些消耗品？
+DRAWLINE
+FOR COUNT, 0, 消耗品種類数
+	BUTTON_TEXT '= @"[{COUNT}] %選択肢配列:COUNT, ITEMNAME_LEN, LEFT%"
+	IF GETNUM(ITEM, 選択肢配列:COUNT) >= 0
+		; 所持数設定があるもの(ITEMに定義がある)
+		BUTTON_TEXT += @"　持有数：{ITEM:(選択肢配列:COUNT)}"
+		IF ITEM:(選択肢配列:COUNT) > 0 && 使用条件配列:COUNT
+			PRINTBUTTON BUTTON_TEXT, COUNT
+		ELSE
+			SETCOLOR カラーパレット("グレーアウト")
+			PRINTPLAINFORM %BUTTON_TEXT%
+		ENDIF
+	ELSE
+		; 所持数設定がないもの(ITEMに定義がない)
+		BUTTON_TEXT += "　持有数：∞"
+		IF 使用条件配列:COUNT
+			PRINTBUTTON BUTTON_TEXT, COUNT
+		ELSE
+			SETCOLOR カラーパレット("グレーアウト")
+			PRINTPLAINFORM %BUTTON_TEXT%
+		ENDIF
+	ENDIF
+	SIF 追加情報配列:COUNT != ""
+		PRINTFORM 　%追加情報配列:COUNT%
+	RESETCOLOR
+	PRINTL
+NEXT
+PRINTL
+PRINTBUTTON "[999] 返回", 999
+PRINTL
+PRINTL
+BINPUT
+リザルト保存 = RESULT
+SELECTCASE リザルト保存
+	CASE 999
+		RETURN -1
+	CASEELSE
+		RSTR:コマンド結果受渡し文字列 '= 選択肢配列:リザルト保存
+		SELECTCASE 選択肢配列:リザルト保存
+			CASE "オイル"
+				;オイル共通部分
+				CALL SOURCE_CALC_液体(TARGET, PLAYER, 20000)
+				CALL SOURCE_CALC_接触(TARGET, PLAYER, 60)
+				RETURN 1
+			CASE "鬼灯之香"
+				IF TFLAG:マッサージ_鬼灯の香使用時間 != 0
+					;使用済み
+					PRINTW 鬼灯之香已经点燃。
+				ELSE
+					;使用時間をセット
+					TFLAG:マッサージ_鬼灯の香使用時間 = DAY * 1440 + TIME
+					;ITEM消費
+					ITEM:鬼灯之香 -= 1
+					RETURN 1
+				ENDIF
+		ENDSELECT
+ENDSELECT
+
+LOOP 1
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE0
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(0)
+	RETURN RESULT
+
+
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM0
+
+SELECTCASE RSTR:コマンド結果受渡し文字列
+	CASE "オイル"
+		PRINTFORML %CALLNAME:PLAYER%在%CALLNAME:TARGET%的肌肤上滴落精油…
+	CASE "鬼灯之香"
+		PRINTFORML %CALLNAME:PLAYER%声称这是%TEXTR("放松用熏香/舒缓芳香精油")%并点燃香炉，开始焚起鬼灯之香…
+		PRINTFORML 袅袅升起的轻烟带着甜腻气息，逐渐充盈整个房间，想必不久就会将%CALLNAME:TARGET%的%TEXTR("理性/意识/警戒心")%就会%TEXTR("彻底融化/完全溶解")%%TEXTR("殆尽/消散")%吧…
+ENDSELECT

@@ -1,0 +1,89 @@
+﻿;-------------------------------------------------
+;拍打臀部
+;-------------------------------------------------
+@COMNAME22
+#FUNCTIONS
+TSTR:コマンド名受渡 = 拍打臀部
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_22
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ")
+
+@COM_TOOLTIP_22
+LOCALS = <br>■拍打臀部<br>
+LOCALS += "拍打对方臀部施加痛感与快感的指令。"
+LOCALS += "<br>指令类型：嘿咻<br>获取来源：快Ｓ・痛苦・反感(特定条件时)・欢乐(特定条件时)"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM22
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+
+CALL SOURCE_CALC_征服(PLAYER, TARGET, 150)
+CALL SOURCE_CALC_快Ｓ(TARGET, PLAYER, 100)
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, 125)
+IF ABL:TARGET:マゾ性感 > 2
+	CALL SOURCE_CALC_快Ｓ(TARGET, PLAYER, 100)
+	CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 150)
+ELSE
+	CALL SOURCE_CALC_反感(TARGET, PLAYER, 60)
+ENDIF
+RCVAR:TARGET:苦痛コマンドフラグ = 1
+RCVAR:PLAYER:嗜虐コマンドフラグ = 1
+
+;サドは嗜虐快楽
+SIF ABL:PLAYER:サド性感
+	EXP:PLAYER:嗜虐快楽経験 ++
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@COM_ABLE22
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(22)
+	RETURN RESULT
+;指を何かに使ってるなら無理
+SIF TEQUIP:PLAYER:指
+	RETURN 0
+;尻に届かないなら無理（アナルで代用）
+CALL MODE_部位届く判定(部位_アナル, PLAYER, TARGET)
+SIF RESULT == 0
+	RETURN 0
+;挿入中は一部を除きダメ
+IF MODE_存在判定_完全一致("Ｖ挿入系", PLAYER, TARGET)
+	SIF !MODE_存在判定_完全一致("後背位", PLAYER, TARGET) && !MODE_存在判定_完全一致("立ちバック", PLAYER, TARGET)
+		RETURN 0
+ENDIF
+IF MODE_存在判定_完全一致("Ａ挿入系", PLAYER, TARGET)
+	SIF !MODE_存在判定_完全一致("Ａ後背位", PLAYER, TARGET) && !MODE_存在判定_完全一致("Ａ立ちバック", PLAYER, TARGET)
+		RETURN 0
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM22
+PRINTFORML %CALLNAME:PLAYER%用掌心连续大力拍打%CALLNAME:TARGET%的臀部
+
+@MESSAGE_COM22_非口上時
+
+IF ABL:TARGET:マゾ性感 > 2
+	PRINTFORML %CALLNAME:TARGET%随着每次拍打发出娇喘，显露出愉悦…
+ENDIF

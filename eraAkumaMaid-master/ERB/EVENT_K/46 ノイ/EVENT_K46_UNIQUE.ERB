@@ -1,0 +1,901 @@
+﻿;特殊なイベントを纏める時のファイルとして設定
+;とりあえずは部員間交流イベントを全体で処理できるよう対応する
+;-----------------------------------------
+;ここから命令の本文
+;-----------------------------------------
+@EVENT_EXCHANGE
+#DIM MEMO_PLAYER
+#DIM MEMO_TARGET
+#DIM LCOUNT
+
+MEMO_PLAYER = PLAYER
+MEMO_TARGET = TARGET
+TARGET = 0
+;PLAYERに诺伊を、TARGETにもう一人の対象の番号を入れる
+PLAYER = FIND_COND("部員間Ｈ主導者")
+TARGET = PLAYER
+TARGET = FIND_COND("交流中")
+
+CALL EVENT_EXCHANGE_MAIN, EXCHANGE_JADGE()
+;最後にTARGETとPLAYERをもとに戻す
+PLAYER = MEMO_PLAYER
+TARGET = MEMO_TARGET
+
+;-----------------------------------------
+;交流イベントの発生条件を指定する関数
+;別にこの形である必要はないが、SYSTEMに書きやすいのでこうする
+;-----------------------------------------
+@EXCHANGE_GATE()
+#FUNCTION
+#DIM ACTOR
+
+SIF COND("昼") == 0
+	RETURNF 0
+SIF COND("周日")
+	RETURNF 0
+;ConfigがOKじゃなければスルー
+SIF CONFIG("部員間Ｈ") == 0
+	RETURNF 0
+;部員間交流イベントが発生してるか格子
+SIF FIND_COND("交流中") == 0
+	RETURNF 0
+ACTOR = FIND_COND("部員間Ｈ主導者")
+;交流確率がRAND以上でなければ起こらない
+IF CFLAG:ACTOR:交流確率 >= RAND:99 + 1
+	RETURNF 1
+ELSE
+	RETURNF 0
+ENDIF
+
+;-----------------------------------------
+;ARGSにはEXCHANGE_JADGE()が入っている
+;PLAYERに诺伊、TARGETに交流相手の番号が入っている
+;-----------------------------------------
+@EVENT_EXCHANGE_MAIN, ARGS
+;ここ来了らまずはエロがあるかどうかを判定
+;非エロならそちらに移し、エロ有なら別個に移す
+
+;各種指令が実行できるか格子
+CALL CHECK_COM_ABLE, TARGET
+
+DRAWLINE
+SELECTCASE ARGS
+CASE "不適切"
+	PRINTFORMW 发生了意想不到的事情。
+	PRINTFORMW 改造した覚えがない場合はスレ等に報告していただけると有がたいです
+	RETURN 0
+CASE "非エロ"
+	TFLAG:交流中 = 1
+	CALL PRINT_MAIDFACE, PLAYER, TARGET
+CASE "性騷擾"
+	TFLAG:交流中 = 1
+	CALL EMOTION_PLUS, "害羞", PLAYER, TARGET
+CASEELSE
+	TFLAG:交流中 = 1
+	CALL EMOTION_PLUS, "躁动难忍", PLAYER, TARGET
+ENDSELECT
+CALL EXCHANGE_STR, ARGS
+CALL EXCHANGE_GET_EXP, ARGS
+
+CFLAG:交流回数++
+PRINTFORMW 二人の交流回数+1
+TFLAG:交流中 = 0
+
+;-----------------------------------------
+;ここから部員間交流イベントの本文。PLAYERとTARGETが決定してある必要がある
+;-----------------------------------------
+@EXCHANGE_STR, ARGS
+SELECTCASE ARGS
+CASE "非エロ", "性騷擾"
+	PRINTFORMW %CALLNAME:PLAYER%は%CALLNAME:TARGET%に声を掛けた。
+	PRINTFORML 　
+	SELECTCASE RAND:14
+		CASE 0
+			PRINTFORMW %CALLNAME:PLAYER%和%CALLNAME:TARGET%兩人好像交談正歡……
+		CASE 1
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は会話を楽しんでいたようだ……
+		CASE 2
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は冗談を言い合っているようだ……
+		CASE 3
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%はオススメのスイーツを紹介し合っている……
+		CASE 4
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は学校生活について話し込んでいる……
+		CASE 5
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は茶を楽しんでいる……
+		CASE 6
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は最近の流行について話している……
+		CASE 7
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は好みの領帯プについて話している……
+		CASE 8
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は早口言葉に挑戦している……
+		CASE 9
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は%CALLNAME:MASTER%の話題で盛り上がっている……
+		CASE 10
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%はちょっとした雑学を教え合っている……
+		CASE 11
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は話に花を咲かせている……
+		CASE 12
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は行ってみたい旅行先について話し合っている……
+		CASE 13
+			PRINTFORMW %CALLNAME:PLAYER%と%CALLNAME:TARGET%は学校の七不思議について考察している……
+	ENDSELECT
+CASE "本番"
+	PRINTFORML %CALLNAME:PLAYER%は%CALLNAME:TARGET%に声を掛けた。
+	PRINTFORML 　
+	PRINTFORM %CALLNAME:PLAYER%和%CALLNAME:TARGET%二人きりで
+	SELECTCASE RAND:4
+		CASE 0
+			PRINTFORMW 「何か」をしているようだ……
+		CASE 1
+			PRINTFORMW 密会しているようだ……
+		CASE 2
+			PRINTFORMW いやらしい玩耍に興じているようだ……
+		CASE 3
+			PRINTFORMW 素肌を晒し合っているようだ……
+		CASE 4
+			PRINTFORMW 秘所を見せ合っているようだ……
+	ENDSELECT
+CASE "昼Ｖ性交する"	
+	PRINTFORMW %CALLNAME:PLAYER%は%CALLNAME:TARGET%を呼び出した。
+	PRINTFORML 　
+	PRINTFORMW ……%CALLNAME:PLAYER%が%CALLNAME:TARGET%の陰部に陰茎を挿入し始めた。
+	SELECTCASE RAND:10
+		CASE 0
+			PRINTFORMW %CALLNAME:TARGET%の愛液が飛沫になって周囲を汚してゆく……
+		CASE 1
+			PRINTFORMW %CALLNAME:TARGET%の喘ぎ声が辺りに木霊している……
+		CASE 2
+			PRINTFORMW 荒い吐息と肌のぶつかり合う音が部屋に響いている……
+		CASE 3
+			PRINTFORMW %CALLNAME:PLAYER%のえぐるようなピストンが続けられる……
+		CASE 4
+			PRINTFORMW %CALLNAME:TARGET%の女性器が容赦なく形を変えられてゆく……
+		CASE 5
+			PRINTFORMW %CALLNAME:PLAYER%の陰茎が弱点を擦り上げている……
+		CASE 6
+			PRINTFORMW %CALLNAME:PLAYER%のＶ挿入経験が加算されていく……
+		CASE 7
+			PRINTFORMW %CALLNAME:TARGET%の大陰唇が%CALLNAME:PLAYER%の陰茎を美味しそうに咀嚼している……
+		CASE 8
+			PRINTFORMW %CALLNAME:TARGET%の女陰が絞り上げるように陰茎を締め付けている……
+		CASE 9
+			PRINTFORMW %CALLNAME:TARGET%の締め付けに%CALLNAME:PLAYER%の呼吸が荒くなってゆく……
+	ENDSELECT
+CASE "昼Ａ性交する"
+	PRINTFORMW %CALLNAME:PLAYER%は%CALLNAME:TARGET%を呼び出した。
+	PRINTFORML 　
+	PRINTFORMW ……%CALLNAME:PLAYER%が%CALLNAME:TARGET%の尻を犯し始めた。
+	SELECTCASE RAND:9
+		CASE 0
+			PRINTFORMW 陰茎が抜かれてからも、%CALLNAME:TARGET%の尻穴はひくひくと物欲しそうに蠢いている……
+		CASE 1
+			PRINTFORMW %CALLNAME:TARGET%は顔を上気させながら腸内への白濁を求めている……
+		CASE 2
+			PRINTFORMW 倒錯的で淫猥な教育は就这様日が落ちるまで続いた……
+		CASE 3
+			PRINTFORMW %CALLNAME:TARGET%は臓器を混ぜ返される快感に蕩けてゆく……
+		CASE 4
+			PRINTFORMW 窄まりは%CALLNAME:PLAYER%の陰茎によって徐々に性器に作り変えられている……
+		CASE 5
+			PRINTFORMW %CALLNAME:TARGET%は有得ない快楽によって正気を失い始めている……
+		CASE 6
+			SIF !VAGINA(TARGET)
+				PRINTFORMW それから%CALLNAME:TARGET%はメスを自覚するまで犯され続けた……
+			SIF VAGINA(TARGET)
+				PRINTFORMW それから%CALLNAME:TARGET%は膣では味わえない快感に溺れ続けた……
+		CASE 7
+			SIF !VAGINA(TARGET)
+				PRINTFORMW %CALLNAME:TARGET%は前立腺をいじめられ開発されている……
+			SIF VAGINA(TARGET)
+				PRINTFORMW %CALLNAME:TARGET%は子宮を腸越しに開発されている……
+		CASE 8
+			PRINTFORMW %CALLNAME:PLAYER%のＡ挿入経験が加算されていく……
+	ENDSELECT
+CASE "昼Ａ性交される"
+	PRINTFORMW %CALLNAME:PLAYER%は%CALLNAME:TARGET%を呼び出した。
+	PRINTFORML 　
+	SIF PENIS(TARGET)
+		PRINTFORMW ……%CALLNAME:TARGET%は誘惑されるがままに、四つん這い变成了%CALLNAME:PLAYER%を犯し始めた
+	SIF !PENIS(TARGET)
+		PRINTFORMW ……%CALLNAME:TARGET%が假阳具を装着し%CALLNAME:PLAYER%を四つん這いになって犯し始めた
+	SELECTCASE RAND:6
+		CASE 0
+			PRINTFORMW %CALLNAME:TARGET%は恍惚とした表情で%CALLNAME:PLAYER%を気持ちよくさせるため腰を振っている……
+		CASE 1
+			PRINTFORMW %CALLNAME:PLAYER%は激しい抽送を受けながら女の顔ではしたなく喘いでいる……
+		CASE 2
+			PRINTFORMW %CALLNAME:PLAYER%は慣れた様子で%CALLNAME:TARGET%に大人の腰靈活を教えてゆく……
+		CASE 3
+			PRINTFORMW %CALLNAME:PLAYER%は襲われていることを楽しみ的同时、可愛的嬌声を%CALLNAME:TARGET%に聞かせている……
+		CASE 4
+			PRINTFORMW %CALLNAME:PLAYER%は%CALLNAME:TARGET%に組み伏せられるように犯され興奮している……
+		CASE 5
+			PRINTFORMW %CALLNAME:PLAYER%は%CALLNAME:TARGET%に激烈地求められ笑みをこぼしている……
+		CASE 6
+			PRINTFORMW %CALLNAME:PLAYER%は%CALLNAME:TARGET%の一生懸命な腰靈活を応援している……
+	ENDSELECT
+CASE "昼口交"
+	PRINTFORMW %CALLNAME:PLAYER%は%CALLNAME:TARGET%を呼び出した。
+	PRINTFORML 　
+	SELECTCASE RAND:14
+		CASE 0
+			PRINTFORMW %CALLNAME:TARGET%が%CALLNAME:PLAYER%の陰茎を、うっとりとした表情で舐めている……
+		CASE 1
+			PRINTFORMW %CALLNAME:TARGET%が%CALLNAME:PLAYER%の陰茎を、细心的舐めて味わっている……
+		CASE 2
+			IF COND("真性包茎", PLAYER)
+				PRINTFORMW %CALLNAME:TARGET%が%CALLNAME:PLAYER%の包皮陰茎を、精心口内で綺麗にしている……
+			ELSEIF COND("假性包茎", PLAYER)
+				PRINTFORMW %CALLNAME:TARGET%が%CALLNAME:PLAYER%の包皮陰茎を、器用に舌で剥いて綺麗にしている……
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%は、汗で闷热的た%CALLNAME:PLAYER%の陰茎を精心舐めて綺麗にしている……
+			ENDIF
+		CASE 3
+			PRINTFORMW %CALLNAME:TARGET%が地べたに座り舌を出すと、綺麗な顔を%CALLNAME:PLAYER%の精液が何度も白く染めてゆく……
+		CASE 4
+			PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:PLAYER%の腰にしがみつき、口と喉奥で陰茎を愉しんでいる……
+		CASE 5
+			PRINTFORM %CALLNAME:TARGET%%CALLNAME:PLAYER%の陰茎に舌を這わせ、
+			SIF COND("真性包茎", PLAYER) || COND("假性包茎", PLAYER)
+				PRINTFORM 余った皮の中で
+			PRINTFORMW 涎とカウ布を混ぜて遊んでいる……
+		CASE 6
+			PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:PLAYER%の陰茎を音もなく咥え、慢慢地した口淫を愉しんでいる……
+		CASE 7
+			PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:PLAYER%の陰茎から吐き出される精液を飲み下している……
+		CASE 8
+			PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:PLAYER%の陰茎に口付けし、カウ布を啜り始めた……
+		CASE 9
+			PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:PLAYER%の感じている顔を見つめ的同时、口交を続けている……
+		CASE 10
+			PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:PLAYER%の亀頭を糖玉のように舐め回している……
+		CASE 11
+			PRINTFORMW %CALLNAME:TARGET%はわざといやらしい音を立て的同时、%CALLNAME:PLAYER%の陰茎をしゃぶっている……
+		CASE 12
+			PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:PLAYER%の陰茎から溢れ出た濃厚的精液を点心にしている……
+		CASE 13
+			PRINTFORM %CALLNAME:TARGET%
+			IF CFLAG:交流口交 <= 3
+				PRINTFORMW ぎこちない様子で%CALLNAME:PLAYER%の陰茎を舐めている……
+			ELSEIF CFLAG:交流口交 <= 7 || CFLAG:交流口交 > 3
+				PRINTFORMW すっかり慣れた様子で%CALLNAME:PLAYER%の陰茎を舐め吸っている……
+			ELSE
+				PRINTFORMW 流れるように%CALLNAME:PLAYER%の陰茎を露出させ、舌で清め始めた……
+			ENDIF
+	ENDSELECT
+ENDSELECT
+
+;-----------------------------------------
+;経験値の上昇判定。PLAYERとTARGETが決定してある必要がある
+;-----------------------------------------
+@EXCHANGE_GET_EXP, ARGS
+#DIM GET_REL
+#DIM KAISU
+#DIM S_COM
+#DIMS SELECT_PLAY
+
+;まずは非エロエロ有ともに上昇する相性をこちらで変更
+;エロ有の場合は回数も計算する
+SELECTCASE ARGS
+CASE "非エロ"
+	;相性〇までは早めに到達するように
+	IF COND("相性〇", PLAYER) == 0
+		GET_REL = RAND:3 + 2
+	ELSE
+		GET_REL = RAND:2 + 1
+	ENDIF
+CASE "性騷擾"
+	KAISU = MIN(ABL:欲望 / 10 + 1, 10)
+	GET_REL = KAISU
+
+	TFLAG:PLAY回数 = (RAND:3+1) * KAISU
+	IF PENIS(TARGET)
+		CALL SIMULATE_TRAIN_COM, TNUM("给对方手交"), TFLAG:PLAY回数
+	ELSE
+		CALL SIMULATE_TRAIN_COM, TNUM("阴部愛撫"), TFLAG:PLAY回数
+	ENDIF
+	CFLAG:交流Ｈ回数++
+CASEELSE
+	KAISU = MIN(ABL:欲望 / 5 + 1, 10)
+	GET_REL = 2 * KAISU
+
+	;どのようなPLAYを行うのかをここでセレクトさせる
+	SELECT_PLAY = %TEXTR(EXCHANGE_TABLE() )%
+
+	;前準備開始
+	CALL SIMULATE_TRAIN_FIRST
+
+	TFLAG:PLAY回数 = (RAND:3+1) * KAISU
+	SELECTCASE SELECT_PLAY
+	CASE "ペッティング"
+		SELECTCASE RAND:3
+		CASE 0
+			IF PENIS(TARGET)
+				IF RAND:2
+					S_COM = TNUM("舐陰莖")
+				ELSE
+					S_COM = TNUM("给对方手交")
+				ENDIF
+			ELSE
+				IF RAND:2
+					S_COM = TNUM("舐陰")
+				ELSE
+					S_COM = TNUM("阴部愛撫")
+				ENDIF
+			ENDIF
+		CASE 1
+			IF ABL:Ａ感覚 >= 3 && RAND:2
+				S_COM = TNUM("肛門愛撫")
+			ELSE
+				S_COM = TNUM("胸愛撫")
+			ENDIF
+		CASE 2
+			IF VAGINA(PLAYER) && VAGINA(TARGET) && RAND:2
+				S_COM = TNUM("磨鏡")
+			ELSE
+				S_COM = TNUM("愛撫")
+			ENDIF
+		ENDSELECT
+	CASE "口交"
+		S_COM = TNUM("口交")
+	CASE "手淫"
+		S_COM = TNUM("手淫")
+		SIF ABL:施虐属性 >= 2
+			CALL SIMULATE_TRAIN_COM, TNUM("胸爱抚奉侍"), TFLAG:PLAY回数
+	CASE "乳交"
+		S_COM = TNUM("乳交")
+	CASE "六九式"
+		S_COM = TNUM("六九式")
+	CASE "Ｖ性交"
+		IF CANTRAINS("Ｖ挿入")
+			S_COM = CANTRAINS("Ｖ挿入")
+		ELSE
+			S_COM = TNUM("正常位")
+		ENDIF
+		SIF EXCHANGE_PLAY_FILTER("接吻判定")
+			CALL SIMULATE_TRAIN_COM, TNUM("接吻"), TFLAG:PLAY回数
+		SIF EXCHANGE_PLAY_FILTER("生ハメ判定") == 0
+			TEQUIP:PLAYER:避孕套 = 1
+	CASE "Ａ性交"
+		IF CANTRAINS("Ａ挿入")
+			S_COM = CANTRAINS("Ａ挿入")
+		ELSE
+			S_COM = TNUM("肛門後背位")
+		ENDIF
+		SIF EXCHANGE_PLAY_FILTER("接吻判定")
+			CALL SIMULATE_TRAIN_COM, TNUM("接吻"), TFLAG:PLAY回数
+	CASE "Ａ挿入"
+		IF CANTRAINS("Ａ逆挿入")
+			S_COM = CANTRAINS("Ａ逆挿入")
+		ELSE
+			S_COM = TNUM("Ａ後背位奉仕")
+		ENDIF
+		SIF EXCHANGE_PLAY_FILTER("接吻判定")
+			CALL SIMULATE_TRAIN_COM, TNUM("接吻"), TFLAG:PLAY回数
+	ENDSELECT
+
+	;実行する内容に応じてCFLAGを立てる
+	SELECTCASE S_COM
+	CASE TNUM("舐陰")
+		CFLAG:交流舐陰 += KAISU
+	CASE TNUM("舐陰莖")
+		CFLAG:交流舐陰莖 += KAISU
+	CASE TNUM("口交")
+		CFLAG:交流口交 += KAISU
+	CASE TNUM("六九式")
+		IF PENIS(TARGET)
+			CFLAG:交流舐陰莖 += KAISU
+		ELSE
+			CFLAG:交流舐陰 += KAISU
+		ENDIF
+		CFLAG:交流口交 += KAISU
+	;Ｖ性交
+	CASE 60 TO 69
+		CFLAG:交流Ｖ性交 += KAISU
+	;Ａ性交
+	CASE 70 TO 79
+		CFLAG:交流Ａ性交 += KAISU
+	;Ａ挿入(诺伊のＡに挿入)
+	CASE 125 TO 129
+		CFLAG:交流Ａ挿入 += KAISU
+	ENDSELECT
+
+	;TNUM(S_COM)をTFLAG:PLAY回数 だけ行う
+	CALL SIMULATE_TRAIN_COM, S_COM, TFLAG:PLAY回数
+
+	;経験や珠などの獲得量計算
+	CALL SIMULATE_TRAIN_CALC
+
+	;結果発表
+;	[IF_DEBUG]
+;		CALL SIMULATE_TRAIN_SHOW
+;	[ENDIF]
+
+	TEQUIP:避孕套 = 0
+	TEQUIP:PLAYER:避孕套 = 0
+	CFLAG:交流Ｈ回数++
+ENDSELECT
+CALL CHANGE_RELATION, GET_REL, TARGET, PLAYER
+PRINTFORML 两人的相性+{GET_REL}
+
+;-----------------------------------------------
+;用于对部员间交流进行判定的函数
+;因为各种条件容易变得复杂，所以放在这里
+;以PLAYER是诺伊、TARGET是交流对象为前提
+;-------------------------------------------------
+@EXCHANGE_JADGE()
+#FUNCTIONS
+
+;非エロの場合は問答無用でOK、そうじゃない場合は色々と対応する
+SELECTCASE CEVENTS("部員間交流", PLAYER)
+CASE "非エロ"
+	RETURNF "非エロ"
+CASE "エロ有"
+	;毫无疑问的
+	;讨厌男性的
+	SIF CFLAG:ＮＴＲ禁止 == 1 || TALENT:討厭男人 >= 2
+		RETURNF "非エロ"
+	
+	;在这里填写有非色情部員間交流的判定条件
+	SELECTCASE CALLNAME:TARGET
+	CASE "樱", "千紗", "百合香"
+		;樱毫无疑问
+		;千紗和你的関系太强了，想不出色情交流的情形
+		;百合香理由同上
+		RETURNF "非エロ"
+	CASE "槞彁", "棗"
+		;槞彁和棗在恋慕状态下会拒绝
+		SIF TALENT:恋慕
+			RETURNF "非エロ"
+	CASE "焰", "静菜"
+		;焰和静菜有家庭，所以必须要有淫乱才行
+		SIF TALENT:淫乱 == 0
+			RETURNF "非エロ"
+	CASE "維吹"
+		;因为得到了作者的建议，相思相爱的话就不会进入色情交流
+		;谢谢您的意见……
+		SIF TALENT:相思相愛
+			RETURNF "非エロ"
+	CASE "紬希"
+		;紬希在HE中绝对不会进行色情交流
+		SIF CEVENT("I love you, my dear.")
+			RETURNF "非エロ"
+	CASE "万音"
+		;覚醒前的万音不进行色情交流
+		SIF CEVENT("淫魔覚醒：万音") == 0
+			RETURNF "非エロ"
+	CASE "南実"
+		;根据丽香（南実作者）的方案，好感度1500以上，诺伊和南実的相性在◎以上，而且不是处女的时候就可以进行色情交流了
+		SIF CFLAG:好感度 < 1500 || COND("相性◎", PLAYER) == 0 || TALENT:処女
+			RETURNF "非エロ"
+	ENDSELECT
+	
+	;根据种族和对象的不同，决定从性骚扰到性交的进度
+	;淫魔本身就是这样的种族，所以一開始就可以火力全開，也不在意相性
+	IF COND("種族：淫魔")
+		SELECTCASE RAND:5
+		CASE 0
+			RETURNF "本番"
+		CASE 1
+			IF VAGINA(TARGET) && PENIS(PLAYER)
+				RETURNF "昼Ｖ性交する"
+			ELSEIF PENIS(PLAYER)
+				RETURNF "昼Ａ性交する"
+			ELSE
+				RETURNF "本番"
+			ENDIF
+		CASE 2
+			IF PENIS(PLAYER)
+				RETURNF "昼Ａ性交する"
+			ELSE
+				RETURNF "本番"
+			ENDIF
+		CASE 3
+			IF PENIS(TARGET)
+				RETURNF "昼Ａ性交される"
+			ELSEIF PENIS(PLAYER)
+				RETURNF "昼口交"
+			ELSE
+				RETURNF "本番"
+			ENDIF
+		CASE 4
+			IF PENIS(PLAYER)
+				RETURNF "昼口交"
+			ELSE
+				RETURNF "本番"
+			ENDIF
+		ENDSELECT
+	;淫乱进度也很快
+	;虽然这样说，也需要几回的过程
+	ELSEIF TALENT:淫乱
+		IF CFLAG:交流回数 < 3
+			SELECTCASE RAND:2
+			CASE 0
+				RETURNF "性騷擾"
+			CASE 1
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "性騷擾"
+				ENDIF
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:5
+			CASE 0
+				RETURNF "本番"
+			CASE 1
+				IF VAGINA(TARGET) && PENIS(PLAYER)
+					RETURNF "昼Ｖ性交する"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 2
+				IF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 3
+				IF PENIS(TARGET)
+					RETURNF "昼Ａ性交される"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 4
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			ENDSELECT
+		ENDIF
+	;不重视贞操的不在乎相性、但也需要几回的过程
+	ELSEIF TALENT:不在乎貞操
+		IF CFLAG:交流回数 < 1
+			RETURNF "非エロ"
+		ELSEIF CFLAG:交流回数 < 3
+			SELECTCASE RAND:2
+			CASE 0
+				RETURNF "性騷擾"
+			CASE 1
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "性騷擾"
+				ENDIF
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:5
+			CASE 0
+				RETURNF "本番"
+			CASE 1
+				IF VAGINA(TARGET) && PENIS(PLAYER)
+					RETURNF "昼Ｖ性交する"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 2
+				IF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 3
+				IF PENIS(TARGET)
+					RETURNF "昼Ａ性交される"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 4
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			ENDSELECT
+		ENDIF
+	;好奇心需要一定相性、超过所需相性后就和淫乱一样了
+	ELSEIF TALENT:好奇心
+		IF COND("相性〇", PLAYER) == 0 || CFLAG:交流回数 < 1
+			RETURNF "非エロ"
+		ELSEIF CFLAG:交流回数 < 3
+			SELECTCASE RAND:2
+			CASE 0
+				RETURNF "性騷擾"
+			CASE 1
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "性騷擾"
+				ENDIF
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:5
+			CASE 0
+				RETURNF "本番"
+			CASE 1
+				IF VAGINA(TARGET) && PENIS(PLAYER)
+					RETURNF "昼Ｖ性交する"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 2
+				IF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 3
+				IF PENIS(TARGET)
+					RETURNF "昼Ａ性交される"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 4
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			ENDSELECT
+		ENDIF
+	;无法逾越的底线判定非常严格
+	;两人的相性必须在☆
+	ELSEIF TALENT:難以越過的底線
+		IF COND("相性☆", PLAYER) == 0 || CFLAG:交流回数 < 5
+			RETURNF "非エロ"
+		ELSEIF CFLAG:交流回数 < 10
+			RETURNF "性騷擾"
+		ELSE
+			SELECTCASE RAND:5
+			CASE 0
+				RETURNF "本番"
+			CASE 1
+				IF VAGINA(TARGET) && PENIS(PLAYER)
+					RETURNF "昼Ｖ性交する"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 2
+				IF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 3
+				IF PENIS(TARGET)
+					RETURNF "昼Ａ性交される"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 4
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			ENDSELECT
+		ENDIF
+	;重视贞操和保守也一定的严格
+	;相性要◎才行
+	;不擅长对付男性也在这里
+	ELSEIF TALENT:保守的 || TALENT:贞操重视 || TALENT:討厭男人 == 1
+		IF COND("相性◎", PLAYER) == 0 || CFLAG:交流回数 < 3
+			RETURNF "非エロ"
+		ELSEIF CFLAG:交流回数 < 5
+			RETURNF "性騷擾"
+		ELSE
+			SELECTCASE RAND:5
+			CASE 0
+				RETURNF "本番"
+			CASE 1
+				IF VAGINA(TARGET) && PENIS(PLAYER)
+					RETURNF "昼Ｖ性交する"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 2
+				IF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 3
+				IF PENIS(TARGET)
+					RETURNF "昼Ａ性交される"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 4
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			ENDSELECT
+		ENDIF
+	;其他以外相性〇就可以了
+	ELSE
+		IF COND("相性〇", PLAYER) == 0 || CFLAG:交流回数 < 3
+			RETURNF "非エロ"
+		ELSEIF CFLAG:交流回数 < 5
+			SELECTCASE RAND:2
+			CASE 0
+				RETURNF "性騷擾"
+			CASE 1
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "性騷擾"
+				ENDIF
+			ENDSELECT
+		ELSE
+		SELECTCASE RAND:5
+			CASE 0
+				RETURNF "本番"
+			CASE 1
+				IF VAGINA(TARGET) && PENIS(PLAYER)
+					RETURNF "昼Ｖ性交する"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 2
+				IF PENIS(PLAYER)
+					RETURNF "昼Ａ性交する"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 3
+				IF PENIS(TARGET)
+					RETURNF "昼Ａ性交される"
+				ELSEIF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+			CASE 4
+				IF PENIS(PLAYER)
+					RETURNF "昼口交"
+				ELSE
+					RETURNF "本番"
+				ENDIF
+		ENDSELECT
+		ENDIF
+	ENDIF
+CASEELSE
+	;上記以外で来たらバグなのでその旨を出す
+	RETURNF "不適切"
+ENDSELECT
+
+;-----------------------------------------------
+;部員間交流の可能なPLAY一覧を表示するための関数
+;PLAYERに诺伊、TARGETに交流相手の番号が入っている
+;-------------------------------------------------
+@EXCHANGE_TABLE()
+#FUNCTIONS
+#DIMS EVENT_TABLE
+
+;ペッティングは強制選択
+EVENT_TABLE = ペッティング/
+
+;相手の技巧が3以上なら奉仕するのも解禁
+IF ABL:技巧 >= 3
+	SIF PENIS(PLAYER)
+		EVENT_TABLE += "口交/乳交/手淫/"
+
+	SIF VAGINA(PLAYER)
+		EVENT_TABLE += "奉仕舐陰/"
+
+	EVENT_TABLE += "六九式/"
+ENDIF
+
+;discordで意見をいただき、宇佐美酱は前戯系のみに限定するように
+SIF CALLNAME:TARGET == "宇佐美"
+	RETURNF EVENT_TABLE
+
+;米娅酱の場合は前戯系以外は肛門性交しかしない
+IF CALLNAME:TARGET == "米娅"
+	SIF COND("身嗜み：Ａ独占") == 0
+		EVENT_TABLE += "Ａ性交/"
+	RETURNF EVENT_TABLE
+ENDIF
+
+;上記の角色以外は処女じゃなければＶ性交もする
+;あるいは相性が☆以上だと許す
+SIF EXCHANGE_PLAY_FILTER("Ｖ性交判定")
+	EVENT_TABLE += "Ｖ性交/"
+
+;Ａ処女じゃなければ肛門性交も
+SIF EXCHANGE_PLAY_FILTER("Ａ性交判定")
+	EVENT_TABLE += "Ａ性交/"
+
+;阴茎あれば性交する側になる可能性も
+SIF EXCHANGE_PLAY_FILTER("Ａ挿入判定")
+	EVENT_TABLE += "Ａ挿入/"
+
+RETURNF EVENT_TABLE
+
+;-----------------------------------------------
+;可能なPLAYのIF文がものすごく肥大化しそうなのでここで埋め込んでおく
+;PLAYERに诺伊、TARGETに交流相手の番号が入っている
+;-------------------------------------------------
+@EXCHANGE_PLAY_FILTER(ARGS)
+#FUNCTION
+SELECTCASE ARGS
+CASE "接吻判定"
+	SIF COND("身嗜み：接吻独占") || COND("身嗜み：接吻独占", PLAYER)
+		RETURNF 0
+	SIF FIL_COMP("交流接吻", PLAYER) == 0
+		RETURNF 0
+	SIF CANTRAIN("接吻") == 0
+		RETURNF 0
+	RETURNF 1
+
+CASE "Ｖ性交判定"
+	SIF PENIS(PLAYER) == 0 || VAGINA(TARGET) == 0
+		RETURNF 0
+	SIF COND("身嗜み：Ｖ独占")
+		RETURNF 0
+	SIF FIL_COMP("交流Ｖ性交", PLAYER) == 0
+		RETURNF 0
+	;処女かどうか
+	IF TALENT:処女
+		SIF FIL_COMP("奪処女", PLAYER) == 0
+			RETURNF 0
+	ELSE
+		SIF CANTRAINS("Ｖ挿入") == 0
+			RETURNF 0
+	ENDIF
+	RETURNF 1
+
+CASE "Ａ性交判定"
+	SIF PENIS(PLAYER) == 0
+		RETURNF 0
+	SIF COND("身嗜み：Ａ独占")
+		RETURNF 0
+	SIF FIL_COMP("交流Ａ性交", PLAYER) == 0
+		RETURNF 0
+	SIF CANTRAINS("Ａ挿入") == 0
+		RETURNF 0
+	RETURNF 1
+
+CASE "Ａ挿入判定"
+	SIF PENIS(TARGET) == 0
+		RETURNF 0
+	SIF COND("身嗜み：Ａ独占", PLAYER)
+		RETURNF 0
+	SIF FIL_COMP("交流Ａ挿入", PLAYER) == 0
+		RETURNF 0
+	SIF CANTRAINS("Ａ逆挿入") == 0
+		RETURNF 0
+	RETURNF 1
+	
+CASE "生ハメ判定"
+	SIF FIL_COMP("生許可", PLAYER)
+		RETURNF 1
+	RETURNF 0
+
+ENDSELECT
+RETURNF 0

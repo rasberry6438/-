@@ -1,0 +1,282 @@
+﻿@COM149
+;导管
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+CALL SHOW_COM_ORDER_COM, 149
+
+;実行できない
+SIF TCVAR:干劲 == 0
+	RETURN 0
+;-------------------------------------------------
+;実行決定
+;-------------------------------------------------
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+RETURN 1
+
+@FLAG_COM149, ARG
+;尿的污垢発生
+IF PENIS(TARGET)
+	STAIN:Ｐ = SET_STAIN(STAIN:Ｐ, "尿")
+ELSE
+	STAIN:Ｖ = SET_STAIN(STAIN:Ｖ, "尿")
+ENDIF
+;利尿剤の効果は消失
+TEQUIP:利尿剤 = 0
+;主动放尿したので、最後まで出し切ります
+BASE:尿意 = 0
+;胖次をずらす
+SIF !CHECK_CLO("Ｖ露出") && INSERT("挿入") == 0
+	CALL SETFLAG, "下衣を露出：テ接吻ト没有", TARGET
+;放尿
+EXP:放尿経験 += 1
+NOWEX:放尿 += 1
+EX:放尿 += 1
+
+@SOURCE_COM149, ARG
+CALL VARSET_COMF
+
+CALL SOURCE_DOWNBASE_HP, 149
+
+SOURCE:0:疼痛 = 1000
+SOURCE:0:恐惧 = 500
+SOURCE:0:不潔 = 500
+SOURCE:0:露出 = 2000
+SOURCE:0:逸脱 = 1500
+SOURCE:0:屈従 = 3000
+
+;PALAM:欲情をみる
+SELECTCASE PALAM:欲情
+CASE IS < PALAMLV:1
+	TIMES SOURCE:0:逸脱, 1.50
+CASE IS < PALAMLV:2
+	TIMES SOURCE:0:逸脱, 1.00
+CASE IS < PALAMLV:3
+	TIMES SOURCE:0:逸脱, 0.90
+CASE IS < PALAMLV:4
+	TIMES SOURCE:0:逸脱, 0.70
+CASE IS >= PALAMLV:4
+	TIMES SOURCE:0:逸脱, 0.50
+ENDSELECT
+
+;ABL:受虐属性をみる
+SELECTCASE ABL:受虐属性
+CASE 0
+	TIMES SOURCE:0:情愛, 0.80
+	TIMES SOURCE:0:露出, 0.80
+CASE 1
+	TIMES SOURCE:0:情愛, 1.00
+	TIMES SOURCE:0:露出, 1.00
+CASE 2
+	TIMES SOURCE:0:情愛, 1.30
+	TIMES SOURCE:0:露出, 1.20
+CASE 3
+	TIMES SOURCE:0:情愛, 1.40
+	TIMES SOURCE:0:露出, 1.40
+CASE 4
+	TIMES SOURCE:0:情愛, 1.70
+	TIMES SOURCE:0:露出, 1.50
+CASEELSE
+	TIMES SOURCE:0:情愛, 2.00
+	TIMES SOURCE:0:露出, 1.70
+ENDSELECT
+
+;場所をみる
+IF TEQUIP:室内露出PLAY || TEQUIP:野外PLAY
+	TIMES SOURCE:0:逸脱, 2.50
+	TIMES SOURCE:0:露出, 1.50
+ELSEIF TEQUIP:浴室PLAY
+	TIMES SOURCE:0:逸脱, 0.50
+ENDIF
+
+SELECTCASE EXP:放尿経験 + EXP:漏尿経験
+CASE IS < EXPLV:1
+	TIMES SOURCE:0:逸脱, 3.00
+CASE IS < EXPLV:2
+	TIMES SOURCE:0:逸脱, 2.50
+CASE IS < EXPLV:3
+	TIMES SOURCE:0:逸脱, 2.00
+CASE IS < EXPLV:4
+	TIMES SOURCE:0:逸脱, 1.00
+CASE IS < EXPLV:5
+	TIMES SOURCE:0:逸脱, 0.80
+CASEELSE
+	TIMES SOURCE:0:逸脱, 0.60
+ENDSELECT
+
+SELECTCASE EXP:尿道経験 + MIN(EXP:PLAYER:尿道責め経験, 50)
+CASE IS < 5
+CASE IS < 20
+	TIMES SOURCE:0:疼痛, 0.70
+CASE IS < 50
+	TIMES SOURCE:0:疼痛, 0.50
+CASE IS < 150
+	TIMES SOURCE:0:疼痛, 0.20
+CASE IS < 300
+	TIMES SOURCE:0:疼痛, 0.05
+CASEELSE
+	TIMES SOURCE:0:疼痛, 0.00
+ENDSELECT
+
+IF TALENT:尿道性感
+	TIMES SOURCE:0:疼痛, 0.50
+	TIMES SOURCE:0:恐惧, 0.50
+ENDIF
+
+;筋弛緩剤
+SIF GETBIT(TEQUIP:筋弛緩剤, 1)
+	TIMES SOURCE:0:疼痛, 0.20
+
+CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM149
+INVERTBIT TEQUIP:导管, 0
+IF TEQUIP:导管
+	IF PENIS(TARGET)
+		PRINTFORMW 将%CALLNAME:TARGET%的陰茎緊緊固定住後、用指尖微微拡寬尿道口、将塗上潤滑用的果凍的導管慢慢的挿入了……
+		PRINTFORML …
+		PRINTFORML ……
+		PRINTFORML ………
+		PRINTFORMW 大約、挿入了20cm長度的導管？
+	ELSE
+		PRINTFORMW 将%CALLNAME:TARGET%飽満的陰唇撥開、将露出的尿道口微微地拓寬後、将塗上潤滑用的果凍的導管慢慢的挿入了……
+	ENDIF
+	PRINTFORMW 導管的頂端被推到膀胱的位置、因挿入而繃緊的尿道稍稍放鬆後、金黄的尿液就順著導管淳淳流淌而出……
+ELSE
+	PRINTFORMW 従%CALLNAME:TARGET%的尿道中慎重小心的抜出了導尿管……
+ENDIF
+
+@EQUIP_COM149
+SIF TEQUIP:导管 == 0
+	RETURN 0
+
+CALL SOURCE_COM149, 10
+RETURN 1
+
+@EQUIP_COM149_2
+SIF TEQUIP:导管 == 0
+	RETURN 0
+
+PRINTL ＜导管挿入中＞
+IF BASE:尿意 >= 1000 || (BASE:尿意 >= 100 && RAND:4 == 0)
+	IF INSERT("挿入")
+		SELECTCASE CONDS("体位")
+		CASE "後背位"
+			PRINTFORML 插入尿道的導管中、快樂的淫液混雜著尿液一併涓涓流下……
+		CASEELSE
+			PRINTFORML 插入尿道的導管中、尿液被斷斷續續湧出的愛液推出……
+		ENDSELECT
+	ELSE
+		PRINTFORML 插入尿道的導管中、快樂的淫液混雜著尿液一併涓涓流下……
+	ENDIF
+	;尿的污垢発生
+	IF PENIS(TARGET)
+		STAIN:Ｐ = SET_STAIN(STAIN:Ｐ, "尿")
+	ELSE
+		STAIN:Ｖ = SET_STAIN(STAIN:Ｖ, "尿")
+	ENDIF
+	BASE:尿意 = 0
+ENDIF
+
+RETURN 1
+
+
+@COM_ORDER_COM149, ARG
+VARSET LOCAL
+LOCALS = 
+
+;すべての命令に共通の要素を考慮
+;(信頼が高いと命令に従いやすいなど)
+CALL COM_ORDER, ARG
+
+LOCAL = RESULT
+
+;ABL:露出癖
+IF ABL:露出癖
+	LOCAL += MIN(ABL:露出癖, 10) * 2
+	LOCALS = %LOCALS% + 露出癖LV{ABL:露出癖}({MIN(ABL:露出癖, 10) * 2})
+ENDIF
+;ABL:受虐属性
+IF ABL:受虐属性
+	LOCAL += MIN(ABL:受虐属性, 5) * 3
+	LOCALS = %LOCALS% + 受虐属性LV{ABL:受虐属性}({MIN(ABL:受虐属性, 5) * 3})
+ENDIF
+;冷静
+IF TALENT:冷静
+	LOCAL -= 5
+	LOCALS = %LOCALS% - 冷静(5)
+ENDIF
+;害羞
+IF TALENT:害羞
+	LOCAL -= 15
+	LOCALS = %LOCALS% - 害羞(15)
+ENDIF
+;不知羞恥
+IF TALENT:不知羞恥
+	LOCAL += 2
+	LOCALS = %LOCALS% + 不知羞恥(2)
+ENDIF
+;清楚
+IF TALENT:清楚
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 清楚(10)
+ENDIF
+;接受快感
+IF TALENT:接受快感
+	LOCAL += 5
+	LOCALS = %LOCALS% + 接受快感(5)
+ENDIF
+;否定快感
+IF TALENT:否定快感
+	LOCAL -= 5
+	LOCALS = %LOCALS% - 否定快感(5)
+ENDIF
+;倒錯的
+IF TALENT:倒錯的
+	LOCAL += 10
+	LOCALS = %LOCALS% + 倒錯的(10)
+ENDIF
+IF TEQUIP:拘束
+	LOCAL += 30
+	LOCALS = %LOCALS% + 拘束中(30)
+ENDIF
+;媚薬
+IF TEQUIP:媚薬
+	LOCAL += 2
+	LOCALS = %LOCALS% + 媚薬(2)
+ENDIF
+;尿道性感
+IF TALENT:尿道性感
+	LOCAL += 10
+	LOCALS = %LOCALS% + 尿道性感(10)
+ELSE
+	LOCAL -= 30
+	LOCALS = %LOCALS% - 尿道性感没有(30)
+ENDIF
+;视频拍摄
+IF TEQUIP:攝像機
+	LOCAL -= 20
+	LOCALS = %LOCALS% - 撮影中(20)
+ENDIF
+;野外or室内露出
+IF TEQUIP:野外PLAY
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 野外PLAY(10)
+ELSEIF TEQUIP:室内露出PLAY
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 室内露出(10)
+ENDIF
+
+;合計を表示(70以上で実行)
+CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 70
+
+RETURN RESULT

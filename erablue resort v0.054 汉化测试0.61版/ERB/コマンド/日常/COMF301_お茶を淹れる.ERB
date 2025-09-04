@@ -1,0 +1,131 @@
+﻿
+@COMNAME301
+#FUNCTIONS
+TSTR:コマンド名受渡 = 泡茶
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_301
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+
+@COM_TOOLTIP_301
+LOCALS = <br>■泡茶<br>
+LOCALS += "冲泡茶水并与在场全体角色进行休憩的指令。<br>每次执行后需要2小时冷却时间。"
+LOCALS += "<br>指令类型：日常<br>获取来源：欢乐・征服"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+;泡茶
+@COM301
+LOCAL = RAND:100
+LOCAL:1 = 90 + GET_SUCCESS_RATE() / 5
+SIF LOCAL:1 > 99
+	LOCAL:1 = 99
+IF LOCAL <= 9
+	;10％で大成功
+	EXP:MASTER:会話経験 ++
+	RFLAG:コマンド結果受渡し変数 = 1
+ELSEIF LOCAL >= LOCAL:1
+	;10～1％で失敗
+	RFLAG:コマンド結果受渡し変数 = -1
+ELSE
+	;残りは成功
+	RFLAG:コマンド結果受渡し変数 = 0
+ENDIF
+
+;その場に居るTARGET全員で回す
+LOCAL:1 = TARGET
+FOR LOCAL,1,CHARANUM
+	SIF TARGET:LOCAL <= 0
+		CONTINUE
+	SIF CFLAG:(TARGET:LOCAL):睡眠
+		CONTINUE
+	SIF CFLAG:(TARGET:LOCAL):隠密
+		CONTINUE
+	TARGET = TARGET:LOCAL
+	CALL COM301_1
+NEXT
+TARGET = LOCAL:1
+
+TIME += 30
+RETURN 1
+
+
+@COM301_1
+;歓楽強度
+LOCAL:0 = 700
+;征服強度
+LOCAL:1 = 100
+
+IF RFLAG:コマンド結果受渡し変数 == -1
+	TIMES LOCAL:0 , 0.10
+	TIMES LOCAL:1 , 0.50
+ELSEIF RFLAG:コマンド結果受渡し変数 == 0
+	TIMES LOCAL:0 , 1.00
+	TIMES LOCAL:1 , 1.00
+ELSE
+	TIMES LOCAL:0 , 2.00
+	TIMES LOCAL:1 , 2.00
+ENDIF
+
+IF TALENT:TARGET:飲食不可
+	LOCAL:0 = LOCAL:0 / 2
+	LOCAL:1 = LOCAL:1 / 2
+ENDIF
+
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, LOCAL:0)
+CALL SOURCE_CALC_征服(TARGET, PLAYER, LOCAL:1)
+CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, LOCAL:0 / 2)
+
+;関係性上昇(基本15分で+1、大成功で1.5倍、失敗時は半減)
+CALL 関係性一括上昇(TARGET, 2, RFLAG:コマンド結果受渡し変数)
+
+;体力回復
+LOCAL:1 = 100
+;回復早い、回復遅い
+SIF !GETBIT(TCVAR:TARGET:食事済みフラグ, 0)
+	BASE:TARGET:体力 = MIN(MAXBASE:TARGET:体力, BASE:TARGET:体力 + (LOCAL:1 * 3 / (3 - TALENT:TARGET:回復速度)))
+SETBIT TCVAR:TARGET:食事済みフラグ, 0
+
+;お茶を飲んだフラグ
+TCVAR:お茶飲み時刻 = 1440 * DAY + TIME
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@COM_ABLE301
+;泡茶実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(301)
+	RETURN RESULT
+;二時間間隔
+SIF TIME_PROGRESS(TCVAR:お茶飲み時刻) < 120
+	RETURN 0
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;浴場
+SIF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:MASTER:現在位置)
+	RETURN 0
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM301
+PRINTFORML %CALLNAME:PLAYER%为%CALLNAME:TARGET%\@ GET_TARGETNUM() > 1 ? 们 # \@奉上了茶饮…
+IF RFLAG:コマンド結果受渡し変数 == 1
+	PRINTFORML %CALLNAME:TARGET%与%CALLNAME:PLAYER%品茗闲谈，共度了愉快时光…
+ELSEIF RFLAG:コマンド結果受渡し変数 == -1
+	PRINTFORML …似乎不合%CALLNAME:TARGET%的口味
+ENDIF
+
+

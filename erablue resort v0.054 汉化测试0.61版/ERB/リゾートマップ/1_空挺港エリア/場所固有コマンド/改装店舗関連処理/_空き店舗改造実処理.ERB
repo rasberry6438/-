@@ -1,0 +1,301 @@
+﻿
+@空艇港_店舗改装処理(店番号, 画面表示用変数)
+#DIM 店番号
+#DIM 画面表示用変数
+VARSET LOCALS
+
+IF 空艇港店舗屋号記録:店番号 == ""
+	空艇港店舗屋号記録:店番号 = %空艇港_店舗屋号ランダム決定()%
+ENDIF
+
+DRAWLINE
+PRINTL 正在对空艇港区的店铺进行改装
+PRINTL 想要什么样的店铺？
+DRAWLINE
+LOCALS = <div rect='81,0,1912,344' border='31' bcolor='#C0C0C0'></div>
+LOCALS += @"<div rect='156,62,1912,281'>持有卢比：%NUM_FORMAT(MONEY)%<br>持有ZP　：%ZP所持量全文字列()%</div>"
+LOCALS += "<div rect='81,375,1937,2812' border='31' bcolor='#C0C0C0'></div><div rect='2050,375,3875,2812' border='31' bcolor='#C0C0C0'></div>"
+LOCALS += "<div rect='156,500,1937,2812'>"
+CALLFORMF 空艇港店舗名表示_{空艇港店舗状況:店番号:0}(店番号)
+LOCALS += @"<button value='99'>[99] 当前店铺：%TSTR:場所名受渡%</button>"
+LOCALS += "<br>"
+IF 空艇港店舗状況:店番号:0 != 0
+	LOCALS += "<button value='100'>[100] 空置房间</button>"
+	LOCALS += "<br>"
+ENDIF
+IF 空艇港店舗状況:店番号:0 != 1
+	LOCALS += @"<button value='101'>[101] 道具店</button>"
+	LOCALS += "<br>"
+ENDIF
+IF 空艇港店舗状況:店番号:0 != 2
+	LOCALS += @"<button value='102'>[102] 特产店</button>"
+	LOCALS += "<br>"
+ENDIF
+IF 空艇港店舗状況:店番号:0 != 3
+	LOCALS += @"<button value='103'>[103] 餐馆</button>"
+	LOCALS += "<br>"
+ENDIF
+IF 空艇港店舗状況:店番号:0 != 4
+	LOCALS += @"<button value='104'>[104] 饰品店</button>"
+	LOCALS += "<br>"
+ENDIF
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+LOCALS += "</div>"
+
+;現在の店舗状況表示
+CALL 空艇港_店舗改装右画面表示(画面表示用変数, 店番号)
+
+HTML_PRINT LOCALS, 1
+FOR LOCAL, 0, 29
+	PRINTL
+NEXT
+DRAWLINE
+
+$INPUT_LOOP
+BINPUT
+
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 99
+		画面表示用変数 = 0
+		RESTART
+	CASE 100 TO 104
+		IF 空艇港店舗状況:店番号:0 == LOCAL - 100
+			REUSELASTLINE 
+			GOTO INPUT_LOOP
+		ENDIF
+		画面表示用変数 = LOCAL
+		RESTART
+	CASE 999
+		RETURN -1
+	CASE 0
+		CALLFORM 空艇港店舗解説文_{画面表示用変数 - 100}(LOCALS:1, 店番号)
+		LOCAL:1 = RESULT
+		IF MONEY < LOCAL:1
+			DRAWLINE
+			PRINTW 卢比不足。
+			画面表示用変数 = 0
+			RESTART
+		ENDIF
+		CALLFORMF 空艇港店舗名表示_{画面表示用変数 - 100}(店番号)
+		DRAWLINE
+		PRINTFORMW 花费%NUM_FORMAT(LOCAL:1)%卢比，将店铺改装为%TSTR:場所名受渡%
+		空艇港店舗状況:店番号:0 = 画面表示用変数 - 100
+		画面表示用変数 = 0
+		MONEY -= LOCAL:1
+		RESTART
+	CASE 1
+		画面表示用変数 = 0
+		RESTART
+	CASE 10
+		PRINTL 
+		PRINTL 
+		DRAWLINE
+		PRINTL 请输入店铺招牌名称。
+		DRAWLINE
+		INPUTS
+		IF RESULTS == ""
+			PRINTL 
+			PRINTL 
+			PRINTFORMW 输入为空，已随机生成招牌名称
+			空艇港店舗屋号記録:店番号 = %空艇港_店舗屋号ランダム決定()%
+		ELSE
+			空艇港店舗屋号記録:店番号 = %RESULTS%
+			PRINTL 
+			PRINTL 
+			PRINTFORMW 店铺招牌已更名为%空艇港店舗屋号記録:店番号%
+		ENDIF
+		RESTART
+	CASE 11
+		空艇港店舗屋号記録:店番号 = %空艇港_店舗屋号ランダム決定()%
+		RESTART
+ENDSELECT
+
+@空艇港_店舗改装右画面表示(画面表示用変数, 店番号)
+#DIM 画面表示用変数
+#DIM 店番号
+#DIMS 建物文章受け渡し文字列
+建物文章受け渡し文字列 = 
+
+SELECTCASE 画面表示用変数
+	CASE 0
+		LOCALS = <div rect='2125,500,3775,2812'>
+		CALLFORM 空艇港店舗解説文_{空艇港店舗状況:店番号:0}(建物文章受け渡し文字列, 店番号)
+		LOCALS += 建物文章受け渡し文字列
+		IF 空艇港店舗状況:店番号:0 != 0
+			LOCALS += "<br>"
+			LOCALS += "<button value='10'>[10] 手动输入招牌</button><br>"
+			LOCALS += "<button value='11'>[11] 随机生成招牌</button><br>"
+			LOCALS += "<br>"
+		ENDIF
+		LOCALS += "</div>"
+	CASE 100 TO 104
+		LOCALS = <div rect='2125,500,3775,2812'>
+		CALLFORM 空艇港店舗解説文_{画面表示用変数 - 100}(建物文章受け渡し文字列, 店番号)
+		LOCALS += 建物文章受け渡し文字列
+		LOCALS += "<br>"
+		IF 画面表示用変数 != 100
+			LOCALS += "<button value='10'>[10] 手动输入招牌</button><br>"
+			LOCALS += "<button value='11'>[11] 随机生成招牌</button><br>"
+			LOCALS += "<br>"
+		ENDIF
+		LOCALS += "确认进行改装？<br>"
+		LOCALS += @"需要卢比：%NUM_FORMAT(RESULT), 7%"
+		LOCALS += "<br>"
+		LOCALS += "<button value='0'>[0]确定</button><br>"
+		LOCALS += "<button value='1'>[1]取消</button><br>"
+		LOCALS += "</div>"
+ENDSELECT
+
+HTML_PRINT LOCALS, 1
+
+
+@空艇港_店舗屋号ランダム決定()
+#FUNCTIONS
+#DIMS 屋号_上
+#DIMS 屋号_下
+
+
+STRDATA 屋号_上
+	DATA era
+	DATAFORM %CALLNAME:MASTER%
+	DATA 火炎
+	DATA 流水
+	DATA 微风
+	DATA 大地
+	DATA 荣光
+	DATA 暗夜
+	DATA 梦想
+	DATA 魔法
+	DATA 魔术
+	DATA 秘密
+	DATA 神秘
+	DATA 丰收
+	DATA 繁星
+	DATA 恩惠
+	DATA 恋爱
+	DATA 战车
+	DATA 胜利
+	DATA 力量
+	DATA 勇气
+	DATA 隐者
+	DATA 贤者
+	DATA 命运
+	DATA 幸运
+	DATA 时代
+	DATA 正义
+	DATA 平等
+	DATA 睿智
+	DATA 节制
+	DATA 恶魔
+	DATA 宿命
+	DATA 塔
+	DATA 星
+	DATA 希望
+	DATA 月
+	DATA 幻想
+	DATA 太阳
+	DATA 青春
+	DATA 双子
+	DATA 审判
+	DATA 复活
+	DATA 世界
+	DATA 宇宙
+	DATA 真实
+	DATA 剑
+	DATA 探险
+	DATA 短剑
+	DATA 战斧
+	DATA 锐枪
+	DATA 魔杖
+	DATA 强弓
+	DATA 重炮
+	DATA 乐琴
+	DATA 铁拳
+	DATA 名刀
+	DATA 追忆
+	DATA 豁达
+	DATA 刚健
+	DATA 豪放
+	DATA 大志
+	DATA 天资
+	DATA 热血
+	DATA 热烈
+	DATA 飞翔
+	DATA 不屈
+	DATA 伏龙
+	DATA 凤梨
+	DATA 不败
+	DATA 奋迅
+	DATA 无敌
+	DATA 一心
+	DATA 威风
+	DATA 英雄
+	DATA 果断
+	DATA 矜持
+	DATA 调和
+	DATA 斗魂
+	DATA 迈进
+	DATA 友情
+	DATA 胜利
+	DATA 努力
+	DATA 团结
+	DATA 挑战
+	DATA 疾风
+	DATA 勇猛
+	DATA 朝雾
+	DATA 闪电
+	DATA 永远
+	DATA 樱花
+	DATA 风花
+	DATA 月下
+	DATA 紫苑
+	DATA 月华
+	DATA 东云
+	DATA 秋水
+	DATA 青云
+	DATA 苍穹
+	DATA 玉响
+	DATA 薄冰
+	DATA 翡翠
+	DATA 白夜
+	DATA 名月
+	DATA 讴歌
+	DATA 残响
+	DATA 万雷
+	DATA 珊瑚
+	DATA 珍珠
+	DATA 蓝玉
+	DATA 黄玉
+	DATA 石榴
+	DATA 水晶
+	DATA 玉髓
+	DATA 孔雀
+	DATA 月长
+	DATA 红玉
+	DATA 黑玉
+	DATA 黑曜
+	DATA 金刚
+	DATA 琥珀
+	DATA 虎目
+	DATA 越后
+ENDDATA
+
+STRDATA 屋号_下
+	DATA 屋
+	DATA 商店
+	DATA 堂
+	DATA 本铺
+	DATA 超市
+	DATA 精品店
+	DATA 舍
+	DATA 企划
+	DATA 工房
+	DATA 市场
+	DATA 集市
+	DATA 仓库
+ENDDATA
+
+RETURNF 屋号_上 + 屋号_下
+

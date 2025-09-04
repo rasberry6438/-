@@ -1,0 +1,191 @@
+﻿;-------------------------------------------------
+;クンニ
+;愛撫系コマンド　レベル1
+;-------------------------------------------------
+@COMNAME1
+#FUNCTIONS
+IF MODE_存在判定_完全一致("シックスナイン可能", TARGET, PLAYER)
+	TSTR:コマンド名受渡 = 69式
+ELSE
+	TSTR:コマンド名受渡 = 舔阴
+ENDIF
+
+;許可時の特別文章はここに記入
+IF TFLAG:オートコマンドフラグ >= 4000
+	;反転時、つまりあなたが舐める方
+	許可取り文章 = %CALLNAME:TARGET%似乎要求%CALLNAME:PLAYER%进行[%TSTR:コマンド名受渡%]。
+ELSE
+	許可取り文章 = %CALLNAME:PLAYER%正准备对%CALLNAME:TARGET%执行[%TSTR:コマンド名受渡%]。
+ENDIF
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_1
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ")
+弱点コマンドカテゴリ = C_女
+オートコマンド許可 = 3
+連続オート許可 = 1
+
+
+@COM_TOOLTIP_1
+LOCALS = <br>■舔阴<br>
+LOCALS += "以阴蒂为中心进行舌技爱抚的指令。<br>进入舔阴模式，在模式变更或性行为结束前持续产生特定快感源。"
+LOCALS += "<br>执行者持有[舌头灵巧][猫舌]特性时效果增减。"
+LOCALS += "<br>指令类型：嘿咻<br>获取来源：快Ｃ・暴露・接触・体液"
+LOCALS += "<br>专属经验值：口交经验(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM1
+;-------------------------------------------------
+;モードの設定
+;-------------------------------------------------
+SIF !MODE_シックスナイン中_完全一致(TARGET, PLAYER) && MODE_存在判定_完全一致("シックスナイン可能", TARGET, PLAYER)
+	RFLAG:コマンド結果受渡し変数 = 1
+CALL MODE_CHANGE("クンニ", PLAYER, TARGET)
+;-------------------------------------------------
+;COM別FLAGの設定
+;-------------------------------------------------
+
+;奉仕快楽
+RCVAR:PLAYER:奉仕コマンドフラグ = 1
+RCVAR:PLAYER:汎用喘ぎ_文節低減フラグ = 1
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+LOCAL = 150
+;舌を使う調教では、調教者の舌使いによって、快感のソース増加
+SIF TALENT:PLAYER:舌使い
+	TIMES LOCAL , 1.50
+;猫舌では減少
+SIF TALENT:PLAYER:猫舌
+	TIMES LOCAL , 0.75
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, LOCAL)
+
+CALL SOURCE_CALC_液体(TARGET, PLAYER, 60)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 80)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 100)
+
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;同性愛
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 3
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 3
+
+
+;調教者が猫舌持ちの場合は、調教者に嗜虐快楽経験を追加
+SIF TALENT:PLAYER:猫舌
+	EXP:PLAYER:嗜虐快楽経験 += 1
+;口淫経験
+EXP:PLAYER:口淫経験 ++
+
+CALL 初体験日登録処理(PLAYER, TARGET, "ファーストキス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "クリトリス", "", 1)
+IF RESULT
+	RCVAR:PLAYER:ファーストキス中フラグ = 1
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>向%CALLNAME:TARGET%的[阴蒂]献上初吻</font><img src='えっちハート'>","うふふ")
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE1
+;クンニ実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(1)
+	RETURN RESULT
+;クリがない場合駄目
+SIF TALENT:TARGET:Ｃ感度 == -2
+	RETURN 0
+;女性器がないとダメ
+SIF GETBIT(TALENT:TARGET:性別, 0) == 0
+	RETURN 0
+;下半身着衣
+;前鎧、めくれない服、タイツ、前張りがあると無理
+SIF TEQUIP:下腹部前鎧あり
+	RETURN 0
+SIF TEQUIP:下半身服あり && (!TEQUIP:スカートめくり可 && !TEQUIP:ずらし可)
+	RETURN 0
+SIF TEQUIP:下タイツあり && !TEQUIP:下タイツ破れ
+	RETURN 0
+SIF TEQUIP:下半身下着あり == 2
+	RETURN 0
+;口を何かに使ってるなら無理
+SIF TEQUIP:PLAYER:口
+	RETURN 0
+;クリを何かに使ってるなら無理
+SIF TEQUIP:TARGET:クリトリス
+	RETURN 0
+;挿入系・素股系時は個別にOFF
+SIF MODE_存在判定_順不同("ＶＡ挿入系", PLAYER, TARGET)
+	RETURN 0
+SIF MODE_存在判定_順不同("素股系", PLAYER, TARGET)
+	RETURN 0
+
+;オートコマンド中の制限
+IF FLAG:オートコマンド判定中フラグ
+	SIF 初体験済みチェック("ファーストキス", PLAYER) == 0
+		RETURN 0
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM1
+PRINTFORM %CALLNAME:PLAYER%
+
+IF RFLAG:コマンド結果受渡し変数
+	PRINTFORML 调整体位与%CALLNAME:TARGET%头部交错，
+	PRINTFORM 对准%CALLNAME:TARGET%的
+ELSEIF MODE_シックスナイン中_完全一致(TARGET, PLAYER)
+	PRINTFORM 眼前%CALLNAME:TARGET%的
+ELSEIF !TEQUIP:下半身服あり && TEQUIP:下半身下着あり
+	IF TALENT:恋慕 && PLAYER == MASTER
+		PRINTFORM 主动褪下内衣做好准备的
+	ELSE
+		PRINTFORM 被褪下内衣暴露的
+	ENDIF
+	PRINTFORM 对准%CALLNAME:TARGET%的
+ELSEIF TEQUIP:ずらし可
+	IF TALENT:恋慕 && PLAYER == MASTER
+		PRINTFORM 主动褪下衣物的
+	ELSE
+		PRINTFORM 被褪下衣物暴露的
+	ENDIF
+ELSEIF TEQUIP:スカートめくり可
+	IF TALENT:恋慕 && PLAYER == MASTER
+		PRINTFORM 主动掀起裙摆的
+	ELSE
+		PRINTFORM 被掀起裙摆的
+	ENDIF
+	PRINTFORM 对准%CALLNAME:TARGET%的
+ELSE
+	SIF TALENT:恋慕 && PLAYER == MASTER
+		PRINT 主动张开双腿做好准备的
+	PRINTFORM 对准%CALLNAME:TARGET%的
+ENDIF
+PRINTFORM 阴唇被细致舔舐
+;ふたなり＋欲情のPLAMLV3以上
+IF GETBIT(TALENT:性別, 1) && PALAM:欲情 >= PALAMLV:3
+	PRINT ，并用舌头缠绕挺立的阴茎根部
+;ふたなり
+ELSEIF GETBIT(TALENT:性別, 1)
+	PRINT ，用舌尖扫过阴茎冠状沟
+;欲情のPALAMLV3以上
+ELSEIF PALAM:欲情 >= PALAMLV:3
+	PRINT ，专注吮吸充血的阴蒂尖端
+ENDIF
+PRINTL …
+

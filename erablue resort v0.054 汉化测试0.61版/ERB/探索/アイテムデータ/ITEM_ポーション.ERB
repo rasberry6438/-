@@ -1,0 +1,53 @@
+﻿
+@アイテム個別文章表示_治疗药水(ARGS)
+;ポーション
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 800
+ENDIF
+
+LOCALS = 
+LOCALS += @"■治疗药水　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "治疗药水")}<br>"
+LOCALS += "在空之世界广泛使用的通用疗伤药。<br>"
+LOCALS += "只需简单加工药草即可制成，<br>"
+LOCALS += "因此常被新手炼金术师用来赚取零花钱。<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "我方单体ＨＰ恢复[５００]。<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_治疗药水
+CALL 汎用使用先表示("味方単体")
+
+@アイテム効果処理_治疗药水(ARG)
+;ARG = 隊列の何番目か
+
+IF !BATTLE_STATE:ARG:キャラ登録番号
+	RETURN 0
+ENDIF
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "治疗药水") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:最大ＨＰ == BATTLE_STATE:ARG:ＨＰ
+	PRINTW ＨＰ已满
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:ＨＰ < 1
+	PRINTW 无法治疗战斗不能状态
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:最大ＨＰ - BATTLE_STATE:ARG:ＨＰ < 500
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＨＰ恢复了{BATTLE_STATE:ARG:最大ＨＰ - BATTLE_STATE:ARG:ＨＰ}
+ELSE
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＨＰ恢复了500
+ENDIF
+
+BATTLE_STATE:ARG:ＨＰ = MIN(BATTLE_STATE:ARG:ＨＰ + 500, BATTLE_STATE:ARG:最大ＨＰ)
+
+RETURN 1

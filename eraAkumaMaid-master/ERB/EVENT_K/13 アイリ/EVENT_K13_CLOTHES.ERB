@@ -1,0 +1,172 @@
+﻿;-------------------------------------------------
+;この角色独自の衣装を設定する。制服、体操服、泳装は既存のものから選ぶのが楽です
+;-------------------------------------------------
+@CLOTHES_K13, ARGS
+
+SELECTCASE ARGS
+;高めの頻度で着用します。設定しなくてもかまいません
+CASE "内衣"
+	IF COND("発情期") && BASE:欲求不満 >= 50 && TALENT:恋慕 && RAND:10 == 0
+		CSTR:胖次 = 肉球印花胖次/黒/紐/
+		CSTR:胸罩 = 猫型胸罩/黒/紐/蕾丝情趣内衣/
+	ELSE
+		CSTR:胖次 = 低腰胖次/淡色/
+		CSTR:胸罩 = 简约胸罩/淡色/
+	ENDIF
+
+;衣装に関わらず常に付けている飾品です。設定しなくてもかまいません
+CASE "飾品"
+	CSTR:飾品 = 
+
+;学園での便装です。設定必須です
+CASE "制服"
+	CALL SET_COSTUME, "西装外衣"
+	IF COND("冬")
+		CALL SET_BOTTOM, "运动衫休闲褲"
+		CALL SET_OTHER, "围巾"
+	ENDIF
+;学園の体育の授業で着ます。この格好のまま部室に現れたりもする。設定必須です
+CASE "体操服"
+	CALL SET_COSTUME, "体操服五分褲"
+;学園の水泳の授業で着ます。この格好のまま部室に現れたりもする。設定必須です
+CASE "泳装"
+	CALL SET_COSTUME, "競泳泳装"
+
+;自宅など学園外で着ます。設定必須です
+CASE "便装"
+	IF COND("周日")
+		IF COND("冬")
+			CALL SET_SHIRT, "针织毛衣/赤"
+			CALL SET_BOTTOM, "运动衫休闲褲"
+		ELSE
+			CALL SET_SHIRT, "宽大的Ｔ恤"
+			CALL SET_BOTTOM, "五分褲"
+		ENDIF
+	ELSE
+		CALL CLOTHES_K13, "制服"
+	ENDIF
+
+;自分的房間(not主人公的房間)で着ます
+CASE "居家服"
+	IF COND("夏")
+		CALL SET_SHIRT, "宽大的Ｔ恤"
+	ELSE
+		CALL CLOTHES_K13, "便装"
+	ENDIF
+
+;约会以外で家から外出際に着ます。情人旅館呼出とかね
+CASE "外出装"
+
+;もちろん约会の際に着ます
+CASE "约会衣装"
+	SELECTCASE TEXTS("季節")
+	CASE "冬"
+		CALL SET_SHIRT, "针织毛衣/赤"
+		CALL SET_SKIRT, "長裙"
+		CALL SET_SHOES, "靴"
+		CALL SET_OTHER, "围巾"
+	CASE "夏"
+		CALL SET_SHIRT, "无袖女式衬衫"
+		CALL SET_BOTTOM, "热褲"
+		CALL SET_SHOES, "平底鞋"
+	CASEELSE
+		CALL SET_SHIRT, "女式衬衫"
+		CALL SET_SKIRT, "裙"
+		CALL SET_SHOES, "无后跟鞋"
+	ENDSELECT
+	IF COND("発情中")
+		CALL SET_PANTIES, "Ｈ的内衣"
+		CALL SET_BRA, "Ｈ的胸罩"
+	ENDIF
+
+ENDSELECT
+
+;-------------------------------------------------
+;時間帯や場所に応じた髪型、表情の変化を記述する。設定しなくてもかまいません
+;-------------------------------------------------
+@MAIDFACE_K13
+IF (PLACE("部室") || COND("约会中")) && TALENT:恋慕 && (COND("春") || COND("夏")) && (RAND:10 + CFLAG:ポニテ手応え >= 9)
+	CSTR:前髪 = 自然刘海２
+	CSTR:改髪 = 马尾辫
+	;部室にいると髪型違うよアピールしてくる分岐用
+	SIF PLACE("部室")
+		CALL SET_CEVENT, "髪型変化：アイリ"
+ELSEIF (PLACE("部室") || COND("约会中")) && TALENT:恋慕 && (COND("秋") || COND("冬")) && (RAND:10 + CFLAG:卷髪手応え >= 9)
+	CSTR:前髪 = 透明刘海
+	CSTR:後髪 = 卷髪
+	SIF PLACE("部室")
+		CALL SET_CEVENT, "髪型変化：アイリ"
+ELSE
+	CALL SETFLAG, "普段の髪型復元", TARGET
+	SIF CEVENT("髪型変化：アイリ")
+		CALL DEL_CEVENT, "髪型変化：アイリ"
+ENDIF
+
+
+;-------------------------------------------------
+;感情やシチュに応じて、角色独自の表情を設定する。設定しなくてもかまいません
+;主にEMOTION_PLUSなどで颜绘を出す際の文字列の組み合わせの代わりに使う関数です
+;-------------------------------------------------
+@EMOTION_K13, ARGS
+
+SELECTCASE ARGS
+;一人で何かしてる状態などです
+CASE "闲"
+	STR:颜绘改髪 = 通常眉/斜眼/小口２
+CASE "睡眠"
+	STR:颜绘改髪 = 
+CASE "欣喜"
+	IF TALENT:相思相愛 && RAND:2
+		STR:颜绘改髪 = 困扰眉/吊眼/ヮ/紅潮
+	ELSE
+		STR:颜绘改髪 = 困扰眉/吊眼飘忽/小口/紅潮
+	ENDIF
+CASE "甜言蜜语"
+	IF TALENT:相思相愛 && RAND:2
+		STR:颜绘改髪 = 困扰眉/吊眼/ヮ/紅潮
+	ELSE
+		STR:颜绘改髪 = 困扰眉/吊眼飘忽/小口/紅潮
+	ENDIF
+CASE "心情好"
+	STR:颜绘改髪 = 微笑/ふき出し開心
+CASE "心情差"
+	STR:颜绘改髪 = 嘟嘴
+CASE "躁动难忍"
+	IF RAND:2
+		STR:颜绘改髪 = 困扰眉/吊眼半目/小口/赤面
+	ELSE
+		STR:颜绘改髪 = 困扰眉/吊眼半目/へ字３/赤面
+	ENDIF
+CASE "躁动难忍２"
+	IF RAND:2
+		STR:颜绘改髪 = 困扰眉/吊眼半目/呀哒２/赤面
+	ELSE
+		STR:颜绘改髪 = 困扰眉/吊眼半目/栗口/赤面
+	ENDIF
+CASE "刚睡醒"
+	STR:颜绘改髪 = 斜眼/通常眉/無口系/对话框困倦
+CASE "憤怒"
+	STR:颜绘改髪 = 憤怒眉/呀哒/对话框憤怒
+CASE "害羞"
+	STR:颜绘改髪 = 憤怒眉/吊眼飘忽/小口/紅潮
+CASE "惊嚇"
+	STR:颜绘改髪 = 通常眉/〇〇/無口系/对话框！？
+CASE "小悪魔"
+	IF COND("発情中")
+		IF RAND:3 == 0 && TALENT:恋慕
+			STR:颜绘改髪 = 困扰眉/吊眼半目/ヮ３/赤面
+		ELSEIF RAND:2 && TALENT:恋慕
+			STR:颜绘改髪 = 困扰眉/吊眼半目/いー２/赤面
+		ELSE
+			STR:颜绘改髪 = 困扰眉/吊眼半目/微笑/赤面
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 困扰眉/吊眼半目/微笑/
+	ENDIF
+CASE "红潮恍惚"
+	STR:颜绘改髪 = 困扰眉/斜眼/半開/紅潮
+CASE "不審"
+	STR:颜绘改髪 = 通常眉/斜眼/へ字
+CASE ""
+	STR:颜绘改髪 = 
+ENDSELECT

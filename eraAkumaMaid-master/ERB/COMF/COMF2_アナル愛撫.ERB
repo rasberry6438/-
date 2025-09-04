@@ -1,0 +1,294 @@
+﻿@COM2
+;肛門愛撫
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+RETURN 1
+
+@FLAG_COM2, ARG
+IF PREVCOM == 5
+	CALL FLAG_COM5, 30
+ELSEIF PREVCOM == 6
+	CALL FLAG_COM6, 30
+ENDIF
+
+IF TEQUIP:肛用振動棒
+	CALL FLAG_COM33, 130
+ELSEIF CHECK("Ａ指挿入")
+	CALL FLAG_INSERTION, "Ａ指挿入", ARG, 100
+ENDIF
+
+@SOURCE_COM2, ARG
+IF PREVCOM == 5
+	CALL SOURCE_COM5, 30
+ELSEIF PREVCOM == 6
+	CALL SOURCE_COM6, 30
+ENDIF
+IF TEQUIP:肛用振動棒
+	CALL SOURCE_INSERTION, "Ａ振動棒", ARG, 130
+ELSEIF CHECK("Ａ指挿入")
+	CALL SOURCE_INSERTION, "Ａ指挿入", ARG, 100
+ELSE
+	CALL VARSET_COMF
+
+	CALL SOURCE_DOWNBASE_HP, 2
+
+	SOURCE:0:情愛 = ABL:Ａ感覚 * 100
+	SOURCE:0:露出 = 400
+	SOURCE:0:逸脱 = 1000
+
+	;ABL:Ａ感覚をみる
+	SOURCE:0:Ａ快楽 = CALCF("Ａ刺激", 1)
+	;調教者の指靈活をみる
+	SOURCE:0:Ａ快楽 = SOURCE_EXABL(SOURCE:0:Ａ快楽, "指靈活", PLAYER)
+
+	;EXP:Ａ経験に応じたＡ快感、苦痛、恐怖、逸脱(反感)補正
+	SELECTCASE EXP:Ａ経験
+	CASE IS >= 300
+		TIMES SOURCE:0:Ａ快楽, 1.60
+		TIMES SOURCE:0:疼痛, 0.50
+		TIMES SOURCE:0:恐惧, 0.20
+		TIMES SOURCE:0:逸脱, 0.20
+	CASE IS >= 150
+		TIMES SOURCE:0:Ａ快楽, 1.40
+		TIMES SOURCE:0:疼痛, 0.60
+		TIMES SOURCE:0:恐惧, 0.40
+		TIMES SOURCE:0:逸脱, 0.60
+	CASE IS >= 50
+		TIMES SOURCE:0:Ａ快楽, 1.20
+		TIMES SOURCE:0:疼痛, 0.80
+		TIMES SOURCE:0:恐惧, 0.70
+	CASE IS >= 20
+		TIMES SOURCE:0:逸脱, 1.20
+	CASE IS >= 5
+		TIMES SOURCE:0:Ａ快楽, 0.50
+		TIMES SOURCE:0:疼痛, 1.50
+		TIMES SOURCE:0:恐惧, 1.50
+		TIMES SOURCE:0:逸脱, 1.50
+	CASEELSE
+		TIMES SOURCE:0:Ａ快楽, 0.10
+		TIMES SOURCE:0:疼痛, 2.00
+		TIMES SOURCE:0:恐惧, 2.00
+		TIMES SOURCE:0:逸脱, 2.00
+	ENDSELECT
+
+	;PALAM:欲情をみる
+	SELECTCASE PALAM:欲情
+	CASE IS < PALAMLV:1
+		TIMES SOURCE:0:屈従, 0.30
+	CASE IS < PALAMLV:2
+		TIMES SOURCE:0:屈従, 0.50
+	CASE IS < PALAMLV:3
+		TIMES SOURCE:0:屈従, 0.80
+	CASE IS < PALAMLV:4
+	CASE IS >= PALAMLV:4
+		TIMES SOURCE:0:屈従, 1.20
+	ENDSELECT
+
+	SIF TALENT:Ａ性向
+		CALL CALC, "好みのPLAY", SOURCE:0:Ａ快楽
+
+	CALL CALC, "調教ソース", ARG
+ENDIF
+
+@TRAIN_MESSAGE_COM2
+IF PREVCOM == SELECTCOM && COND("前Ｔ調教者") == PLAYER
+	IF TEQUIP:肛用振動棒 && CHECK_COM("結腸責め")
+		PRINTFORMW %CALLNAME:PLAYER%將%CALLNAME:TARGET%結腸的最深處用%NAMES("Ａ振動棒", TARGET)%周到的侍奉著、直到徹底被快感溶化為止……
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%將%CALLNAME:TARGET%的肛門用手指周到的侍奉著、直到徹底被快感溶化為止……
+	ENDIF
+;挿入中
+ELSEIF INSERT("Ｖ挿入") || INSERT("尿道挿入")
+	IF INSERT("騎乗位")
+		PRINTFORM %CALLNAME:PLAYER%在%CALLNAME:TARGET%腰を振らせ的同时、
+	ELSE
+		PRINTFORM %CALLNAME:PLAYER%将腰を突き入れ的同时、%CALLNAME:TARGET%の
+	ENDIF
+	IF TEQUIP:肛用振動棒
+		IF CHECK_COM("結腸責め")
+			PRINTFORMW 尻穴中伸出的振動棒%TEXTR("激烈地抽插著、將結腸的最深處也同樣摩擦著/執拗地玩弄著、將大腸的深處一併刺激著/緊緊抓住、並以能在小腹表面產生凸起的程度不斷地翻攪著")%……
+		ELSE
+			PRINTFORMW 尻穴中伸出的振動棒%TEXTR("激烈地抽插著/執拗地玩弄著/緊緊抓住並不斷地翻攪著")%……
+		ENDIF
+	ELSEIF ABL:Ａ拡張 >= 2 && CHECK("Ａ指挿入") && INSERT("後背位")
+		PRINTFORMW 将被菊門夹住的中指与无名指全部插入一下下按摩着内部的黏膜…
+	ELSE
+		PRINTFORMW 肛門用手指輕輕地戲弄著……
+	ENDIF
+;Ａ挿入中
+ELSEIF INSERT("Ａ挿入")
+	PRINTFORM %CALLNAME:PLAYER%呢？
+	IF TALENT:PLAYER:扶她 || TALENT:PLAYER:男性
+		PRINT 灼熱堅挺的肉棒
+	ELSE
+		PRINT 無機質的冰冷假陰莖
+	ENDIF
+	PRINTFORMW 在腸道中不斷衝擊著的時候、也將%CALLNAME:TARGET%肛門週邊的柔肉輕輕地揉捏著……
+;それ以外
+ELSE
+	PRINTFORM %CALLNAME:PLAYER%将
+	IF TEQUIP:接吻
+		PRINTFORM 將%CALLNAME:TARGET%%TEXTS("接吻継続助詞付き")%、
+		CALL SETFLAG, "追加接吻フラグ", TARGET
+	ELSEIF PREVCOM == TNUM("胸愛撫")
+		PRINTFORM 輕柔的愛撫著%CALLNAME:TARGET%的胸部的同時、
+	ELSEIF PREVCOM == TNUM("扒開菊穴")
+		PRINTFORM 在眼前展示着的%CALLNAME:TARGET%的
+	ELSE
+		;六九式
+		IF TEQUIP:六九式
+			PRINTFORM %TEXTS("６９")%
+		;PLAYを受け入れ可能かつ好色
+		ELSEIF CHECK("Ａ指挿入") && TALENT:好色 && RAND:2 == 0
+			PRINT 將正妖艷的微笑著的
+		;縄
+		ELSEIF TEQUIP:拘束
+			PRINT 將被拘束著動彈不得的
+		ELSEIF CHECK("Ａ指挿入") && COND("脚の使用")
+			;害羞で快Ａ or欲情が低いなら追加したり
+			SIF TALENT:害羞 && (PALAM:快Ａ <= PALAMLV:3 || PALAM:欲情 <= PALAMLV:4)
+				PRINT 臉頰染上羞恥的紅暈、
+			PRINT 主動將雙腿張開的
+		;Ａ感覚1以下or叛逆or害羞
+		ELSEIF (ABL:Ａ感覚 <= 1 || TALENT:叛逆 || TALENT:害羞) && RAND:3 >= 1
+			;害羞で快Ａ or欲情が低いなら追加したり
+			SIF TALENT:害羞 && (PALAM:快Ａ <= PALAMLV:3 || PALAM:欲情 <= PALAMLV:4)
+				PRINT 因羞恥而不斷顫抖著的
+		ENDIF
+		PRINTFORM %CALLNAME:TARGET%的
+		;拉米亚にお尻は無い方針で
+		IF COND("脚が無い")
+			SIF CHECK_CLO("Ａ露出") == 0
+				CALL SETFLAG, "下衣を露出：テ接吻ト没有", TARGET
+		;肛門が露出していないで、胖次をずらしていないなら自動的にずらす
+		ELSE
+			SIF !CHECK_CLO("Ａ露出") && CHECK_CLO("Ａ露出可")
+				CALL SETFLAG, "下衣を露出：テ接吻ト有些", TARGET
+
+			;小只的ら
+			IF TALENT:娇小
+				PRINT 小小的
+			;Ａ性向なら
+			ELSEIF TALENT:Ａ性向 && RAND:3 >= 1
+				PRINT 柔軟的
+			;淫乱なら
+			ELSEIF TALENT:淫乱 && RAND:3 >= 1
+				PRINT 富含彈性的
+			;それ以外
+			ELSEIF RAND:2 == 0
+				PRINT 形状好
+			ENDIF
+			;乱数分岐
+			IF RAND:2 == 0
+				PRINT 將柔軟的尻肉
+			ELSE
+				PRINT 臀瓣
+			ENDIF
+			;Ａ感覚1以下or叛逆or害羞
+			SIF (ABL:Ａ感覚 <= 1 || TALENT:叛逆 || TALENT:害羞)&& TALENT:恋慕 == 0 && RAND:3 >= 1
+				PRINT 強硬地
+			;恋慕orＡ指挿入を楽しめる状態かつ信頼3以上で縛ってないと相手にお尻を広げさせます
+			IF CHECK("Ａ指挿入") + TALENT:恋慕 && ABL:信頼 >= 3 && TEQUIP:拘束 == 0 && RAND:2 == 0
+				PRINT 強行展開、
+			ELSE
+				PRINT 打開、
+			ENDIF
+		ENDIF
+	ENDIF
+	;肛用振動棒or布ルor肛塞or充气か、直前に肛門系調教かで分岐。
+	IF COND("肛門栓")
+		PRINT 肛門
+		;乱数分岐
+		IF TEQUIP:肛塞
+			PRINT 借助道具塞住、將
+		;道端の菠萝包加筆分
+		ELSEIF ABL:Ａ拡張 - SIZE("Ａ振動棒", TARGET) >= 2
+			PRINT 向落ちないようにしっかりと咥えられた
+		;ここまで加筆分
+		ELSEIF RAND:3 == 0
+			PRINT 充分地打開著、將
+		ELSEIF RAND:2 == 0
+			PRINT 慢慢拉出來、將
+		ELSE
+			PRINT 的末端含住、將
+		ENDIF
+		;Ａ潤3以上で追加
+		SIF PALAM:Ａ潤 >= PALAMLV:3 && TEQUIP:肛用振動棒
+			PRINT 沾滿粘液的
+		IF COND("肛門拉珠")
+			PRINT 將肛門拉珠、
+		ELSEIF TEQUIP:肛用振動棒
+			PRINT 肛用振動棒、
+		ELSEIF TEQUIP:肛塞
+			PRINT 肛塞、
+		ENDIF
+		;乱数分岐
+		IF TEQUIP:肛塞
+			PRINT 轉動著
+		ELSEIF RAND:3 == 0
+			PRINT 滋啵滋啵地
+		ELSEIF RAND:2 == 0
+			PRINT 温柔地
+		ELSE
+			PRINT 溫柔緩慢地
+		ENDIF
+		IF CHECK_COM("結腸責め")
+			PRINTFORMW 前後抽插著。
+
+			IF EXP:結腸経験 >= 5 && RAND:3 == 0
+				PRINTFORMW 反復深入體內的插入行為讓%CALLNAME:TARGET%將自己的Ｓ狀結腸的運動規律充分地掌握了、在異物深入體內的時候、巧妙地借助腸道的蠕動將其吞入更深的深處……
+			ELSEIF SIZE("Ａ振動棒") >= 2 && RAND:2
+				PRINTFORMW 深入腹腔並向外摩擦著不斷抽插的貫穿了結腸的\@ SIZE("Ａ振動棒") >= 3 ? 振動棒那兇惡的形態 # 粗大振動棒的形狀 \@、在%CALLNAME:TARGET%小腹的左側\@ ABL:Ａ拡張 >= 6 ? 一直到肚臍的地方都 # 附近 \@明顯的凸顯出來了……
+			ELSE
+				PRINTFORM 被手腕那麼長的異物不斷地抽插著、
+				IF TALENT:結腸性感
+					PRINTFORM 難以忍受隨之而來的快感、%CALLNAME:TARGET%在%TEXTR(@"用慢慢的深呼吸調節絮亂的呼吸節奏\/向%CALLNAME:PLAYER%伸出的手挺直腰肢\/半張著嘴吐出灼熱而凌亂的氣息")%的同時、
+					PRINTFORMW 將%TEXTR("結腸/身體的深處/被充分開發的淫靡肉窟")%%TEXTR("集中意識感受著/被侵犯所產生的快感神志恍惚的享受著/將被虐的幸福快樂地享受著")%……
+				ELSE
+					PRINTFORMW 讓依然不夠適應的%CALLNAME:TARGET%、因著這種異常的行為所帶來的未知感覺而%TEXTR("誇張地翻起白眼、嘶啞著說不出話來/陷入恐慌與迷惑之中/無法抑制地僵直身體")%……
+				ENDIF
+			ENDIF
+		ELSEIF COND("肛門拉珠") || TEQUIP:肛塞
+			PRINTFORMW 玩弄著……
+		ELSE
+			PRINTFORMW 抽插著……
+		ENDIF
+	ELSE
+		PRINTFORM 將%TEXTS("肛門")%尻穴
+		;肛門系調教やＡ性向やＡ経験150以上にあわせて乱数分岐
+		IF (PREVCOM == 33 || (PREVCOM >= 60 && PREVCOM <= 69) || (PREVCOM >= 136 && PREVCOM <= 138) || PREVCOM == 142 || PREVCOM == 143 || PREVCOM == 202 || EXP:Ａ経験 >= 150) && RAND:3
+			PRINT 用數根手指插入、
+		ELSEIF (PREVCOM == 33 || (PREVCOM >= 60 && PREVCOM <= 69) || (PREVCOM >= 136 && PREVCOM <= 138) || PREVCOM == 142 || PREVCOM == 143 || PREVCOM == 202 || EXP:Ａ経験 >= 150) && RAND:2
+			PRINT 用手指直達指根地深深插入、
+		ELSEIF CHECK("Ａ指挿入")
+			PRINTFORM 用手指插入、
+		ELSE
+			PRINTFORM 用手指描繪著邊緣、
+		ENDIF
+		IF CUP:屈服 < 500 && (PREVCOM == 33 || (PREVCOM >= 60 && PREVCOM <= 69) || (PREVCOM >= 136 && PREVCOM <= 138) || PREVCOM == 142 || PREVCOM == 143 || PREVCOM == 202 || EXP:Ａ経験 >= 150) && RAND:3
+			PRINT 滋啵滋啵地
+		ELSEIF RAND:3 == 0 && CHECK("Ａ指挿入")
+			PRINT 激烈地
+		ELSEIF RAND:2 == 0
+			PRINT 温柔地
+		ELSE
+			PRINT 不斷沿著尻穴的邊緣
+		ENDIF
+		;乱数分岐
+		IF RAND:3 == 0
+			PRINTFORMW 玩弄著……
+		ELSEIF RAND:2 && CHECK("Ａ指挿入")
+			PRINTFORMW 抽插著……
+		ELSE
+			PRINTFORMW 刺激著……
+		ENDIF
+	ENDIF
+ENDIF
+

@@ -1,0 +1,204 @@
+﻿;-------------------------------------------------
+;Talk。とりあえず選んで様子を見る
+;打招呼して無いならまず打招呼。そのあとはわりとてきとー
+;-------------------------------------------------
+@MESSAGE_DAILY_SELECT1
+STR:日常イベント名 = %STR:選択肢%
+
+SELECTCASE DAILYCOMNAME(1)
+CASE "Talk"
+	SELECTCASE STR:日常イベント名
+	CASE "果然还是算了"
+		STR:日常イベント名 = 
+		RETURN 0
+	CASE "雑談"
+		STR:日常イベント名 = Talk
+	CASE "和大家雑談"
+		STR:日常イベント名 = Talk
+		FLAG:対複数 = 1
+	CASE "性処理相談"
+		CALL CHECK_COM_ABLE, TARGET
+		CALL SETFLAG, "性処理でのPLAY内容", TARGET
+		STR:日常イベント名 = 
+		RETURN 0
+	ENDSELECT
+CASE "打招呼"
+	SELECTCASE STR:日常イベント名
+	CASE "拥抱打招呼"
+		STR:日常イベント名 = 打招呼ハグ
+	CASE "用接吻打招呼"
+		STR:日常イベント名 = 打招呼接吻
+	CASE "对着股间打招呼"
+		IF PENIS(TARGET)
+			STR:日常イベント名 = 打招呼口交
+		ELSE
+			STR:日常イベント名 = 打招呼舐陰
+		ENDIF
+	CASE "向大家打招呼する"
+		STR:日常イベント名 = 打招呼
+		FLAG:対複数 = 1
+	CASEELSE
+		STR:日常イベント名 = 打招呼
+	ENDSELECT
+CASEELSE
+	STR:日常イベント名 = %DAILYCOMNAME(1)%
+ENDSELECT
+
+@TEXT_SELECT_DAILY1
+STR:選択肢 = 
+STR:禁止選択肢 = 
+
+SELECTCASE DAILYCOMNAME(1)
+CASE "Talk"
+	;口上側で選択肢を自由に作ることができる
+	TRYCALLFORM DAILY1_K{NO:TARGET}_ADDSELECT
+	STR:追加選択肢 = /%STR:選択肢%
+
+	STR:選択肢 += "雑談/"
+	SIF CHARA_NUM("室内の邪魔者")
+		STR:選択肢 += "和大家雑談/"
+
+	SIF COND("性処理中")
+		STR:選択肢 += "性処理相談/"
+
+	;IF COND("性騷擾雑談可能")
+	;	SIF TALENT:乳房
+	;		STR:選択肢 += "胸を揉みながら雑談/"
+	;	STR:選択肢 += "股間を弄りながら雑談/"
+	;ENDIF
+	;SIF TALENT:好色 || TALENT:淫乱 || ABL:欲望 >= 5
+	;	STR:選択肢 += "Ｈ的話をする/"
+	SIF COND("甜言蜜语可能")
+		STR:選択肢 += "甜言蜜语/"
+	SIF COND("夸奖可能")
+		STR:選択肢 += "夸奖/"
+	SIF CFLAG:心情好 == 0 && COND("点心を亲手自制した")
+		STR:選択肢 += "夸奖点心/"
+CASE "打招呼"
+	STR:選択肢 = 打招呼/
+	SIF CHARA_NUM("打招呼していない") >= 2
+		STR:選択肢 += "向大家打招呼する/"
+	STR:選択肢 += "拥抱打招呼/"
+	SIF COND("合意：接吻") && FIRSTCOM(TNUM("接吻") )
+		STR:選択肢 += "用接吻打招呼/"
+	SIF COND("性別嫌悪") == 0 && CHECK_BOTTOM("休闲褲") == 0
+		STR:選択肢 += "对着股间打招呼/"
+ENDSELECT
+
+CALL SELECT_BAN
+
+
+;-------------------------------------------------
+;ここにはセリフのみを置く
+;-------------------------------------------------
+@MESSAGE_DAILY1
+SIF TFLAG:地の文スキップ
+	RETURN 0
+SELECTCASE STR:日常イベント名
+CASE "叫醒"
+	;汚した？
+	IF COND("着衣の乱れ")
+		PRINTFORMW 把乱掉的衣服整理好隠滅証拠的%CALLNAME:MASTER%、温柔地摇了摇%CALLNAME:TARGET%的肩、让她醒了过来。
+	ELSEIF EXP_GAIN("睡眠悪戯経験") + EXP_GAIN("睡眠姦経験")
+		PRINTFORMW 已经充分享受完了的%CALLNAME:MASTER%的身旁、轻轻摇晃着肩膀的%CALLNAME:TARGET%从睡梦中慢慢醒来。
+	ELSE
+		PRINTFORMW %CALLNAME:MASTER%的身旁、轻轻摇晃着肩膀的%CALLNAME:TARGET%从睡梦中慢慢醒来。
+	ENDIF
+CASE "打招呼ハグ"
+	PRINTFORMW %CALLNAME:MASTER%用以拥抱的方式向%CLO("現在的格好＆の")%%CALLNAME:TARGET%\@ CFLAG:打招呼した ? 回应了问候 # 打了招呼 \@。
+CASE "打招呼接吻"
+	PRINTFORMW %CALLNAME:MASTER%用亲吻的方式向%CALLNAME:TARGET%\@ CFLAG:打招呼した ? 回应了问候 # 打了招呼 \@。
+CASE "打招呼口交"
+	PRINTFORMW %CALLNAME:MASTER%在%CALLNAME:TARGET%前跪下、用亲吻阴茎的方式\@ CFLAG:打招呼した ? 回应了问候 # 打了招呼 \@。
+CASE "打招呼舐陰"
+	PRINTFORM %CALLNAME:MASTER%把脸埋进%CALLNAME:TARGET%的股間、
+	IF CHECK_CLO("Ｖ露出")
+		PRINTFORM 全部剥開的
+	ELSEIF CHECK_BOTTOM("布鲁马")
+		PRINTFORM 隔着布鲁马
+	ELSEIF CHECK_CLO("连褲襪露出")
+		PRINTFORM 连褲襪越しの
+	ELSEIF CHECK_CLO("贴身制服露出") || CHECK_CLO("下衣露出")
+		PRINTFORM 隔着股布
+	ELSEIF EQUIP:胖次
+		PRINTFORM 隔着%PANTIES(TARGET, "胖次")%
+	ENDIF
+	PRINTFORMW 用亲吻阴部的方式\@ CFLAG:打招呼した ? 回应了问候 # 打了招呼 \@。
+CASE "打招呼"
+	IF FLAG:対複数
+		PRINTFORMW %CALLNAME:MASTER%向%CALLNAME:TARGET%她们\@ CFLAG:打招呼した ? 回应了 # 打了 \@招呼。
+	ELSE
+		PRINTFORMW %CALLNAME:MASTER%向%CALLNAME:TARGET%\@ CFLAG:打招呼した ? 回应了 # 打了 \@招呼。
+	ENDIF
+CASE "甜言蜜语"
+	SELECTCASE CONDS("直前行動")
+	CASE "從後面抱住"
+		PRINTFORM %CALLNAME:MASTER%將身體貼了過去、自然地
+	CASE "撫摸頭髮"
+		PRINTFORM %CALLNAME:MASTER%撫摸著頭髮的同時、自然地
+	CASE "把手放在大腿上"
+		PRINTFORM %CALLNAME:MASTER%一邊撫摸著大腿、一邊自然地
+	CASEELSE
+		PRINTFORM %CALLNAME:MASTER%雑談し的同时、%TEXTR("自然な流れで/隙を突いて/折を見て")%
+	ENDSELECT
+	IF TALENT:单相思 || TALENT:相思相愛
+		PRINTFORMW 向%CALLNAME:TARGET%%TEXTR("坦诚地表达了自己的心意/诉说爱意/表达了好意")%。
+	ELSE
+		PRINTFORMW 向%CALLNAME:TARGET%%TEXTR("诉说甜言蜜语/诉说爱意/表达了好意")%。
+	ENDIF
+CASE "夸奖点心"
+	PRINTFORMW %CALLNAME:MASTER%夸奖了%CALLNAME:TARGET%亲手做的%TEXTS("点心")%。
+CASE "夸奖"
+	SELECTCASE CONDS("直前行動")
+	CASE "给对方剃毛"
+		PRINTFORM %CALLNAME:MASTER%一边%TEXTR("用手掌抚摸着刚刚剃干净的下腹部/用手抚平刚刚剃好毛发的股间/用手指划过刚刚处理干净的滑溜溜的阴唇")%、
+		PRINTFORMW 一边夸奖起%CALLNAME:TARGET%那里%TEXTR("舒服的触感/漂亮的样子/健康的样子")%。
+		RETURN 1
+	CASE "從後面抱住"
+		PRINTFORM %CALLNAME:MASTER%將身體貼了過去、自然地對%CALLNAME:TARGET%
+	CASE "撫摸頭髮"
+		PRINTFORM %CALLNAME:MASTER%撫摸著頭髮的同時、自然地對%CALLNAME:TARGET%
+	CASE "把手放在大腿上"
+		PRINTFORM %CALLNAME:MASTER%一邊撫摸著大腿、一邊自然地對%CALLNAME:TARGET%
+	CASEELSE
+		PRINTFORM %CALLNAME:MASTER%一边雑談着、%TEXTR("自然地把话题引了过去/突入了破绽/看准了机会")%将%CALLNAME:TARGET%
+	ENDSELECT
+	IF CFLAG:Cosplay中
+		PRINTFORMW 的%CLO("現在的格好")%夸奖了一番。
+	ELSE
+		PRINTFORMW 夸奖了一番。
+	ENDIF
+CASE "Ｈ的話をする"
+	PRINTFORMW %CALLNAME:MASTER%は%CALLNAME:TARGET%とＨ的说着话。
+;CASE "胖次の話"
+;	PRINTFORMW %CALLNAME:MASTER%は%CALLNAME:TARGET%に胖次の色を訊ねてみた。
+CASE "胸を揉みながら雑談"
+	PRINTFORMW %CALLNAME:MASTER%一边揉着%CALLNAME:TARGET%的胸部一边開始了雑談。
+CASE "股間を弄りながら雑談"
+	PRINTFORMW %CALLNAME:MASTER%一边轻撫%CALLNAME:TARGET%的股間一边開始了雑談。
+CASE "Talk"
+	IF FLAG:対複数
+		PRINTFORMW %CALLNAME:MASTER%和%CALLNAME:TARGET%们快乐地雑談着。
+	ELSE
+		PRINTFORMW %CALLNAME:MASTER%和%CALLNAME:TARGET%雑談着。
+	ENDIF
+ENDSELECT
+
+;-------------------------------------------------
+;主に胖次の描写などをする。STR:日常イベント名 は決定後。
+;-------------------------------------------------
+@AFTERMESSAGE_DAILY1
+SELECTCASE STR:日常イベント名
+CASE "打招呼舐陰", "打招呼口交"
+	CALL SETFLAG_DAILY, STR:日常イベント名
+	SIF COND("胖次形状確認") || CHECK_CLO("胖次露出") == 0
+		RETURN 0
+
+	IF EQUIP:胖次 == 0
+		SIF EQUIP:裙
+			CALL TEXT_PANTU_CHECK, SKIRT(TARGET)
+	ELSEIF CHECK_BOTTOM("布鲁马") == 0 && CHECK_CLO("贴身制服露出") == 0
+		CALL TEXT_PANTU_CHECK_SHORT
+	ENDIF
+ENDSELECT
+

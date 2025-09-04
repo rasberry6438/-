@@ -1,0 +1,3453 @@
+﻿;CEVENT("做爱部联谊")
+
+
+
+@EVENT_LOVEORG
+	#DIMS ACTION
+	#DIMS EVENT_TABLE
+	#DIMS MENU_SHOP
+	#DIM MEMO_ASSI
+	;判定当日是否进行做爱部活动
+	IF CEVENT("做爱部活动参加",MASTER) 
+	; IF TCVAR:MASTER:做爱部活动参加
+		PRINTFORMW 今天已经参加过做爱部的活动了、明天再去吧
+		RETURN 1
+	ENDIF
+	;选择ASSI是否参加并给两人添加对应事件
+	CALL SET_CEVENT("LOVORG同行中",TARGET)
+	;IF CEVENT("做爱部成员",ASSI) && TARGET != ASSI
+	;	PRINTFORML %CALLNAME:ASSI%也是做爱部的部员，要带她一起参加吗？
+	;	CALL PRINT_SELECT, "一起参加/不一起参加"
+	;	IF RESULT == 0
+	;		CALL SET_CEVENT("助手LOVORG前往",ASSI)
+	;		CALL SET_CEVENT("LOVORG同行中",ASSI)
+	;		CALL SET_CEVENT("二人LOVORG同行中",ASSI)
+	;	ENDIF
+	;ENDIF
+	;进入LOVEORG主程序
+
+	;MEMO_ASSI = ASSI
+	;ASSI = MASTER
+
+	CALL EVENT_LOVEORG_MAIN
+
+	;ASSI = MEMO_ASSI
+	;删除两人添加的事件
+	CALL DEL_CEVENT("LOVORG同行中",TARGET)
+	;CALL DEL_CEVENT("助手LOVORG前往",ASSI)
+	;CALL DEL_CEVENT("LOVORG同行中",ASSI)
+	;CALL DEL_CEVENT("二人LOVORG同行中",ASSI)
+
+	;记录MASTER今日进行做爱部活动
+	CALL SET_CEVENT("做爱部活动参加",MASTER)
+
+@EVENT_LOVEORG_MAIN
+#DIM LCOUNT
+FOR LCOUNT, 0, 20
+	;助手参加活动时的循环内容
+	CALL EVENT_LOVEORG_TOP
+	DRAWLINE
+	CALL EVENT_LOVEORG_BOTTOM
+	INPUT
+	SELECTCASE RESULT
+		CASE 100
+			IF CEVENT("LOVORG同行中",TARGET)	;与同伴在一起
+				PRINTFORMW 你带着%CALLNAME:TARGET%一起离开了做爱部
+			ELSE
+				PRINTFORMW 你将%CALLNAME:TARGET%留在了做爱部中、独自离开了
+				CFLAG:TARGET:入室までの所要時間 += 5
+				TCVAR:不在部室 = 1
+			ENDIF
+			BREAK
+		CASE 99
+			SAVESTR:現在位置 = 部室
+	ENDSELECT
+	CALL LOVEORG_EVENT(RESULT,LOCALS:RESULT)
+		;IF CEVENT("助手LOVORG前往",ASSI)
+		;CALL EVENT_LOVEORG_TOP
+		;DRAWLINE
+		;CALL EVENT_LOVEORG_BOTTOM
+		;INPUT
+		;SELECTCASE RESULT
+		;CASE 100
+		;	IF CEVENT("LOVORG同行中",TARGET)	;与同伴在一起
+		;		PRINTFORMW 你带着%CALLNAME:TARGET%一起离开了做爱部
+		;	ELSE
+		;		PRINTFORMW 你将%CALLNAME:TARGET%留在了做爱部中、独自离开了
+		;		CFLAG:TARGET:入室までの所要時間 += 5
+		;		TCVAR:不在部室 = 1
+		;	ENDIF
+		;	BREAK
+		;CASE 99
+		;	SAVESTR:現在位置 = 部室
+		;ENDSELECT
+		;CALL LOVEORG_EVENT(RESULT,LOCALS:RESULT)
+		;助手不参加活动时的循环内容
+		;ELSE
+		;CALL EVENT_LOVEORG_TOP
+		;DRAWLINE
+		;CALL EVENT_LOVEORG_BOTTOM
+		;INPUT
+		;SELECTCASE RESULT
+		;CASE 100
+		;	IF CEVENT("LOVORG同行中",TARGET)	;与同伴在一起
+		;		PRINTFORMW 你带着%CALLNAME:TARGET%一起离开了做爱部
+		;	ELSE
+		;		PRINTFORMW 你将%CALLNAME:TARGET%留在了做爱部中、独自离开了
+		;		CFLAG:TARGET:入室までの所要時間 += 5
+		;		TCVAR:不在部室 = 1
+		;	ENDIF
+		;	BREAK
+		;CASE 99
+		;	SAVESTR:現在位置 = 部室
+		;ENDSELECT
+		;CALL LOVEORG_EVENT(RESULT,LOCALS:RESULT)
+		;ENDIF
+NEXT
+CFLAG:做爱部部活参加次数 += 1
+CALL EVENT_LOVEORG_CHECK, TARGET
+IF ASSI != TARGET && CEVENT("助手LOVORG前往",ASSI)
+	CALL EVENT_LOVEORG_CHECK, ASSI
+	CFLAG:ASSI:做爱部部活参加次数 += 1
+ENDIF
+PRINTFORMW 
+PRINTFORMW 今天的做爱部活动就进行到这里吧...
+SAVESTR:現在位置 = 部室
+PRINTFORMW 
+PRINTFORMW 
+
+;此函数用于上半页面显示
+@EVENT_LOVEORG_TOP
+	PRINTFORML
+	DRAWLINE
+	DRAWLINE
+	PRINTFORML
+	PRINTFORML
+	PRINTFORM %TEXTS("日期表示")% 
+	PRINTFORML -%TEXTS("現在位置")%- 
+	SIF CEVENT("LOVORG同行中",TARGET)
+		CALL EVENT_LOVEORG_MEM_SHOW_NEW, TARGET
+	IF CEVENT("助手LOVORG前往",ASSI)
+		CALL EVENT_LOVEORG_MEM_SHOW_NEW, ASSI
+		;PRINTFORML
+		;PRINTFORML
+		PRINTFORML 做爱部活动的参与情况
+		CALL LOVEORG_EXP_MINI
+		;CALL LOVEORG_EXP, TARGET
+		;CALL LOVEORG_EXP, ASSI
+		;PRINTFORML
+		;PRINTFORML
+		;两人同行
+		IF CEVENT("LOVORG同行中",TARGET) && CEVENT("LOVORG同行中",ASSI)
+			CALL PRINT_MAIDFACE, TARGET, ASSI
+		;TARGET同行ASSI不同行
+		ELSEIF CEVENT("LOVORG同行中",TARGET) && CEVENT("LOVORG同行中",ASSI) == 0
+			CALL PRINT_MAIDFACE, TARGET
+			PRINTFORML %CALLNAME:ASSI%不在这里....
+		;TARGET不同行ASSI同行
+		ELSEIF CEVENT("LOVORG同行中",TARGET)==0 && CEVENT("LOVORG同行中",ASSI) && CEVENT("助手LOVORG前往",ASSI)
+			CALL PRINT_MAIDFACE, ASSI
+			PRINTFORML %CALLNAME:TARGET%不在这里....
+		;两人都不同行
+		ELSE
+			PRINTFORML %CALLNAME:TARGET%和%CALLNAME:ASSI%不在这里....
+		ENDIF
+		PRINTFORML
+	ELSE
+		;PRINTFORML
+		;PRINTFORML
+		PRINTFORML 做爱部活动的参与情况
+		CALL LOVEORG_EXP_MINI
+		;CALL LOVEORG_EXP, TARGET
+		;PRINTFORML
+		;PRINTFORML
+		IF CEVENT("LOVORG同行中",TARGET)
+			CALL PRINT_MAIDFACE, TARGET
+		ELSE
+			PRINTFORML %CALLNAME:TARGET%不在这里....
+		ENDIF
+	ENDIF
+
+;此函数用于下班页面显示，选项显示
+@EVENT_LOVEORG_BOTTOM
+	#DIM LCOUNT
+	#DIM NEXT_LINE
+	STR:選択肢 = 
+	; 	[1]加入做爱部		[2]拒绝加入
+
+	;	[3]查看详细状态
+	; ------------------------------------------------------------------
+	; 	[11]发送短信			[12]打电话			[13]打电话给部长		[14]观看直播摄像头
+
+	; 	[15]参观社团			[16]浇汁室			[17]独自前往			[18]受邀前往
+
+	; 	[19]寻找同伴			[20]寻找助手		[21]助手与同伴交流
+
+	; 	[81]打发时间			[89]解除部员限制	
+	; ---------------------------------------------------------------------------
+
+	; 	[91]一起去做爱部	 	[92]让她独自去		[93]让助手一起去		
+
+	;	[98]返回部室		[99]离开做爱部
+	SIF	SAVESTR:現在位置 == "做爱部" && CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 == 0
+		STR:選択肢 += "[98]加入做爱部/[97]拒绝加入/改行/"
+		STR:選択肢 += "[16]查看详细状态/DRAWLINE/"
+	SIF	SAVESTR:現在位置 == "部室" && !CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 >= 1
+		STR:選択肢 += "[2]发送短信/[3]打电话/"
+	SIF	SAVESTR:現在位置 == "部室" && !CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 >= 2
+		STR:選択肢 += "[4]打电话给部长/"
+	SIF	SAVESTR:現在位置 == "部室" && !CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 >= 3
+		STR:選択肢 += "[5]观看直播摄像头/"
+	SIF SAVESTR:現在位置 == "做爱部" && CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 >= 1 && TCVAR:做爱部活动标签 > 0
+		STR:選択肢 += "爱心粉紅/"
+	SIF	SAVESTR:現在位置 == "做爱部" && CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 >= 1
+		STR:選択肢 += "[8]参观社团/[13]贴上标签/"
+	SIF	SAVESTR:現在位置 == "做爱部" && CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 >= 3
+		STR:選択肢 += "[10]浇汁室/"
+	SIF	SAVESTR:現在位置 == "部室" && !CEVENT("LOVORG同行中",TARGET)
+		STR:選択肢 += "[7]独自前往/"
+	SIF	SAVESTR:現在位置 == "部室" && !CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 >= 3 && CEVENT("做爱部邀请",TARGET)
+		STR:選択肢 += "爱心粉紅/[6]受邀前往做爱部/"
+	SIF	SAVESTR:現在位置 == "做爱部" && !CEVENT("LOVORG同行中",TARGET)
+		STR:選択肢 += "[11]寻找同伴/"
+	SIF	SAVESTR:現在位置 == "做爱部" && CEVENT("LOVORG同行中",TARGET) 
+		STR:選択肢 += "[1]让同伴自由活动/"
+	SIF	SAVESTR:現在位置 == "做爱部" && !CEVENT("LOVORG同行中",ASSI) && CEVENT("助手LOVORG前往",ASSI)
+		STR:選択肢 += "[12]寻找助手/"
+	SIF	SAVESTR:現在位置 == "做爱部" && CEVENT("LOVORG同行中",TARGET) && CEVENT("LOVORG同行中",ASSI) && CEVENT("助手LOVORG前往",ASSI)
+		STR:選択肢 += "[14]助手和同伴进行交流/"
+	; SIF	!CEVENT("LOVORG同行中",TARGET)
+	; 	STR:選択肢 += "[15]电话和同伴交流/"
+	STR:選択肢 += "改行/"
+	SIF	SAVESTR:現在位置 == "做爱部" 
+		STR:選択肢 += "[80]打发时间/水色/[81]呼叫爱琉/";
+	SIF	CEVENT("部员等级限制",TARGET)
+		STR:選択肢 += "[21]解除等级限制/"
+	SIF CEVENT("LOVORG同行中",TARGET) && CFLAG:做爱部部员等级 > 1
+		STR:選択肢 += "[31]降低部员等级/"
+	STR:選択肢 += "改行/DRAWLINE/"
+	SIF	SAVESTR:現在位置 == "部室" && CEVENT("LOVORG同行中",TARGET)
+		STR:選択肢 += "[0]一起去做爱部/"
+	SIF	SAVESTR:現在位置 == "部室" && CEVENT("LOVORG同行中",TARGET)&& CFLAG:做爱部部员等级 >= 1
+		STR:選択肢 += "[1]让她独自去/"
+	SIF	SAVESTR:現在位置 == "部室" && CEVENT("LOVORG同行中",ASSI)&& CFLAG:ASSI:做爱部部员等级 >= 1
+		STR:選択肢 += "[50]让助手独自去/"
+	SIF SAVESTR:現在位置 == "部室"
+		STR:選択肢 += "[100]返回部室/"
+	SIF	SAVESTR:現在位置 == "做爱部" 
+		STR:選択肢 += "[99]离开做爱部/";
+	;IF CEVENT("助手LOVORG前往",ASSI) == 0
+	;	IF SAVESTR:現在位置 == "做爱部"
+	;		IF CEVENT("LOVORG同行中",TARGET)
+	;			SIF CFLAG:做爱部部员等级 == 0
+	;				STR:選択肢 += "[98]加入做爱部/[97]拒绝加入/改行/DRAWLINE/"
+	;			SIF CFLAG:做爱部部员等级 >= 1 && TCVAR:做爱部活动标签 > 0
+	;				STR:選択肢 += "爱心粉紅/"
+	;			SIF CFLAG:做爱部部员等级 >= 1
+	;				STR:選択肢 += "[8]参观社团/[13]贴上标签/"
+	;			SIF CFLAG:做爱部部员等级 >= 3
+	;				STR:選択肢 += "[10]浇汁室/"
+	;		ELSE
+	;			STR:選択肢 += "[11]寻找同伴/"
+	;		ENDIF
+	;		STR:選択肢 += "改行/"
+	;		STR:選択肢 += "[80]打发时间/水色/[81]呼叫爱琉/";
+	;		SIF	CEVENT("部员等级限制",TARGET)
+	;			STR:選択肢 += "[21]解除等级限制/"
+	;		STR:選択肢 += "改行/DRAWLINE/"
+	;		STR:選択肢 += "[99]离开做爱部/"
+	;	ELSEIF SAVESTR:現在位置 == "部室"
+	;		IF !CEVENT("LOVORG同行中",TARGET)
+	;			SIF CFLAG:做爱部部员等级 >= 1
+	;				STR:選択肢 += "[2]发送短信/[3]打电话/"
+	;			SIF CFLAG:做爱部部员等级 >= 2
+	;				STR:選択肢 += "[4]打电话给部长/"
+	;			SIF CFLAG:做爱部部员等级 >= 3
+	;				STR:選択肢 += "[5]观看直播摄像头/"
+	;			STR:選択肢 += "[7]前往做爱部/"
+	;			SIF CFLAG:做爱部部员等级 >= 3 && CEVENT("做爱部邀请",TARGET)
+	;				STR:選択肢 += "爱心粉紅/[6]受邀前往做爱部/"
+	;			STR:選択肢 += "改行/"
+	;			SIF	CEVENT("部员等级限制",TARGET)
+	;				STR:選択肢 += "[21]解除等级限制/"
+	;			STR:選択肢 += "改行/DRAWLINE/"
+	;		ELSE
+	;			STR:選択肢 += "改行/"
+	;			SIF	CEVENT("部员等级限制",TARGET)
+	;				STR:選択肢 += "[21]解除等级限制/"
+	;			STR:選択肢 += "改行/DRAWLINE/"
+	;			STR:選択肢 += "[0]一起去做爱部/"
+	;			SIF CFLAG:做爱部部员等级 >= 1
+	;				STR:選択肢 += "[1]让她独自去/"
+	;		ENDIF
+	;		STR:選択肢 += "[100]返回部室/"
+	;	ENDIF
+	;ELSE
+	;	IF SAVESTR:現在位置 == "做爱部"
+	;		IF CEVENT("LOVORG同行中",TARGET)
+	;			SIF CFLAG:做爱部部员等级 == 0
+	;				STR:選択肢 += "[98]加入做爱部/[97]拒绝加入/改行/DRAWLINE/"
+	;			SIF CFLAG:做爱部部员等级 >= 1 && TCVAR:做爱部活动标签 > 0
+	;				STR:選択肢 += "爱心粉紅/"
+	;			SIF CFLAG:做爱部部员等级 >= 1
+	;				STR:選択肢 += "[8]参观社团/[13]贴上标签/"
+	;			SIF CFLAG:做爱部部员等级 >= 3
+	;				STR:選択肢 += "[10]浇汁室/"
+	;			IF CEVENT("LOVORG同行中",ASSI)
+	;				STR:選択肢 += "改行/[14]助手和同伴进行交流/"
+	;			ELSE
+	;				STR:選択肢 += "改行/[12]寻找助手/"
+	;			ENDIF
+	;		ELSE
+	;			STR:選択肢 += "[11]寻找同伴/"
+	;				SIF !CEVENT("LOVORG同行中",ASSI)
+	;			STR:選択肢 += "[12]寻找助手/"
+	;			STR:選択肢 += "[15]电话和同伴交流/"
+	;		ENDIF
+			;SIF !CEVENT("LOVORG同行中",ASSI)
+			;	STR:選択肢 += "[12]寻找助手/"
+	;		STR:選択肢 += "改行/"
+	;		STR:選択肢 += "[80]打发时间/水色/[81]呼叫爱琉/改行/";
+	;		SIF CEVENT("LOVORG同行中",TARGET)
+	;			STR:選択肢 += "[1]让同伴自由活动/"
+	;		SIF CEVENT("LOVORG同行中",ASSI)
+	;			STR:選択肢 += "[50]让助手自由活动/"
+	;		SIF	CEVENT("部员等级限制",TARGET)
+	;			STR:選択肢 += "[21]解除同伴等级限制/"
+	;		SIF	CEVENT("部员等级限制",ASSI)
+	;			STR:選択肢 += "[22]解除助手等级限制/"
+	;		STR:選択肢 += "改行/DRAWLINE/"
+	;		STR:選択肢 += "[99]离开做爱部/"
+	;	ELSEIF SAVESTR:現在位置 == "部室"
+	;		IF !CEVENT("LOVORG同行中",TARGET)
+	;			SIF CFLAG:做爱部部员等级 >= 1
+	;				STR:選択肢 += "[2]发送短信/[3]打电话/"
+	;			SIF CFLAG:做爱部部员等级 >= 2
+	;				STR:選択肢 += "[4]打电话给部长/"
+	;			SIF CFLAG:做爱部部员等级 >= 3
+	;				STR:選択肢 += "[5]观看直播摄像头/"
+	;			STR:選択肢 += "[7]独自前往/"
+	;			SIF CFLAG:做爱部部员等级 >= 3 && CEVENT("做爱部邀请",TARGET)
+	;				STR:選択肢 += "爱心粉紅/[6]受邀前往做爱部/"
+	;			STR:選択肢 += "改行/"
+	;			SIF	CEVENT("部员等级限制",TARGET)
+	;				STR:選択肢 += "[21]解除同伴等级限制/"
+	;			SIF	CEVENT("部员等级限制",ASSI)
+	;				STR:選択肢 += "[22]解除助手等级限制/"
+	;			SIF CEVENT("LOVORG同行中",ASSI) && CFLAG:ASSI:做爱部部员等级 >= 1
+	;				STR:選択肢 += "[50]让助手独自去/"
+	;			STR:選択肢 += "[15]电话和同伴交流/"
+	;			STR:選択肢 += "改行/DRAWLINE/"
+	;		ELSE
+	;			STR:選択肢 += "改行/"
+	;			SIF	CEVENT("部员等级限制",TARGET)
+	;				STR:選択肢 += "[21]解除同伴等级限制/"
+	;			SIF	CEVENT("部员等级限制",ASSI)
+	;				STR:選択肢 += "[22]解除助手等级限制/"
+	;			STR:選択肢 += "[0]一起去做爱部/"
+	;			SIF CFLAG:做爱部部员等级 >= 1
+	;				STR:選択肢 += "[1]让她独自去/"
+	;			SIF CEVENT("LOVORG同行中",ASSI) && CFLAG:ASSI:做爱部部员等级 >= 1
+	;				STR:選択肢 += "[50]让助手独自去/"
+	;			STR:選択肢 += "改行/改行/DRAWLINE/"
+	;		ENDIF
+	;		STR:選択肢 += "[100]返回部室/"
+	;	ENDIF
+	;ENDIF
+	;----TEST----
+	STR:選択肢 += "改行/DRAWLINE/"
+	; STR:選択肢 += "[91]同伴等级设置/"
+	;SIF CEVENT("助手LOVORG前往",ASSI)
+	;	STR:選択肢 += "[92]助手等级设置/"
+	;SIF CFLAG:做爱部部员等级 == 4
+	;---------------------
+	CALL SELECT_BAN
+	VARSET LOCALS
+	SPLIT STR:選択肢, "/", LOCALS
+	NEXT_LINE = 0
+	FOR LCOUNT, 0, 100
+		;まずは色だけチェック
+		SELECTCASE LOCALS:LCOUNT
+		CASE "灰色", "水色", "爱心粉紅", "青", "緑", "緑色", "黄色"
+			;すでに指定色になっている場合は色変換を止める
+			IF GETCOLOR() != DEF_COLOR(LOCALS:LCOUNT)
+				SETCOLOR DEF_COLOR(LOCALS:LCOUNT)
+				CONTINUE
+			ENDIF
+		ENDSELECT
+
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASE "太字"
+			FONTSTYLE 1
+			CONTINUE
+		CASE "改行"
+			SIF NEXT_LINE%5
+				PRINTL 
+			NEXT_LINE = 0
+			CONTINUE
+		CASE "DRAWLINE"
+			IF NEXT_LINE%5
+				NEXT_LINE = 0
+				PRINTL 
+			ENDIF
+			DRAWLINE
+			CONTINUE
+		ENDSELECT
+
+		;太字にした？
+		IF GETBIT(GETSTYLE(), 0)
+			SELECTCASE LOCALS:LCOUNT
+			CASE "NOBUTTON"
+				PRINTPLAINFORM %TEXT_LJ("", 21)%
+			CASEELSE
+				PRINTFORM %TEXT_LJ(LOCALS:LCOUNT, 21)%
+			ENDSELECT
+		ELSE
+			SELECTCASE LOCALS:LCOUNT
+			CASE "NOBUTTON"
+				PRINTPLAINFORM %TEXT_LJ("", 24)%
+			CASEELSE
+				PRINTFORM %TEXT_LJ(LOCALS:LCOUNT, 24)%
+			ENDSELECT
+		ENDIF
+		FONTREGULAR
+		RESETCOLOR
+
+		NEXT_LINE += 1
+		SIF NEXT_LINE%5 == 0
+			PRINTL 
+	NEXT
+
+;此函数用于检查输入人员有没有达到升级标准
+@EVENT_LOVEORG_CHECK, ARG
+#DIMS MSG
+IF CFLAG:ARG:做爱部部员等级 == 1
+	IF CEVENT("做爱部成员",ARG) && CFLAG:ARG:做爱部部活参加次数 >= 3
+		; IF CFLAG:做爱部测试 == 1
+		PRINTFORMW %CALLNAME:ARG%的部员等级似乎可以提升了
+		CALL PRINT_SELECT, "保持现状/允许提升"
+		IF RESULT == 0
+			PRINTFORMW %CALLNAME:ARG%的等级将会维持现状、如果想提升、请下次来做爱部后执行[解除限制]指令
+			CALL SET_CEVENT("部员等级限制",ARG)
+		ELSE
+			PRINTFORMW 在多次参加做爱部的活动并观摩后、%CALLNAME:ARG%的部员等级提高了
+			PRINTFORMW 现在的%CALLNAME:ARG%将不在抗拒来自其他部员的 接吻、爱抚等行为
+			PRINTFORMW 并且也会参与部门发起、或部员提出的口交请求
+			PRINTFORMW 功能解禁： 【打电话给部长】
+			; 【隐奸PLAY】
+			CFLAG:ARG:做爱部部员等级 = 2
+			IF CEVENT("入部欢迎会",ARG) == 0 && CEVENT("LOVORG同行中",ARG)
+				DRAWLINE
+				PRINTFORMW 「入部欢迎会？」
+				PRINTFORMW 与你同行的%CALLNAME:ARG%似乎收到了来自部门的短信
+				PRINTFORMW 在与你道歉后、再次独自前往了做爱部
+				PRINTFORMW ....
+				CFLAG:307 +=  (12+RAND:6)
+				CFLAG:322 +=  (5+RAND:5)
+				CFLAG:321 +=  (2+RAND:3)
+				CALL SET_CEVENT("入部欢迎会",ARG)
+				CFLAG:ARG:入室までの所要時間 += 10
+			ELSEIF CEVENT("入部欢迎会",ARG) == 0
+				DRAWLINE
+				PRINTFORMW 过了一会收到了来自%CALLNAME:ARG%的短信
+				MSG = @"%CNAME("主人")%、部里的大家要给我举办欢迎会/可能要晚一些才能回去"
+				CALL LOVEORG_TEL_MESSAGE(ARG,MSG)
+				PRINTFORMW ....
+				CFLAG:307 +=  (12+RAND:6)
+				CFLAG:322 +=  (5+RAND:5)
+				CFLAG:321 +=  (2+RAND:3)
+				CALL SET_CEVENT("入部欢迎会",ARG)
+				CFLAG:ARG:入室までの所要時間 += 5
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF CFLAG:ARG:做爱部部员等级 == 2
+	IF CEVENT("做爱部成员",ARG) && CFLAG:ARG:做爱部部活参加次数 >= 5 && TALENT:ARG:処女 == 0 && TALENT:ARG:淫乱 ;&& CFLAG:ARG:做爱部本番次数>=10
+	; IF CFLAG:做爱部测试 == 2
+	PRINTFORMW %CALLNAME:ARG%的部员等级似乎可以提升了
+		CALL PRINT_SELECT, "保持现状/允许提升"
+		IF RESULT == 0
+			PRINTFORMW %CALLNAME:ARG%的等级将会维持现状、如果想提升、请下次来做爱部后执行[解除限制]指令
+			CALL SET_CEVENT("部员等级限制",ARG)
+		ELSE
+			PRINTFORMW 在与部员多次的爱抚与接吻当中、感到了与他人亲密接触的快乐
+			PRINTFORMW 并在多次的口交后逐渐觉醒了精液与侍奉的嗜好、
+			PRINTFORMW %CALLNAME:ARG%的部员等级提高了
+			PRINTFORMW 现在的%CALLNAME:ARG%将可以接受跟其他部员进行戴套性交、肛交、拍摄
+			PRINTFORMW 同时、做爱部也开发了一些特殊play、原有功能也多出了部分差分
+			PRINTFORMW 功能解禁： 【观看直播摄像头】【浇汁室】
+			CFLAG:ARG:做爱部部员等级 = 3
+		ENDIF
+	ELSEIF CEVENT("做爱部成员",ARG) && CFLAG:ARG:做爱部部活参加次数 >= 5
+		PRINTFORMW 想达到下个部员等级、需要达成[淫乱]以及[非处女]特性...
+	ENDIF
+ELSEIF CFLAG:ARG:做爱部部员等级 == 3
+	IF CEVENT("做爱部成员",ARG) && CFLAG:ARG:做爱部部活参加次数 >= 10  && TALENT:ARG:贞操重视 == 0 && TALENT:ARG:淫乱 && CFLAG:ARG:做爱部本番次数>=3 && CFLAG:ARG:做爱部口交次数>=8
+	; IF CFLAG:做爱部测试 == 3
+	PRINTFORMW %CALLNAME:ARG%的部员等级似乎可以提升了
+		CALL PRINT_SELECT, "保持现状/允许提升"
+		IF RESULT == 0
+			PRINTFORMW %CALLNAME:ARG%的等级将会维持现状、如果想提升、请下次来做爱部后执行[解除限制]指令
+			CALL SET_CEVENT("部员等级限制",ARG)
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%在已经沉醉于与部员们的性交当中
+			PRINTFORMW %CALLNAME:ARG%的部员等级已达到 【资深部员】
+			PRINTFORMW 现在的%CALLNAME:ARG%将可以接受跟任何人发生性行为
+			PRINTFORMW 并且将会参加部门组织的联谊与乱交活动
+			CFLAG:ARG:做爱部部员等级 = 4
+		ENDIF
+	ELSEIF CEVENT("做爱部成员",ARG) && CFLAG:ARG:做爱部部活参加次数 >= 10 && TALENT:ARG:淫乱 && CFLAG:ARG:做爱部本番次数>=3 && CFLAG:ARG:做爱部口交次数>=8;&& CFLAG:ARG:做爱部本番次数>=20
+		PRINTFORMW %CALLNAME:ARG%的内心抗拒着、重视贞操的她这已经是能为你做到的极限了
+		PRINTFORMW 由于贞操重视的影响、%CALLNAME:ARG%将不会进入下一个部员等级
+	ELSE
+		PRINTFORMW 想要%CALLNAME:ARG%提升做爱部等级、需要在部活中 口交>8次 本番>3次
+	ENDIF
+ENDIF
+
+;此函数用于显示TARGET和ASSI的UI，待修改
+@EVENT_LOVEORG_MEM_SHOW, ARG
+	;IF CEVENT("LOVORG同行中",TARGET)
+	PRINTFORM %CALLNAME:ARG%
+	PRINTFORM 做爱部入部状态	
+	IF CEVENT("做爱部成员",ARG)
+		CALL PRINT_STRL, @"爱心粉紅_[已入部]"
+	ELSE
+		CALL PRINT_STRL, @"灰色_[未入部]_L"
+	ENDIF
+	PRINTFORM 做爱部成员等级	:	{CFLAG:ARG:做爱部部员等级}LV
+	IF CEVENT("部员等级限制",ARG)
+		CALL PRINT_STRL, @"水色_(锁定)"
+	ELSE
+		PRINTFORML
+	ENDIF
+	SELECTCASE  CFLAG:ARG:做爱部部员等级	
+		CASE 1
+			CALL PRINT_STR, @"黄色_[见习部员]"
+			PRINTFORML 可以自由出入部门的房间与设施、观摩部门进行的各种活动
+		CASE 2
+			CALL PRINT_STR, @"青_[初级部员]"
+			PRINTFORML 可以接受部员提出的爱抚、接吻等邀请、可以参与部门进行的口交活动
+		CASE 3
+			CALL PRINT_STR, @"緑_[高级部员]"
+			PRINTFORML 会与部员进行戴套性交、肛交等行为、以及部分特殊PLAY
+		CASE 4
+			CALL PRINT_STR, @"爱心粉紅_[资深部员]"
+			PRINTFORML 可以参与部门中的所有活动、以及与其他部门的联谊或乱交活动
+		CASE 0
+		CASEELSE
+			PRINTFORML 部员等级超出范围1~4
+	ENDSELECT
+	PRINTFORML
+	IF TCVAR:ARG:做爱部活动标签>0
+		PRINTFORM %CALLNAME:ARG%现在身上的标签为: 
+		IF TCVAR:ARG:做爱部活动标签 == 1
+			CALL PRINT_STR, @"爱心粉紅_[拥抱允许]"
+		ELSEIF TCVAR:ARG:做爱部活动标签 == 2
+			CALL PRINT_STR, @"爱心粉紅_[爱抚允许]"
+		ELSEIF TCVAR:ARG:做爱部活动标签 == 3
+			CALL PRINT_STR, @"爱心粉紅_[亲吻允许]"
+		ELSEIF TCVAR:ARG:做爱部活动标签 == 4
+			CALL PRINT_STR, @"爱心粉紅_[侍奉允许]"
+		ELSEIF TCVAR:ARG:做爱部活动标签 == 5
+			CALL PRINT_STR, @"爱心粉紅_[性交允许]"
+		ENDIF
+		PRINTFORML
+	ENDIF
+
+@EVENT_LOVEORG_MEM_SHOW_NEW, ARG
+	#DIM GAP
+	#DIM TELEPHONE_MASTER
+	#DIM SUM
+	SIF ARG == TARGET
+		SETCOLOR DEF_COLOR("黄色")
+	PRINTFORM %TEXT_LJ(NAME:ARG, 15)%
+	RESETCOLOR
+	PRINTFORM 做爱部入部状态	
+	IF CEVENT("做爱部成员",ARG)
+		CALL PRINT_STR, @"爱心粉紅_[已入部]"
+	ELSE
+		PRINTFORM 做爱部入部状态
+		CALL PRINT_STR, @"灰色_[未入部]_L"
+	ENDIF
+	PRINTFORM %TEXT_LJ("", 5)%
+	PRINTFORM 做爱部成员等级	:	{CFLAG:ARG:做爱部部员等级}LV
+	PRINTFORM %TEXT_LJ("", 5)%
+		GAP = 0
+		SELECTCASE CFLAG:ARG:做爱部部员等级
+			CASE 1
+				SUM = 3
+				IF CFLAG:ARG:做爱部部活参加次数 > 3
+					GAP += 0
+				ELSE
+					GAP += 3 - CFLAG:ARG:做爱部部活参加次数
+				ENDIF
+			CASE 2
+				SUM = 5
+				IF CFLAG:ARG:做爱部部活参加次数 > 5
+					GAP += 0
+				ELSE
+					GAP += 5 - CFLAG:ARG:做爱部部活参加次数
+				ENDIF
+			CASE 3
+				SUM = 13
+				IF CFLAG:ARG:做爱部部活参加次数 > 10
+					GAP += 0
+				ELSE
+					GAP += 10 - CFLAG:ARG:做爱部部活参加次数
+				ENDIF
+				IF CFLAG:ARG:做爱部本番次数 > 3
+					GAP += 0
+				ELSE
+					GAP += 3 - CFLAG:ARG:做爱部本番次数
+				ENDIF
+			CASE 4
+				SUM = 1
+				GAP = 0
+		ENDSELECT
+	SIF CEVENT("做爱部成员",TARGET)
+		CALL PRINT_BAR, "欲求ゲージ", SUM-GAP, SUM, 20
+	IF CEVENT("部员等级限制",ARG)
+		CALL PRINT_STRL, @"水色_(锁定)"
+	ELSE
+		PRINTFORML
+	ENDIF
+	SELECTCASE  CFLAG:ARG:做爱部部员等级	
+		CASE 1
+			CALL PRINT_STR, @"黄色_[见习部员]"
+			PRINTFORML 可以自由出入部门的房间与设施、观摩部门进行的各种活动
+		CASE 2
+			CALL PRINT_STR, @"青_[初级部员]"
+			PRINTFORML 可以接受部员提出的爱抚、接吻等邀请、可以参与部门进行的口交活动
+		CASE 3
+			CALL PRINT_STR, @"緑_[高级部员]"
+			PRINTFORML 会与部员进行戴套性交、肛交等行为、以及部分特殊PLAY
+		CASE 4
+			CALL PRINT_STR, @"爱心粉紅_[资深部员]"
+			PRINTFORML 可以参与部门中的所有活动、以及与其他部门的联谊或乱交活动
+		CASE 0
+		CASEELSE
+			PRINTFORML 部员等级超出范围1~4
+	ENDSELECT
+	;PRINTFORML
+	IF TCVAR:ARG:做爱部活动标签>0
+		PRINTFORM %CALLNAME:ARG%现在身上的标签为: 
+		IF TCVAR:ARG:做爱部活动标签 == 1
+			CALL PRINT_STR, @"爱心粉紅_[拥抱允许]"
+		ELSEIF TCVAR:ARG:做爱部活动标签 == 2
+			CALL PRINT_STR, @"爱心粉紅_[爱抚允许]"
+		ELSEIF TCVAR:ARG:做爱部活动标签 == 3
+			CALL PRINT_STR, @"爱心粉紅_[亲吻允许]"
+		ELSEIF TCVAR:ARG:做爱部活动标签 == 4
+			CALL PRINT_STR, @"爱心粉紅_[侍奉允许]"
+		ELSEIF TCVAR:ARG:做爱部活动标签 == 5
+			CALL PRINT_STR, @"爱心粉紅_[性交允许]"
+		ENDIF
+		PRINTFORML
+	ENDIF
+	PRINTFORML
+;此函数用于触发ASSI动作
+@LOVEORG_ASSI_ACTION
+	#DIMS CHOICE
+		;SIF CEVENT("LOVORG同行中",ASSI)
+		;	PRINTFORMW ---此时%CALLNAME:ASSI%与%CALLNAME:MASTER%在一起---
+		;SIF CEVENT("二人LOVORG同行中",ASSI)
+		;	PRINTFORMW ---此时%CALLNAME:ASSI%与%CALLNAME:TARGET%在一起---
+	;ASSI既没有和TARGET也没有和MASTER时
+	IF CEVENT("LOVORG同行中",ASSI) == 0 && CEVENT("二人LOVORG同行中",ASSI) == 0
+		;PRINTFORML 
+		;PRINTFORML ---开始触发%CALLNAME:ASSI%自由活动---
+		CHOICE = %LOVEORG_ASSI_ACTION_CHOICE()%
+		CALL LOVEORG_ASSI_ACTION_STR, CHOICE
+		CALL LOVEORG_ASSI_ACTION_EXP, CHOICE
+		;ASSI与TARGET都单独行动时随机判定她们是否会和
+		IF CEVENT("LOVORG同行中",TARGET) == 0
+			IF	RAND:5 == 0
+				PRINTFORMW %CALLNAME:ASSI%和%CALLNAME:TARGET%会和了
+				CALL SET_CEVENT("二人LOVORG同行中",ASSI)
+				;如果会和时TARGET也和MASTER在一起
+				SIF CEVENT("LOVORG同行中",TARGET)
+					CALL SET_CEVENT("LOVORG同行中",ASSI)
+			ENDIF
+		ENDIF
+	;ASSI和TARGET一起自由活动
+	ELSEIF CEVENT("LOVORG同行中",ASSI) == 0 && CEVENT("LOVORG同行中",TARGET) == 0 && CEVENT("二人LOVORG同行中",ASSI)
+		;随机只对ASSI发生事件，两人因此分开
+		IF 0;RAND:3 == 0
+			PRINTFORMW 部员邀请%CALLNAME:ASSI%一起参加活动/%CALLNAME:ASSI%被部员叫走了
+			CHOICE = %LOVEORG_ASSI_ACTION_CHOICE()%
+			CALL LOVEORG_ASSI_ACTION_STR, CHOICE
+			CALL LOVEORG_ASSI_ACTION_EXP, CHOICE
+			CALL DEL_CEVENT("二人LOVORG同行中",ASSI)
+			;SIF CEVENT("二人LOVORG同行中",ASSI) == 0
+				;PRINTFORMW %CALLNAME:ASSI%已经和%CALLNAME:TARGET%分开了
+		;随机发生ASSI和TARGET共同事件，两人没有分开
+		ELSE
+			PRINTFORMW %CALLNAME:ASSI%和%CALLNAME:TARGET%被部员一起邀请参加活动
+			CHOICE = %LOVEORG_ASSI_TARGET_CHOICE()%
+			CALL LOVEORG_ASSI_TARGET_STR, CHOICE
+			CALL LOVEORG_ASSI_TARGET_EXP, CHOICE
+			;SIF CEVENT("二人LOVORG同行中",ASSI) == 1
+			;	PRINTFORMW %CALLNAME:ASSI%没有和%CALLNAME:TARGET%分开
+		ENDIF
+	;ASSI和TARGET一起时不触发ASSI活动
+	ELSE
+	ENDIF
+	CALL LOVEORG_ASSI_WITH_TARGET
+
+
+;此函数用于更新三人同行时的事件
+@LOVEORG_ASSI_WITH_TARGET
+	IF CEVENT("LOVORG同行中",ASSI) && CEVENT("LOVORG同行中",TARGET)
+		CALL SET_CEVENT("二人LOVORG同行中",ASSI)
+	ELSEIF CEVENT("LOVORG同行中",TARGET) && CEVENT("二人LOVORG同行中",ASSI)
+		CALL SET_CEVENT("LOVORG同行中",ASSI)
+	ENDIF
+
+
+
+;此函数输入ASSI行动的play，显示对应文本
+;新添加的PLAY要在 @LOVEORG_ASSI_ACTION_EXP 中添加经验更新命令；在 @LOVEORG_ASSI_ACTION_CHOICE 中添加选择play语句
+@LOVEORG_ASSI_ACTION_STR, ARGS
+	PRINTFORMW %CALLNAME:ASSI%在自由活动时
+	SELECTCASE ARGS	
+		CASE "非工口"
+			PRINTFORMW 没有发生工口事件
+		CASE "口交"
+			PRINTFORMW 用嘴巴侍奉了部员的肉棒/细心的帮部员进行了口交
+		CASE "口内射精"
+			PRINTFORMW 帮部员口交、并当着部员的面将射出的新鲜精子吞入口中
+		CASE "爱抚"
+			PRINTFORMW 与部员脱光衣服、在更衣室/休息室/房间中/走廊中 互相爱抚
+		CASE "接吻"
+			PRINTFORMW 与部员在更衣室/休息室/房间中/走廊中 如同恋人般/舌头纠缠着/浓密地接吻了
+		CASE "乳交"
+			PRINTFORMW 用%OBAI_DECRIPTION()%帮部员进行了乳交
+		CASE "带套性交"
+			PRINTFORMW 用小穴迎接了部员的戴套肉棒
+		CASE "肛交"
+			PRINTFORMW 与部员发生了肛交
+		CASE "肛内生中出"
+			PRINTFORMW 与部员发生了肛内生中出
+		CASE "无套性交"
+			PRINTFORMW 与部员在更衣室/休息室/房间中 尽情享受了无套性交的快乐/如同夫妇般在没有避孕套的情况下、充分享受了彼此的身体
+		CASE "腔内生中出"
+			PRINTFORMW 与部员充分的享受了性交后、在强烈的高潮中、被部员浓郁的精子直接灌入小穴深处
+		CASE "精浴"
+			PRINTFORMW 浑身赤裸地被几位部员围在中间、脸上、头发上、身体上都被浇上了新鲜的精液
+		CASE "乱交"
+			PRINTFORMW 与许多部员一起、在部门最深处的房间中、进行了淫靡且淫乱的乱交活动
+	ENDSELECT
+
+;此函数输入ASSI行动时的PLAY，并更新ASSI对应经验
+;新添加的PLAY要在 @LOVEORG_ASSI_ACTION_STR 中添加对应文本输出；在 @LOVEORG_ASSI_ACTION_CHOICE 中添加选择play语句
+@LOVEORG_ASSI_ACTION_EXP, ARGS
+	SELECTCASE ARGS	
+		CASE "非工口"
+		CASE "口交"
+			CFLAG:ASSI:做爱部口交次数 += 1
+		CASE "口内射精"
+			CFLAG:ASSI:做爱部口交次数 += 1
+			CFLAG:ASSI:做爱部口内射精次数 += 1
+		CASE "爱抚"
+			CFLAG:ASSI:做爱部爱抚次数 += 1
+		CASE "接吻"
+			CFLAG:ASSI:做爱部接吻次数 += 1
+		CASE "乳交"
+			CFLAG:ASSI:做爱部乳交次数 += 1
+		CASE "带套性交"
+			CFLAG:ASSI:做爱部本番次数 += 1
+		CASE "肛交"
+			CFLAG:ASSI:做爱部肛交次数 += 1
+		CASE "肛内生中出"
+			CFLAG:ASSI:做爱部肛交次数 += 1
+			CFLAG:ASSI:做爱部肛内生中出次数 += 1
+		CASE "无套性交"
+			CFLAG:ASSI:做爱部本番次数 += 1
+		CASE "腔内生中出"
+			CFLAG:ASSI:做爱部本番次数 += 1
+			CFLAG:ASSI:做爱部腔内生中出次数 += 1
+		CASE "精浴"
+			CFLAG:ASSI:做爱部口内射精次数 += 1
+			CFLAG:ASSI:做爱部精浴次数 += 1
+		CASE "乱交"
+			CFLAG:ASSI:做爱部联谊乱交次数 += 1
+	ENDSELECT
+
+;此函数用于生成ASSI的具体行动，自定义判定方式，输出PLAY的字符串
+;新添加的PLAY要在 @LOVEORG_ASSI_ACTION_STR 中添加对应文本输出；在 @LOVEORG_ASSI_ACTION_EXP 中添加经验更新命令
+@LOVEORG_ASSI_ACTION_CHOICE
+	#FUNCTIONS
+	#DIMS CHOICE
+	CHOICE = 非工口
+	SELECTCASE CFLAG:ASSI:做爱部部员等级
+		CASE 1
+
+		CASE 2
+			SELECTCASE RAND:5
+			CASE 0
+				CHOICE = 口交
+			CASE 1
+				CHOICE = 口内射精
+			CASE 2
+				CHOICE = 爱抚
+			CASE 3
+				CHOICE = 接吻
+			CASE 4
+				CHOICE = 乳交
+			ENDSELECT
+		CASE 3
+			SELECTCASE RAND:8
+			CASE 1
+				CHOICE = 口交
+			CASE 2
+				CHOICE = 口内射精
+			CASE 3
+				CHOICE = 爱抚
+			CASE 4
+				CHOICE = 接吻
+			CASE 5
+				CHOICE = 乳交
+			CASE 6
+				CHOICE = 带套性交
+			CASE 7
+				CHOICE = 肛交
+			CASE 0
+				CHOICE = 肛内生中出
+			;特殊PLAY后续添加
+			ENDSELECT
+		CASE 4
+			SELECTCASE RAND:11
+			CASE 0
+				CHOICE = 口交
+			CASE 1
+				CHOICE = 口内射精
+			CASE 2
+				CHOICE = 爱抚
+			CASE 3
+				CHOICE = 接吻
+			CASE 4
+				CHOICE = 乳交
+			CASE 5
+				CHOICE = 带套性交
+			CASE 6
+				CHOICE = 肛交
+			CASE 7
+				CHOICE = 肛内生中出
+			CASE 8
+				CHOICE = 无套性交
+			CASE 9
+				CHOICE = 腔内生中出
+			CASE 10
+				CHOICE = 精浴
+			CASE 11
+				CHOICE = 乱交
+			ENDSELECT
+	ENDSELECT
+	RETURNF CHOICE
+
+@LOVEORG_ASSI_TARGET_CHOICE
+	#FUNCTIONS
+	#DIMS CHOICE
+	CHOICE = 非工口
+	SELECTCASE CFLAG:ASSI:做爱部部员等级
+		CASE 1
+		CASE 2
+			SELECTCASE RAND:5
+			CASE 0
+				CHOICE = 口交
+			CASE 1
+				CHOICE = 口内射精
+			CASE 2
+				CHOICE = 爱抚
+			CASE 3
+				CHOICE = 接吻
+			CASE 4
+				CHOICE = 乳交
+			ENDSELECT
+		CASE 3
+			SELECTCASE RAND:8
+			CASE 1
+				CHOICE = 口交
+			CASE 2
+				CHOICE = 口内射精
+			CASE 3
+				CHOICE = 爱抚
+			CASE 4
+				CHOICE = 接吻
+			CASE 5
+				CHOICE = 乳交
+			CASE 6
+				CHOICE = 带套性交
+			CASE 7
+				CHOICE = 肛交
+			CASE 0
+				CHOICE = 肛内生中出
+			;特殊PLAY后续添加
+			ENDSELECT
+		CASE 4
+			SELECTCASE RAND:11
+			CASE 0
+				CHOICE = 口交
+			CASE 1
+				CHOICE = 口内射精
+			CASE 2
+				CHOICE = 爱抚
+			CASE 3
+				CHOICE = 接吻
+			CASE 4
+				CHOICE = 乳交
+			CASE 5
+				CHOICE = 带套性交
+			CASE 6
+				CHOICE = 肛交
+			CASE 7
+				CHOICE = 肛内生中出
+			CASE 8
+				CHOICE = 无套性交
+			CASE 9
+				CHOICE = 腔内生中出
+			CASE 10
+				CHOICE = 精浴
+			CASE 11
+				CHOICE = 乱交
+			ENDSELECT
+	ENDSELECT
+	RETURNF CHOICE
+
+@LOVEORG_ASSI_TARGET_EXP, ARGS
+	SELECTCASE ARGS	
+		CASE "非工口"
+		CASE "口交"
+			CFLAG:ASSI:做爱部口交次数 += 1
+			CFLAG:TARGET:做爱部口交次数 += 1
+		CASE "口内射精"
+			CFLAG:ASSI:做爱部口交次数 += 1
+			CFLAG:ASSI:做爱部口内射精次数 += 1
+			CFLAG:TARGET:做爱部口交次数 += 1
+			CFLAG:TARGET:做爱部口内射精次数 += 1
+		CASE "爱抚"
+			CFLAG:ASSI:做爱部爱抚次数 += 1
+			CFLAG:TARGET:做爱部爱抚次数 += 1
+		CASE "接吻"
+			CFLAG:ASSI:做爱部接吻次数 += 1
+			CFLAG:TARGET:做爱部接吻次数 += 1
+		CASE "乳交"
+			CFLAG:ASSI:做爱部乳交次数 += 1
+			CFLAG:TARGET:做爱部乳交次数 += 1
+		CASE "带套性交"
+			CFLAG:ASSI:做爱部本番次数 += 1
+			CFLAG:TARGET:做爱部本番次数 += 1
+		CASE "肛交"
+			CFLAG:ASSI:做爱部肛交次数 += 1
+			CFLAG:TARGET:做爱部肛交次数 += 1
+		CASE "肛内生中出"
+			CFLAG:ASSI:做爱部肛交次数 += 1
+			CFLAG:ASSI:做爱部肛内生中出次数 += 1
+			CFLAG:TARGET:做爱部肛交次数 += 1
+			CFLAG:TARGET:做爱部肛内生中出次数 += 1
+		CASE "无套性交"
+			CFLAG:ASSI:做爱部本番次数 += 1
+			CFLAG:TARGET:做爱部本番次数 += 1
+		CASE "腔内生中出"
+			CFLAG:ASSI:做爱部本番次数 += 1
+			CFLAG:ASSI:做爱部腔内生中出次数 += 1
+			CFLAG:TARGET:做爱部本番次数 += 1
+			CFLAG:TARGET:做爱部腔内生中出次数 += 1
+		CASE "精浴"
+			CFLAG:ASSI:做爱部口内射精次数 += 1
+			CFLAG:ASSI:做爱部精浴次数 += 1
+			CFLAG:TARGET:做爱部口内射精次数 += 1
+			CFLAG:TARGET:做爱部精浴次数 += 1
+		CASE "乱交"
+			CFLAG:ASSI:做爱部联谊乱交次数 += 1
+			CFLAG:TARGET:做爱部联谊乱交次数 += 1
+	ENDSELECT
+
+@LOVEORG_ASSI_TARGET_STR, ARGS
+	SELECTCASE ARGS	
+		CASE "非工口"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时没有发生工口事件
+		CASE "口交"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了口交
+		CASE "口内射精"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了口内射精
+		CASE "爱抚"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了爱抚
+		CASE "接吻"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了接吻
+		CASE "乳交"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了乳交
+		CASE "带套性交"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了带套性交
+		CASE "肛交"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了肛交
+		CASE "肛内生中出"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了肛内生中出
+		CASE "无套性交"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了无套性交
+		CASE "腔内生中出"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了腔内生中出
+		CASE "精浴"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了精浴
+		CASE "乱交"
+			PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%在自由活动时与部员发生了乱交
+	ENDSELECT
+
+@LOVEORG_SHOW_MAIN
+	;CASE "TEST"
+	; CALL PRINT_CUTIN, "受精", TARGET
+	; CALL PRINT_STRFW, @"UH_%CALLNAME:TARGET%被别的男人的精子受精了_UH"
+	; CSTR:TARGET:現在位置 = "做爱部"
+	;SAVESTR:TARGET:現在位置 = 公園
+	CFLAG:TARGET:入室までの所要時間 += 5
+	; CFLAG:TARGET:不在 = 1
+	; CALL USERSHOP_PRE, 1
+	VARSET TARGET
+	; TARGET = FIND_COND("現在存在")
+	; CALL SETFLAG, "対象指定", 1
+	; CALL RESET_PARTNER
+	TARGET = FIND_COND("現在存在")
+	PRINTFORMW 现在的对象是：%CALLNAME:TARGET%
+	;話し相手をpartnerにする
+	; CALL RESET_SET_PARTNER, FINDCHARA(CFLAG:交流中, 2, 2)
+
+	; CALL PRINT_MAIDFACE, TARGET, PARTNER()
+	; CALL RESET_SET_PARTNER, TARGET
+	; CALL SET_PARTNER, TARGET
+	; VARSET ACTOR
+
+
+
+;番号查询
+@LOVEORG_EVENT(ARG,ARGS)
+#DIM ACTOR
+#DIMS MSG
+#DIMS MSGS
+
+PRINTFORML 
+PRINTFORML 
+PRINTFORML
+PRINTFORML
+SELECTCASE ARG
+	; CASE "让她独自去"/让同伴在做爱部自由活动
+	CASE 1
+		IF SAVESTR:現在位置 == "部室"
+			PRINTFORMW 你让%CALLNAME:TARGET%独自前往做爱部
+			IF CFLAG:做爱部部员等级 == 1
+				PRINTFORMW 「只是去看看的话」
+			ELSEIF CFLAG:做爱部部员等级 == 2
+				PRINTFORMW 「一个人过去吗」
+			ELSEIF CFLAG:做爱部部员等级 == 3
+				PRINTFORMW 「%CNAME("主人")%喜欢这样吗——」
+				PRINTFORMW 「%CNAME("一人称")%、也不讨厌啦」
+			ELSEIF CFLAG:做爱部部员等级 == 4
+				CALL PRINT_STRW, @"「%CNAME("主人")%、那%CNAME("一人称")%出发了哦_HH_」"
+			ENDIF
+			;CALL DEL_CEVENT("LOVORG同行中",TARGET)
+		ELSEIF SAVESTR:現在位置 == "做爱部"
+			PRINTFORMW 你让%CALLNAME:TARGET%在做爱部中自由活动
+		ELSE 
+			PRINTFORMW 现在位置参数错误
+			PRINTFORMW 去除%CALLNAME:TARGET%同行事件失败
+			RETURN 0
+		ENDIF
+		CALL DEL_CEVENT("LOVORG同行中",TARGET)
+		SIF CEVENT("二人LOVORG同行中",ASSI)
+			CALL DEL_CEVENT("二人LOVORG同行中",ASSI)
+
+	; CASE "一起去做爱部"
+	CASE 0
+		SAVESTR:現在位置 = 做爱部
+		IF CEVENT("初识做爱部",MASTER) == 0
+			;初次
+			PRINTFORMW 你跟%CALLNAME:TARGET%在学校中散步
+			PRINTFORMW 在途经一片林荫间，偶然发现了一张已经破破烂烂的社团招新海报
+			PRINTFORMW 「做爱部？」
+			PRINTFORMW 「%CNAME("一人称")%们学校还有这种部门？」
+			PRINTFORMW 海报已模糊不堪，能够勉强辨认出部室地址似乎在演艺楼二或三楼
+			PRINTFORMW 出于好奇，你决定与%CALLNAME:TARGET%前往做爱部一探究竟
+			PRINTFORMW 
+			PRINTFORMW 
+			PRINTFORMW 来到演艺楼二楼的一处拐角，一个不起眼的房间，右侧挂着『做⬤部』的牌子
+			PRINTFORMW 似乎是这里没错...
+			PRINTFORMW 
+			PRINTFORMW 『请进...』
+			PRINTFORMW 敲门进入房间，房间倒是平平无奇，跟普通的部室没太多区别
+			PRINTFORMW 只是靠墙的柜子被一块亚麻色的布挡住，看不到里面
+			PRINTFORMW 部室里，一个大叔模样却穿着校服的人正紧盯着电脑
+			PRINTFORMW 『抱歉，%CNAME("一人称")%们这边已经不招新人了...』
+			PRINTFORMW 大叔抬起头看向这边，在%CALLNAME:TARGET%的脸上停顿了几秒
+			PRINTFORMW 『啊————，不，%CNAME("一人称")%们还招人的』
+			IF COND("教員")
+				PRINTFORMW 『这位同学，还有这位老师————』
+				IF TALENT:母親
+					PRINTFORMW 『啊——同时也是母亲吗、这关系可真是不得了呢』
+					PRINTFORMW 『%CNAME("一人称")%们社团也有个迷恋自己母亲的部员、不过他母亲还一直当他是小孩子』
+				ELSE
+					PRINTFORMW 『你们看起来是亲密关系呢』
+				ENDIF
+			ELSEIF TALENT:妹
+				PRINTFORMW 『这位同学，还有这位————』
+				PRINTFORMW 『你的妹妹是吗、真是位美人呢』
+				PRINTFORMW 『有这么漂亮、关系又亲密的妹妹真是令人羡慕——』
+			ELSEIF TALENT:姉
+				PRINTFORMW 『这位同学，还有这位————』
+				PRINTFORMW 『你的姐姐是吗、真是位美人呢』
+				PRINTFORMW 『看的出来、你们姐弟的关系真的很好』
+			ELSE
+				PRINTFORMW 『两位看起来是情侣关系呢』
+			ENDIF	
+
+			PRINTFORMW 『顺带问下，既然你们来到这里、应该知道这是什么部门吧』
+
+			PRINTFORMW 
+			PRINTFORMW 『知道的话就好、就怕误打误撞的过来误解了就不好了』
+			PRINTFORMW 『如你所见、鄙人是这个社团的部长』
+			PRINTFORMW 『社团成立的初衷、也是想帮助学校里性欲过强的男生女生们能够彼此帮助调解』
+			PRINTFORMW 『鉴于你们优秀的资质、%CNAME("一人称")%诚心的邀请你们加入到做爱部里来』
+		ELSE
+			;当前同伴已是做爱部成员
+			IF CEVENT("做爱部成员",TARGET)
+				IF RAND:2 == 0
+					PRINTFORMW 你带着%CALLNAME:TARGET%一起前往了做爱部
+					PRINTFORMW 大叔一如既往的坐在部室中、听到声音后看向了这边
+					PRINTFORMW 『啊——你们过来啦——— 』
+					PRINTFORMW 『玩的愉快』
+				ELSE
+					PRINTFORMW 来到外侧的部室、大叔却意外的却不在这里
+				ENDIF
+			; 当前同伴不是做爱部成员且第一次来
+			ELSEIF CEVENT("初识",TARGET) == 0
+				PRINTFORMW 你带着%CALLNAME:TARGET%一起前往了做爱部
+				PRINTFORMW 
+				PRINTFORMW 『——是你啊、欢迎』
+				PRINTFORMW 『哦呀？』
+				IF COND("教員")
+					PRINTFORMW 『这次带来的是老师吗』
+					IF TALENT:母親
+						PRINTFORMW 『啊——同时也是母亲啊、这关系可真是不得了呢』
+						PRINTFORMW 『%CNAME("一人称")%们社团也有个迷恋自己母亲的部员、不过他母亲还一直当他是小孩子』
+					ELSE
+						PRINTFORMW 『你们看起来也是亲密关系呢』
+					ENDIF
+				ELSEIF TALENT:妹
+					PRINTFORMW 『这位看起来像是低年级的同学呢』
+					PRINTFORMW 『你的妹妹是吗、真是位美人呢』
+					PRINTFORMW 『有这么漂亮、关系又亲密的妹妹真是令人羡慕——』
+				ELSEIF TALENT:姉
+					PRINTFORMW 『这次又是不一样的女性吗』
+					PRINTFORMW 『你的姐姐是吗、真是位美人呢』
+					PRINTFORMW 『看的出来、你们姐弟的关系真的很好』
+				ELSE
+					PRINTFORMW 『这次又是不一样的女性吗』
+					PRINTFORMW 『不过看起来两位也是情侣关系呢』
+				ENDIF	
+
+			; 当前同伴不是做爱部成员，但不是第一次来
+			ELSEIF CEVENT("初识",TARGET)
+				PRINTFORMW 你带着%CALLNAME:TARGET%一起前往了做爱部
+				PRINTFORMW 『又过来了吗、欢迎——』
+				PRINTFORMW 『这次来是想入部的吗』
+			ENDIF
+		ENDIF
+		CALL SET_CEVENT("初识做爱部",MASTER)
+		CALL SET_CEVENT("初识",TARGET)
+
+	; CASE "拒绝加入"
+	CASE 97
+		PRINTFORMW 『好吧——』
+		PRINTFORMW 『可惜————』
+		PRINTFORMW 大叔失落的坐回去
+		PRINTFORMW 『如果改变主意了、请随时来部里找%CNAME("一人称")%——』
+
+	; CASE "加入做爱部"
+	CASE 98
+		IF CEVENT("存在做爱部成员",MASTER) == 0
+			PRINTFORMW 『真的吗！？』
+			PRINTFORMW 『如果想要加入的话、十分欢迎！』
+			PRINTFORMW 『啊————』
+			PRINTFORMW 『不过情侣的话还是要提醒一下』
+			PRINTFORMW 大叔认真地看着你与%CALLNAME:TARGET%
+			PRINTFORMW 『做爱部奉行自由原则，你可以做任何事情、也可以拒绝做任何事、没有人可以强迫你』
+			IF COND("教員")
+				IF TALENT:母親
+					PRINTFORMW 『所以你的母亲也不可避免的会和其他学生发生亲密的行为』
+					PRINTFORMW 『能否接受自己的母亲跟别的学生亲吻、甚至性交』
+				ELSE
+					PRINTFORMW 『所以你的老师也不可避免的会和自己的其他学生发生亲密的行为』
+				ENDIF
+			ELSEIF TALENT:妹
+				PRINTFORMW 『所以你的妹妹也不可避免的会和其他男人发生亲密的行为』
+			ELSEIF TALENT:姉
+				PRINTFORMW 『所以你的姐姐也不可避免的会和其他男人发生亲密的行为』
+			ELSE
+				PRINTFORMW 『所以你的伴侣也不可避免的会和其他人发生亲密的行为』
+			ENDIF
+			PRINTFORMW 『如果同意的话、你们就是部门的一员了』
+			
+		;非第一位伙伴加入做爱部
+		ELSE
+			PRINTFORMW 『嘛——既然你先前已经有伴侣加入了、其他的%CNAME("一人称")%也就不在多问了』
+			PRINTFORMW 『能够接受她跟部里的其他成员做爱的话、她就是部里的一员了』
+		ENDIF
+		CALL PRINT_SELECT, "同意/不同意"
+		IF RESULT == 0
+			PRINTFORMW 『欢迎你们的加入』
+			PRINTFORMW 『接下来、跟着%CNAME("一人称")%进入真正的做爱部吧』
+			PRINTFORMW 大叔将盖住柜子的布掀起，打开柜门，里面是一条不算长的通道
+			PRINTFORMW 随后、领着你与%CALLNAME:TARGET%进入了真正的做爱部
+			CALL SET_CEVENT("做爱部成员",TARGET)
+			CALL SET_CEVENT("存在做爱部成员",MASTER)
+			CFLAG:做爱部部员等级 = 1
+		ELSE
+			IF CEVENT("初次询问加入",MASTER) == 0
+				PRINTFORMW 『好吧、很多人最终也是因为这个拒绝了』
+				PRINTFORMW 『%CNAME("一人称")%可以理解』
+				
+			ELSE
+				IF RAND:2 == 0
+					PRINTFORMW 『改变主意了？』
+					PRINTFORMW 『如果想加入的话、随时都可以』
+				ELSEIF RAND:2 == 0
+					PRINTFORMW 『不同意的话、那%CNAME("一人称")%也没办法了』
+				ELSE
+					PRINTFORMW 『如果不同意的话、就请不要再消遣我了好吗』
+				ENDIF
+			ENDIF
+		ENDIF
+		
+		CALL SET_CEVENT("初次询问加入",MASTER)
+		
+
+	; CASE "参观社团"
+	CASE 8
+		IF CEVENT("参观做爱部") == 0
+			PRINTFORMW 你和%CALLNAME:TARGET%跟着大叔、一同参观了做爱部的部室构造
+			PRINTFORMW 部室规模比想象中要大出很多、几乎有三间教室的大小、被墙壁分割成了大大小小的好几个区域
+			PRINTFORMW 『其实还有不少功能性的房间还没有装好』
+			PRINTFORMW 『不过一周内也差不多可以装完了』
+			CALL SET_CEVENT("参观做爱部")
+		ELSE
+			CALL LOVEORG_TAGGED_VISIT, TARGET
+			SIF CEVENT("LOVORG同行中",ASSI)
+				CALL LOVEORG_TAGGED_VISIT, ASSI
+			;IF TCVAR:做爱部活动标签 > 0
+			;	A = 0
+			;	SELECTCASE TCVAR:做爱部活动标签
+			;	CASE 1
+			;		A = 8
+			;	CASE 2
+			;		A = (1+RAND:2)
+			;	CASE 3
+			;		A = 3
+			;	CASE 4
+			;		A = (5+RAND:2)
+			;	CASE 5
+			;		A = 7
+			;	ENDSELECT
+			;	PRINTFORMW 你与%CALLNAME:TARGET%在部室中闲逛着、迎面走来一位%LOVERORG_MEMBER(RAND:6)%的男性部员
+			;	PRINTFORM 并向你询问、是否可以
+			;	SELECTCASE A
+			;	CASE 8
+			;		PRINTFORMW 跟%CALLNAME:TARGET%拥抱
+			;	CASE 1
+			;		PRINTFORMW 摸一下%CALLNAME:TARGET%的胸部
+			;	CASE 2
+			;		PRINTFORMW 摸一下%CALLNAME:TARGET%的屁股
+			;	CASE 3
+			;		PRINTFORMW 跟%CALLNAME:TARGET%接吻
+			;	CASE 4
+			;		PRINTFORMW 吮吸%CALLNAME:TARGET%的乳房
+			;	CASE 5
+			;		PRINTFORMW 让%CALLNAME:TARGET%帮他口交
+			;	CASE 6
+			;		PRINTFORMW 让%CALLNAME:TARGET%帮他乳交
+			;	CASE 7
+			;		PRINTFORMW 跟%CALLNAME:TARGET%去旁边的房间中性交
+			;	ENDSELECT
+
+			;	CALL PRINT_SELECT, "同意/拒绝"
+			;	IF RESULT == 0
+			;		CALL LOVEORG_SHARE(A)
+			;	ELSE
+			;		PRINTFORMW 『%TEXTR(@"啊——抱歉呢/不好意思打搅你们了/我只是问问、祝你们玩的开心")%』
+			;		PRINTFORMW 部员礼貌的道歉后、打着招呼离开了
+			;	ENDIF
+			;ELSE
+			;	PRINTFORMW 你与%CALLNAME:TARGET%在部室的走廊中散步
+			;	IF CFLAG:做爱部部员等级 == 1 && RAND:2 == 0
+			;		PRINTFORMW 一对像是%TEXTR(@"情侣/师生/兄妹")%的男女、%TEXTR(@"正全裸着戴着项圈从你面前经过/正以站立后背位的姿势被压在窗户上做着/正坐在沙发上毫不顾忌旁人地热情亲吻着")%
+			;	ELSEIF CFLAG:做爱部部员等级 == 2 && RAND:2 == 0
+			;		PRINTFORMW %TEXTR(@"%CALLNAME:TARGET%熟悉地向你介绍着社团的房间与构造/%CALLNAME:TARGET%也会偶尔向认识的部员打招呼")%
+			;	ELSEIF CFLAG:做爱部部员等级 == 3 && RAND:2 == 0
+			;		PRINTFORMW %TEXTR(@"从附近房间传来的下流娇喘让%CALLNAME:TARGET%想到了什么、有些脸红/在一间特别的房间前伫立了许久、%CALLNAME:TARGET%才回过神般的拉着你离开了")%
+			;	ELSEIF CFLAG:做爱部部员等级 == 4 && RAND:2 == 0
+			;		PRINTFORMW 每一个遇到的部员都会向%CALLNAME:TARGET%跟你热情的打着招呼
+			;	ELSE 
+			;		IF RAND :3 == 0
+			;			PRINTFORMW 来到部室休息区的沙发上坐下后、%CALLNAME:TARGET%%TEXTR(@"便亲密地依偎在你的肩膀上/悄悄的将手伸进你的裤子当中握住肉棒套弄起来")%
+			;		ELSEIF RAND:2 == 0
+			;			PRINTFORMW 不知不觉间、%CALLNAME:TARGET%牵起你的手、与你十指相扣
+			;		ELSE
+			;			PRINTFORMW 不时有着奇怪的声音从附近的%TEXTR(@"房间/门缝/厕所/浴室 ")%里%TEXTR(@"传来/飘进耳朵")%
+			;		ENDIF
+			;	ENDIF
+			;ENDIF
+		ENDIF
+	; CASE "发送短信"
+	CASE 2
+		PRINTFORMW 你编辑了一条短信发给了%CALLNAME:TARGET%
+		MSGS = 
+		IF RAND:3 == 0
+			PRINTFORMW 没过多久，便收到了%CALLNAME:TARGET%的回信
+			; PRINTFORMW %CNAME("主人")%，%CNAME("一人称")%现在正在参观社团呢、这边有好多很厉害的活动
+			; PRINTFORML [#附件：]
+			MSGS = %CNAME("主人")%，%CNAME("一人称")%现在正在参观社团呢、这边有好多很厉害的活动/
+			MSGS += "#附件：/"
+			A = RAND:5
+			SELECTCASE A
+			CASE 0
+				; PRINTFORMW 『衬衫纽扣全部解开、露出内衣的同时正用嘴巴同时给两根肉棒做口交的娇小女性』
+				MSGS += "『衬衫纽扣全部解开、露出内衣的同时正用嘴巴同时给两根肉棒做口交的娇小女性』"
+			CASE 1
+				;PRINTFORMW 『浑身赤裸、身边围着几个对着她撸动肉棒、坐在巨大的马型阴茎上自慰的美丽女性』
+				MSGS += "『浑身赤裸、身边围着几个对着她撸动肉棒、坐在巨大的马型阴茎上自慰的美丽女性』"
+			CASE 2
+				;PRINTFORMW 『匍匐在某个女性身上、以種付式体位、一边接吻、一边进攻着小穴的大叔』
+				MSGS += "『匍匐在某个女性身上、以種付式体位、一边接吻、一边进攻着小穴的大叔』"
+			CASE 3
+				;PRINTFORMW 『坐在沙发上、雄伟的巨根同时被两位女性同时用嘴巴侍奉着的大叔』
+				MSGS += "『坐在沙发上、雄伟的巨根同时被两位女性同时用嘴巴侍奉着的大叔』"
+			CASE 4
+				;PRINTFORMW 『挂满精液、隐约可见后面张开着的樱粉色口腔的壁穴』
+				MSGS += "『挂满精液、隐约可见后面张开着的樱粉色口腔的壁穴』"
+			ENDSELECT
+			
+		ELSEIF RAND:3 == 0 &&CFLAG:做爱部部员等级 >= 3
+			PRINTFORMW 过了一会，收到了%CALLNAME:TARGET%的回信
+			; CALL PRINT_STRW, @"[%CNAME("主人")%，请来做爱部里面的房间一趟_HH_]"
+			MSGS += @"「%CNAME("主人")%，请来做爱部里面的房间一趟_HH_」"
+			CALL SET_CEVENT("做爱部邀请",TARGET)
+			CFLAG:311 += 1
+		ELSEIF RAND:2 == 0 && CFLAG:做爱部部员等级 >= 3
+			PRINTFORMW 等了许久、却依旧没有回应
+			PRINTFORMW 才收到一条短信、上面是一串乱码似的的英文与符号、
+			PRINTFORMW 短信的%CNAME("主人")%似乎想发送些什么、但最终只是一串毫无含义的乱码
+			MSGS += "「ass1$@# (*(civuj」"
+			CFLAG:311 += 2
+		ELSEIF RAND:3 == 0 && CFLAG:做爱部部员等级 >= 2
+			PRINTFORMW 过了许久，才收到了%CALLNAME:TARGET%的回信
+			; PRINTFORMW [抱歉、住r人、、现在由点忙]
+			MSGS += "[抱歉、住r人、、现在由点忙]"
+		ELSEIF CFLAG:做爱部部员等级 >= 3
+			PRINTFORMW 过了一会，收到了%CALLNAME:TARGET%的回信
+			; PRINTFORMW 部活中
+			; PRINTFORML [#附件：]
+			MSGS += "部活中/"
+			MSGS += "[#附件：]/"
+			A = RAND:5
+			STR:写真 = 
+			SELECTCASE A
+			CASE 0
+				; PRINTFORML 『充满画面的特写镜头：樱粉色口腔被精液填满、还挂着许多白色丝线的%CALLNAME:TARGET%大张着嘴的自拍』
+				MSGS += @"『充满画面的特写镜头：樱粉色口腔被精液填满、还挂着许多白色丝线的%CALLNAME:TARGET%大张着嘴的自拍』"
+				STR:写真 = @"充满画面的特写镜头：樱粉色口腔被精液填满、还挂着许多白色丝线的%CALLNAME:TARGET%大张着嘴的自拍"
+				CFLAG:307 += 1
+				CFLAG:322 += 1
+			CASE 1
+				; PRINTFORML 『充满画面的特写镜头：被一根黝黑粗壮阴茎横过来遮住了上半张脸的%CALLNAME:TARGET%的自拍』
+				MSGS +=  @"充满画面的特写镜头：被一根黝黑粗壮阴茎横过来遮住了上半张脸的%CALLNAME:TARGET%的自拍"
+				STR:写真 = @"充满画面的特写镜头：被一根黝黑粗壮阴茎横过来遮住了上半张脸的%CALLNAME:TARGET%的自拍"
+				CFLAG:307 += 2
+			CASE 2
+				; PRINTFORML 『充满画面的特写镜头：粉色柔软的阴唇被伞状龟头撑开的特写』
+				MSGS += @"充满画面的特写镜头：粉色柔软的阴唇被伞状龟头撑开的特写"
+				STR:写真 = @"充满画面的特写镜头：粉色柔软的阴唇被伞状龟头撑开的特写"
+				CFLAG:311 += 1
+			CASE 3
+				; PRINTFORML 『腔内被粗壮肉棒塞得满满的%CALLNAME:TARGET%的股间的自拍』
+				MSGS += @"腔内被粗壮肉棒塞得满满的%CALLNAME:TARGET%的股间的自拍"
+				STR:写真 = @"腔内被粗壮肉棒塞得满满的%CALLNAME:TARGET%的股间的自拍"
+				CFLAG:311 += 1
+			CASE 4
+				; PRINTFORML 『一丝不挂跪在地上、左右两边各站在一个挺立着肉棒的男人、在镜子前拍照的%CALLNAME:TARGET%』
+				MSGS += @"一丝不挂跪在地上、左右两边各站在一个挺立着肉棒的男人、在镜子前拍照的%CALLNAME:TARGET%"
+				STR:写真 = @"一丝不挂跪在地上、左右两边各站在一个挺立着肉棒的男人、在镜子前拍照的%CALLNAME:TARGET%"
+				CFLAG:307 += 3
+			ENDSELECT
+			CALL SAVE_PHOTO, @"%STR:写真%"
+		ELSE
+			PRINTFORMW 过了一会，收到了%CALLNAME:TARGET%的回信
+			; PRINTFORMW [%TEXTR(@"怎么了，/有什么事吗、/是不是想%CNAME("一人称")%了呢、]")%%CNAME("主人")%]
+			MSGS += @"[%TEXTR(@"怎么了，/有什么事吗、/是不是想%CNAME("一人称")%了呢、]")%%CNAME("主人")%]"
+		ENDIF
+		CALL LOVEORG_TEL_MESSAGE,TARGET,MSGS
+	; CASE "打电话"
+	CASE 3
+		PRINTFORMW 你拨通了%CALLNAME:TARGET%的电话
+		PRINTFORMW 
+		a = 0
+		IF CFLAG:做爱部部员等级 == 1
+			a = RAND:2
+		ELSEIF CFLAG:做爱部部员等级 == 2
+			a = RAND:4
+		ELSEIF CFLAG:做爱部部员等级 == 3
+			a = RAND:6
+		ELSEIF CFLAG:做爱部部员等级 == 4
+			a = RAND:9
+		ENDIF
+
+		IF CEVENT("做爱部电话初次") && CFLAG:做爱部部员等级 >= 3
+			a = 100
+		ENDIF
+
+		SELECTCASE a
+		CASE 0
+			PRINTFORMW 电话很快被接通
+			PRINTFORMW 「抱歉%CNAME("主人")%，现在有点不方便.....」
+			PRINTFORMW 对面对面传来了%CALLNAME:TARGET%刻意的压低的声音
+		CASE 1
+			PRINTFORMW 电话很快被接通
+			PRINTFORMW 「现在吗」
+			PRINTFORMW 「现在在社团里参观呢」
+			PRINTFORMW 「呜哇——这个场面可真是不得了呢」
+		CASE 2
+			PRINTFORMW 过了一会、电话被接通
+			PRINTFORMW 「%CNAME("主人")%？」
+			PRINTFORMW 「%CNAME("一人称")%现在在参加一个部里的小活动」
+			CALL PRINT_STRW, @"「嗯~啾——啾噜~嗯噗 _HH_——　」"
+			PRINTFORMW 听筒对面传来一些奇怪的声音
+			CALL PRINT_STRW, @"「啾噜_HH_~奇怪的声音？」"
+			PRINTFORMW 「没、没有啊——」
+			PRINTFORMW 「这边还有事呢、%CNAME("一人称")%先挂了」
+			CALL PRINT_STRW, @"「唔——啾卜~_HH_~~ ——————嘟————嘟————嘟」"
+			CFLAG:307 += 1
+		CASE 3
+			PRINTFORMW 电话接通，可对面却没有任何回应，仔细听仿佛有微微的女性喘息的声音...
+			CFLAG:308 += 1
+		CASE 4
+			PRINTFORMW 过了许久、电话被接通
+			PRINTFORMW 『你好』
+			PRINTFORMW 对面传来一个男人的声音
+			PRINTFORMW 『%CALLNAME:TARGET%是吗、%CALLNAME:TARGET%她正忙呢、所以手机放在了旁边...』
+			PRINTFORMW 『哦~~夹得这么紧吗——呼~~』
+			PRINTFORMW 『没有其他事的话，就挂了哦、%CNAME("一人称")%这边也很忙的』
+			CALL PRINT_STRW, @"「嗯_HH_~~ ——————嘟————嘟————嘟」"
+			CFLAG:311 += 1
+		CASE 5
+			PRINTFORMW 过了许久、电话被接通
+			CALL PRINT_STRW, @"「怎么了——嗯_HH_~ %CNAME("主人")%」"
+			CALL PRINT_STRW, @"「没什么事就是想——_HH_——听听%CNAME("一人称")%的声音吗?」"
+			CALL PRINT_STRW, @"「谢谢_HH_、————%TEXTR("咕呣/喔~~")%_HH_~~」"
+			PRINTFORMW 另一边传来%CALLNAME:TARGET%压抑不住地娇喘
+			CALL PRINT_STRW, @"「可、可以一会再聊吗、%CNAME("一人称")%现在————咕咿！~~_HH_ _HH_ 」"
+			CALL PRINT_STRW, @"「%CNAME("一人称")%爱着你~、%CNAME("主人")%——_HH_ 喔喔——_HH_、再————嘟————嘟————嘟」"
+			PRINTFORMW 电话被挂断了
+			CFLAG:311 += 2
+		CASE 6
+			PRINTFORMW 电话很快被接通
+			CALL PRINT_STRW, @"「嗯~啾——啾噜~嗯噗 _HH_　」"
+			CALL PRINT_STRW, @"「啾_HH_　嗯……啾嗚、啾_HH_嗯！！—— _HH_」"
+			PRINTFORMW 「%CNAME("主人")%？」
+			PRINTFORMW 「%CNAME("一人称")%现在在帮部员口交哦」
+			PRINTFORMW 「%CNAME("主人")%听得见吗」
+			CALL PRINT_STRW, @"「啾啵_HH_、啾、咧捋~」"
+			CALL PRINT_STRW, @"「嗯呜!?  嗯啾~~_HH_啾~」"
+			PRINTFORMW ....
+			PRINTFORMW ..
+			CFLAG:307 += 1
+		CASE 7
+			PRINTFORMW 电话很快被接通
+			PRINTFORMW 
+			CALL PRINT_STRW, @"「嗯_HH_，就是那里」"
+			CALL PRINT_STRW, @"「咕啊！~~_HH_」"
+			CALL PRINT_STRW, @"「%TEXTR("嗯/哈啊")%_HH_　%TEXTR("这样动、不行、呀啊啊啊/不要、不要动啊、啊啊啊啊/要是像那样侵犯深处的话、呀啊、不要")%_HH_」"
+			CALL PRINT_STRW, @"「%TEXTR("寶寶的房間/子宮")%%TEXTR("一直這樣玩弄……嗯、不行/不要一直摩擦啊")%_HH_　%TEXTR("好棒、感覺好棒/啊啊啊、明明很痛卻覺得好舒服")%_HH_」"
+			PRINTFORMW 这边也要侍奉吗、
+			CALL PRINT_STRW, @"「嗯_HH_、啾噜~~，啾噜_HH_」"
+			CALL PRINT_STRW, @"「唔呣~啊_HH_、唔呣、嗯呜~~」"
+			CALL PRINT_STRW, @"「咕噜~~、噗_HH_、咕噜~~、噗呣~~」"
+			CALL PRINT_STRW, @"「啊_HH_、啾~~、啊~~、再深一点~_HH_」"
+			PRINTFORMW ....
+			PRINTFORMW ..
+			PRINTFORMW 不远处不断传来%CALLNAME:TARGET%的娇喘
+			CFLAG:311 += 2
+			CFLAG:323 += 1
+		CASE 8
+			PRINTFORMW 电话很快被接通
+			PRINTFORMW 「%CNAME("主人")%？」
+			PRINTFORMW 「现在吗？」
+			PRINTFORMW 「现在%CNAME("一人称")%在部室%TEXTR("%最深处的房间里/中间的沙发上")%」
+			PRINTFORMW 「%TEXTR("一丝不挂的/穿着微型比基尼/穿着下流的情趣内衣")%、旁边还围满了一群赤裸的部员」
+			PRINTFORMW 「接下来、%CNAME("一人称")%就要被部员们%TEXTR("一起侵犯了/把精液浇到身体各处/轮流侵犯嘴穴")%」
+			CALL PRINT_STRW, @"「一会再打给%CNAME("一人称")%吧、爱你哦——%CNAME("主人")%_HH_」"
+			PRINTFORMW 「————嘟————嘟」
+			PRINTFORMW 电话被挂断了
+			CFLAG:321 += 1
+			CFLAG:311 += 3
+
+		CASE 100
+			PRINTFORMW 视频通话
+			PRINTFORMW 屏幕中出现了%CALLNAME:TARGET%的脸
+			PRINTFORMW 「%CNAME("主人")%！」
+			PRINTFORMW 「现在%CALLNAME:TARGET%正在进行部活当中哦」
+			PRINTFORMW 随着画面一阵闪动
+			PRINTFORMW 视角似乎是来到了%CALLNAME:TARGET%袒露的小腹处
+			PRINTFORMW 「这个形状、%CNAME("主人")%知道吗」
+			PRINTFORMW %CALLNAME:TARGET%指着小腹上一块不算显眼的凸起处
+			PRINTFORMW 「这是大叔的肉棒哦、厉害吧」
+			PRINTFORMW 「从外面都能很明显的看到还是第一次呢」
+			PRINTFORMW 「嗯~~」
+			PRINTFORMW 「现在还在通话中呢~~」
+			CALL PRINT_STRW, @"「噫_HH_！—— 」"
+			CALL PRINT_STRW, @"「这样动起来的话~_HH_」"
+			PRINTFORMW %CALLNAME:TARGET%小腹上凸起的位置开始变幻起来、随之而来的是%CALLNAME:TARGET%愈加舒服的呻吟
+			PRINTFORMW 很快、无人在意的手机从%CALLNAME:TARGET%的手中掉下、划过柔软的肌肤、落在床上
+			PRINTFORMW 摄像头向上正对着两人的结合处
+			PRINTFORMW 深色粗壮的阴茎在粉嫩的小穴中不断进出着
+			PRINTFORMW 在大叔如打桩机般的进攻下、淫水四处飞溅
+			PRINTFORMW 渐渐的、%CALLNAME:TARGET%的声音愈加高亢、肉棒的速度也不断加快
+			PRINTFORMW [啪啪]响声在小小的屏幕中回响着
+			PRINTFORMW 屏幕中、阴囊猛烈的收缩起来、鼓胀的阴茎连同根部没入小穴之中
+			PRINTFORMW 男人的动作仿佛按下了暂停键一般、停滞了、与之相反、%CALLNAME:TARGET%的臀部则不断抽搐着、颤抖着
+			PRINTFORMW 没过多久、白色的粘稠液体从两人的结合处溢出、顺着重力、沿着菊花流下
+			PRINTFORMW 深色的粗壮阴茎从%CALLNAME:TARGET%的小穴中一点点拔出、可以清晰的看到上面裹着的白色精液
+			PRINTFORMW 在龟头离开的那一刹、大量的精液仿佛拔出了塞子一般从小穴的洞口挤出、流下
+			PRINTFORMW 白色的液体低落在手机的镜头上、画面中一片白色、无法再分辨了
+			PRINTFORMW 但不久，屏幕中又响起%CALLNAME:TARGET%的呻吟、与肉体与肉体的碰撞声
+			PRINTFORMW 只不过这次只能看到依稀的影子了
+			CFLAG:311 += 1
+			CFLAG:323 += 1
+		ENDSELECT
+
+		
+	; CASE "打电话给部长"
+	CASE 4
+		PRINTFORMW %TEXTR("几声响铃后/过了一会/等待了半分钟后")%电话被接通
+		PRINTFORMW 找%CALLNAME:TARGET%是吗
+		IF RAND:2 == 0
+			IF CFLAG:做爱部部员等级 == 1
+				;level1
+				IF RAND:2 == 0
+					PRINTFORMW 『她在部里的休息区坐着呢、需要%CNAME("一人称")%帮你转交电话吗』
+				ELSE
+					PRINTFORMW 『她在观摩部里的活动呢、看的挺入神的呢』
+				ENDIF
+			ELSEIF CFLAG:做爱部部员等级 == 2
+				;level2
+				IF RAND:2 == 0
+					PRINTFORMW 电话另一边传来淅淅沥沥的水声
+					PRINTFORMW 『她在浴室洗澡呢』
+				ELSE
+					PRINTFORMW 『嘛————她也渐渐开始参与部里的活动了』
+					PRINTFORMW 『什么活动？啊——这个...』
+					PRINTFORMW 『算是侍奉类的活动吧』
+					CFLAG:307 += 1
+					CFLAG:308 += 1
+				ENDIF
+				
+			ELSEIF CFLAG:做爱部部员等级 == 3
+				; level3
+				IF RAND:2 == 0
+					PRINTFORMW 电话另一边传来“啪 啪”的肉体撞击声、随后是大叔的声音
+					PRINTFORMW 『抱歉呢、%CNAME("一人称")%现在有些忙、等一会可以吗』
+					CFLAG:311 += 1
+				ELSE
+					PRINTFORMW 『嘛————还是你自己去看直播摄像吧』
+				ENDIF
+				
+			ELSEIF CFLAG:做爱部部员等级 == 4
+				; level4
+				IF RAND:2 == 0
+					PRINTFORMW 『她现在可是很忙的、部里的男生们可是都很喜欢她呢』
+				ELSEIF RAND:2 == 0
+					PRINTFORMW 短暂的沉默后、电话另一边响起了%CALLNAME:TARGET%下流的娇喘声
+					PRINTFORMW 「%TEXTR("嗯_HH_、啾噜~~，啾噜_HH_/啾_HH_——啾，嗯啾——")%」
+					CALL PRINT_STRW, @"「%TEXTR("唔！~_HH_  啾芙……啾噜_HH_——/啾_HH_　嗯……啾嗚、啾_HH_嗯！！—— _HH_")%」"
+					PRINTFORMW 亲吻声与肉体间的撞击声不绝于耳
+					CFLAG:309 += 1
+					CFLAG:311 += 1
+				ELSE
+					PRINTFORMW 『她刚才跟三个部员进了最里面的房间、%CNAME("一人称")%想一时半会是出不来了呢』
+					CFLAG:311 += 2
+				ENDIF
+				
+			ENDIF
+		ELSE
+			PRINTFORMW 『%TEXTR(@"抱歉、%CNAME("一人称")%也不太清楚/应该在部里的哪个房间里吧/刚刚还有看到她的")%』
+		ENDIF
+
+
+	; CASE "观看直播摄像头"
+	CASE 5
+		PRINTFORMW 在切换了几个位置的摄像头后，发现了%CALLNAME:TARGET%的身影
+		PRINTFORMW 
+		PRINTFORMW 在浴室中，%CALLNAME:TARGET%赤裸着身体、正在淋浴中....
+		IF RAND:8 == 0 
+			PRINTFORMW 你正欣赏着%CALLNAME:TARGET%的身姿，突然间浴帘被拉开、浑身赤裸的大叔挺着坚硬的肉棒钻进了%CALLNAME:TARGET%所在的隔间中
+			PRINTFORMW %CALLNAME:TARGET%似乎十分惊讶、手足无措间、被大叔一把抱入怀中、强硬地夺去了嘴唇、隔间中响起%CALLNAME:TARGET%的悲鸣
+			PRINTFORMW 大叔在抱住%CALLNAME:TARGET%的同时、上下其手、一边抓住%CALLNAME:TARGET%圆润的臀部揉弄、一边摩挲着那光洁的背脊
+			PRINTFORMW 几分钟过去
+			PRINTFORMW 在大叔的攻势下、%CALLNAME:TARGET%反抗的力气也越来越小、悲鸣声中也渐渐夹杂起甜蜜的娇哼、甚至不时会主动地探出舌头迎合起大叔的接吻
+			PRINTFORMW %CALLNAME:TARGET%的双手也缠上了大叔得到脖子、一次又一次的献上自己粉色的樱唇
+			PRINTFORMW 在这狭小的空间里、两具赤裸的躯体紧紧地贴合着、不断地互相亲吻着
+			PRINTFORMW 大叔勃起的肉棒在%CALLNAME:TARGET%的小腹上摩擦、溢出的先走汁涂抹在两人的肌肤上、随着摩擦发出下流的粘稠声音
+			CFLAG:308 += 1
+			CFLAG:309 += 1
+		ELSEIF RAND:7 == 0 
+			PRINTFORMW 在部室的一个角落中、一男一女正靠的很近的站着
+			PRINTFORMW 由于摄像头角度的问题、只能看到两人上半身、无法看到两人的脸
+			PRINTFORMW 从衣着看来、女人似乎是%CALLNAME:TARGET%
+			PRINTFORMW 两人似乎在交谈着什么、
+			PRINTFORMW 突然、%CALLNAME:TARGET%的身影猛地一颤、双手定格住了动作
+			PRINTFORMW 而男人则抱过%CALLNAME:TARGET%、揽进了怀中
+			CFLAG:308 += 1
+		ELSEIF RAND:6 == 0 
+			PRINTFORMW 部室的一角、%CALLNAME:TARGET%正与一个男人亲密的拥吻着
+			PRINTFORMW 从视频中不断传来水声与吮吸声
+			PRINTFORMW %CALLNAME:TARGET%不知何时也环住了男人的腰、如同亲密的情侣一般相拥着
+			PRINTFORMW 男人的手却在%CALLNAME:TARGET%背后不安分的摩挲着、并不时地划过%CALLNAME:TARGET%的臀部
+			CFLAG:308 += 1
+			CFLAG:309 += 1
+		ELSEIF RAND:5 == 0 
+			PRINTFORMW 部室的一个房间中、上半身衣衫不整的%CALLNAME:TARGET%正与一个男性紧紧相拥着
+			PRINTFORMW 由于摄像头角度的问题、无法看到两人的脸
+			PRINTFORMW 只能听到像是接吻一般下流的水声
+			PRINTFORMW 渐渐地水声越发响亮、不时夹杂着女人微微的娇喘声
+			PRINTFORMW 男人的手早已探入裙底、在%CALLNAME:TARGET%臀部的位置、贴身的布料浮现出手的形状
+			PRINTFORMW 下半身裤子上鼓胀的帐篷、也紧紧地顶着%CALLNAME:TARGET%的小腹、隔着肚子向子宫打招呼
+			CFLAG:308 += 1
+			CFLAG:309 += 1
+		ELSE
+			PRINTFORMW 在%TEXTR("部室的一角/某个房间中/淋浴的隔间中/厕所的隔间中/部室最深处的房间中")%
+			PRINTFORMW %TEXTR("衣衫不整/上身赤裸/只穿着胖次/穿着比基尼/浑身赤裸")%的%CALLNAME:TARGET%
+			IF RAND:3 == 0 
+				PRINTFORMW 正以%TEXTR("M字开腿的姿势/跪坐的姿势")%蹲坐在%TEXTR("男人/两个男人/三个男人")%的身前
+				PRINTFORMW %TEXTR("用灵巧的舌头不断的服务着眼前的阴茎/被男人抱住头、当做小穴一般粗暴的抽插/主动地将肉棒吞入深处侍奉着/像是品尝美味般将肉棒吞下、舌头缠绕着发出下流的水声")%
+				CFLAG:307 += 1
+			ELSEIF RAND:2 == 0 
+				PRINTFORMW 正被男人从后方抱住、%TEXTR("以下流的手法不断的揉弄着乳房/柔软的乳房在男人的动作下不断地变形着")%
+				CFLAG:308 += 1
+			ELSE
+				PRINTFORMW 正主动地环住男人的脖子、像是恋人一般身体紧贴在一起、%TEXTR("舌头纠缠着/嘴唇重叠着")%亲吻
+				CFLAG:309 += 1
+			ENDIF
+		ENDIF
+		;%TEXTR("几声响铃后/过了一会/等待了半分钟后")%																	   
+		;口																												   
+		; PRINTFORMW 两人的身影已经从监控中消失、不知去向何处
+		; PRINTFORMW 只有照向角落的光芒似乎有些晃荡
+	; CASE "受邀前往做爱部"
+	CASE 6
+		PRINTFORMW 你敲了敲做爱部的门
+		PRINTFORMW 激烈的交合声由远及近、来到了门前
+		PRINTFORMW 门被打开
+		PRINTFORMW 映入眼帘的是、一边被大叔后入、一边低下身子开门的%CALLNAME:TARGET%
+		PRINTFORMW 「%CNAME("主人")%、欢迎光临」
+		A = 0
+		IF CEVENT("做爱部邀请1",TARGET) == 1
+			PRINTFORML 是否观看简易事件
+			CALL PRINT_SELECT, "观看简易事件/观看完整事件"
+			IF RESULT == 0
+				A = 1
+			ELSE
+				A = 0
+			ENDIF
+		ELSE
+		ENDIF
+		SELECTCASE A
+		;完整事件
+		CASE 0
+			; PRINTFORMW 「%CNAME("一人称")%现在正在和大叔做爱哦、】
+			PRINTFORMW 后面的大叔打断了%CALLNAME:TARGET%的话
+			IF COND("教員")
+				IF TALENT:母親
+					PRINTFORMW 『%TEXTR("是你啊/你来了啊")%、%CALLNAME:TARGET%老师的儿子』
+					PRINTFORM 『如你所见、你的母亲%CALLNAME:TARGET%老师
+				ELSE
+					PRINTFORMW 『%TEXTR("是你啊/你来了啊")%、%CALLNAME:TARGET%老师学生』
+					PRINTFORM 『如你所见、你亲爱的%CALLNAME:TARGET%老师
+				ENDIF
+			ELSEIF TALENT:妹
+				PRINTFORMW 『%TEXTR("是你啊/你来了啊")%、%CALLNAME:TARGET%酱的哥哥』
+				PRINTFORM 『如你所见、你的妹妹
+			ELSEIF TALENT:姉
+				PRINTFORMW 『%TEXTR("是你啊/你来了啊")%、%CALLNAME:TARGET%酱的弟弟』
+				PRINTFORM 『如你所见、你的姐姐
+			ELSE
+				PRINTFORMW 『%TEXTR("是你啊/你来了啊")%、%CALLNAME:TARGET%酱的男朋友』
+				PRINTFORM 『如你所见、你的女友
+			ENDIF
+			PRINTFORMW %TEXTR(@"正在跟%CNAME("一人称")%做爱/和%CNAME("一人称")%正在浓密的SEX当中哦/正在用小穴充分的品尝%CNAME("一人称")%的肉棒哦")%』
+			PRINTFORMW 大叔说话的同时猛地挺了一下腰、让他身下的%CALLNAME:TARGET%无可忍耐地在你身前呻吟起来
+			PRINTFORMW %CALLNAME:TARGET%低伏着身子、仰头看着你、饱满浑圆的臀部后面、是身体不断耸动着的大叔
+			PRINTFORMW 在与你说话时、两人的动作也从未停止、雪白柔软的双峰不停地前后晃动着
+			; PRINTFORMW 「请进、%CNAME("主人")%现在先进来在旁边坐会吧】
+			; PRINTFORMW 「等%CNAME("一人称")%和大叔做爱结束之后、再来侍奉您把
+			; PRINTFORMW 「大概半个、不、一个小时吧
+			; PRINTFORMW 「大叔、做的到吗~
+			;邀请至做爱部自述
+			PRINTFORMW 『既然来了、就请进来坐吧』
+			PRINTFORMW 『不过这边一时半会还结束不了呢』
+			PRINTFORMW 『%CALLNAME:TARGET%酱也不想这么快结束吧』
+			PRINTFORMW 「%CNAME("一人称")%——」
+			PRINTFORMW %CALLNAME:TARGET%还未说完、大叔便一把抱过她、粗暴地吻住了她的唇
+			PRINTFORMW 「唔————%CNAME("主人")%的面前、这样——嗯  啾~~」
+			PRINTFORMW %CALLNAME:TARGET%嘴上说着抗拒的话、可身体却相反的、主动伸出舌头缠上了大叔的舌头、下流地接吻起来
+			PRINTFORMW ....
+			PRINTFORMW ..
+			PRINTFORMW
+			PRINTFORMW 几分钟后
+			PRINTFORMW %CALLNAME:TARGET%被大叔以种付的姿势压在了床上、
+			PRINTFORMW 两人相拥着、激烈的亲吻着、发出巨大的水声
+			PRINTFORMW 与此同时、大叔的肉棒也早已昂扬挺立、正贴在%CALLNAME:TARGET%娇嫩的小穴上反复摩擦着
+			PRINTFORMW 在小穴已洪水泛滥之际、大叔一边亲吻着一边将龟头抵在了小穴的入口
+			PRINTFORMW 两瓣饱满的阴唇早已被打湿、被龟头轻易的推开
+			PRINTFORMW 随着%CALLNAME:TARGET%一声愉悦的呻吟、肉棒一路长驱直入、直达小穴的深处
+			PRINTFORMW 直到根部也完全没入、%CALLNAME:TARGET%双腿紧紧地夹住大叔的腰间、两人紧密的结合在了一起
+			PRINTFORMW 『%CALLNAME:TARGET%的小穴还真是%TEXTR("紧致/舒服/刺激")%呢』
+			PRINTFORMW 『难不成、被男友看着的情况下插入更加有感觉呢』
+			PRINTFORMW 
+			
+			IF RAND:3 == 0
+			; PRINTFORMW --淫乱高
+				CALL PRINT_STRW, @"「是的 _HH_」"
+				PRINTFORMW 「一边被%CNAME("主人")%看着、一边被大叔用大肉棒侵犯真的好有感觉」
+				PRINTFORMW 「%CNAME("主人")%、再靠近点」
+				PRINTFORMW 「看看%CNAME("一人称")%被被人的肉棒搞到高潮的样子」																																				  
+				PRINTFORMW 「%TEXTR(@"一边被%CNAME("主人")%看着、一边和大叔做爱真的太舒服了 /所以、请更多更多的疼爱%CNAME("一人称")%、用这根肉棒把小穴搅的一塌糊涂吧/被%CNAME("主人")%看着更加有感觉了")%」
+			ELSEIF RAND:2 == 0
+				PRINTFORMW %CALLNAME:TARGET%没有回答、只是交叠在大叔腰间的双腿夹的更紧了些
+			ELSE
+				PRINTFORMW 「不，不是的」
+				PRINTFORMW 「只是刚好碰到了敏感的地方」
+			ENDIF
+			PRINTFORMW 『看来大叔%CNAME("一人称")%也要好好地回应呢』
+			PRINTFORMW 大叔说完、再一次夺去了%CALLNAME:TARGET%的唇、并保持着插入的姿势开始调整肉棒的角度
+			PRINTFORMW 随后开始缓缓的上下出入起来
+			PRINTFORMW 一下、两下、、
+			PRINTFORMW 速度逐渐的加快
+			PRINTFORMW 而被快感冲击的%CALLNAME:TARGET%、只是不断索求着大叔的亲吻、身体本能地迎合起肉棒的进攻
+			PRINTFORMW 『%CALLNAME:TARGET%、舒服吗、不用说%CNAME("一人称")%也知道哦』
+			PRINTFORMW 『因为子宫都降下来了、在紧紧吸附着%CNAME("一人称")%的肉棒呢』
+			PRINTFORMW 
+			IF CFLAG:做爱部部员等级 == 3
+				; PRINTFORMW --戴套内射
+				PRINTFORMW 大叔摆动着身子、让肉棒在%CALLNAME:TARGET%的小穴深处左右摩擦着、再慢慢挺入深处
+				PRINTFORMW 龟头吻在了%CALLNAME:TARGET%的子宫口上，一触即分，随即又以更猛烈的气势冲了进来，一次又一次地亲吻起子宫的入口
+				PRINTFORMW 每一次挥舞腰肢，都会带起%CALLNAME:TARGET%的臀肉卷起一阵肉浪向下方扩散，[啪 啪 啪]的拍击声在房间里不断回响
+				PRINTFORMW ...
+				PRINTFORMW 不知多久后、大叔一边与%CALLNAME:TARGET%浓密接吻着、一边加快了抽送的速度
+				PRINTFORMW 最后在%CALLNAME:TARGET%愉悦的悲鸣中、将阴茎深深地插入小穴中，抵住子宫开始射精
+				PRINTFORMW 被压在身下的雪白娇躯剧烈地颤抖着
+				PRINTFORMW 足足过去了一分钟、%CALLNAME:TARGET%才缓缓停息下来、胸脯用力地起伏着、
+				PRINTFORMW 大叔将肉棒拔出、能看到避孕套顶端被灌入的大量精液、如同水球般鼓胀起来
+			ELSEIF CFLAG:做爱部部员等级 == 4 && EXP:子宮姦経験 >= 15 && RAND:3 == 0
+				; PRINTFORMW --子宫奸
+				PRINTFORMW 『而且、以大叔%CNAME("一人称")%的经验、%CALLNAME:TARGET%酱的子宫已经被男友开发完毕了吧』
+				PRINTFORMW 『这种事情%CNAME("一人称")%很清楚、毕竟部里女性成员的子宫都是%CNAME("一人称")%开发的』
+				PRINTFORMW 『而且、%CALLNAME:TARGET%的小穴已经把一切都告诉%CNAME("一人称")%了哦』
+				PRINTFORMW 『子宫口正一张一合的呼唤着肉棒呢』
+				PRINTFORMW 大叔说着的同时、扭动起腰部、让龟头的前端轻轻的叩击%CALLNAME:TARGET%最深处的大门
+				PRINTFORMW 每叩击一次、子宫口就会松开一些、让龟头进去更多一些
+				PRINTFORMW 强烈的快感%CALLNAME:TARGET% 任由自己身为雌性的本能主导着
+				PRINTFORMW 将整个龟头完全没入了子宫之中
+				CALL PRINT_STRL, @"「%TEXTR("哈啊/啊~")%_HH_」"
+				CALL PRINT_STRW, @"「%TEXTR("太大了……要发出不妙的声音了/好大……要失去意识了")%_HH_　大叔的%TEXTR("鸡鸡/鸡巴/阴茎/肉棒")%太棒了_HH_」"
+				PRINTFORMW 『啊——』
+				PRINTFORMW 『%CALLNAME:TARGET%酱的里面、太舒服了吧』
+				PRINTFORMW 『在部里所有开发过的女性子宫里、你的可以排在前列呢』
+				PRINTFORMW 大叔将肉棒从%CALLNAME:TARGET%的拔出、深色的杆部裹满了白色
+				PRINTFORMW 灌注的精液难以让她全部接纳随从拨开的嫩肉汩汩流出
+				PRINTFORMW 大叔就这样来到%CALLNAME:TARGET%的旁边、将沾满污浊的肉棒搭在了%CALLNAME:TARGET%的脸上
+				PRINTFORMW 而%CALLNAME:TARGET%也配合的张开嘴、小巧的舌头也灵活地在肉棒上来回舔舐着
+				PRINTFORMW 同时将阴茎迎入口中、充满爱意的吮吸着
+				PRINTFORMW 「大叔的肉棒上还留着好多....」
+				CALL PRINT_STRW, @"「啾_HH_　嗯……啾嗚、啾_HH_嗯！！—— _HH_」"
+				CALL PRINT_STRW, @"「嗯_HH_　哈……嗯嗚 _HH_　」"
+				CALL PRINT_STRW, @"「啾啵、啾、咧捋~」"
+				EXP:子宮姦経験 += 6
+				CFLAG:323 += 1
+				CFLAG:307 += 1
+			ELSEIF CFLAG:做爱部部员等级 == 4
+				; PRINTFORMW --无套内射
+				PRINTFORMW 『%CALLNAME:TARGET%、要射了哦、想要%CNAME("一人称")%射在里面还是外面呢』
+				PRINTFORMW 大叔询问的同时、腰间的动作也没有落下
+				PRINTFORMW 腰肢挥舞着、一次又一次的将肉棒送入小穴的最深处
+				CALL PRINT_STRW, @"「嗯————_HH_  在舒服的时候问这些、真是太狡猾了」"
+				PRINTFORMW 「啊——那里好深」
+				PRINTFORMW 『%CALLNAME:TARGET%桑、如何、考虑好了吗』
+				PRINTFORMW 『再拖下去、%CNAME("一人称")%可就要射精了』
+				CALL PRINT_STRW, @"「里面、请把大叔浓厚的精液满满的注入%CNAME("一人称")%的小穴里来吧_HH_」"
+				PRINTFORMW 『求之不得、就在你最爱的%CNAME("主人")%面前、被别的男人播种吧』
+				PRINTFORMW 「%CNAME("主人")%？啊————%CNAME("主人")%还在这里、不行不能在里————」
+				CALL PRINT_STRW, @"「哦哦、%TEXTR("那边不行、这么进攻子宫口的话/小宝宝的房间、被这么砰砰砰的敲的话/大叔的肉棒顶到小穴的最深处了")%~~咕咿~~_HH_」_W"
+				PRINTFORMW 「子宫竟然自己降下来了、对不起、%CNAME("主人")%」
+				PRINTFORMW 「大叔的肉棒太舒服了....」
+				PRINTFORMW %CALLNAME:TARGET%双手从下方伸出、抱在了大叔的腰间
+				PRINTFORMW 大叔也顺应着俯下身、紧贴住%CALLNAME:TARGET%的娇躯、
+				CALL PRINT_STRW, @"「kiss~~——_HH_」"
+				PRINTFORMW %CALLNAME:TARGET%向着大叔索取着吻、而大叔也毫无顾虑的夺去了她的唇、
+				CALL PRINT_STRW, @"「啊_HH_、嗯~~、啊~~、啾~~、啊~~、嗯_HH_」"
+				CALL PRINT_STRW, @"「呜_HH_、啊~~、嗯~~、呜呣~~、啊~~、嗯呜~~」"
+				PRINTFORMW 在激烈动作的同时、两人浓密的接吻起来
+				PRINTFORMW 大叔抽插的动作越发的加快、肉体与肉体的碰撞声在房间中此起彼伏
+				PRINTFORMW 两人的结合处在激烈的碰撞中不断有淫液飞溅出来
+				PRINTFORMW 褶皱的阴囊撞击在%CALLNAME:TARGET%的肉穴上发出响亮的声音
+				PRINTFORMW 进出小穴的肉棒也愈加膨胀、将两瓣阴唇越发的撑开、这是即将爆发的前兆
+				PRINTFORMW 『啊——%CALLNAME:TARGET%酱、要出来了』
+				PRINTFORMW 「嗯——请把%CNAME("一人称")%的子宫用精液填满吧」
+				CALL PRINT_STRW, @"「咕咿！！_HH_~~_HH_————」_L"
+				PRINTFORMW 两人的性器紧紧地贴合在一起、裸露在外的硕大阴囊猛烈的收缩起来
+				PRINTFORMW 大量的精液从紧贴在子宫口的龟头前方奔涌而出
+				PRINTFORMW 新鲜滚烫的精子不断敲击在%CALLNAME:TARGET%的子宫壁上
+				PRINTFORMW %CALLNAME:TARGET%的双手紧紧地抱住大叔的身体
+				PRINTFORMW 白皙的躯体在大叔的身下剧烈地痉挛着
+				PRINTFORMW 大量的精液很快将子宫也填满、多余的精子不断从两人的结合处溢出来、顺着重力流到菊穴、再流到床上
+				CFLAG:323 += 1
+			ENDIF
+			PRINTFORMW ...
+			PRINTFORMW 结束后的大叔穿上了内裤后便离开了、房间中只剩下%CALLNAME:TARGET%与你
+		;简易事件
+		CASE 1
+			;简易事件
+			PRINTFORMW 结合在一起的两人邀请你进入观摩
+			PRINTFORMW %CALLNAME:TARGET%与大叔就这样在你面前的床上开始了激烈而淫乱的性交
+			PRINTFORMW %BODY_DECRIPTION()%在欲望间不断碰撞、
+			PRINTFORMW 娇媚的喘息与下流的水声互相编织
+			PRINTFORMW 背德与欲望的乐章足足演奏了一个小时
+			PRINTFORMW 才在大叔意犹未尽的表情下结束了
+		ENDSELECT
+		PRINTFORMW %CALLNAME:TARGET%就这样赤裸的躺在凌乱的床上
+		PRINTFORMW 面色潮红地喘息着
+		; PRINTFORMW 『%CNAME("主人")%、刚才的表演如何
+		IF TALENT:妹
+			IF RAND:2 == 0
+				PRINTFORMW 「看到自己的妹妹在眼前被其他男人侵犯的感觉如何呢」
+				PRINTFORMW 「%CNAME("一人称")%%TEXTR("刚才可是很辛苦的哦/为哥哥付出了太多")%」
+				PRINTFORMW 「%CNAME("主人")%、请抱抱%CNAME("一人称")%吧」
+			ELSE
+				PRINTFORMW 「%CNAME("主人")%的性癖真是太怪了、竟然想看自己妹妹被别人侵犯什么的」
+				PRINTFORMW 「%CNAME("一人称")%可是鼓起了很大的勇气呢」
+				PRINTFORMW 「所以哥哥、请抱抱%CNAME("一人称")%吧」
+			ENDIF
+		ELSEIF TALENT:母親
+			PRINTFORMW 「好久没跟丈夫以外的人这么畅快地做过了」
+			PRINTFORMW 「刚才妈妈的表情怎么样」
+		ELSE
+			PRINTFORMW 「%TEXTR(@"在%CNAME("主人")%的面前/当着%CNAME("主人")%的面")%跟别的男人SEX什么的」
+			PRINTFORMW 「%TEXTR("真是不得了呢/好像有点做过头了")%」
+		ENDIF
+		PRINTFORMW 
+		CFLAG:311 += 1
+		CFLAG:309 += 1
+		CALL DEL_CEVENT("做爱部邀请",TARGET)
+		CALL SET_CEVENT("LOVORG同行中",TARGET)
+		
+	; CASE "隐奸PLAY"//虽然很色、但是对话太多、对于不同性格的角色来说没有什么匹配度，之后可能会单独开给玛丽用
+	CASE 9
+		; PRINTFORMW 来到做爱部的一个贴着“隐奸”的窗口前
+		; PRINTFORMW 『%CNAME("主人")%、有些在意这个窗口吗
+		; PRINTFORMW 『这是部里专门用来玩隐奸PLAY的地方哦
+		; PRINTFORMW 『明明女朋友就在眼前、却在看不见的地方跟别的男人做这样那样的事情
+		; PRINTFORMW 『要试试吗
+		; PRINTFORMW 
+		; PRINTFORMW 『看来%CNAME("主人")%还是挺感兴趣的呢、请允许%CNAME("一人称")%准备一下
+		; PRINTFORMW 说罢、%CALLNAME:TARGET%转身走进了窗口后的房间中
+		; PRINTFORMW 。。。
+		; PRINTFORMW 过了几分钟、窸窸窣窣的声音从拉着帘幕的窗口后方传来
+		; PRINTFORMW 紧接着、帘幕从里面被拉开、露出了%CALLNAME:TARGET%的俏脸
+		; PRINTFORMW 『久等了、%CNAME("主人")%
+		; PRINTFORMW %CALLNAME:TARGET%的脸色微微有些红润、仔细看向窗口
+		; PRINTFORMW 里面是一片黑色、似乎故意将房间做成了黑色
+		; PRINTFORMW 『在开始之前跟%CNAME("主人")%您讲一下、因为隐奸是看不到的、所以需要%CNAME("主人")%发挥自己的想象哦
+		; PRINTFORMW 
+		; PRINTFORMW 
+		; PRINTFORMW 『那么、开始咯
+		; PRINTFORMW %CALLNAME:TARGET%说完、便将右侧的帘幕拉了过来、遮住了自己肩膀右侧的部分
+		; PRINTFORMW 『在刚刚拉上的窗帘后面、%CNAME("主人")%看不到的地方
+		; PRINTFORMW 『大叔正挺着他粗壮的肉棒对着%CNAME("一人称")%哦
+		; PRINTFORMW 『然后、%CNAME("一人称")%呢、现在要开始帮大叔手交了
+		; PRINTFORMW %CALLNAME:TARGET%转过头、看向右侧帘幕后方的位置
+		; PRINTFORMW 可从你这一侧、却什么也无法看见
+		; PRINTFORMW 『啊、好硬、大叔的肉棒真是又热又硬呢
+		; PRINTFORMW 『嗯——这个力度如何 、%CNAME("一人称")%知道了
+		; PRINTFORMW %CALLNAME:TARGET%再次回过头来、看向了你
+		; PRINTFORMW 『感觉如何、%CNAME("主人")%
+		; PRINTFORMW 『能够想象到在这个帘子的后面、自己的女朋友正在帮别的男人套弄肉棒的场景吗
+		; PRINTFORMW 『还要继续下去吗、之后的环节只会更加激烈哦
+		; PRINTFORMW 
+		; PRINTFORMW 『嗯、%CNAME("一人称")%知道了、那么要继续咯
+		; PRINTFORMW 『接下来是润滑液手交
+		; PRINTFORMW 从帘幕的后面传来噗滋噗滋的挤压声
+		; PRINTFORMW 『润滑液倒在手里有点凉凉的呢、首先是龟头...
+		; PRINTFORMW 渐渐的、从帷幕后方传来“咕啾咕啾”的响声、听着似乎真像是在做手交一般
+		; PRINTFORMW 『啊啦、左边也要吗、抱歉%CNAME("主人")%、另一边也要做呢
+		; PRINTFORMW %CALLNAME:TARGET%将自己左边的帘幕也拉起、将左侧肩膀以外的部分也完全遮盖住
+		; PRINTFORMW 从你这边看去、只能看到%CALLNAME:TARGET%的上半身肩膀以内的部分、而肩膀左右两侧则完全被挡住了
+		; PRINTFORMW “咕啾咕啾”的响声不断从左右两侧传来、%CALLNAME:TARGET%的身体也跟着声音小幅的晃动着
+		; PRINTFORMW 『啊、两边的肉棒在%CNAME("一人称")%手里还在变大呢
+		; PRINTFORMW 『要射了吗、
+		; PRINTFORMW 『唉？想要射在嘴里吗
+		; PRINTFORMW %CALLNAME:TARGET%回头看了看你、略显歉意
+		; PRINTFORMW 『抱歉了、%CNAME("主人")%
+		; PRINTFORMW 随后张开嘴、朝向右边靠了过去
+		; PRINTFORMW 黑色的帘幕刚好的只将%CALLNAME:TARGET%的嘴巴挡住、而其他地方却清晰的暴露在你眼前
+		; PRINTFORMW %CALLNAME:TARGET%的下巴大大的张开着、似乎是将什么东西含住了
+		; PRINTFORMW 接着、伴随着一声愉悦的呜咽声、%CALLNAME:TARGET%的眼睛突然大睁
+		; PRINTFORMW 喉咙处开始不断的吞咽着什么
+		; PRINTFORMW 十几秒后、张开的下巴才缓缓合上
+		; PRINTFORMW %CALLNAME:TARGET%举起满是润滑液的右手挡住嘴巴、缓缓转过身来
+		; PRINTFORMW 『抱歉、%CNAME("主人")%、因为是隐奸、所以嘴巴里就不能给你看了
+		; PRINTFORMW -- 非第一次
+		; PRINTFORMW 选项 -- 想看
+		; PRINTFORMW 	 --不想看
+		; PRINTFORMW 唉——想要看看吗、
+		; PRINTFORMW 既然是%CNAME("主人")%的要求的话————
+		; PRINTFORMW 那%CNAME("主人")%所期望的是什么样的场景呢
+		; PRINTFORMW 是想要看%CNAME("一人称")%张开嘴里面什么都没有、还是里面挂满了浓稠的精子呢
+		; PRINTFORMW --什么都没有
+		; PRINTFORMW 哼哼——其实啊、
+		; PRINTFORMW %CALLNAME:TARGET%移开了挡着嘴唇的手、张开嘴
+		; PRINTFORMW 展示着自己干净的粉色口腔
+		; PRINTFORMW 
+		; PRINTFORMW --满是精子
+		; PRINTFORMW 请等一下
+		; PRINTFORMW %CALLNAME:TARGET%俯下身子从窗口中消失
+		; PRINTFORMW 过了两分钟、又出现在了窗口、依旧用手遮挡着嘴巴
+		; PRINTFORMW 不过%CALLNAME:TARGET%的呼吸有些急促、从手的边缘能依稀看到透明液体的反光以及黑色弯曲的毛发
+		; PRINTFORMW 『那、%CNAME("主人")%、请看好吧
+		; PRINTFORMW %CALLNAME:TARGET%缓缓移开遮挡的手、露出覆满果冻状半透明液体的双唇、
+		; PRINTFORMW 嘴角边还沾染着几根黑色毛发
+		; PRINTFORMW 『啊——
+		; PRINTFORMW 张开嘴、浓郁的白浊几乎快要溢满整个口腔
+		; PRINTFORMW %CALLNAME:TARGET%一边展示着、还一边用舌头在口腔里搅动着、让精子在自己的口腔中流动着、泛起一个又一个精液泡泡
+		; PRINTFORMW 『这样满足了吗？%CNAME("主人")%
+		; PRINTFORMW 
+		; PRINTFORMW 
+		; PRINTFORMW 
+		; PRINTFORMW 『不过大叔的精液是真的又浓厚、又粘稠、现在还有好多精子挂在%CNAME("一人称")%的喉咙里呢
+		; PRINTFORMW 『啊————
+		; PRINTFORMW 『这个手的后面、就是%CNAME("一人称")%张开嘴向%CNAME("主人")%展示嘴里精液的样子哦
+		; PRINTFORMW 『不过不能给%CNAME("主人")%看到呢
+		; PRINTFORMW 『阿拉——还要做扫除口交吗
+		; PRINTFORMW 『抱歉了，%CNAME("主人")%
+		; PRINTFORMW %CALLNAME:TARGET%将两边的帘子拉了过来，将脸颊外面的位置也遮住了
+		; PRINTFORMW 并从下发拉起另一个帘子将鼻子以下的位置也挡了起来
+		; PRINTFORMW 这下只能看到%CALLNAME:TARGET%鼻子以上的脸了
+		; PRINTFORMW 『现在两根沾满精液的肉棒都贴在%CNAME("一人称")%的嘴巴前了
+		; PRINTFORMW 『不过%CNAME("主人")%是看不到的呢
+		; PRINTFORMW 『接下来——就是
+		; CALL PRINT_STRW, @"「%TEXTR("啾、姆呜/啾、吸溜吸溜、嗯~")%_HH_」_L"
+		; CALL PRINT_STRW, @"「%TEXTR("＿/啾、")%吸溜_HH_　%TEXTR("好浓厚的味道/啾……这边也是")%_HH_」"
+		; PRINTFORMW 帘幕的后方响起下流的舔舐声
+		; PRINTFORMW 随着%CALLNAME:TARGET%头部的微微晃动、还有白色的雾气从帘幕缓缓向上飘动
+		; PRINTFORMW --
+		; PRINTFORMW 『唉？想要确认下吗
+		; PRINTFORMW 『这样做的话、就失去原本的意义了呢
+		; PRINTFORMW 『既然%CNAME("主人")%要求的话
+		; PRINTFORMW %CALLNAME:TARGET%拉开左右的帘子
+		; PRINTFORMW 后面其实根本就没有人
+		; PRINTFORMW 下方也不过是两根普通的热狗、黄色的芝士流淌着、正向上冒着热气
+		; PRINTFORMW 『这样满足了吧、%CNAME("主人")%
+		; PRINTFORMW --
+		; PRINTFORMW 『多谢款待
+		; PRINTFORMW %CALLNAME:TARGET%完成了侍奉、发出了亲吻一般的声音后
+		; PRINTFORMW 将帘幕缓缓地归于原位
+		; PRINTFORMW 
+		; PRINTFORMW 
+		; PRINTFORMW 『这次要做的是本番的隐奸哦
+		; PRINTFORMW 『%CNAME("主人")%做好准备了吗、一会可不要哭鼻子呀
+		; PRINTFORMW 『既然如此
+		; PRINTFORMW %CALLNAME:TARGET%低下头、淅淅索索的动作着
+		; PRINTFORMW 随后、一件裙子被取了出来、可以看出、这是%CALLNAME:TARGET%今天穿的裙子
+		; PRINTFORMW 随后、%CALLNAME:TARGET%将其放在了窗沿上、
+		; PRINTFORMW 不一会内裤也被取出、放在了裙子之上
+		; PRINTFORMW 『现在、%CNAME("一人称")%的下面已经是真空了
+		; PRINTFORMW 『%CNAME("主人")%有没有发现%CNAME("一人称")%今天坐的比昨天高了一些呢
+		; PRINTFORMW 『其实、%CNAME("一人称")%没有坐在椅子上、而是坐在了大叔的大腿之间
+		; PRINTFORMW 『大叔的肉棒现在正夹在%CNAME("一人称")%的大腿根部、紧紧地贴着小穴哦
+		; PRINTFORMW 『%CNAME("主人")%、可以想象的到吗
+		; PRINTFORMW 『啊——
+		; PRINTFORMW %CALLNAME:TARGET%发出了一声娇喘
+		; PRINTFORMW 『屁股那边——
+		; PRINTFORMW 『%CNAME("主人")%、大叔正擅自揉弄着%CNAME("一人称")%的屁股呢
+		; PRINTFORMW 『嗯——肉棒也越来越硬了、先走汁也流出来了
+		; PRINTFORMW 『%CNAME("一人称")%的手怎么擅自——
+		; PRINTFORMW 『抱歉、%CNAME("主人")%、%CNAME("一人称")%不想这样的、只是%CNAME("一人称")%的手不自觉的移到了大叔的肉棒上
+		; PRINTFORMW 『才不是因为这根肉棒又粗壮又坚挺、下流的形状想让小穴吞下呢
+		; PRINTFORMW 『才不是哦
+		; PRINTFORMW 『啊——更多的先走汁流出来了、满手都是呢
+		; PRINTFORMW 『%CNAME("一人称")%的小穴也不自主的湿起来了、
+		; PRINTFORMW 『嗯——_HH_、这么顶着小腹的话——_HH_
+		; PRINTFORMW 、、、、
+		; PRINTFORMW 、、、、
+		; PRINTFORMW 『接下来就要插入了
+		; PRINTFORMW %CALLNAME:TARGET%缓缓地起身
+		; PRINTFORMW 『嗯————在%CNAME("主人")%的面前、用小穴吞下别人的肉棒什么的...
+		; PRINTFORMW %CALLNAME:TARGET%右手伸向下方、似乎在拨弄着肉棒
+		; PRINTFORMW 『对准这边....
+		; PRINTFORMW 随着%CALLNAME:TARGET%身体的一点点下沉
+		; PRINTFORMW 她的呼吸也随之急促起来、脸上洋溢着浅浅的红晕
+		; PRINTFORMW 『嗯——
+		; PRINTFORMW 『啊_HH_、好深~~
+		; PRINTFORMW 『喔~——_HH_ _HH_~
+		; PRINTFORMW 当%CALLNAME:TARGET%完全坐下之际、她的嘴中发出了高亢的呻吟
+		; PRINTFORMW 身躯不断颤抖、双眼无神的向上翻动着
+		; PRINTFORMW 『进——进来了
+		; PRINTFORMW 过了好久才缓过神来
+		; PRINTFORMW 『抱歉、让%CNAME("主人")%看到%CNAME("一人称")%不检点的一面了
+		; PRINTFORMW 『但是、大叔的————嗯_HH_ ————
+		; PRINTFORMW 『哦哦——
+		; PRINTFORMW 『不能在%CNAME("一人称")%说话的时候————噫————
+		; PRINTFORMW %CALLNAME:TARGET%双手扶在窗沿上、身体开始有规律的上下律动起来
+
+
+	; CASE "浇汁室"
+	CASE 10
+		IF CEVENT("浇汁室初识",TARGET) == 0
+			PRINTFORMW 介绍
+			PRINTFORMW 「这里是浇汁室」
+			PRINTFORMW 「就是让男性部员尽情的把种子浇在自己想要的地方」
+			PRINTFORMW 「嘴巴也好、胸部也好、即便是小穴里面也是可以的哦」
+			PRINTFORMW 「唯一的限制就是插入与本番是禁止的」
+			PRINTFORMW 「想要在小穴里射精的话、特例会允许龟头的插入、」
+			; 不过前提是不能太大导致破处
+			PRINTFORMW 「因为也有些处女的部员嘛」
+			CALL SET_CEVENT("浇汁室初识",TARGET)
+		ELSE
+			PRINTFORMW 你与%CALLNAME:TARGET%来到了浇汁室的旁边
+		ENDIF
+		CALL PRINT_SELECT, "让她试试/算了、不做了";/简易事件
+		IF RESULT == 0
+			IF CEVENT("浇汁室初次",TARGET) == 0
+				PRINTFORMW 
+				PRINTFORMW 「唉？想让%CNAME("一人称")%试试吗」
+				PRINTFORMW 「倒也不是不行」
+				PRINTFORMW 「这个旁边是观察室、这边是看不见里面的、%CNAME("主人")%就先在里面等等吧」
+				PRINTFORMW %CALLNAME:TARGET%将你推入了观察室，随机离开了房间
+				PRINTFORMW 你打量了一下周围、确实能清楚的能看到旁边的浇汁室
+				PRINTFORMW 几分钟后、7,8个男人依次走进了浇汁室、在房间中围成了一圈
+				PRINTFORMW 随即、穿着校服、身着白色筒袜、黑色皮鞋的%CALLNAME:TARGET%也进入了室内、站在了男人中间
+				PRINTFORMW （%CALLNAME:TARGET%竟然会主动邀请%CNAME("一人称")%们、真是稀奇呀
+				PRINTFORMW 「之前冷落了大家是%CNAME("一人称")%的不对、今天就请大家玩的尽兴吧」
+				IF TALENT:処女
+					PRINTFORMW 「不过%CNAME("一人称")%还是处女呢、还请大家手下留情」
+				ENDIF
+			ELSE
+				IF ABL:精液中毒 >= 8
+					PRINTFORMW 已经对精液有些上瘾的%CALLNAME:TARGET%毫无抗拒的答应了你的请求
+					PRINTFORMW 看起来似乎已经在期待起男人们新鲜的精液浇灌在自己身上
+				ELSEIF MARK:淫紋
+					PRINTFORMW 还未等%CALLNAME:TARGET%决定、小腹上的淫纹已经开始发出淫靡的光芒
+					PRINTFORMW 似乎身体比本人更加诚实呢
+				ELSE
+					PRINTFORMW 尽管%CALLNAME:TARGET%对浓郁的肉棒与精液气味还是不太适应
+					PRINTFORMW 但还是答应了你的请求
+				ENDIF
+				PRINTFORMW 在你进入观察室后没过几分钟
+				PRINTFORMW %CALLNAME:TARGET%就领着7,8个部员依次走进浇汁室
+			ENDIF
+			PRINTFORMW 一进入浇汁室、男性们已经迫不及待的脱掉衣服、将或大或小的肉棒朝向%CALLNAME:TARGET%
+			PRINTFORMW 在众人的目光下、%CALLNAME:TARGET%一件一件的褪下衣服
+			PRINTFORMW 直到将自己%BODY_DECRIPTION()%展现在男人们眼前后、活动开始了
+			PRINTFORMW %TEXTR(@"在男人们的要求下、%CALLNAME:TARGET% 仰躺在地上、双手微微遮住关键部位、摆出一副欲拒还羞的姿态/坐在沙发上、双腿向两边以M字的姿势张开/趴在地上、屁股向后方高高翘起、毫无保留地展示着女性的秘密部位")%
+			PRINTFORMW 
+			PRINTFORMW 男人们纷纷掏出肉棒对准了%CALLNAME:TARGET%
+			PRINTFORMW 
+			IF RAND:2 == 0
+				PRINTFORMW 一个男人靠近了%CALLNAME:TARGET%、抬起她的手臂、将肉棒放在了腋下涂抹起来
+				PRINTFORMW 湿润的先走汁涂抹在了%CALLNAME:TARGET%娇嫩的腋下、随即男人将%CALLNAME:TARGET%的手臂放下、将自己的肉棒裹住
+				PRINTFORMW 在校服袖口的遮掩下缓慢的前后摆动起来
+			ELSE
+				PRINTFORMW 男人来到%CALLNAME:TARGET%的背后掀起她的裙子
+				PRINTFORMW 随后轻轻拉开内裤后方的一边，一边撸动着一边将肉棒塞入了内裤中%CALLNAME:TARGET%的臀瓣之间
+				PRINTFORMW （啊、要射了、要射在%CALLNAME:TARGET%同学穿着的内裤里了
+			ENDIF
+
+			IF RAND:3 == 0
+				PRINTFORMW 三根肉棒同时对准了%CALLNAME:TARGET%的脸颊、随后如同...般一同爆发了
+				PRINTFORMW 持续不断地精液不停地浇灌在%CALLNAME:TARGET%的脸上、头发上
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 快要到达极限的男人将他那巨物般的阴茎抵住%CALLNAME:TARGET%小穴的入口
+				PRINTFORMW 随即在一声低吼中、汹涌澎湃的精液涌入了%CALLNAME:TARGET%的体内
+			ELSE
+				PRINTFORMW 几个男人将%CALLNAME:TARGET%的小皮鞋脱下
+				PRINTFORMW 轮流向其中注入着精液、知道整个鞋子都被白色填满
+			ENDIF
+			PRINTFORMW 
+			PRINTFORMW 十几分钟后
+			PRINTFORMW 部员们已经离开、留下部室中一片狼藉的景象
+			IF RAND:3 == 0
+				PRINTFORMW 沾满精液的内裤早已被丢在一旁
+				PRINTFORMW 衣衫早已凌乱不堪、暴露在空气中的小穴正不断地往下滴着精液
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 夹杂着白色的透明液体不断的从%CALLNAME:TARGET%光滑的肌肤上流过
+				PRINTFORMW 顺着重力一路滑到地上
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%脱下有些沾染的丝袜、露出了光洁白皙的脚丫
+				PRINTFORMW 圆润的脚趾如同珍珠一般
+				PRINTFORMW 随后、%CALLNAME:TARGET%拿起已经被灌满白浊的皮鞋、毫不在意的将自己的裸足伸了进去
+				PRINTFORMW 大量的白色液体从鞋口被挤出
+			ENDIF
+			; %CNAME("主人")%、看的还满意/尽兴吗
+			PRINTFORMW 你安抚着%CALLNAME:TARGET%、帮她简单清理之后、离开了这边
+			CFLAG:322 += (1+RAND:2)
+			CFLAG:321 += (2+RAND:3)
+		ELSE
+			PRINTFORMW 你带着%CALLNAME:TARGET%离开了这里
+		ENDIF
+		
+	; CASE "寻找同伴"
+	CASE 11
+		A = 0
+		IF CEVENT("部员性交中",TARGET)
+			A = 2
+		ELSEIF CEVENT("做爱部寻找同伴",TARGET) == 1
+			PRINTFORML 是否观看初次事件
+			CALL PRINT_SELECT, "不观看/观看"
+			IF RESULT == 0 
+				IF CFLAG:做爱部部员等级 == 1
+					A = RAND:3
+				ELSEIF CFLAG:做爱部部员等级 == 2
+					A = RAND:5
+				ELSEIF CFLAG:做爱部部员等级 >= 3
+					A = RAND:8
+				ENDIF
+			ELSE
+				A = 8
+			ENDIF
+		ELSE
+			IF CFLAG:做爱部部员等级 == 1
+				A = RAND:3
+			ELSEIF CFLAG:做爱部部员等级 == 2
+				A = RAND:5
+			ELSEIF CFLAG:做爱部部员等级 == 3
+				A = RAND:6
+			ELSEIF CFLAG:做爱部部员等级 == 4
+				A = 8
+			ENDIF
+		ENDIF
+		PRINTFORMW 你在部室中寻找着%CALLNAME:TARGET%的身影
+		SELECTCASE A
+			CASE 0
+				PRINTFORMW 很快在休息室中发现了正在喝着饮料的%CALLNAME:TARGET%
+
+			CASE 1
+			PRINTFORMW 不久后看到了正从女厕所中出来的%CALLNAME:TARGET%
+
+			CASE 2
+				IF CEVENT("部员性交中",TARGET)
+					PRINTFORMW 紧接着、你来到刚才%CALLNAME:TARGET%与部员一同进入的房间前、%TEXTR("打开一条门缝/从旁边的窗户")%向里面看去
+					PRINTFORMW 首先映入眼帘的是
+					PRINTFORMW 被随意地丢弃在地上的衣服、从裙子、上衣、一直到内衣与胖次全都散落在地上
+					PRINTFORMW 再向深处看去、
+					PRINTFORMW 两具正在交媾中的赤裸躯体映入眼中
+					PRINTFORMW 部员正抱着%CALLNAME:TARGET%以以%TEXTR("后背位/站立后背位/火车便当位/正面抱起/背面抱起")%的姿势%TEXTR("激烈地/不停地/不断地")%侵犯着%CALLNAME:TARGET%的%TEXTR("小穴/花蕊")%
+					PRINTFORMW %CALLNAME:TARGET%不断漏出甜美呻吟的同时、也主动地摇动臀部配合着部员交合的动作
+					PRINTFORMW ...
+					PRINTFORMW ..
+					PRINTFORMW 许久之后
+					PRINTFORMW %TEXTR(" 脸色通红/裙摆下方还有白色丝线不断垂落/脚步有些虚浮")%的%CALLNAME:TARGET%从房间中走出、回到了你的身边
+					CALL SET_CEVENT("LOVORG同行中",TARGET)
+					CALL DEL_CEVENT("部员性交中",TARGET)
+					CFLAG:311 += 1
+				ELSEIF CFLAG:做爱部部员等级 == 1
+					PRINTFORMW 在一间房间外看到了在门口看的出神的%CALLNAME:TARGET%
+					PRINTFORMW 顺着她的目光、可以看到房间内某个%TEXTR("身材娇小/体态丰满/有着夸张巨乳/容颜精致")%的女性 正%TEXTR("躺在床上/靠在墙边/趴在地上")% 、被%TEXTR("某个男性部员/大叔/好几个男性/某位学校老师")%以%TEXTR("后背位/站立后背位/火车便当位/正面抱起/背面抱起")%的姿势%TEXTR("激烈地/不停地/不断地")%侵犯着%TEXTR("小穴/菊穴")%
+					PRINTFORMW 你朝着%CALLNAME:TARGET%打了声招呼、她像是受惊的兔子一般、差点跳了起来、看到是你后才松了一口气
+					PRINTFORMW 随后你与%CALLNAME:TARGET%一起观摩着房间内的活动...
+				ELSE 
+					PRINTFORM 在%TEXTR("男厕所/更衣室/休息室/深处的房间")%中发现了 %TEXTR("衣衫不整/上身赤裸/只穿着胖次/内裤被脱下挂在脚边/浑身赤裸")%
+					IF CFLAG:做爱部部员等级 == 2
+						IF RAND:2 == 0
+							PRINTFORMW 正蹲在地上、%TEXTR("环抱在男人腰间/一边撸动一边/伸长着舌头")%专心致志侍奉着面前肉棒的%CALLNAME:TARGET%
+							PRINTFORMW 纠缠的水声在房间里回响、透明的粘性汁液拉成长丝、不断从嘴巴的结合处流下
+						ELSE
+							PRINTFORMW 正被身后男人不断揉弄着%TEXTR("乳房/胸部")%的%CALLNAME:TARGET%
+							IF TALENT:巨乳
+								IF RAND:2
+									PRINTFORMW 那%TEXTR("丰满/富有分量/摇摇晃晃/充满母性/有重量感")%的胸部被绕着圈抓揉着。
+								ELSE
+									PRINTFORMW 那富有弹性的柔滑胸部、每次被揉弄按压时，都会将男人的手指温柔地弹回去。
+								ENDIF
+							ELSEIF TALENT:貧乳
+								IF RAND:2
+									PRINTFORMW 那%TEXTR("缺乏起伏/平坦/薄弱/绝壁一样/朴素/小小")%的胸部被男人以下流的手法不断刺激着
+								ELSE
+									PRINTFORMW 那缺乏起伏的贫乳、每次被触及，都会湿润的吸附着男人的手指。
+								ENDIF
+							ELSE
+								IF RAND:2
+									PRINTFORMW 那%TEXTR("形状较好/盈盈一握/发育得恰到好处")%的胸部被不停地揉搓着。
+								ELSE
+									PRINTFORMW 那平稳的胸部、每次触及都会紧紧地吸附住男人的手指。
+								ENDIF
+							ENDIF
+						ENDIF
+					ELSEIF CFLAG:做爱部部员等级 > 2
+						PRINTFORMW 正被 %TEXTR("某个男性部员/大叔/某位学校老师")%抱住、以%TEXTR("后背位/站立后背位/火车便当位/正面抱起/背面抱起")%的姿势%TEXTR("激烈地/不停地/不断地")%侵犯着%TEXTR("小穴/菊穴")%的%CALLNAME:TARGET%
+						PRINTFORMW 男人的跨间不断撞击在%CALLNAME:TARGET%柔软的臀部上、发出巨大的[啪 啪]声
+					ENDIF
+					CALL PRINT_SELECT, "转身离开/继续观看"
+					IF RESULT == 0
+						PRINTFORMW 你转身离开
+						PRINTFORMW 过了许久、%TEXTR("脸色微红/重新穿戴好/有些色气")%的喘息着的%CALLNAME:TARGET%回到了你的身边...
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%也察觉到了你的存在、羞耻感让她的脸颊染上了更深的红晕、而对方也更加卖力的做了起来
+						PRINTFORMW 妩媚的娇喘声不断从%CALLNAME:TARGET%的口中漏出
+						PRINTFORMW 许久后、对方心满意足的离开、%TEXTR("脸色微红/重新穿戴好/有些色气")%的喘息着的%CALLNAME:TARGET%回到了你的身边...
+					ENDIF
+					CFLAG:311 += 1
+				ENDIF
+
+			CASE 3
+				PRINTFORMW 过了许久、看到%CALLNAME:TARGET%跟在几个部员身后从某间房间中走了出来
+				CFLAG:307 += (1+RAND:4)
+				CFLAG:308 += (1+RAND:4)
+				CFLAG:309 += (1+RAND:4)
+			CASE 4
+				PRINTFORMW 很快从一间部室的窗户里看到%TEXTR("衣衫不整/上身赤裸/只穿着胖次/穿着比基尼/浑身赤裸")%、正在跟%TEXTR("大叔/部员")%%TEXTR("浓密地接吻/贴在一起互相爱抚")%的%CALLNAME:TARGET%
+				CFLAG:308 += 1
+				CFLAG:309 += 1
+			CASE 5
+				PRINTFORMW 从一扇半掩着的门缝中看到正%TEXTR("骑在大叔身上、不断扭动着腰部、/被大叔压在身下、结合着的性器不断喷洒着爱液/趴在床上、被大叔不断从后面进攻")%的%CALLNAME:TARGET%
+				CFLAG:311 += 1
+			CASE 6
+				IF RAND:3 == 0
+					PRINTFORMW 却意外地在休息室碰到了爱琉
+					PRINTFORMW 爱琉热情地贴了上来、与你坐在沙发上互相抚慰着
+				ELSEIF RAND:2 == 0
+					PRINTFORMW 在厕所前发现了正在洗手的爱琉
+					PRINTFORMW 你将爱琉带入了男厕的隔间中、将她早已开发完成的菊穴毫不留情的侵犯了
+				ELSE
+					PRINTFORMW 碰到了正在壁穴前做准备的爱琉
+					PRINTFORMW 随后成为了她第一个服务对象、将新鲜粘稠的精液填满了爱琉的口腔
+				ENDIF
+				PRINTFORMW 结束之后的你在部室的入口处发现了站立着的%CALLNAME:TARGET%
+			CASE 7
+				PRINTFORMW 部室最深处房间侧面的窗前
+				PRINTFORMW 房间内%CALLNAME:TARGET%正与多个部员做着愉悦的事
+				PRINTFORMW 而你正扶着爱琉丰满的屁股、用肉棒在中间的缝隙上摩擦着
+				PRINTFORMW 『前辈、爱琉的这边是不可以的』
+				PRINTFORMW 『前辈真的想要的话、请插入上面的菊穴好吗』
+				PRINTFORMW 『爱琉知道、这样是没有办法弥补前辈的』
+				PRINTFORMW 『不过这是爱琉最后的底线了』
+				PRINTFORMW 『如果前辈心中不满、可以在菊穴里隔着肠壁尽情的顶撞爱琉的子宫』
+				PRINTFORMW 你答应了爱琉的请求
+				PRINTFORMW 你让爱琉趴在窗口、从背后掀起裙子、将她%TEXTR("绘着小熊图案的可爱/粉色的丝质/白色的蕾丝")%内裤脱下
+				PRINTFORMW 从这个角度正好能同时看见窗户里的%CALLNAME:TARGET%与身下的爱琉
+				PRINTFORMW 在调整了一下角度后、抓着爱琉的桃心形状的屁股
+				PRINTFORMW 一边看着房间内%CALLNAME:TARGET%与男人们性交的场面一边将肉棒送入爱琉温暖湿润的菊穴中
+				CFLAG:325 += 1
+				CFLAG:307 += (3+RAND:5)
+				CFLAG:309 += (3+RAND:5)
+				CFLAG:310 += (3+RAND:5)
+				CFLAG:311 += (3+RAND:5)
+				; PRINTFORMW 啊——就是那里、前辈感觉到了吗
+				; PRINTFORMW 那里就是爱琉的处女小穴的子宫
+				; PRINTFORMW 隔着肠壁触碰的话是不是别有一番滋味呢
+			
+			CASE 8
+				PRINTFORMW 部室最深处的房间吸引了你的注意
+				PRINTFORMW 房间的窗帘从里面被拉上、但窗户边上却有着一段没有遮住的缝隙
+				PRINTFORMW 在好奇心的驱使下、你来到缝隙处向里面看去
+				PRINTFORMW 最里面的赫然是%CALLNAME:TARGET%的身影
+				PRINTFORMW 似乎全部的男性部员都在这里、赤裸着身体的男性们排成一条长队
+				PRINTFORMW 而在床上的%CALLNAME:TARGET%、正被压在床上、以播种的姿势被男人不停侵犯着
+				PRINTFORMW 男人抱着%CALLNAME:TARGET%的身体、一边亲吻、另一边肉棒不断地插入深处、一次又一次地撞击着女性的花心
+				PRINTFORMW 最后肉棒直直的插入深处、扣响那秘密的门扉、将大量的精子送入%CALLNAME:TARGET%的子宫深处
+				PRINTFORMW %CALLNAME:TARGET%的身体也在男人的射精下微微抽搐着、双手紧紧环在男人的背后、享受着高潮的余韵
+				PRINTFORMW 男人恋恋不舍的将肉棒拔出、还未等%CALLNAME:TARGET%的小穴完全合上、下一个男人早已将挺立的肉棒送入满是淫液的洞中
+				PRINTFORMW 用前一人的精液充当润滑剂、一口气再次将肉棒插入最深处
+				PRINTFORMW %CALLNAME:TARGET%不自禁地发出愉悦而下流的娇喘、
+				PRINTFORMW 溢出的精液再次被顶回子宫、坚硬的龟头堵住了子宫的入口
+				PRINTFORMW 『%CALLNAME:TARGET%桑、朝着这边——』
+				PRINTFORMW 男人摸着%CALLNAME:TARGET%的脸朝向自己、最后夺去了%CALLNAME:TARGET%唇、肆意的接吻起来
+				CALL PRINT_STRW, @"「嗯_HH_、啾噜~~，啾噜_HH_」"
+				CALL PRINT_STRW, @"「唔呣~啊_HH_、唔呣、嗯呜~~」"
+				PRINTFORMW 另一边、下半身的动作也没有落下、黝黑的阴茎在%CALLNAME:TARGET%的小穴中不断进出
+				PRINTFORMW 每次肉棒从蜜穴中拔出、都会裹挟着爱液与精液从两人的结合处流出、搅拌着再插入深处
+				PRINTFORMW 像是彰显做爱的事实一般、发出巨大的[啪——啪]声、饱满的臀部卷起一波又一波的肉浪
+				PRINTFORMW %CALLNAME:TARGET%就在这样的进攻下呜咽呻吟着、两条笔直修长的大腿也随着男人的抽插、在空中摇摆着
+				PRINTFORMW 没过多久
+				PRINTFORMW 男人就到了极限、挥舞着腰肢挺入%CALLNAME:TARGET%小穴的深处
+				PRINTFORMW 向着本就装满精液的子宫、再次倾吐出浓郁的种子、鼓胀的子宫将小腹都微微撑起
+				CALL CREATE_MOB, "成海爱琉"
+				ACTOR = CNUM("成海爱琉")
+				CALL SET_SHIRT, "女式衬衫", ACTOR
+				CALL EMOTION_PLUS, "頬手",ACTOR
+				PRINTFORMW 『前辈、那个女孩子是你的女朋友吗』
+				PRINTFORMW 在你看的正入神的时候、一道清脆的女声从你侧边响起
+				PRINTFORMW 一个娇小身材的女孩子过来向你搭话
+				PRINTFORMW 『前辈也看了挺久的吧、心里是什么感觉呢』
+				PRINTFORMW 『嫉妒、还是兴奋呢』
+				CALL PRINT_SELECT, "嫉妒/兴奋"
+				IF RESULT == 0
+					; PRINTFORMW 嫉妒
+					PRINTFORMW 『嗯-果然还是会有些难受的吧』
+					PRINTFORMW 『在这里先向您道个歉、%CNAME("一人称")%是一年级演奏部的成海 爱琉、前辈叫%CNAME("一人称")%爱琉就好』
+					PRINTFORMW 『这个做爱部的部长、就是在那边的那个长得像大叔一样的人、是%CNAME("一人称")%的男朋友』
+					PRINTFORMW 爱琉指着房间中一个赤裸着身子坐在旁边休息的一个男人
+					PRINTFORMW 『刚才、大概也侵犯了前辈的女友』
+					PRINTFORMW 『作为道歉、就由%CNAME("一人称")%来帮前辈进行侍奉吧』
+					PRINTFORMW 名为爱琉的女孩子、慢慢的蹲下身子、跪在你面前、精致的俏脸贴在了你的腰间
+					PRINTFORMW 爱琉伸出手、轻轻地隔着裤子抚摸着你的下身
+					PRINTFORMW 『前辈虽然说着在嫉妒、不过这里却早就硬起来了呢』
+				ELSE
+					; PRINTFORMW --兴奋
+					PRINTFORMW 『兴奋吗———嗯—、在%CNAME("一人称")%看来有些难以理解呢』
+					PRINTFORMW 『啊——忘了自%CNAME("一人称")%介绍了』
+					PRINTFORMW 『%CNAME("一人称")%是一年级演奏部的成海 爱琉、前辈叫%CNAME("一人称")%爱琉就好』
+					PRINTFORMW 『那边的那个长得像大叔一样的人、就是做爱部的部长、也是%CNAME("一人称")%的男朋友』
+					PRINTFORMW 爱琉指着房间中一个赤裸着身子坐在旁边休息的一个男人
+					PRINTFORMW 『前辈刚才应该也看到他侵犯自己的女朋友的场面了吧』
+					PRINTFORMW 『那么在他侵犯你女友的同时、也来侵犯%CNAME("一人称")%的话、会不会让前辈更加兴奋呢』
+					PRINTFORMW 名为爱琉的女孩子、慢慢的蹲下身子、跪在你面前、精致的俏脸贴在了你的腰间
+					PRINTFORMW 伸出手、轻轻地隔着裤子抚摸着你的下身
+					PRINTFORMW 『用前辈这个坚硬的肉棒、尽情地蹂躏%CNAME("一人称")%的嘴穴吧』
+				ENDIF
+				PRINTFORMW 不远处、%CALLNAME:TARGET%那边又开始了新的一轮侵犯
+				PRINTFORMW 大叔坐在床沿上、从背后抱起%CALLNAME:TARGET%、以背面座位的姿势从后面插了进去
+				PRINTFORMW 男人们围在%CALLNAME:TARGET%的身边、拉住她的手在自己的阴茎上套弄起来
+				PRINTFORMW 但不同的是、此刻、大叔的女友正跪在你的胯下、用她的嘴侍奉着你的阴茎
+				CALL PRINT_STRW, @"『啾_HH_　嗯……啾咕、啾_HH_　」"
+				CALL PRINT_STRW, @"『嗯_HH_　哈……嗯咕 _HH_」"
+				CALL PRINT_STRW, @"『啾啵、啾_HH_、咧捋~~」"
+				PRINTFORMW 那边的%CALLNAME:TARGET%在大叔的不断进攻下、很快便颤抖着高潮了
+				PRINTFORMW 大量的淫水不断从两人的结合处飞溅而出、
+				PRINTFORMW %CALLNAME:TARGET%也抽搐了仰靠在大叔的怀中、任由他揉弄自己的乳房并下流的接吻起来
+				CALL PRINT_STRW, @"『嗯_HH_、啾噜~~，啾噜_HH_」"
+				CALL PRINT_STRW, @"『啾_HH_——啾，嗯啾——」"
+				PRINTFORMW 『前辈的肉棒又变大了呢』
+				CALL PRINT_STRW, @"『啾啵、啾、咧捋_HH_~」"
+				PRINTFORMW 『是看到%CALLNAME:TARGET%前辈被别的男人侵犯到高潮的场面而兴奋了吗』
+				PRINTFORMW 『可以哦、前辈再粗暴一些也没关系的』
+				PRINTFORMW 『把爱琉的嘴巴当成小穴、像那些男人侵犯%CALLNAME:TARGET%前辈一样、更加粗暴的蹂躏爱琉吧』
+				PRINTFORMW 『咕——』
+				CALL PRINT_STRW, @"『咕噜~~、噗_HH_、咕噜~~、噗呣~~」"
+				CALL PRINT_STRW, @"『啊——就是这样、前辈~~_HH_』"
+				PRINTFORMW 爱琉双手环抱住你的腰间、好让你的阴茎能更加轻易地插入她的喉咙中
+				PRINTFORMW 而这时你也看到
+				PRINTFORMW 窗帘的缝隙后方、男人跟%CALLNAME:TARGET%的动作越发合拍起来
+				PRINTFORMW 随着肉棒在小穴中进进出出、男人的腰不断的撞击在%CALLNAME:TARGET%饱满的臀肉上、发出啪啪的巨大撞击声
+				PRINTFORMW %CALLNAME:TARGET%也配合着扭动身体、妩媚的呻吟声就算隔着窗户也能清楚的听见
+				PRINTFORMW 男人放慢了动作、双手攀上了%CALLNAME:TARGET%的腰向上滑去、从背后抓住了那柔软的双峰
+				PRINTFORMW 毫不爱惜的大力抓揉着、用指尖揉捏着立起的乳头
+				PRINTFORMW 而每一次触碰、%CALLNAME:TARGET%都会发出更加强烈又满足的呻吟
+				PRINTFORMW 并主动地摆动起身体、让肉棒更多的摩擦小穴深处的敏感部位
+				PRINTFORMW %CALLNAME:TARGET%扭动中的身体已经被汗水打湿、在灯光下显得那么的耀眼、
+				PRINTFORMW 与周围浑身赤裸、挺立着肉棒的男人们形成了强烈的反差
+				PRINTFORMW 终于、男人放下了握着乳房的手、抱紧%CALLNAME:TARGET%的腰肢开始了最后的冲刺
+				PRINTFORMW 一下、两下、三下.....
+				PRINTFORMW 男人抽插的动作逐渐加快、黝黑的阴茎在阴道中不停的来回冲刺着
+				;很快便化为残影、无法看清了
+				PRINTFORMW %CALLNAME:TARGET%的身体也因即将到来的高潮而停止了动作、只是一味地承受着进攻、这是绝顶的前兆
+				CALL PRINT_STRW, @"「%TEXTR("哈啊/呀啊啊啊")%_HH_　%CNAME("一人称")%的子宮降下來了、%TEXTR(@"好像要去了、嗯、嗯嗚。/要丟了啊")%_HH_」"
+				CALL PRINT_STRW, @"「%TEXTR(@"呀啊、啊啊啊_HH_　好、好棒/噫呀_HH_　好舒服/哈啊、不、不行_HH_、那麼激烈的話……啊啊啊啊啊")%_HH_」"
+				PRINTFORMW 突然间男人也牢牢地抱住%CALLNAME:TARGET%、努力地将肉棒嵌入最深处
+				PRINTFORMW 于此同时%CALLNAME:TARGET%的身体猛地一颤、紧接着腰部高高拱起、大量的淫液从结合处喷出
+				CALL PRINT_STRW, @"「去了啊~_HH_！————————」"
+				PRINTFORMW %CALLNAME:TARGET%的娇躯不住地痉挛着、淫液不断从小穴中漏出、流到下方正在不停鼓动的阴囊上
+
+				PRINTFORMW 在大叔射精的同时、你也在爱琉的嘴中爆发了
+				PRINTFORMW 大叔的肉棒不断鼓动着、将源源不断的精液注入%CALLNAME:TARGET%的小穴之中
+				PRINTFORMW 身下的爱琉%TEXTR("也紧紧环住你的腰间/双手与你紧紧相扣")%、将肉棒尽可能地吞入喉咙深处、让浓稠的精液直接流入自己的胃中
+				PRINTFORMW 许久、男人将%CALLNAME:TARGET%放下、肉棒从小穴中拔出
+				PRINTFORMW 爱琉也一边用力吮吸着、一边将肉棒从自己口里拔出
+				CALL PRINT_STRW, @"『嗯_HH_、啾芙……啾噜、啾卜~_HH_」"
+				CALL PRINT_STRW, @"『哈——多谢款待_HH_』"
+				PRINTFORMW 『前辈感觉舒服吗、嗯、那就好』
+				PRINTFORMW ...
+				PRINTFORMW 随后你与爱琉来到休息室、闲聊了一会、并交换了LINE
+				PRINTFORMW 不久之后、脸上带着些许潮红的%CALLNAME:TARGET%也来到了这边
+				CALL SET_CEVENT("做爱部寻找同伴",TARGET)
+				CFLAG:325 += 1
+				CFLAG:307 += (3+RAND:5)
+				CFLAG:309 += (3+RAND:5)
+				CFLAG:310 += (3+RAND:5)
+				CFLAG:311 += (3+RAND:5)
+				CFLAG:324 += (1+RAND:5)
+		ENDSELECT
+
+		;========================= %CALLNAME:TARGET%的专属事件 ===================================
+		; PRINTFORMW 刚进入房间、甜蜜的娇喘声便不断传来
+		; PRINTFORMW 汗液、精液、爱液混杂着的特有气味、不断逸散着
+		; PRINTFORMW 整个房间充斥着桃色的淫靡氛围
+
+		; PRINTFORMW %CALLNAME:TARGET%被坐在沙发上的大叔背后抱住、正面朝向你
+		; PRINTFORMW 修女服的裙摆被播到一边、粉色的小穴毫无保留的暴露在你的眼前
+		; PRINTFORMW 「这种姿态被%CNAME("主人")%看到、太羞耻了」
+		; PRINTFORMW %CALLNAME:TARGET%将裙摆拉下、盖住了两腿中间
+		; PRINTFORMW 身下的大叔将%CALLNAME:TARGET%的屁股抬起、摆弄了几下
+		; PRINTFORMW 再放下时、一根圆柱的形状、在%CALLNAME:TARGET%放下的黑色裙子上凸显出来
+		; PRINTFORMW 「%CNAME("主人")%、这是什么、您是知道的吧
+		; PRINTFORMW 「这个形状、还有长度、硬度、
+		; PRINTFORMW 「在这几天的训练中、已经让%CNAME("一人称")%的身体熟记了呢
+		; PRINTFORMW %CALLNAME:TARGET%隔着裙子薄薄的布料轻轻摩挲着肉棒的尖端
+		; PRINTFORMW 大叔再次将%CALLNAME:TARGET%的屁股抬起、裙摆向上延伸、形状逐渐消失在裙摆的后方
+		; PRINTFORMW 「%CNAME("主人")%、要好好看着%CNAME("一人称")%哦
+		; PRINTFORMW 「嗯~~
+		; PRINTFORMW 伴随着一声娇哼、再放下时、裙子上已经没有凸起的形状
+		; PRINTFORMW 只有%CALLNAME:TARGET%诱人的躯体微微颤抖着
+		; IF MARK:淫紋
+		; 	PRINTFORMW 小腹的淫纹透过单薄的布料闪烁着粉红的颜色
+		; 	PRINTL 
+		; 	CALL PRINT_CUTIN, "淫紋", TARGET
+		; 	CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:TARGET%被刻上的淫纹发出了妖艳的光…"
+		; 	PRINTFORMW 
+		; ENDIF
+		; PRINTFORMW 黑色的布料后面藏着的是什么样的光景、不得而知
+		; PRINTFORMW %CALLNAME:TARGET%带着淫靡的目光看向你、轻轻拎起裙摆
+		; PRINTFORMW 「%CNAME("主人")%，想看看裙摆后面的样子吗
+		; PRINTFORMW 想/不想
+
+		; PRINTFORMW --想
+		; PRINTFORMW 「虽然很害羞、不过既然是%CNAME("主人")%想要的话
+		; PRINTFORMW 「那就请%CNAME("主人")%仔细看清楚咯
+		; PRINTFORMW %CALLNAME:TARGET%一点点的将布料抬起
+		; PRINTFORMW 最先露出的是两个比常人尺寸大了许多的阴囊、正微微鼓胀着
+		; PRINTFORMW 再向上、两人结合处便清晰的暴露了出来、粗壮的肉棒毫无保留的全根没入在淫穴之中
+		; PRINTFORMW 两瓣柔软的阴唇被撑开、紧贴在褶皱的玉袋上
+		; PRINTFORMW 随后、%CALLNAME:TARGET%开始扭动着腰部、在大叔的身上上下晃动起来、
+		; CALL PRINT_STRW, @"「啊~_HH_　%TEXTR("肉棒/阴茎")%在哪里摩擦%TEXTR("的话/、嗯~有感觉了")%_HH_」"
+		; PRINTFORMW 「啊啊——要去了————
+		; PRINTFORMW 「%CNAME("主人")%、请好好看着%CNAME("一人称")%、被大叔的肉棒搞到高潮的样子————
+		; PRINTFORMW %CALLNAME:TARGET%剧烈的高潮的同时、腰部的摆动让阴茎从小穴中滑出
+
+		; PRINTFORMW --不想
+		; PRINTFORMW 「太好了、就算是有%CNAME("主人")%的许可
+		; PRINTFORMW 「但是在%CNAME("主人")%的面前展示自己跟别的男人结合的地方还是太害羞了
+		; PRINTFORMW 「盖住的部分的就请%CNAME("主人")%自己想象吧
+
+		; PRINTFORMW %CALLNAME:TARGET%剧烈的高潮的同时、一根粗壮的肉棒从裙摆的侧方滑出
+		; PRINTFORMW 肉棒上沾满了精液与淫水的污浊、在灯光下泛着妖冶的光泽
+		; PRINTFORMW 「嗯_HH_——抱歉、%CNAME("主人")%、不小心让大叔的肉棒掉出来了
+		; PRINTFORMW 「因为高潮的太强了、不由自主的....
+		; PRINTFORMW %CALLNAME:TARGET%伸出手、将污浊的肉棒重新藏入裙摆的后方
+		; PRINTFORMW 扶着肉棒的同时抬起身子缓缓坐下
+		; PRINTFORMW 「啊————重新进来了、大叔的大肉棒
+
+		CALL SET_CEVENT("LOVORG同行中",TARGET)
+	; CASE "独自前往"
+	CASE 7
+		PRINTFORMW 你独自前往了做爱部
+
+		SAVESTR:現在位置 = 做爱部
+		PRINTFORMW 大叔一如既往的坐在了部室里
+		IF CFLAG:做爱部部员等级 >= 2 && RAND:3 == 0
+			PRINTFORMW 『来找%CALLNAME:TARGET%的是吗』
+			PRINTFORMW 大叔向桌子下方瞥了一眼
+			PRINTFORMW 『抱歉、%CNAME("一人称")%没有——太注意她在哪里』
+			PRINTFORMW 大叔的反应有些不太对劲、仔细听似乎还有奇怪的声音从桌子后方传来
+			CFLAG:307 += 1
+			CFLAG:322 += 1
+		ELSEIF CFLAG:做爱部部员等级 >= 3 && RAND:3 == 0
+			PRINTFORMW 『她还在忙呢、你先去里面坐一会吧』
+			PRINTFORMW ....
+			PRINTFORMW 你来到里侧的房间、不一会收到了大叔的短信
+			PRINTFORMW 《无题》
+			PRINTFORMW #附件
+			PRINTFORMW 『似乎是大叔拍摄的照片：张着嘴下流地吮吸着肉棒、同时一只手挡住眼睛、不想让人认出是谁的女性的照片』
+			CFLAG:307 += 1
+			CFLAG:322 += 2
+		ELSEIF CFLAG:做爱部部员等级 >= 3 && RAND:2 == 0
+			PRINTFORMW %CALLNAME:TARGET%是吗
+			PRINTFORMW 『她现在就在这里哦』
+			PRINTFORMW 大叔看向下方
+			PRINTFORMW 『用力些、让你的男友听听你在做什么』
+			PRINTFORMW 「嗯~~」
+			CALL PRINT_STRW, @"「啾_HH_　嗯……啾咕、啾_HH_　」"
+			PRINTFORMW 从桌子的后方传来%CALLNAME:TARGET%的声音
+			CALL PRINT_STRW, @"「%CNAME("主人")%_HH_　%CNAME("一人称")%现在正在侍奉大叔的大鸡鸡哦　」"
+			CALL PRINT_STRW, @"「嗯_HH_　哈……嗯咕 _HH_」"
+			CALL PRINT_STRW, @"「啾啵、啾_HH_、咧捋~~」"
+			CALL PRINT_STRW, @"「嗯_HH_、啾芙……啾噜、啾卜啾卜~_HH_」"
+			CFLAG:307 += 1
+			CFLAG:322 += 2
+		ELSEIF CFLAG:做爱部部员等级 >= 4 && RAND:2 == 0
+			PRINTFORMW 『来找%CALLNAME:TARGET%的是吗』
+			PRINTFORMW 大叔用力地挺动了一下腰
+			PRINTFORMW 随后、从桌子的后方传来某个女性压抑不住的娇媚呻吟
+			PRINTFORMW 『请稍等下、因为她还有事在忙呢』
+			PRINTFORMW 请去里面坐一下吧、当然要是想待在这边也请随意
+			PRINTFORMW 
+			PRINTFORMW -另一个视角-
+			PRINTFORMW 3分钟前
+			PRINTFORMW 办公桌的下方、%CALLNAME:TARGET%正趴在地毯上、屁股向着身后的大叔高高的翘起
+			PRINTFORMW 大叔的双手隔着内裤在%CALLNAME:TARGET%柔软饱满的臀肉上抚摸揉捏着
+			PRINTFORMW 娴熟的手法让%CALLNAME:TARGET%很快来了感觉、小穴中漏出的蜜汁很快将内裤浸湿了
+			PRINTFORMW 大叔让%CALLNAME:TARGET%把内裤褪下、并将臀部贴靠在自己的跨间
+			PRINTFORMW 随后将%CALLNAME:TARGET%那柔软的尻肉强行展开、将那女性最为私密的花园完全暴露出来、
+			PRINTFORMW 『这边都完全湿了呢』
+			PRINTFORMW 大叔一把说着话、一边将龟头按在了小穴的入口...
+			PRINTFORMW 就在此时、部室的门被敲响
+			PRINTFORMW 『来找%CALLNAME:TARGET%的是吗』
+			PRINTFORMW 大叔用力地挺动了一下腰、雄伟的巨根一下贯穿了%CALLNAME:TARGET%早已做好准备的温暖湿润小穴
+			CALL PRINT_STRW, @"「嗯_HH_、~_HH_」"
+			PRINTFORMW 阴道被填满的巨大快感让%CALLNAME:TARGET%无法忍耐地发出了呻吟
+			PRINTFORMW 炙热而荡漾的腔肉如同生物一般热情地迎接肉棒、不停的给与刺激
+			CFLAG:311 += 1
+		ELSEIF CFLAG:做爱部部员等级 >= 4 && RAND:2 == 0
+			PRINTFORMW 但与平时不同的是、一个熟悉的身影正坐在大叔腿上、亲密的接吻着
+			PRINTFORMW 背着身子看不到正脸、但裸露的脊背、姣好的身材、毫无疑问是你熟悉的%CALLNAME:TARGET%
+			PRINTFORMW 似乎察觉到你的到来、大叔停下了亲吻、从旁边探出了头
+			PRINTFORMW 『来找%CALLNAME:TARGET%的是吗』
+			PRINTFORMW 『不好意思呢、%TEXTR("让我再享用一会可以吗/我们还只做到一半呢")%』
+			PRINTFORMW 说话的同时、大叔的手还在%CALLNAME:TARGET%光洁的背脊上以下流的手法抚摸着
+			PRINTFORMW %CALLNAME:TARGET%的身体不时颤抖着、不经意间吐露出压抑不住的甜美呻吟
+			PRINTFORMW 看起来、被桌子挡住、无法看到的后方、%TEXTR("两人的性器正紧密的结合在一起/两人正进行着比接吻更加进一步的活动")%
+			PRINTFORMW 『而且%CALLNAME:TARGET%也不想就这样结束、是吧』
+			PRINTFORMW %CALLNAME:TARGET%没有回答、但有时没有回答也代表了一种态度
+			PRINTFORMW ...
+			PRINTFORMW 不一会、后方再一次传来%CALLNAME:TARGET%不再刻意压抑的喘息、与两人浓密的接吻声、肉体的撞击声...
+
+		ELSE
+			PRINTFORMW 『%CALLNAME:TARGET%吗?大概在部室里吧』
+		ENDIF
+	
+	;解除限制
+	CASE 21
+		IF CEVENT("部员等级限制",TARGET)
+			CALL DEL_CEVENT("部员等级限制",TARGET)
+			PRINTFORMW %CALLNAME:TARGET%等级限制已解除
+		ENDIF
+		IF CEVENT("部员等级限制",ASSI) && CEVENT("助手LOVORG前往",ASSI)
+			CALL DEL_CEVENT("部员等级限制",TARGET)
+			PRINTFORMW %CALLNAME:TARGET%等级限制已解除
+		ENDIF
+	CASE 22
+		CALL DEL_CEVENT("部员等级限制",ASSI)
+		PRINTFORMW %CALLNAME:ASSI%等级限制已解除
+	CASE 31
+		PRINTFORMW 当前%CALLNAME:TARGET%的部员等级为{CFLAG:做爱部部员等级}
+		IF CFLAG:做爱部部员等级 >= 2
+			PRINTFORMW 确定降低一级到LV{(CFLAG:做爱部部员等级)-1}吗
+			CALL PRINT_SELECT,"是/否"
+			IF RESULT == 0 
+				CFLAG:做爱部部员等级 -= 1
+				PRINTFORMW 做爱部等级已降至LV{CFLAG:做爱部部员等级}
+			ELSE
+				PRINTFORMW 已取消降级
+			ENDIF
+		ELSE 	
+			PRINTFORMW 无法降低
+		ENDIF
+	;打发时间
+	CASE 80
+		IF CEVENT("LOVORG同行中",TARGET)
+			IF CFLAG:做爱部部员等级 > 2 && RAND:4 == 0
+				PRINTFORMW 有几个部员想邀请%CALLNAME:TARGET%参与活动、但都被拒绝了
+			ELSEIF CFLAG:做爱部部员等级 > 3 && RAND:3 == 0
+				PRINTFORMW 几个部员过来邀请%CALLNAME:TARGET%参加活动、%CALLNAME:TARGET%在你耳边小声道歉后、跟着部员离开了
+				CALL DEL_CEVENT("LOVORG同行中",TARGET)
+			ELSE
+				PRINTFORMW %TEXTR(@"你与%CALLNAME:TARGET%在部室楼中闲逛着打发时间.../与%CALLNAME:TARGET%来到屋顶、一同观看起学校的风景")%
+			ENDIF
+		ELSE
+			PRINTFORMW 你在部室中打发了时间
+		ENDIF
+		SIF !CEVENT("LOVORG同行中",ASSI) && CEVENT("助手LOVORG前往",ASSI)
+			CALL LOVEORG_ASSI_ACTION
+
+	;贴标签
+	CASE 13
+		CALL LOVEORG_ADD_TAG, TARGET
+			;PRINTFORMW 要给%CALLNAME:TARGET%贴上什么标签呢(注:当天有效)
+			;STR = 不贴标签/
+			;SIF CFLAG:做爱部部员等级 >= 1
+				;	STR += "拥抱允许/"
+			;SIF CFLAG:做爱部部员等级 >= 2
+			;	STR += "爱抚允许/亲吻允许/"
+			;SIF CFLAG:做爱部部员等级 >= 3
+			;	STR += "侍奉允许/"
+			;SIF CFLAG:做爱部部员等级 >= 4
+			;	STR += "性交允许/"
+			;CALL PRINT_SELECT, STR
+			;SELECTCASE RESULT
+			;CASE 0
+			;	PRINTFORMW 你想了想、放弃了贴上标签的念头
+			;	TCVAR:做爱部活动标签 = 0
+			;CASE 1
+			;	PRINTFORMW 你将印有[拥抱允许]的标签贴在了%CALLNAME:TARGET%的肩膀上
+			;	TCVAR:做爱部活动标签 = 1
+			;CASE 2
+			;	PRINTFORMW 你将印有[爱抚允许]的标签贴在了%CALLNAME:TARGET%的胸前
+			;	TCVAR:做爱部活动标签 = 2
+			;CASE 3
+			;	PRINTFORMW 你将印有[亲吻允许]的标签贴在了%CALLNAME:TARGET%的胸前
+			;	TCVAR:做爱部活动标签 = 3
+			;CASE 4
+			;	PRINTFORMW 你将印有[侍奉允许]的标签贴在了%CALLNAME:TARGET%的胸前
+			;	TCVAR:做爱部活动标签 = 4
+			;CASE 5
+			;	PRINTFORMW 你将印有[性交允许]的标签贴在了%CALLNAME:TARGET%的小腹处
+			;	TCVAR:做爱部活动标签 = 5
+			;ENDSELECT
+			;PRINTFORMW %CALLNAME:TARGET%%TEXTR(@"有些脸红、在你的脸颊上亲了亲/轻轻地握住了你的手")%
+		SIF CEVENT("LOVORG同行中",ASSI)
+			CALL LOVEORG_ADD_TAG, ASSI
+	;助手和同伴交流
+	CASE 14
+		CALL LOVEORG_ASSI_TARGET_EXCHANGE
+	;发送短信/打电话/打电话给部长/观看直播摄像头/受邀前往做爱部/参观社团/隐奸PLAY/浇汁室/寻找同伴
+	;呼叫爱琉
+	CASE 81
+		CALL CREATE_MOB, "成海爱琉"
+		ACTOR = CNUM("成海爱琉")
+		CALL SET_SHIRT, "水手服/青", ACTOR
+		CALL EMOTION_PLUS, "重置/布",ACTOR
+		PRINTFORMW 『前辈~ 这里是爱琉哦~~』
+		PRINTFORMW 『下面是爱琉的颜绘测试』
+		PRINTFORMW 『点击不同的指令、我就会表现出不同的表情哦』
+		PRINTFORML 以下功能仅供测试
+		$INPUT_LOOP_LOVEORG_OTHER
+		CALL PRINT_SELECT, "接吻/脱衣/红潮/精液/离开"
+		IF RESULT == 0
+			CALL EMOTION_PLUS, "吐舌２/半目/通常眉３/赤面/对话框爱心/唇边手",ACTOR
+			CALL PRINT_STRW, @"「啾_HH_　嗯……啾咕、啾_HH_　」"
+			PRINTFORMW 爱琉环抱住你的脖子、吻了上来
+			PRINTFORMW ....
+			GOTO INPUT_LOOP_LOVEORG_OTHER
+		ELSEIF RESULT == 1
+			CALL SET_SHIRT, "", ACTOR
+			CALL EMOTION_PLUS, "重置/赤面/Ｗ剪刀手",ACTOR
+			PRINTFORMW 『前辈喜欢爱琉不穿衣服的样子吗』
+			GOTO INPUT_LOOP_LOVEORG_OTHER
+		ELSEIF RESULT == 2
+			CALL SET_SHIRT, "水手服/青", ACTOR
+			CALL EMOTION_PLUS, "赤面２",ACTOR
+			CALL PRINT_STRW, @"『前辈~ _HH_』"
+			GOTO INPUT_LOOP_LOVEORG_OTHER
+		ELSEIF RESULT == 3
+			CALL SET_SHIRT, "", ACTOR
+			CALL EMOTION_PLUS, "重置/爱心眼/赤面２/通常眉３/Ｗ剪刀手/半目/ڡ３/对话框爱心大量/精液左頬/精液髪/精液右頬/精液Ｂ",ACTOR
+			PRINTFORMW 『前辈的精液、弄的满脸都是呢』
+			GOTO INPUT_LOOP_LOVEORG_OTHER
+		ELSEIF RESULT == 4
+			CALL SET_SHIRT, "水手服/青", ACTOR
+			CALL EMOTION_PLUS, "重置/布/笑颜２/ni↘/紅潮",ACTOR
+			PRINTFORMW 『前辈~ 下次见~』
+		ENDIF
+	; CASE "做爱部等级设置"
+	; CASE 91
+	; 	PRINTFORMW 设置做爱部等级
+	; 	CALL PRINT_SELECT, "0/1/2/3/4"
+	; 	IF RESULT == 0
+	; 		CFLAG:做爱部部员等级 = 0
+	; 	ELSEIF RESULT == 1
+	; 		CFLAG:做爱部部员等级 = 1
+	; 	ELSEIF RESULT == 2
+	; 		CFLAG:做爱部部员等级 = 2
+	; 	ELSEIF RESULT == 3
+	; 		CFLAG:做爱部部员等级 = 3
+	; 	ELSEIF RESULT == 4
+	; 		CFLAG:做爱部部员等级 = 4
+	; 	ENDIF
+	; CASE "做爱部测试"; 临时作为助手等级设置
+	; CASE 92
+	; 	CALL PRINT_SELECT, "0/1/2/3/4"
+	; 		;IF RESULT == 0
+	; 		;	CFLAG:做爱部测试 = 0
+	; 		;ELSEIF RESULT == 1
+	; 		;	CFLAG:做爱部测试 = 1
+	; 		;ELSEIF RESULT == 2
+	; 		;	CFLAG:做爱部测试 = 2
+	; 		;ELSEIF RESULT == 3
+	; 		;	CFLAG:做爱部测试 = 3
+	; 		;ELSEIF RESULT == 4
+	; 		;	CFLAG:做爱部测试 = 4
+	; 		;ENDIF
+	; 	IF RESULT == 0
+	; 		CFLAG:ASSI:做爱部部员等级 = 0
+	; 	ELSEIF RESULT == 1
+	; 		CFLAG:ASSI:做爱部部员等级 = 1
+	; 	ELSEIF RESULT == 2
+	; 		CFLAG:ASSI:做爱部部员等级 = 2
+	; 	ELSEIF RESULT == 3
+	; 		CFLAG:ASSI:做爱部部员等级 = 3
+	; 	ELSEIF RESULT == 4
+	; 		CFLAG:ASSI:做爱部部员等级 = 4
+	; 	ENDIF
+	;让助手独自去做爱部/在做爱部自由活动
+	CASE 50
+		IF SAVESTR:現在位置 == "部室"
+			PRINTFORMW 这里是让%CALLNAME:ASSI%独自去做爱室的文本
+		ELSEIF SAVESTR:現在位置 == "做爱部"
+			PRINTFORMW 这里是让%CALLNAME:ASSI%在做爱部里自由活动的文本
+		ELSE
+			PRINTFORMW 现在位置的参数出现了错误
+			PRINTFORMW 去除%CALLNAME:ASSI%同行事件失败
+			RETURN 0
+		ENDIF
+		CALL DEL_CEVENT("LOVORG同行中",ASSI)
+		SIF CEVENT("二人LOVORG同行中",ASSI)
+			CALL DEL_CEVENT("二人LOVORG同行中",ASSI)
+	;寻找助手
+	CASE 12
+		PRINTFORMW 在做爱部里寻找%CALLNAME:ASSI%
+		CALL SET_CEVENT("LOVORG同行中",ASSI)
+	;用电话和同伴交流
+	CASE 15
+		PRINTFORMW 电话交流
+		CALL LOVEORG_TELEPHONE
+	;显示详细信息
+	CASE 16
+		DRAWLINE
+		CALL LOVEORG_EXP, TARGET
+		SIF CEVENT("助手LOVORG前往",ASSI)
+			CALL LOVEORG_EXP, ASSI
+		DRAWLINE
+		PRINTFORMW
+ENDSELECT     
+
+
+@OBAI_DECRIPTION
+#FUNCTIONS
+LOCALS = ""
+IF TALENT:貧乳
+	LOCALS = 娇嫩而贫瘠的胸部
+ELSEIF TALENT:巨乳
+	LOCALS = 饱满而柔软的乳房
+ELSE
+	LOCALS = 漂亮形状的双乳
+ENDIF     
+RETURNF LOCALS    
+
+@BODY_DECRIPTION
+#FUNCTIONS
+; IF TALENT:妊娠 && RAND:2 == 0
+; 	PRINTFORM %TEXTR("大/膨胀起来的")%肚子
+LOCALS = ""
+IF TALENT:娇小
+	LOCALS = 还未成熟的%TEXTR("幼小/娇小")%身体
+ELSEIF TALENT:巨乳
+	IF COND("苗条")
+		LOCALS = 苗条的同时又有着饱满乳房的性感身体
+	ELSE
+		LOCALS = 豐腴而又飽滿的肉体
+	ENDIF
+ELSE
+	LOCALS = 充满少女感的柔软身体
+ENDIF     
+RETURNF LOCALS 
+
+;此方程用于为对象贴标签
+@LOVEORG_ADD_TAG, ARG
+	PRINTFORMW 要给%CALLNAME:ARG%贴上什么标签呢(注:当天有效)
+	STR = 不贴标签/
+	SIF CFLAG:ARG:做爱部部员等级 >= 1
+		STR += "拥抱允许/"
+	SIF CFLAG:ARG:做爱部部员等级 >= 2
+		STR += "爱抚允许/亲吻允许/"
+	SIF CFLAG:ARG:做爱部部员等级 >= 3
+		STR += "侍奉允许/"
+	SIF CFLAG:ARG:做爱部部员等级 >= 4
+		STR += "性交允许/"
+	CALL PRINT_SELECT, STR
+	SELECTCASE RESULT
+	CASE 0
+		PRINTFORMW 你想了想、放弃了贴上标签的念头
+		TCVAR:ARG:做爱部活动标签 = 0
+	CASE 1
+		PRINTFORMW 你将印有[拥抱允许]的标签贴在了%CALLNAME:ARG%的肩膀上
+		TCVAR:ARG:做爱部活动标签 = 1
+	CASE 2
+		PRINTFORMW 你将印有[爱抚允许]的标签贴在了%CALLNAME:ARG%的胸前
+		TCVAR:ARG:做爱部活动标签 = 2
+	CASE 3
+		PRINTFORMW 你将印有[亲吻允许]的标签贴在了%CALLNAME:ARG%的胸前
+		TCVAR:ARG:做爱部活动标签 = 3
+	CASE 4
+		PRINTFORMW 你将印有[侍奉允许]的标签贴在了%CALLNAME:ARG%的胸前
+		TCVAR:ARG:做爱部活动标签 = 4
+	CASE 5
+		PRINTFORMW 你将印有[性交允许]的标签贴在了%CALLNAME:ARG%的小腹处
+		TCVAR:ARG:做爱部活动标签 = 5
+	ENDSELECT
+	PRINTFORMW %CALLNAME:TARGET%%TEXTR(@"有些脸红、在你的脸颊上亲了亲/轻轻地握住了你的手")%
+
+;此方程用于处理参观时发生的事件
+@LOVEORG_TAGGED_VISIT, ARG
+	IF TCVAR:ARG:做爱部活动标签 > 0
+		A = 0
+		SELECTCASE TCVAR:ARG:做爱部活动标签
+		CASE 1
+			A = 8
+		CASE 2
+			A = (1+RAND:2)
+		CASE 3
+			A = 3
+		CASE 4
+			A = (5+RAND:2)
+		CASE 5
+			A = 7
+		ENDSELECT
+		PRINTFORMW 你与%CALLNAME:ARG%在部室中闲逛着、迎面走来一位%LOVERORG_MEMBER(RAND:6)%的男性部员
+		PRINTFORM 并向你询问、是否可以
+		SELECTCASE A
+		CASE 8
+			PRINTFORMW 跟%CALLNAME:ARG%拥抱
+		CASE 1
+			PRINTFORMW 摸一下%CALLNAME:ARG%的胸部
+		CASE 2
+			PRINTFORMW 摸一下%CALLNAME:ARG%的屁股
+		CASE 3
+			PRINTFORMW 跟%CALLNAME:ARG%接吻
+		CASE 4
+			PRINTFORMW 吮吸%CALLNAME:ARG%的乳房
+		CASE 5
+			PRINTFORMW 让%CALLNAME:ARG%帮他口交
+		CASE 6
+			PRINTFORMW 让%CALLNAME:ARG%帮他乳交
+		CASE 7
+			PRINTFORMW 跟%CALLNAME:ARG%去旁边的房间中性交
+		ENDSELECT
+		CALL PRINT_SELECT, "同意/拒绝"
+		IF RESULT == 0
+			CALL LOVEORG_SHARE(A,ARG)
+		ELSE
+			PRINTFORMW 『%TEXTR(@"啊——抱歉呢/不好意思打搅你们了/我只是问问、祝你们玩的开心")%』
+			PRINTFORMW 部员礼貌的道歉后、打着招呼离开了
+		ENDIF
+	ELSE
+		PRINTFORMW 你与%CALLNAME:ARG%在部室的走廊中散步
+		IF CFLAG:做爱部部员等级 == 1 && RAND:2 == 0
+			PRINTFORMW 一对像是%TEXTR(@"情侣/师生/兄妹")%的男女、%TEXTR(@"正全裸着戴着项圈从你面前经过/正以站立后背位的姿势被压在窗户上做着/正坐在沙发上毫不顾忌旁人地热情亲吻着")%
+		ELSEIF CFLAG:做爱部部员等级 == 2 && RAND:2 == 0
+			PRINTFORMW %TEXTR(@"%CALLNAME:ARG%熟悉地向你介绍着社团的房间与构造/%CALLNAME:ARG%也会偶尔向认识的部员打招呼")%
+		ELSEIF CFLAG:做爱部部员等级 == 3 && RAND:2 == 0
+			PRINTFORMW %TEXTR(@"从附近房间传来的下流娇喘让%CALLNAME:ARG%想到了什么、有些脸红/在一间特别的房间前伫立了许久、%CALLNAME:ARG%才回过神般的拉着你离开了")%
+		ELSEIF CFLAG:做爱部部员等级 == 4 && RAND:2 == 0
+			PRINTFORMW 每一个遇到的部员都会向%CALLNAME:ARG%跟你热情的打着招呼
+		ELSE 
+			IF RAND :3 == 0
+				PRINTFORMW 来到部室休息区的沙发上坐下后、%CALLNAME:ARG%%TEXTR(@"便亲密地依偎在你的肩膀上/悄悄的将手伸进你的裤子当中握住肉棒套弄起来")%
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 不知不觉间、%CALLNAME:ARG%牵起你的手、与你十指相扣
+			ELSE
+				PRINTFORMW 不时有着奇怪的声音从附近的%TEXTR(@"房间/门缝/厕所/浴室 ")%里%TEXTR(@"传来/飘进耳朵")%
+			ENDIF
+		ENDIF
+	ENDIF
+
+
+
+
+;%TEXTR(@"")%
+@LOVEORG_INIT(ARG)
+IF CFLAG:做爱部部员等级 == 2 && RAND:2 == 0
+	PRINTFORMW 过了一会、%TEXTR(@"脸色微微泛红/衣服有些穿戴不齐")%的%CALLNAME:ARG%向你打着招呼出现在%SAVESTR:現在位置%。
+ELSEIF CFLAG:做爱部部员等级 == 3 && RAND:2 == 0
+	PRINTFORMW 过了一会、%TEXTR(@"脸上泛着红晕、小口喘息着/衣衫不整、胸部都露出大半")%的%CALLNAME:ARG%出现在了%SAVESTR:現在位置%。
+ELSEIF CFLAG:做爱部部员等级 == 4 && RAND:2 == 0
+	PRINTFORMW 过了好久、当你以为%CALLNAME:ARG%不会过来的时候、%TEXTR(@"手轻掩着小腹、脚步虚浮/衣衫不整、连头发有些白色粘连/内裤边缘挂着几个满是精液的避孕套")%的%CALLNAME:ARG%出现在了%SAVESTR:現在位置%的门口。
+ELSE
+	PRINTFORMW ……被呼唤的%CALLNAME:ARG%打着招呼出现在了%SAVESTR:現在位置%。
+ENDIF
+
+@LOVEORG_EXP_MINI
+IF CEVENT("助手LOVORG前往",ASSI)
+	PRINTFORM %TEXT_LJ(NAME:TARGET, 12)%
+	PRINTFORM %TEXT_LJ("", 8)%
+	PRINTFORM %TEXT_LJ(NAME:ASSI, 12)%
+	PRINTFORML
+	IF CFLAG:TARGET:做爱部部员等级 >= 2
+		PRINTFORM B:{CFLAG:TARGET:做爱部乳交次数}
+		PRINTFORM %TEXT_RJ("", 2)%
+		PRINTFORM M:{CFLAG:TARGET:做爱部口交次数}
+		PRINTFORM %TEXT_RJ("", 2)%
+		PRINTFORM V:{CFLAG:TARGET:做爱部本番次数}
+		PRINTFORM %TEXT_RJ("", 2)%
+		PRINTFORM A:{CFLAG:TARGET:做爱部肛交次数}
+		PRINTFORM %TEXT_RJ("", 2)%
+	ELSE
+		PRINTFORM %TEXT_LJ("部员等级lv2后解锁", 20)%
+	ENDIF
+	IF CFLAG:ASSI:做爱部部员等级 >= 2
+		PRINTFORM B:{CFLAG:ASSI:做爱部乳交次数}
+		PRINTFORM %TEXT_RJ("", 2)%
+		PRINTFORM M:{CFLAG:ASSI:做爱部口交次数}
+		PRINTFORM %TEXT_RJ("", 2)%
+		PRINTFORM V:{CFLAG:ASSI:做爱部本番次数}
+		PRINTFORM %TEXT_RJ("", 2)%
+		PRINTFORM A:{CFLAG:ASSI:做爱部肛交次数}
+	ELSE
+		PRINTFORM %TEXT_LJ("部员等级lv2后解锁", 15)%
+	ENDIF
+	PRINTFORML
+ELSE
+	PRINTFORM %TEXT_RJ(NAME:TARGET, 12)%
+	PRINTFORML
+	IF CFLAG:TARGET:做爱部部员等级 >= 2
+		PRINTFORM B:{CFLAG:TARGET:做爱部乳交次数}
+		PRINTFORM %TEXT_RJ("", 3)%
+		PRINTFORM M:{CFLAG:TARGET:做爱部口交次数}
+		PRINTFORM %TEXT_RJ("", 3)%
+		PRINTFORM V:{CFLAG:TARGET:做爱部本番次数}
+		PRINTFORM %TEXT_RJ("", 3)%
+		PRINTFORM A:{CFLAG:TARGET:做爱部肛交次数}
+	ELSE
+		PRINTFORM %TEXT_RJ("部员等级level_2后解锁", 12)%
+	ENDIF
+	PRINTFORML
+ENDIF
+
+@LOVEORG_EXP, ARG
+PRINTFORML %CALLNAME:ARG%
+IF CFLAG:ARG:做爱部部员等级 >= 2
+	PRINTFORM %TEXT_RJ("爱抚次数", 12)%:
+	PRINTFORM {CFLAG:ARG:308}
+	PRINTFORM %TEXT_RJ("接吻次数", 12)%:
+	PRINTFORM {CFLAG:ARG:309}
+	PRINTFORM %TEXT_RJ("乳交次数", 12)%:
+	PRINTFORM {CFLAG:ARG:312}
+	PRINTFORM %TEXT_RJ("口交次数", 12)%:
+	PRINTFORM {CFLAG:ARG:307}
+	PRINTFORM %TEXT_RJ("精饮次数", 12)%:
+	PRINTFORM {CFLAG:ARG:322}
+	PRINTL
+ENDIF
+IF CFLAG:ARG:做爱部部员等级 >= 3
+	PRINTFORM %TEXT_RJ("本番次数", 12)%:
+	PRINTFORM {CFLAG:ARG:311}
+	PRINTFORM %TEXT_RJ("肛交次数", 12)%:
+	PRINTFORM {CFLAG:ARG:310}
+	PRINTFORM %TEXT_RJ("精浴次数", 12)%:
+	PRINTFORM {CFLAG:ARG:321}
+	PRINTFORM %TEXT_RJ("V中出次数", 12)%:
+	PRINTFORM {CFLAG:ARG:323}
+	PRINTFORM %TEXT_RJ("A中出次数", 12)%:
+	PRINTFORM {CFLAG:ARG:324}
+	PRINTL
+ENDIF
+IF CFLAG:ARG:做爱部部员等级 < 2
+	PRINTFORML 部员等级Lv2后解锁
+ENDIF
+
+@LOVERORG_MEMBER(ARG)
+#FUNCTIONS
+LOCALS = ""
+SELECTCASE ARG
+CASE 0
+	LOCALS = 有点像女孩子
+CASE 1
+	LOCALS = 身材高大
+CASE 2
+	LOCALS = 体型有些胖胖的
+CASE 3
+	LOCALS = 看起来年纪较小
+CASE 4
+	LOCALS = 戴着眼镜看着斯文
+CASE 5
+	LOCALS = 不良风格看起来像是NTR本中黄毛
+ENDSELECT
+RETURNF LOCALS 
+
+;@LOVEORG_SHARE(ARG)
+@LOVEORG_SHARE, ARG:0, ARG:1
+#DIM CHOICE
+#DIM CNUM
+#DIMS FUNC_NTRS
+CHOICE = ARG:0
+CNUM = TARGET
+SIF ARG:1 != 0
+	CNUM = ARG:1
+
+SELECTCASE CHOICE
+CASE 8
+	PRINTFORMW %CALLNAME:CNUM%向这名部员主动张开双臂、发出了接受拥抱的信号
+	PRINTFORMW 随后、部员与%CALLNAME:CNUM%紧紧地拥抱在了一起、
+	IF TALENT:巨乳
+		PRINTFORMW 感受着%CALLNAME:CNUM%巨大乳房在自己身前挤压变形的柔软感觉
+	ELSEIF TALENT:貧乳
+		PRINTFORMW 感受着%CALLNAME:CNUM%%TEXTR(@"娇小的身体完全被自己掌握的满足感/萝莉般的身躯在自己怀中的背德感")%
+	ELSE
+		PRINTFORMW 感受着%CALLNAME:CNUM%%TEXTR(@"发丝间的香气/柔软而又富有弹性的身体")%
+	ENDIF
+
+
+CASE 1
+	IF CFLAG:做爱部部员等级 == 3
+		PRINTFORMW 部员靠近了%CALLNAME:CNUM%、将手从上衣的下摆中伸了进去
+		PRINTFORMW %TEXTR(@"没有任何阻隔地/沿着肌肤直接")%滑到%CALLNAME:CNUM%的胸前
+	ELSEIF CFLAG:做爱部部员等级 == 4
+		PRINTFORMW %CALLNAME:CNUM%向着部员主动地将上衣掀起、%OBAI_DECRIPTION()%毫无保留的暴露在空气当中
+		PRINTFORMW 男人的眼睛都有些直了、迫不及待的将双手印了上去
+	ELSE 
+		PRINTFORMW 部员靠近了%CALLNAME:CNUM%、将手隔着衣服放在了她的胸前
+	ENDIF
+	PRINTFORMW 随后%TEXTR(@"在你的面前/当着你的面")%开始揉弄、爱抚起来
+	PRINTFORMW %CALLNAME:CNUM%那%OBAI_DECRIPTION()%在部员的手中不断变化着形状、不时也有妩媚的喘息声从%CALLNAME:CNUM%的口中漏出
+	PRINTFORMW ...
+	PRINTFORMW ..
+	CFLAG:CNUM:308 += 1
+CASE 2
+	PRINTFORMW %CALLNAME:CNUM%背向后方、提起裙摆、向着部员展示着自己毫无遮挡的臀部
+	IF CFLAG:做爱部部员等级 == 3
+		PRINTFORMW 部员也迫不及待地将手伸了过去、
+		PRINTFORMW 沿着内裤边缘滑入里面、直接感受着那份柔软
+	ELSEIF CFLAG:做爱部部员等级 == 4
+		PRINTFORMW 毫不客气地将%CALLNAME:CNUM%的内裤拉下、
+		PRINTFORMW 随后将头埋入其中、一边揉弄臀部、一边用舌头进攻着%CALLNAME:CNUM%的菊穴
+	ELSE 
+		PRINTFORMW 部员靠近了%CALLNAME:CNUM%、将手隔着内裤放在了她的臀上
+	ENDIF
+	PRINTFORMW %CALLNAME:CNUM%被突如而来的刺激定住了、%TEXTR("挂着内裤的双腿因为快感而不断颤抖着/忍耐不住的愉悦呻吟不断从口中漏出")%
+	CFLAG:CNUM:308 += 1
+CASE 3
+	IF CFLAG:做爱部部员等级 == 3
+		PRINTFORMW 部员靠近了%CALLNAME:CNUM%、两人的双唇缓缓贴近
+		PRINTFORMW %CALLNAME:CNUM%也闭上了眼睛、
+		CALL PRINT_STRW, @"「啾啵、啾、~」"
+		PRINTFORMW 两人就这样在你的眼前交叠着嘴唇、亲吻着
+	ELSEIF CFLAG:做爱部部员等级 == 4
+		PRINTFORMW %CALLNAME:CNUM%主动的环抱起面前男人的脖子、献上自己粉嫩的双唇
+		PRINTFORMW 男人在一瞬间的错愕后、也积极的回应起来
+		PRINTFORMW 将%CALLNAME:CNUM%的身体抱住紧贴着自己、随后用舌头撬开%CALLNAME:CNUM%的牙关、纠缠着舌吻起来
+	ENDIF
+	CALL PRINT_STRW, @"「啾_HH_　嗯……啾嗚、啾_HH_嗯！！—— _HH_」"
+	CALL PRINT_STRW, @"「嗯_HH_　哈……嗯嗚 _HH_　」"
+	PRINTFORMW 在你面前、两人如同恋人般相拥着、浓密的亲吻着
+	PRINTFORMW 不断传来娇媚的喘息与粘稠的水声
+	PRINTFORMW ...
+	PRINTFORMW ..
+	SIF CFLAG:做爱部部员等级 == 4
+		TRYCALLFORM KOJO_NTRS_K{NO:TARGET}("接吻标签")
+	CFLAG:CNUM:309 += 1
+CASE 4
+; 没想好怎么写;（没啥意思，砍掉）
+
+CASE 5
+	PRINTFORMW %CALLNAME:CNUM%松开了牵着你的手、来到部员身前蹲了下去
+	PRINTFORMW 随后熟练地解开裤子、将那%TEXTR(@"已然勃起的雄性之物/坚硬肉棒")%释放了出来
+	PRINTFORMW 随后将那耸立的阴茎用口腔温柔地包裹住、持续地吮吸起来
+	SIF CFLAG:CNUM:做爱部部员等级 == 4
+		PRINTFORMW 侍奉地同时、%CALLNAME:CNUM%的手也不自禁地伸进内裤中爱抚着自己的小穴
+	PRINTFORMW ...
+	PRINTFORMW 几分钟后、部员颤抖着紧紧抱住%CALLNAME:CNUM%的头、将一波又一波的精子注入%CALLNAME:CNUM%的口腔之中
+	PRINTFORMW 从你的角度也能看到%CALLNAME:CNUM%因为射精而高潮时、从内裤中渗出的爱液将地板都打湿了
+	CFLAG:CNUM:307 += 1
+	CFLAG:CNUM:322 += 1
+;乳交
+CASE 6
+	PRINTFORMW %CALLNAME:CNUM%在部员的目光下将上衣掀起、将内衣解开、露出那%OBAI_DECRIPTION()%
+	PRINTFORMW 在部员热切的目光下、跪坐在了两腿之间、主动地拉开拉链、将那挺立的男根释放了出来
+	IF TALENT:CNUM:巨乳
+		PRINTFORMW 随后用那柔软的乳肉包裹起阴茎上下撸动着刺激起来、
+	ELSEIF TALENT:CNUM:貧乳
+		PRINTFORMW 随后用手按着阴茎、在自己柔软但贫瘠的胸前摩擦起来
+	ELSE
+		PRINTFORMW 随后用双手夹住乳房、将阴茎包裹在其中刺激起来
+	ENDIF
+	PRINTFORMW 同时也不时 将鼻子凑近龟头、%TEXTR(@"将那淫靡的雄性气味深深嗅闻着/用舌头旋转着、温柔地刺激着玲口/低下头饱含爱意地用双唇亲吻起龟头")%
+	PRINTFORMW 突然间、部员的阴茎猛烈的勃起着、马上就要射精了
+	CALL PRINT_SELECT, "就这样在胸部射出来/射在嘴里";/射在脸上(写起来麻烦死了、砍掉)
+	IF RESULT == 0
+		IF TALENT:CNUM:貧乳
+			PRINTFORMW %CALLNAME:CNUM%用手撸动着部员的肉棒、将玲口贴在自己已然挺立的乳头上
+			PRINTFORMW 随后、大量的精液喷薄而出、不断涌出的粘稠液体将%CALLNAME:CNUM%整个胸脯都染上白色的印记、连樱粉色的乳头都被盖住了
+		ELSE
+			PRINTFORMW %CALLNAME:CNUM%托起胸部、将阴茎夹在乳内
+			PRINTFORMW 随后、夹住阴茎的双乳剧烈的脉动起来、从不远处仿佛都能听到那剧烈射精而发出的声音
+			PRINTFORMW 侍奉完的%CALLNAME:CNUM%来到你的面前、%TEXTR("微笑着/開心地笑着")%%CALLNAME:CNUM%用%TEXTR("両手")%将、%TEXTR("豊満的/肉厚の/仿佛要从手掌上洒落下来的")%%TEXTR("乳沟/胸部の間")%左右打开、
+			PRINTFORMW 粘稠的精液在%CALLNAME:CNUM%雪白的双峰间拉出了几条长长的丝线、双乳内侧也被大片的精液打湿、在灯光下反射着妖艳的色泽
+		ENDIF
+		CFLAG:CNUM:321 += 1
+	ELSE
+		PRINTFORMW %CALLNAME:CNUM%低下头、以如同恋人般的姿势吻在了龟头的前端
+		PRINTFORMW 随后、阴茎剧烈的脉动起来、%CALLNAME:CNUM%瞪大了眼睛、发出了一声低呼
+		PRINTFORMW 虽然无法看见、但可以想象到此刻大量的精液正不断从玲口涌出、流入%CALLNAME:CNUM%的口腔之中
+		PRINTFORMW %CALLNAME:CNUM%的喉咙不断的响起吞咽声
+		CFLAG:CNUM:322 += 1
+	ENDIF
+	CFLAG:CNUM:312 += 1
+CASE 7
+	PRINTFORMW %TEXTR(@"部员牵起%CALLNAME:CNUM%的手、将她带进了旁边的一间房间中/部员示意%CALLNAME:CNUM%跟上他、随后走进了旁边的一间房间中、%CALLNAME:CNUM%在你唇上轻轻一吻、随即也进去了")%
+	PRINTFORMW 要跟进去看看吗
+	CALL SET_CEVENT("部员性交中",CNUM)
+	CALL PRINT_SELECT, "要(目前犯)/还是算了"
+	IF RESULT == 0
+		PRINTFORMW 出于某种心理、你决定跟进去看看
+		PRINTFORMW 刚一进门便看到、%CALLNAME:CNUM%正跟部员浓密地亲吻着
+		PRINTFORMW 看到你的瞬间、%CALLNAME:CNUM%似乎有点紧张、但很快又将注意集中在眼前的事上
+		PRINTFORMW 两人一边亲吻着、一边将身上的衣服一件件地脱下
+		PRINTFORMW 很快、两具赤裸的酮体就以更加紧密的姿势贴在了一起
+		PRINTFORMW %CALLNAME:CNUM%%OBAI_DECRIPTION()%紧紧地压在了部员的身上、而部员的双手也在%CALLNAME:CNUM%的后背与臀部间来回的摩挲着
+		PRINTFORMW ...
+		PRINTFORMW ..
+		PRINTFORMW 几分钟后
+		IF RAND:3 == 0
+			PRINTFORMW %CALLNAME:CNUM%仰躺在床上、双腿被部员以M字的姿势向两边打开
+			PRINTFORMW 仿佛要让你仔细看清一般、部员将%CALLNAME:CNUM%那已经满是爱液的小穴向你展示着
+			PRINTFORMW 随后、在你的注视下、将那已经完全勃起的肉棒从龟头开始、一点一点没入进去
+			; PRINTFORMW 前端的龟头分开两瓣柔软的阴唇、后面血管清晰可见的杆部随之下沉、直到全部消失不见
+			PRINTFORMW 而%CALLNAME:CNUM%的小穴仿佛无底的深渊、蠕动着将肉棒全部吞了下去
+			PRINTFORMW 部员发出一声满足的呻吟、而后摆动起腰部、在那柔软的蜜穴里抽插起来
+			PRINTFORMW ...
+
+		ELSEIF RAND:2 == 0
+			PRINTFORMW %CALLNAME:CNUM%双手搭载你的肩膀上、鲜嫩的红唇在你嘴边索取着
+			CALL PRINT_STRW, @"「啾_HH_　嗯……啾嗚、啾_HH_—— _HH_」"
+			PRINTFORMW 而其的身后、部员正抓着她那向后翘起的臀部一边揉弄一边将肉棒贴在中间上下摩擦着
+			CALL PRINT_STRW, @"「嗯呜!?  嗯啾~~啾~」"
+			PRINTFORMW 突然、正与你接吻的%CALLNAME:CNUM%发出一声愉悦的悲鸣
+			PRINTFORMW 向后方看去、部员正挺着腰没入%CALLNAME:CNUM%那温暖湿润的淫穴当中
+			PRINTFORMW ....
+			PRINTFORMW ..
+			CALL PRINT_STRW, @"「嗯_HH_、啾芙……啾噜、啾卜~_HH_」"
+			PRINTFORMW %CALLNAME:CNUM%在接吻间不断漏出的喘息越加地娇媚下流起来
+			PRINTFORMW 身后部员的动作也比一开始大了太多
+			PRINTFORMW 每一次撞击在%CALLNAME:CNUM%的屁股上、都会带起一阵肉浪、伴随着溢出的淫液，飞洒至各处
+			PRINTFORMW %CALLNAME:CNUM%似乎非常有感觉、与你的接吻也愈发浓密而下流
+			PRINTFORMW 并主动配合起身后的男人、扭动起腰部以获得更大的快感
+			PRINTFORMW ...
+			PRINTFORMW 最终、在无数次的冲刺后、男人俯下身抱住%CALLNAME:CNUM%的腰、将肉棒深深插入的同时爆发了
+			PRINTFORMW %CALLNAME:CNUM%也在与你的接吻中颤抖着达到了高潮
+			CFLAG:CNUM:309 += 1
+		ELSE
+			PRINTFORMW %CALLNAME:CNUM%躺在床上、双腿被部员高高抬起、以种付的姿势压在了身体的两侧
+			PRINTFORMW 毫无疑问、这是纯粹为了让女性怀孕而生的体位
+			PRINTFORMW 男性的肉棒能够轻易地抵达女性最深处的子宫入口、然后将精液一滴不落的注入其中
+			PRINTFORMW 而此刻、部员的肉棒已经抵在了%CALLNAME:CNUM%小穴的入口
+			PRINTFORMW 在上方两颗阴囊的摇摆中、那粗壮的阴茎全部没入了小穴之中、
+			PRINTFORMW 两具赤裸的身体完全地结合在了一起
+			PRINTFORMW ...
+			PRINTFORMW 十几分钟后
+			PRINTFORMW 两人正忘我地交配着、上方的部员
+			IF RAND:3 == 0
+				PRINTFORMW 不断地变换着角度、刺激着%CALLNAME:CNUM%腔内的敏感位置
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 如同打桩机一般、不断地扣响小穴最深处的秘密门扉
+			ELSE
+				PRINTFORMW 将肉棒拔出至龟头、再一口气全部插入、摩擦刺激着腔壁的每一个位置
+			ENDIF
+			PRINTFORMW 最终、两人在亲密的纠缠中、迎来了高潮
+			PRINTFORMW 布满淫液的性器亲密的结合在一起、鼓动的阴囊不断将精液注入下方的小穴当中
+			PRINTFORMW %CALLNAME:CNUM%的小穴如同初生的孩童般将肉棒紧紧地吸吮着
+			PRINTFORMW 
+			PRINTFORMW 
+			PRINTFORMW ......
+			PRINTFORMW %CALLNAME:CNUM%回到了你的身边
+			; 男人将混杂着白浊的肉棒拔出、只有少许透明的爱液随之溢出
+			; 这代表着%CALLNAME:TARGET%的子宫完全将男人浓郁的精液所吞下
+		ENDIF
+		CFLAG:CNUM:311 += 1
+		CFLAG:CNUM:323 += 1
+		CALL DEL_CEVENT("部员性交中",CNUM)
+	ELSE
+		PRINTFORMW 你打消了这个念头、离开了这里
+		CALL DEL_CEVENT("LOVORG同行中",CNUM)
+		CFLAG:CNUM:311 += 1
+	ENDIF
+ENDSELECT
+
+@LOVEORG_ASSI_TARGET_EXCHANGE
+	#DIMS CHOICE
+	PRINTFORML %CALLNAME:ASSI%与%CALLNAME:TARGET%交流开始
+	CHOICE = %LOVEORG_ASSI_TARGET_EXCHANGE_CHOICE()%
+	PRINTFORML %CHOICE%
+	CALL LOVEORG_ASSI_TARGET_EXCHANGE_MAIN, CHOICE
+	PRINTFORML %CALLNAME:ASSI%与%CALLNAME:TARGET%交流结束
+
+@LOVEORG_ASSI_TARGET_EXCHANGE_MAIN, ARGS
+SELECTCASE ARGS	
+	CASE "非工口"
+		PRINTFORMW %CALLNAME:ASSI%与%CALLNAME:TARGET%愉快的交流了
+	CASE "口交"
+		PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了口交
+	CASE "口内射精"
+		; PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了口内射精
+		PRINTFORMW %CALLNAME:TARGET%满脸陶醉的将助手射出的精液咀嚼着吞下
+	CASE "爱抚"
+		PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了爱抚
+	CASE "接吻"
+		; PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了接吻
+		PRINTFORMW 如同恋人般热烈地亲吻着、将彼此的唾液不断交换
+	CASE "乳交"
+		PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了乳交
+	CASE "带套性交"
+		; PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了带套性交
+		PRINTFORMW 助手戴上避孕套后、/助手用戴上避孕套的巨大肉棒、将%CALLNAME:TARGET%的小穴贯穿了
+	CASE "肛交"
+		PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了肛交
+	CASE "肛内生中出"
+		; PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了肛内生中出
+		PRINTFORMW 助手将肉棒插入%CALLNAME:TARGET%肠内的深处、将新鲜的子种液灌注进去
+	CASE "无套性交"
+		PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了无套性交
+	CASE "腔内生中出"
+		; PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了腔内生中出
+		PRINTFORMW 将浓郁的精子直接注入%CALLNAME:TARGET%的子宫当中
+	CASE "精浴"
+		PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了精浴
+	CASE "乱交"
+		; PRINTFORMW %CALLNAME:ASSI%在与%CALLNAME:TARGET%交流时发生了乱交
+		PRINTFORMW %CALLNAME:TARGET%跟助手与其他部员一起、彼此交换着充分地做爱了
+ENDSELECT
+
+
+@LOVEORG_ASSI_TARGET_EXCHANGE_CHOICE
+#FUNCTIONS
+#DIMS CHOICE
+CHOICE = 非工口
+SELECTCASE CFLAG:ASSI:做爱部部员等级
+	CASE 1
+		
+	CASE 2
+		SELECTCASE RAND:5
+		CASE 0
+			CHOICE = 口交
+		CASE 1
+			CHOICE = 口内射精
+		CASE 2
+			CHOICE = 爱抚
+		CASE 3
+			CHOICE = 接吻
+		CASE 4
+			CHOICE = 乳交
+		ENDSELECT
+	CASE 3
+		SELECTCASE RAND:8
+		CASE 1
+			CHOICE = 口交
+		CASE 2
+			CHOICE = 口内射精
+		CASE 3
+			CHOICE = 爱抚
+		CASE 4
+			CHOICE = 接吻
+		CASE 5
+			CHOICE = 乳交
+		CASE 6
+			CHOICE = 带套性交
+		CASE 7
+			CHOICE = 肛交
+		CASE 0
+			CHOICE = 肛内生中出
+		;特殊PLAY后续添加
+		ENDSELECT
+	CASE 4
+		SELECTCASE RAND:11
+		CASE 0
+			CHOICE = 口交
+		CASE 1
+			CHOICE = 口内射精
+		CASE 2
+			CHOICE = 爱抚
+		CASE 3
+			CHOICE = 接吻
+		CASE 4
+			CHOICE = 乳交
+		CASE 5
+			CHOICE = 带套性交
+		CASE 6
+			CHOICE = 肛交
+		CASE 7
+			CHOICE = 肛内生中出
+		CASE 8
+			CHOICE = 无套性交
+		CASE 9
+			CHOICE = 腔内生中出
+		CASE 10
+			CHOICE = 精浴
+		CASE 11
+			CHOICE = 乱交
+		ENDSELECT
+ENDSELECT
+RETURNF CHOICE
+
+
+
+
+
+;初步设计在通话过程中为target添加不同event表示通话时进行何种性行为，
+;master说的话以及target的回答都跟target上的event有关
+
+@LOVEORG_TELEPHONE
+CALL SET_CEVENT("通话中", TARGET)
+CALL LOVEORG_TELEPHONE_MAIN
+CALL DEL_CEVENT("通话中", TARGET)
+
+@LOVEORG_TELEPHONE_MAIN
+#DIM CHOICE
+#DIM MEMO_LINECOUNT
+CALL LOVEORG_TELEPHONE_TOP
+$LOOP
+	MEMO_LINECOUNT = LINECOUNT
+	CALL LOVEORG_TELEPHONE_BOTTOM
+	INPUT
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	CHOICE = RESULT
+	CALL TELEPHONE_MASTER, CHOICE
+	CALL TELEPHONT_TARGET, CHOICE
+	SIF CHOICE != 0
+		GOTO LOOP
+CALL LOVEORG_TELEPHONE_END
+
+@LOVEORG_TELEPHONE_TOP
+	PRINTFORML ------这里是电话刘海-------
+
+@LOVEORG_TELEPHONE_BOTTOM
+	;#DIM MEMO_LINECOUNT
+	#DIM LCOUNT
+	#DIM NEXT_LINE
+	;MEMO_LINECOUNT = LINECOUNT
+	STR:選択肢 = 
+	STR:選択肢 += "[0]结束通话/[1]说1/[2]说2/[3]说3/[4]说4"
+	;
+		CALL SELECT_BAN
+		VARSET LOCALS
+		SPLIT STR:選択肢, "/", LOCALS
+		NEXT_LINE = 0
+		FOR LCOUNT, 0, 100
+			;まずは色だけチェック
+			SELECTCASE LOCALS:LCOUNT
+			CASE "灰色", "水色", "爱心粉紅", "青", "緑", "緑色", "黄色"
+				;すでに指定色になっている場合は色変換を止める
+				IF GETCOLOR() != DEF_COLOR(LOCALS:LCOUNT)
+					SETCOLOR DEF_COLOR(LOCALS:LCOUNT)
+				CONTINUE
+				ENDIF
+			ENDSELECT
+
+			SELECTCASE LOCALS:LCOUNT
+			CASE ""
+				BREAK
+			CASE "太字"
+				FONTSTYLE 1
+				CONTINUE
+			CASE "改行"
+				SIF NEXT_LINE%5
+					PRINTL 
+				NEXT_LINE = 0
+					CONTINUE
+			CASE "DRAWLINE"
+				IF NEXT_LINE%5
+					NEXT_LINE = 0
+					PRINTL 
+				ENDIF
+				DRAWLINE
+				CONTINUE
+			ENDSELECT
+
+			;太字にした？
+			IF GETBIT(GETSTYLE(), 0)
+				SELECTCASE LOCALS:LCOUNT
+				CASE "NOBUTTON"
+					PRINTPLAINFORM %TEXT_LJ("", 21)%
+				CASEELSE
+					PRINTFORM %TEXT_LJ(LOCALS:LCOUNT, 21)%
+				ENDSELECT
+			ELSE
+				SELECTCASE LOCALS:LCOUNT
+				CASE "NOBUTTON"
+					PRINTPLAINFORM %TEXT_LJ("", 24)%
+				CASEELSE
+					PRINTFORM %TEXT_LJ(LOCALS:LCOUNT, 24)%
+				ENDSELECT
+			ENDIF
+			FONTREGULAR
+			RESETCOLOR
+
+			NEXT_LINE += 1
+			SIF NEXT_LINE%5 == 0
+				PRINTL 
+		NEXT
+	;CLEARLINE LINECOUNT - MEMO_LINECOUNT
+
+@TELEPHONE_MASTER, ARG
+	#DIMS msaid
+	SELECTCASE ARG
+	CASE 0,
+	CASE 1,
+		PRINTFORMW %TEXT_RJ("要说的话1很长很长很长很长很长很长很长很长很长很长：master",80)%
+		PRINTFORMW
+	CASE 2,
+		PRINTFORMW %TEXT_RJ("要说的话2：master",80)%
+		;PRINTFORMC 要说的话2：master
+		PRINTFORMW	
+	CASE 3,
+		PRINTFORMW %TEXT_RJ("要说的话3：master",80)%
+		;PRINTFORMC 要说的话3：master
+		PRINTFORMW
+	CASE 4,
+		PRINTFORMW %TEXT_RJ("要说的话4：master",80)%
+		;PRINTFORMC 要说的话4：master
+		PRINTFORMW
+	CASEELSE
+		PRINTFORML master出现错误
+	ENDSELECT
+	
+
+@TELEPHONT_TARGET, ARG
+	#DIMS tsaid
+	tsaid = "%CALLNAME:TARGET%:"
+	SELECTCASE ARG
+	CASE 0,
+	CASE 1,
+		PRINTFORML %CALLNAME:TARGET%:回应说的话1
+		PRINTFORMW
+	CASE 2,
+		PRINTFORML %CALLNAME:TARGET%:回应说的话2
+		PRINTFORMW
+	CASE 3,
+		PRINTFORML %CALLNAME:TARGET%:回应说的话3
+		PRINTFORMW
+	CASE 4,
+		PRINTFORML %CALLNAME:TARGET%:回应说的话4
+		PRINTFORMW
+	CASEELSE
+		PRINTFORML target出现错误
+	ENDSELECT
+
+@LOVEORG_TELEPHONE_END
+	PRINTFORMW 通话结束
+
+
+@LOVEORG_TEL_MESSAGE,ARG,ARGS
+#DIM LCOUNT
+#DIM LOCAL_NUM
+
+LOCAL_NUM = 2
+VARSET LOCALS
+SPLIT ARGS, "/", LOCALS
+SETBIT FLAG:状況判定, 49
+STR:0 = ------ 短信 -----
+STR:1 = 【%CALLNAME:TARGET%】
+STR:2 =  
+FOR LCOUNT, 0, 20
+	SELECTCASE LOCALS:LCOUNT
+	CASE ""
+		SIF LOCALS:(LCOUNT + 1) != ""
+			CONTINUE
+		BREAK
+	CASEELSE
+		STR:(LCOUNT + 3) = %LOCALS:LCOUNT%
+	ENDSELECT
+NEXT
+CALL DIALOGUE_FRAME, ARG
+CLEARBIT FLAG:状況判定, 49
+PRINTFORMW 
+
+;触发联谊开始的函数
+@LOVEORG_FELLOWSHIP_BEGIN, ARG
+	SIF ARG <= 0
+		ARG = TARGET
+	PRINTFORMW 做爱部邀请%CALLNAME:ARG%去温泉酒店参加联谊了
+	CALL SET_CEVENT("做爱部联谊", ARG)
+
+;因为参加做爱部联谊而呼叫角色失败的函数
+;@LOVEORG_FELLOWSHIP_NOTFIND
+@LOVEORG_FELLOWSHIP_NOTFIND, ARG
+	PRINTFORMW 没有回应，%CALLNAME:ARG%去温泉酒店参加联谊了
+	; PRINTFORMW 就是这样
+
+;触发联谊结束的函数
+@LOVEORG_FELLOWSHIP_END, ARG
+	SIF ARG <= 0
+		ARG = TARGET
+	PRINTFORMW %CALLNAME:ARG%的做爱部联谊结束了
+	CALL DEL_CEVENT("做爱部联谊", ARG)

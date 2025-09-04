@@ -1,0 +1,762 @@
+﻿@従業員制服設定
+#DIM 従業員一覧, 500
+#DIM ページ数
+VARSET 従業員一覧, -1
+
+DRAWLINE
+PRINTL 可在此设定员工制服方案。
+PRINTL ※当前功能处于开发阶段，可能出现运作异常。
+DRAWLINE
+LOCALS = <div rect='81,31,1937,2812' border='31' bcolor='#C0C0C0'></div><div rect='2050,31,3875,2812' border='31' bcolor='#C0C0C0'></div>
+
+;現在いる従業員を一覧表示
+従業員一覧:0 = 0
+LOCAL:1 = 1
+FOR LOCAL, 1, CHARANUM
+	SIF TALENT:LOCAL:従業員 == 0
+		CONTINUE
+	従業員一覧:(LOCAL:1) = LOCAL
+	LOCAL:1 += 1
+NEXT
+LOCALS += "<div rect='156,156,1937,2812'>"
+FOR LOCAL, ページ数 * 17, ページ数 * 17 + 17
+	IF 従業員一覧:LOCAL < 0
+		LOCALS += "<br>"
+		CONTINUE
+	ENDIF
+	LOCALS += @"<button value='{LOCAL}'>%CALLNAME:(従業員一覧:LOCAL), 16, LEFT%["
+	IF 現在制服:(従業員一覧:LOCAL):0 == ""
+		LOCALS += "便服"
+	ELSE
+		LOCALS += @"%SUBSTRING(現在制服:(従業員一覧:LOCAL):0, 0, 17)%"
+	ENDIF
+	LOCALS += "]</button><br>"
+NEXT
+IF ページ数 > 0
+	LOCALS += "<button value='1000'>　＜ 上一页</button>"
+ELSE
+	LOCALS += "　　　　　　　 "
+ENDIF
+LOCALS += "　　　　"
+IF 従業員一覧:(ページ数 * 17 + 17) > -1
+	LOCALS += "<button value='1001'>下一页 ＞</button>"
+ENDIF
+LOCALS += "<br>"
+LOCALS += "<br>"
+LOCALS += "<button value='997'>[997] 改造制服</button>"
+LOCALS += "<br>"
+LOCALS += "<button value='998'>[998] 批量配置</button>"
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+LOCALS += "</div>"
+
+LOCALS += "<div rect='2125,156,3675,2812'>"
+LOCALS += "</div>"
+
+HTML_PRINT LOCALS
+FOR LOCAL, 0, 25
+	PRINTL
+NEXT
+DRAWLINE
+
+DO
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 1000
+		ページ数 -= 1
+		RESTART
+	CASE 1001
+		ページ数 += 1
+		RESTART
+	CASE 999
+		ページ数 = 0
+		RETURN 0
+	CASE 998
+		CALL 従業員制服設定_切り替え(9999)
+		RESTART
+	CASE 997
+		CALL 従業員制服改造設定
+		RESTART
+	CASE 0 TO 499
+		CALL 従業員制服設定_切り替え(従業員一覧:LOCAL)
+		RESTART
+ENDSELECT
+LOOP 1
+
+
+@従業員制服設定_切り替え(対象キャラ)
+#DIM 対象キャラ
+#DIM ページ数
+#DIMS 制服一時配列, 100
+#DIMS 分割文字列配列, 2
+#DIMS 衣装合算
+#DIM 文字長さ
+#DIM 表示許可数
+#DIM CONST 表示数 = 20
+#DIMS 解説文
+
+DRAWLINE
+PRINTL 可在此设定员工制服方案。
+PRINTL ※功能开发中，可能存在异常情况。
+DRAWLINE
+LOCALS = <div rect='81,31,1937,2812' border='31' bcolor='#C0C0C0'></div><div rect='2050,31,3875,2812' border='31' bcolor='#C0C0C0'></div>
+LOCALS += "<div rect='156,156,1937,2812'>"
+IF 対象キャラ != 9999
+	LOCALS += @"%CALLNAME:対象キャラ, 16, LEFT%["
+	IF 現在制服:対象キャラ:0 == ""
+		LOCALS += "便服]"
+	ELSEIF 現在制服:対象キャラ:0 == "浴衣"
+		LOCALS += "浴袍]"
+	ELSE
+		LOCALS += @"%現在制服:対象キャラ:0%]"
+	ENDIF
+ELSE
+	LOCALS += @"批量配置"
+ENDIF
+LOCALS += "<br>"
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+LOCALS += "</div>"
+IF フィールド展開:允许色情制服
+	衣装合算 = %所持制服文字列%%所持エロ衣装文字列%
+	SPLIT 衣装合算, "_", 制服一時配列
+ELSE
+	SPLIT 所持制服文字列, "_", 制服一時配列
+ENDIF
+
+文字長さ = 18
+FOR LOCAL, 0, 100
+	SIF 制服一時配列:LOCAL == ""
+		BREAK
+	文字長さ = MAX(文字長さ, STRLENS(制服一時配列:LOCAL)-4)
+	;DEBUGPRINTFORML %分割文字列配列:1%
+NEXT
+
+LOCALS:1 = <div rect='2125,156,3675,2812'>
+;普段着と全裸分
+表示許可数 = 2
+IF ページ数 == 0
+	LOCALS:1 += @"<button value='100'>[100] 变更为%"普段着", 文字長さ, LEFT%</button>"
+	IF 対象キャラ != 9999
+		SIF CSTR:対象キャラ:画像フォルダ == ""
+			CSTR:対象キャラ:画像フォルダ '= GET_RESOURCES_BASE_FOLDER(対象キャラ)
+		IF EXIST画像FILE(@"resources/%CSTR:対象キャラ:画像フォルダ%/顔_デフォルト")
+			LOCALS:1 += @"　<font color='#%カラーパレット_HTML("黄")%'>有图像</font>"
+		ENDIF
+	ENDIF
+	LOCALS:1 += "<br>"
+	IF フィールド展開:允许色情制服
+		LOCALS:1 += @"<button value='997'>[997] 变更为%"全裸", 文字長さ, LEFT%</button>"
+		IF 対象キャラ != 9999
+			IF EXIST画像FILE(@"resources/%CSTR:対象キャラ:画像フォルダ%/顔_全裸")
+				LOCALS:1 += @"　<font color='#%カラーパレット_HTML("黄")%'>有图像</font>"
+			ENDIF
+		ENDIF
+		LOCALS:1 += "<br>"
+	ENDIF
+ENDIF
+FOR LOCAL, 0, 100
+	IF 制服一時配列:LOCAL == ""
+		BREAK
+	ENDIF
+	SPLIT 制服一時配列:LOCAL, "/", 分割文字列配列
+	IF 対象キャラ != 9999
+		TRYCCALLFORM CLOTHES_着用条件_%分割文字列配列:1%(対象キャラ)
+			SIF RESULT == 0
+				CONTINUE
+		CATCH
+		ENDCATCH
+	ELSE
+		SIF EXISTFUNCTION(@"CLOTHES_着用条件_%分割文字列配列:1%")
+			CONTINUE
+	ENDIF
+	表示許可数 ++
+	SIF ページ数 != (表示許可数 - 1) / 表示数
+		CONTINUE
+	IF 分割文字列配列:1 == "浴衣"
+		LOCALS:2 = 浴袍
+	ELSE
+		LOCALS:2 '= 分割文字列配列:1
+	ENDIF
+	VARSET RESULTS
+	IF OPTION変数:ツールチップ切り替え == 0
+		解説文 = 
+		TRYCCALLFORM CLOTHES_販売説明_%分割文字列配列:1%()
+			LOCAL:1 = HTML_STRINGLEN(RESULTS)
+			IF RESULTS != ""
+				解説文 += @"<br>%RESULTS%"
+			ENDIF
+			IF RESULTS:1 != ""
+				解説文 += @"%"来源：" + RESULTS:1, MAX(LOCAL:1, 40)%<br>"
+			ENDIF
+			解説文 '= REPLACE(解説文, "<(?!br).*?>", "")
+		CATCH
+		ENDCATCH
+		LOCALS:1 += @"<button value='{LOCAL}' title='%解説文%'>[{LOCAL, 3, RIGHT}] 变更为%LOCALS:2, 文字長さ, LEFT%</button>"
+	ELSE
+		LOCALS:1 += @"<button value='{LOCAL}'>[{LOCAL, 3, RIGHT}] 变更为%LOCALS:2, 文字長さ, LEFT%</button>"
+	ENDIF
+	IF 対象キャラ != 9999
+		IF EXIST画像FILE(@"resources/%CSTR:対象キャラ:画像フォルダ%/顔_%分割文字列配列:1%") || EXIST画像FILE(@"resources/%CSTR:対象キャラ:画像フォルダ%/短冊_%分割文字列配列:1%")
+			LOCALS:1 += @"　<font color='#%カラーパレット_HTML("黄")%'>有图像</font>"
+		ENDIF
+	ENDIF
+	LOCALS:1 += "<br>"
+NEXT
+IF 表示許可数 < (ページ数 + 1) * 表示数
+	FOR LOCAL, 0, 表示数 - (表示許可数 % 表示数)
+		LOCALS:1 += "<br>"
+	NEXT
+ENDIF
+LOCALS:1 += "<br>"
+IF ページ数 > 0
+	LOCALS:1 += @"<button value='1000'>[1000] 上一页</button>"
+ELSE
+	LOCALS:1 += @"　　　 　　　　　"
+ENDIF
+LOCALS:1 += @"　　　"
+IF ページ数 < (表示許可数 - 1) / 表示数
+	LOCALS:1 += @"<button value='1001'>[1001] 下一页</button>"
+ELSE
+	LOCALS:1 += @"　　　 　　　　　"
+ENDIF
+LOCALS:1 += "</div>"
+
+
+HTML_PRINT LOCALS, 1
+HTML_PRINT LOCALS:1, 1
+FOR LOCAL, 0, 25
+	PRINTL
+NEXT
+DRAWLINE
+
+DO
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 1000
+		ページ数 --
+		RESTART
+	CASE 1001
+		ページ数 ++
+		RESTART
+	CASE 999
+		ページ数 = 0
+		RETURN 0
+	CASE 998
+		RETURN 0
+	CASE 997
+		IF 対象キャラ == 9999
+			FOR LOCAL, 1, CHARANUM
+				SIF TALENT:LOCAL:従業員 == 0
+					CONTINUE
+				現在制服:LOCAL:0 = 全裸
+				CALL CLOTHES_RESET(LOCAL)
+				CALL CLOTHES_RESET_TRAIN(LOCAL)
+			NEXT
+		ELSE
+			現在制服:対象キャラ:0 = 全裸
+			CALL CLOTHES_RESET(対象キャラ)
+			CALL CLOTHES_RESET_TRAIN(対象キャラ)
+		ENDIF
+		ページ数 = 0
+		RETURN 0
+	CASE 100
+		IF 対象キャラ == 9999
+			FOR LOCAL, 1, CHARANUM
+				SIF TALENT:LOCAL:従業員 == 0
+					CONTINUE
+				現在制服:LOCAL:0 = 
+				CALL CLOTHES_RESET(LOCAL)
+				CALL CLOTHES_RESET_TRAIN(LOCAL)
+			NEXT
+		ELSE
+			現在制服:対象キャラ:0 = 
+			CALL CLOTHES_RESET(対象キャラ)
+			CALL CLOTHES_RESET_TRAIN(対象キャラ)
+		ENDIF
+		ページ数 = 0
+		RETURN 0
+	CASE 0 TO 99
+		SPLIT 制服一時配列:LOCAL, "/", 分割文字列配列
+		IF 対象キャラ == 9999
+			FOR LOCAL, 1, CHARANUM
+				SIF TALENT:LOCAL:従業員 == 0
+					CONTINUE
+				現在制服:LOCAL:0 = %分割文字列配列:1%
+				CALL CLOTHES_RESET(LOCAL)
+				CALL CLOTHES_RESET_TRAIN(LOCAL)
+			NEXT
+		ELSE
+			IF STRCOUNT(制服一時配列:LOCAL, "キャラ専用")
+				現在制服:対象キャラ:0 = %分割文字列配列:1%
+			ELSE
+				現在制服:対象キャラ:0 = %分割文字列配列:1%
+			ENDIF
+			CALL CLOTHES_RESET(対象キャラ)
+			CALL CLOTHES_RESET_TRAIN(対象キャラ)
+		ENDIF
+		ページ数 = 0
+		RETURN 0
+ENDSELECT
+LOOP 1
+
+@従業員制服改造設定(改造対象 = -1)
+#DIM 改造対象
+#DIMS 対象衣装名
+#DIMS 改造パターン名_上
+#DIMS 改造パターン名_下
+#DIMS 改造パターン名_その他
+#DIMS 表示衣装
+#DIMS 制服一時配列, 100
+#DIMS 分割文字列配列, 2
+#DIM 詳細改造フラグ
+#DIM フィールド保存
+
+DRAWLINE
+PRINTL 可在此设定员工制服方案。
+PRINTL ※当前功能处于开发阶段，可能出现运作异常。
+DRAWLINE
+LOCALS = <div rect='81,215,1937,2812' border='31' bcolor='#C0C0C0'></div><div rect='2050,215,3875,2812' border='31' bcolor='#C0C0C0'></div>
+
+対象衣装名 '= ""
+IF フィールド展開:允许色情制服
+	表示衣装 '= 所持制服文字列 + 所持エロ衣装文字列
+ELSE
+	表示衣装 '= 所持制服文字列
+ENDIF
+SPLIT 表示衣装, "_", 制服一時配列
+LOCALS += "<div rect='156,340,1937,2812'>"
+FOR LOCAL, 0, 100
+	IF 制服一時配列:LOCAL == ""
+		BREAK
+	ENDIF
+	SPLIT 制服一時配列:LOCAL, "/", 分割文字列配列
+	IF GETNUM(制服改造, 分割文字列配列:1, 1) == -1
+		CONTINUE
+		;LOCALS += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>%分割文字列配列:1%</font>"
+	ELSEIF 改造対象 < 0 || 改造対象 == GETNUM(制服改造, 分割文字列配列:1, 1)
+		改造対象 = GETNUM(制服改造, 分割文字列配列:1, 1)
+		対象衣装名 '= 分割文字列配列:1
+		LOCALS += @"<font color='#%カラーパレット_HTML("黄")%'>%分割文字列配列:1%</font> [设定中]"
+	ELSE
+		LOCALS += @"<button value='{GETNUM(制服改造, 分割文字列配列:1, 1)}'>%分割文字列配列:1%</button>"
+	ENDIF
+	LOCALS += "<br>"
+NEXT
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 确认设定</button>"
+LOCALS += "<br>"
+LOCALS += "</div>"
+
+LOCALS += "<div rect='2125,340,3675,2812'>"
+IF 改造対象 < 0
+	LOCALS += "当前无可改造制服<br>"
+ELSE
+	SIF !制服改造:改造対象:改造状況フラグ
+		CALLFORM 制服改造初期化_%対象衣装名%()
+	IF 詳細改造フラグ == 0
+		;個別の関数を作ろうかと思ったけどめんどくせぇので直記述
+		;現状の改造説明
+		LOCALS += "■说明<br>"
+		IF 制服改造:改造対象:改造状況フラグ == -1
+			LOCALS += "　制服处于未改造的状态。<br>"
+			LOCALS += "　上半身：长袖西装款式<br>"
+			LOCALS += "　下半身：西裤套装款式<br>"
+		ELSE
+			LOCALS += "　图案定制改造版。<br>"
+			LOCALS += "　上半身："
+			LOCAL = 0
+			IF STRFIND(改造パターン名_上, "エロ改造：トップレス_") > -1
+				LOCALS += "肘部以下全裸露的无上装款式"
+			ELSE
+				IF STRFIND(改造パターン名_上, "谷間露出_") > -1
+					LOCALS += "大幅展现乳沟"
+					LOCAL = 1
+				ENDIF
+				IF STRFIND(改造パターン名_上, "横乳露出_") > -1
+					SIF LOCAL
+						LOCALS += "、"
+					LOCALS += "暴露腋下与侧乳"
+					LOCAL = 1
+				ENDIF
+				IF STRFIND(改造パターン名_上, "へそ露出_") > -1
+					SIF LOCAL
+						LOCALS += "、"
+					LOCALS += "显露肚脐"
+					LOCAL = 1
+				ENDIF
+				SIF LOCAL
+					LOCALS += "的"
+				LOCALS += "长袖西装款式"
+				SIF STRFIND(改造パターン名_上, "インナー_") > -1
+					LOCALS += "（含内搭衣物）"
+			ENDIF
+			LOCALS += "<br>"
+			LOCALS += "　下半身："
+			IF STRFIND(改造パターン名_下, "エロ改造：ボトムレス_") > -1
+				LOCALS += "仅保留鞋袜的全裸露款式"
+			ELSE
+				IF STRFIND(改造パターン名_下, "スカート_") > -1
+					LOCALS += "优雅裙装款式"
+				ELSEIF STRFIND(改造パターン名_下, "ミニスカ_") > -1
+					LOCALS += "紧身超短裙款式"
+				ELSE
+					LOCALS += "裤装套装款式"
+				ENDIF
+				SIF STRFIND(改造パターン名_下, "タイツ_") > -1
+					LOCALS += "（含连裤袜）"
+			ENDIF
+			LOCALS += "<br>"
+		ENDIF
+		LOCALS += "<br>"
+
+		;以下改造選択肢
+		LOCALS += "■上半身改造<br>"
+		LOCALS += "　<button value='2000'>・大幅展现乳沟</button>"
+		SIF STRFIND(改造パターン名_上, "谷間露出_") > -1
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		LOCALS += "<br>"
+		LOCALS += "　<button value='2001'>・暴露腋下与侧乳</button>"
+		SIF STRFIND(改造パターン名_上, "横乳露出_") > -1
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		LOCALS += "<br>"
+		LOCALS += "　<button value='2002'>・显露肚脐</button>"
+		SIF STRFIND(改造パターン名_上, "へそ露出_") > -1
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		LOCALS += "<br>"
+		LOCALS += "　<button value='2003'>・添加内搭衣物</button>"
+		SIF STRFIND(改造パターン名_上, "インナー_") > -1
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		LOCALS += "<br>"
+		IF フィールド展開:允许色情制服
+			LOCALS += "　<button value='2004'>・上半身真空改造</button>"
+			SIF STRFIND(改造パターン名_上, "エロ改造：トップレス_") > -1
+				LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+		LOCALS += "■下半身改造<br>"
+		LOCALS += "　<button value='2010'>・切换裙装款式</button>"
+		SIF STRFIND(改造パターン名_下, "スカート_") > -1
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		LOCALS += "<br>"
+		LOCALS += "　<button value='2011'>・切换迷你裙款式</button>"
+		SIF STRFIND(改造パターン名_下, "ミニスカ_") > -1
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		LOCALS += "<br>"
+		LOCALS += "　<button value='2012'>・添加连裤袜</button>"
+		SIF STRFIND(改造パターン名_下, "タイツ_") > -1
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		LOCALS += "<br>"
+		IF フィールド展開:允许色情制服
+			LOCALS += "　<button value='2013'>・下半身真空改造</button>"
+			SIF STRFIND(改造パターン名_下, "エロ改造：ボトムレス_") > -1
+				LOCALS += @"　　<font color='#%カラーパレット_HTML("黄")%'>已应用</font>"
+		ENDIF
+		LOCALS += "<br>"
+	ELSE
+		FOR LOCAL, 1, 23
+			RESULT = 1
+			CALLFORM 制服改造可_%対象衣装名%(LOCAL)
+			IF RESULT == 0
+				;LOCALS += @"<font color='#808080'>この項目は改造できません</font>"
+				CONTINUE
+			ENDIF
+			IF EQUIPNAME_TIPS(LOCAL) != ""
+				LOCALS += @"<nonbutton title='%EQUIPNAME_TIPS(LOCAL)%'>%EQUIPNAME:LOCAL%"
+				LOCALS += @"<font color='#808080'>%"(?)", 24 - STRLENS(EQUIPNAME:LOCAL), LEFT%</font>"
+				LOCALS += "：</nonbutton>"
+			ELSE
+				LOCALS += @"%EQUIPNAME:LOCAL, 24, LEFT%："
+			ENDIF
+			IF LOCAL == 9
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 0 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 0}'>[不穿胸罩]</button></font>"
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 1 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 1}'>[穿着胸罩]</button></font>"
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 2 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 2}'>[乳贴]</button></font>"
+			ELSEIF LOCAL == 17
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 0 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 0}'>[不穿内裤]</button></font>"
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 1 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 1}'>[穿着内裤]</button></font>"
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 2 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 2}'>[阴贴]</button></font>"
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 3 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 3}'>[兜裆布]</button></font>"
+			ELSE
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 0 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 0}'>[无]</button></font>"
+				LOCALS += @"<font color='#\@ 制服改造:改造対象:LOCAL == 1 ? C0C0C0 # 333333\@'><button value='{1000 + LOCAL * 10 + 1}'>[有]</button></font>"
+			ENDIF
+			LOCALS += "<br>"
+		NEXT
+		LOCALS += "</div>"
+		LOCALS += "<div rect='2125,2846,3675,2812'>"
+	ENDIF
+	IF 制服改造:改造対象:改造状況フラグ > 0
+		LOCALS += @"%" " * 51%<button value='998'>[恢复默认设置]</button>　　　　"
+	ELSE
+		LOCALS += @"%" " * 51%<font color='#333333'>[恢复默认设置]</font>　　　　"
+	ENDIF
+ENDIF
+LOCALS += "</div>"
+
+;上書きで黒線を乗せるためにここに表記
+IF 詳細改造フラグ == 0
+	LOCALS += @"<div rect='2050,0,792,243' padding='46' color='#101010' border='31,31,0' bcolor='#C0C0C0'><font color='#%カラーパレット_HTML("黄")%'>图案定制</font></div><div rect='2890,0,592,243' padding='46' border='31' bcolor='#C0C0C0'><button value='997'>详细定制</button></div>"
+ELSE
+	LOCALS += @"<div rect='2050,0,792,243' padding='46' border='31' bcolor='#C0C0C0'><button value='997'>图案定制</button></div><div rect='2890,0,592,243' color='#101010' padding='46' border='31,31,0' bcolor='#C0C0C0'><font color='#%カラーパレット_HTML("黄")%'>详细定制</font></div>"
+ENDIF
+
+HTML_PRINT LOCALS
+FOR LOCAL, 0, 27
+	PRINTL
+NEXT
+DRAWLINE
+
+DO
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 999
+		FOR LOCAL, 1, CHARANUM
+			SIF TALENT:LOCAL:従業員 == 0
+				CONTINUE
+			SIF 現在制服:LOCAL:0 == "" || 現在制服:LOCAL:0 == "全裸"
+				CONTINUE
+			SIF GETNUM(制服改造, 現在制服:LOCAL:0, 1) == -1
+				CONTINUE
+			CALL CLOTHES_RESET_TRAIN(LOCAL)
+		NEXT
+		RETURN 0
+	CASE 998
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		改造パターン名_上 = 
+		改造パターン名_下 = 
+		改造パターン名_その他 = 
+		RESTART
+	CASE 997
+		INVERTBIT 詳細改造フラグ, 0
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		改造パターン名_上 = 
+		改造パターン名_下 = 
+		改造パターン名_その他 = 
+		RESTART
+	CASE 0 TO 99
+		改造対象 = LOCAL
+		RESTART
+	CASE 1000 TO 1399
+		制服改造:改造対象:((LOCAL - 1000) / 10) = LOCAL % 10
+		制服改造:改造対象:改造状況フラグ = 1
+		IF LOCAL % 10 == 0
+			SWAP フィールド展開:允许色情制服, フィールド保存
+			フィールド展開:允许色情制服 = 0
+			RESULT = 1
+			CALLFORM 制服改造可_%対象衣装名%((LOCAL - 1000) / 10)
+			IF RESULT == 0
+				;エロなし状況で改造出来ない部位がなし＝エロ改造と判定する
+				制服改造:改造対象:エロ改造フラグ = 1
+			ENDIF
+			SWAP フィールド展開:允许色情制服, フィールド保存
+		ENDIF
+		RESTART
+	CASE 2000
+		IF STRFIND(改造パターン名_上, "谷間露出_") > -1
+			改造パターン名_上 = %REPLACE(改造パターン名_上, "谷間露出_", "")%
+		ELSE
+			改造パターン名_上 += "谷間露出_"
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+	CASE 2001
+		IF STRFIND(改造パターン名_上, "横乳露出_") > -1
+			改造パターン名_上 = %REPLACE(改造パターン名_上, "横乳露出_", "")%
+		ELSE
+			改造パターン名_上 += "横乳露出_"
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+	CASE 2002
+		IF STRFIND(改造パターン名_上, "へそ露出_") > -1
+			改造パターン名_上 = %REPLACE(改造パターン名_上, "へそ露出_", "")%
+		ELSE
+			改造パターン名_上 += "へそ露出_"
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+	CASE 2003
+		IF STRFIND(改造パターン名_上, "インナー_") > -1
+			改造パターン名_上 = %REPLACE(改造パターン名_上, "インナー_", "")%
+		ELSE
+			改造パターン名_上 += "インナー_"
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+	CASE 2004
+		;上半身改造をすべて無視して設定
+		IF STRFIND(改造パターン名_上, "エロ改造：トップレス_") > -1
+			改造パターン名_上 = 
+		ELSE
+			改造パターン名_上 = エロ改造：トップレス_
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+
+	CASE 2010
+		IF STRFIND(改造パターン名_下, "スカート_") > -1
+			改造パターン名_下 = %REPLACE(改造パターン名_下, "スカート_", "")%
+		ELSE
+			改造パターン名_下 += "スカート_"
+			IF STRFIND(改造パターン名_下, "ミニスカ_") > -1
+				改造パターン名_下 = %REPLACE(改造パターン名_下, "ミニスカ_", "")%
+			ENDIF
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+	CASE 2011
+		IF STRFIND(改造パターン名_下, "ミニスカ_") > -1
+			改造パターン名_下 = %REPLACE(改造パターン名_下, "ミニスカ_", "")%
+		ELSE
+			改造パターン名_下 += "ミニスカ_"
+			IF STRFIND(改造パターン名_下, "スカート_") > -1
+				改造パターン名_下 = %REPLACE(改造パターン名_下, "スカート_", "")%
+			ENDIF
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+	CASE 2012
+		IF STRFIND(改造パターン名_下, "タイツ_") > -1
+			改造パターン名_下 = %REPLACE(改造パターン名_下, "タイツ_", "")%
+		ELSE
+			改造パターン名_下 += "タイツ_"
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+	CASE 2013
+		IF STRFIND(改造パターン名_下, "エロ改造：ボトムレス_") > -1
+			改造パターン名_下 = 
+		ELSE
+			改造パターン名_下 = エロ改造：ボトムレス_
+		ENDIF
+		CALLFORM 制服改造初期化_%対象衣装名%()
+		CALL パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+		RESTART
+ENDSELECT
+LOOP 1
+
+@制服登録処理(ARGS)
+
+;汎用服にあるか？
+IF EXISTFUNCTION(@"CLOTHES_CHANGE_%ARGS%")
+	;被ってない？
+	IF STRCOUNT(所持制服文字列, @"汎用/%ARGS%_") == 0 && STRCOUNT(所持エロ衣装文字列, @"エロ/%ARGS%_") == 0
+		所持制服文字列 += @"汎用/%ARGS%_"
+	ENDIF
+	RETURN 1
+ELSE
+	;キャラ服にあるか？
+	FOR LOCAL, 1, CHARANUM
+		IF CSTR:LOCAL:服名称 == ARGS
+			;被ってない？
+			IF STRCOUNT(所持制服文字列, @"キャラ専用{NO:LOCAL}/%ARGS%_") == 0
+				所持制服文字列 += @"キャラ専用{NO:LOCAL}/%ARGS%_"
+			ENDIF
+			RETURN 1
+		ENDIF
+	NEXT
+ENDIF
+
+;どっちにもないならエラー返しておしまい
+PRINTW 未找到符合条件的服装。
+RETURN 0
+
+@エロ衣装登録処理(ARGS)
+
+;汎用服にあるか？
+IF EXISTFUNCTION(@"CLOTHES_CHANGE_%ARGS%")
+	;被ってない？
+	IF STRCOUNT(所持制服文字列, @"汎用/%ARGS%_") == 0 && STRCOUNT(所持エロ衣装文字列, @"エロ/%ARGS%_") == 0
+		所持エロ衣装文字列 += @"エロ/%ARGS%_"
+	ENDIF
+	RETURN 1
+ENDIF
+
+;ないならエラー返しておしまい
+PRINTW 未找到符合条件的服装。
+RETURN 0
+
+@パターン改造素質セット(改造対象, 改造パターン名_上, 改造パターン名_下, 改造パターン名_その他)
+#DIM 改造対象
+#DIMS 改造パターン名_上
+#DIMS 改造パターン名_下
+#DIMS 改造パターン名_その他
+
+LOCAL = -1
+IF STRFIND(改造パターン名_上, "谷間露出_") > -1
+	制服改造:改造対象:はだけ可 = 1
+	制服改造:改造対象:手差し込み可 = 1
+	制服改造:改造対象:パイズリ可 = 1
+	LOCAL = 1
+ENDIF
+IF STRFIND(改造パターン名_上, "横乳露出_") > -1
+	制服改造:改造対象:手差し込み可 = 1
+	制服改造:改造対象:脇出し = 1
+	LOCAL = 1
+ENDIF
+IF STRFIND(改造パターン名_上, "へそ露出_") > -1
+	制服改造:改造対象:へそ出し = 1
+	LOCAL = 1
+ENDIF
+IF STRFIND(改造パターン名_上, "インナー_") > -1
+	制服改造:改造対象:上タイツあり = 1
+	LOCAL = 1
+ENDIF
+IF STRFIND(改造パターン名_上, "エロ改造：トップレス_") > -1
+	制服改造:改造対象:上半身鎧あり = 0
+	制服改造:改造対象:上半身服あり = 0
+	制服改造:改造対象:脇出し = 0
+	制服改造:改造対象:へそ出し = 0
+	制服改造:改造対象:はだけ可 = 0
+	制服改造:改造対象:手差し込み可 = 0
+	制服改造:改造対象:パイズリ可 = 0
+	制服改造:改造対象:上タイツあり = 0
+	制服改造:改造対象:上半身下着あり = 0
+	制服改造:改造対象:上半身下着抜き取り可 = 0
+	制服改造:改造対象:エロ改造フラグ = 1
+	LOCAL = 1
+ENDIF
+
+IF STRFIND(改造パターン名_下, "スカート_") > -1
+	制服改造:改造対象:スカートめくり可 = 1
+	制服改造:改造対象:下半身下着抜き取り可 = 1
+	LOCAL = 1
+ENDIF
+IF STRFIND(改造パターン名_下, "ミニスカ_") > -1
+	制服改造:改造対象:スカートめくり可 = 1
+	制服改造:改造対象:下半身下着抜き取り可 = 1
+	LOCAL = 1
+ENDIF
+IF STRFIND(改造パターン名_下, "タイツ_") > -1
+	制服改造:改造対象:下タイツあり = 1
+	LOCAL = 1
+ENDIF
+IF STRFIND(改造パターン名_下, "エロ改造：ボトムレス_") > -1
+	制服改造:改造対象:下腹部後鎧あり = 0
+	制服改造:改造対象:下腹部前鎧あり = 0
+	制服改造:改造対象:下半身服あり = 0
+	制服改造:改造対象:スカートめくり可 = 0
+	制服改造:改造対象:ずらし可 = 0
+	制服改造:改造対象:下タイツあり = 0
+	制服改造:改造対象:下半身下着あり = 0
+	制服改造:改造対象:下半身下着抜き取り可 = 0
+	制服改造:改造対象:エロ改造フラグ = 1
+	LOCAL = 1
+ENDIF
+
+制服改造:改造対象:改造状況フラグ = LOCAL

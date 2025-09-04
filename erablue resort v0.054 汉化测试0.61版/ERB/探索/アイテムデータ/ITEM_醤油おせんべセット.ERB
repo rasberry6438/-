@@ -1,0 +1,58 @@
+﻿
+@アイテム個別文章表示_酱油仙贝套装(ARGS)
+;醤油おせんべセット
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 3500
+ENDIF
+
+LOCALS = 
+LOCALS += @"■酱油仙贝套装　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "酱油仙贝套装")}<br>"
+LOCALS += "酥脆可口的仙贝点心套装，散发酱油焦香。<br>"
+LOCALS += "食用后全体成员体力小幅恢复。<br>"
+LOCALS += "无法在战斗中使用。<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "我方全体ＨＰ恢复[１０００]。<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_酱油仙贝套装
+;戦闘時使用不可
+CALL 汎用使用先表示("味方全体", -1)
+
+@アイテム効果処理_酱油仙贝套装(ARG)
+;ARG = 隊列の何番目か
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "酱油仙贝套装") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+LOCAL:1 = 0
+FOR LOCAL, 0, 14
+	SIF LOCAL > 3 && LOCAL < 10
+		CONTINUE
+	SIF !BATTLE_STATE:LOCAL:キャラ登録番号
+		CONTINUE
+	SIF BATTLE_STATE:LOCAL:ＨＰ < 1
+		CONTINUE
+	SIF BATTLE_STATE:LOCAL:最大ＨＰ == BATTLE_STATE:LOCAL:ＨＰ
+		CONTINUE
+	IF BATTLE_STATE:LOCAL:最大ＨＰ - BATTLE_STATE:LOCAL:ＨＰ < 1000
+		PRINTFORML %CALLNAME:(BATTLE_STATE:LOCAL:キャラ登録番号)%的ＨＰ恢复了{BATTLE_STATE:LOCAL:最大ＨＰ - BATTLE_STATE:LOCAL:ＨＰ}
+	ELSE
+		PRINTFORML %CALLNAME:(BATTLE_STATE:LOCAL:キャラ登録番号)%的ＨＰ恢复了1000
+	ENDIF
+	BATTLE_STATE:LOCAL:ＨＰ = MIN(BATTLE_STATE:LOCAL:ＨＰ + 1000, BATTLE_STATE:LOCAL:最大ＨＰ)
+	LOCAL:1 += 1
+NEXT
+
+IF LOCAL:1 > 0
+	WAIT
+ELSE
+	PRINTW 没有可恢复对象。
+	RETURN 0
+ENDIF
+
+RETURN 1

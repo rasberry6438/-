@@ -1,0 +1,286 @@
+﻿@COM136
+;浣腸
+;TEQUIP:浣腸は薬剤使用だと>=2となり、精液浣腸時には==１となる
+;排泄した場合は NOWEX:排泄 で記録。SOURCEとしては、12：露出、13：屈従、14：逸脱が特に高い。
+;排泄を撮影すると、初回は屈従が凄まじい事になる
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+RETURN 1
+
+@FLAG_COM136, ARG
+;胖次などをずらす
+SIF !CHECK_CLO("Ａ露出")
+	CALL SETFLAG, "下衣を露出：テ接吻ト没有", TARGET
+
+@SOURCE_COM136, ARG
+CALL SOURCE_SMPLAY, "浣腸", ARG
+
+CALL VARSET_COMF
+
+CALL SOURCE_DOWNBASE_HP, 136
+
+;PLAYとしては、TEQUIP:浣腸…つまりCOND("液体浣腸")の値が増えるほどキツいこととする。最高に厳しいのは排泄PLAY。
+SOURCE:0:Ａ快楽 = ABL:Ａ感覚*100
+SOURCE:0:疼痛 = COND("液体浣腸")*500
+SOURCE:0:不潔 = 4000 + COND("液体浣腸")*1000
+SOURCE:0:露出 = 10000
+SOURCE:0:屈従 = 9000 + COND("液体浣腸")*1000
+SOURCE:0:逸脱 = 4000 + COND("液体浣腸")*1000
+
+;排泄
+IF NOWEX:排泄
+	SOURCE:0:不潔 += 20000
+	SOURCE:0:露出 += NOWEX:排泄 * 5000 + 10000
+	SOURCE:0:屈従 += NOWEX:排泄 * 5000 + 10000
+	SOURCE:0:逸脱 += NOWEX:排泄 * 5000 + 10000
+	;撮影したなら
+	SIF TEQUIP:攝像機
+		SOURCE:0:屈従 *= 3
+ENDIF
+
+;場所をみる
+IF COND("人里") || TEQUIP:室内露出PLAY
+	TIMES SOURCE:0:露出, 1.50
+	TIMES SOURCE:0:逸脱, 3.00
+ELSEIF TEQUIP:野外PLAY
+	TIMES SOURCE:0:露出, 1.50
+	TIMES SOURCE:0:逸脱, 2.00
+ELSEIF TEQUIP:浴室PLAY
+	TIMES SOURCE:0:逸脱, 0.50
+ENDIF
+
+;ABL:露出癖をみる
+SELECTCASE ABL:露出癖
+CASE 0 TO 5
+	SOURCE:0:逸脱 = MULTIPLY(SOURCE:0:逸脱, 100 - ABL:露出癖*13)
+CASE 6 TO 10
+	SOURCE:0:逸脱 = MULTIPLY(SOURCE:0:逸脱, 35 - (ABL:露出癖 - 5)*5)
+CASEELSE
+	SOURCE:0:逸脱 = MULTIPLY(SOURCE:0:逸脱, 10 - (ABL:露出癖 - 10)*1)
+ENDSELECT
+
+;Ａ拡張LVをみる
+SELECTCASE ABL:Ａ拡張
+CASE IS >= 3
+	TIMES SOURCE:0:疼痛, 0.30
+CASE 2
+	TIMES SOURCE:0:疼痛, 0.50
+CASE 1
+CASEELSE
+	TIMES SOURCE:0:疼痛, 2.00
+ENDSELECT
+
+SIF TALENT:Ａ性向
+	CALL CALC, "好みのPLAY", SOURCE:0:Ａ快楽
+
+CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM136
+;浣腸塞子の着脱
+IF COND("肛門栓")
+	CALL SETFLAG, "排泄"
+ELSE
+	IF TEQUIP:浣腸
+		IF COND("大量浣腸")
+			PRINTFORMW 向%CALLNAME:TARGET%抵達極限的肛門將浣腸液追加的灌注了、
+			PRINTFORMW 被過分大量的黏稠藥液充滿體內的%CALLNAME:TARGET%、腹部已經如同鼓起的青蛙一樣誇張的膨脹起來了……
+			TEQUIP:浣腸 = 4
+		ELSE
+			PRINTFORMW 向%CALLNAME:TARGET%的菊穴將追加的浣腸液灌注了
+			PRINTFORMW 儘管仍然存在略微的空餘空間、但%CALLNAME:TARGET%的腹部極大地膨脹起來了、神情十分痛苦的樣子……
+			TEQUIP:浣腸 = 3
+		ENDIF
+	ELSEIF ITEM:浣腸
+		PRINTFORML 要用哪個讓%CALLNAME:TARGET%的腹部膨脹起來？
+		PRINTFORML （注意：小型物品以外的物品使用的場合、肛門性交等部分指令不能進行。）
+		PRINTFORML  [ 0] 普通浣腸器
+		PRINTFORML  [ 1] 特大浣腸器
+		PRINTFORML [100] 不、再考慮一下吧。
+
+		CALL INPUT_SELECT, 2, 100
+
+		IF RESULT == 100
+			TFLAG:指令中止 = 1
+			RETURN 0
+		ELSEIF RESULT == 0
+			PRINTFORMW 向%CALLNAME:TARGET%的菊穴將浣腸液滿滿地灌注了
+			TEQUIP:浣腸 = 2
+		ELSEIF RESULT == 1
+			PRINTFORMW 被大量的浣腸液灌注的%CALLNAME:TARGET%的腹部就像是妊娠一樣膨脹起來了……
+			TEQUIP:浣腸 = 4
+		ENDIF
+	ENDIF
+	IF COND("液体浣腸") && COND("肛門栓") == 0
+		PRINTFORML 　
+		PRINTFORML 是否使用肛塞？
+		PRINTFORML [0] 是
+		PRINTFORML [1] 否
+		CALL INPUT_SELECT, 2
+		IF RESULT == 0
+			PRINTFORMW %CALLNAME:TARGET%的尻穴被塞上了肛塞…
+			TEQUIP:肛塞 = 1
+		ENDIF
+	ENDIF
+	;精液浣腸フラグ消去
+	TEQUIP:精液浣腸 = 0
+	CUP:Ａ潤 += 1000
+ENDIF
+
+@EQUIP_COM136
+SIF TEQUIP:浣腸 == 0
+	RETURN 0
+SIF SELECTCOM == 136
+	RETURN 0
+SIF COND("精液浣腸")
+	RETURN 0
+CALL SOURCE_COM136, 10
+
+RETURN 1
+
+@EQUIP_COM136_2
+SIF TEQUIP:浣腸 == 0
+	RETURN 0
+SIF SELECTCOM == 136
+	RETURN 0
+
+IF COND("温泉浣腸")
+	PRINTL ＜温泉浣腸中＞
+ELSEIF COND("精液浣腸")
+	PRINTL ＜精液浣腸中＞
+ELSE
+	PRINTFORM ＜浣腸
+	SELECTCASE COND("液体浣腸")
+	CASE 3
+		PRINT （大量）
+	CASE IS >= 4
+		PRINT （超大量）
+	ENDSELECT
+	IF INSERT("Ａ挿入")
+		PRINT ＋Ａ挿入
+	ELSEIF COND("肛門栓")
+		PRINT ＋肛塞挿入中
+	ENDIF
+	PRINTL ＞
+ENDIF
+
+;精液浣腸だと浣腸経験とかは没有
+IF COND("精液浣腸")
+	;ここは微々たる物
+	SIF BASE:排泄物
+		BASE:排泄欲 += EXP_GAIN("肛内精液経験")*20
+	;限界まであとどれくらい？
+	;SELECTCASE (BASE:排泄欲 * 100) / MAXBASE:排泄欲
+	;CASE IS >= 90
+	;	PRINTFORML %CALLNAME:TARGET%的腹部也許是被精液的灌注而受到刺激、迴響著咕嚕咕嚕的響聲……
+	;ENDSELECT
+	RETURN 0
+ELSEIF COND("液体浣腸")
+	VARSET LOCAL
+	;ターンごとに耐えるのがきつくなる
+	LOCAL = 300 + (CUP:快Ｃ + CUP:快Ｖ + CUP:快Ａ + CUP:苦痛)/5 + NOWEX:Ｃ絶頂*200 + NOWEX:Ｖ絶頂*500 + NOWEX:Ａ絶頂*1000 + NOWEX:絶頂数合計*100
+
+	;浣腸量による補正
+	SELECTCASE COND("液体浣腸")
+	CASE 3
+		TIMES LOCAL, 3.00
+	CASE IS >= 4
+		TIMES LOCAL, 5.00
+	ENDSELECT
+
+	;Ａ拡張度合いによる補正
+	SELECTCASE ABL:Ａ拡張 - ABL:Ａ技術
+	CASE IS >= 4
+		TIMES LOCAL, 30.00
+	CASE 3
+		TIMES LOCAL, 10.00
+	CASE 2
+		TIMES LOCAL, 5.00
+	CASE 1
+		TIMES LOCAL, 3.00
+	ENDSELECT
+
+	;指令などによる補正
+	SELECTCASE SELECTCOM
+	CASE 2
+		TIMES LOCAL, 1.20
+	CASE 9
+		TIMES LOCAL, 1.10
+	CASE 14
+		TIMES LOCAL, 1.30
+	CASE 33, 141
+		TIMES LOCAL, 2.00
+	CASE 142, 143
+		TIMES LOCAL, 3.00
+	CASE 60 TO 79
+		TIMES LOCAL, 1.50
+	ENDSELECT
+
+	;LOCAL:1は下方修正。かかり過ぎないようにLOCALとは独立させて調整
+	LOCAL:1 = 100
+
+	;性格による補正(ツンやクーはがんばって堪えます。他はシラネ)
+	SELECTCASE TALENT:高慢*50 + TALENT:堅強*40 + TALENT:強気*40 + TALENT:冷静*25 + TALENT:害羞*50 + TALENT:聰慧*25
+	CASE IS >= 150
+		TIMES LOCAL:1, 0.30
+	CASE IS >= 100
+		TIMES LOCAL:1, 0.50
+	CASE IS > 50
+		TIMES LOCAL:1, 0.80
+	ENDSELECT
+
+	;能力による補正。露出癖が高いと我慢しない。受虐属性が高いと忍耐。
+	SELECTCASE 100 - ABL:露出癖*30 + ABL:受虐属性*10
+	CASE IS >= 80
+		TIMES LOCAL:1, 0.30
+	CASE IS >= 50
+		TIMES LOCAL:1, 0.50
+	CASE IS >= 30
+		TIMES LOCAL:1, 0.80
+	CASE IS < -20
+		TIMES LOCAL:1, 2.00
+	CASE IS < 0
+		TIMES LOCAL:1, 1.50
+	ENDSELECT
+
+	;どんなに耐えても30％はある
+	LOCAL:1 = MAX(LOCAL:1, 30)
+
+	;補正のかかった値を追加
+	BASE:排泄欲 += MULTIPLY(LOCAL, LOCAL:1)
+
+	IF COND("肛門栓")
+		PRINTFORML %CALLNAME:TARGET%緊縮的腸道中、被強硬地灌注了\@ COND("大量浣腸") ? 大量 # \@\@ COND("温泉浣腸") ? 充滿氨臭味的濁黃尿液 # 混合各種液體的浣腸液 \@、卻因為被強行塞入的肛門塞而無法排出、忍受著持續地玩弄。
+		SELECTCASE ABL:受虐属性
+		CASE 0
+			PRINTFORML %CALLNAME:TARGET%不禁流露出苦悶的神情……
+		CASE 1
+			PRINTFORML %CALLNAME:TARGET%的身上浮現黏稠的脂汗、盡力忍受著排泄感……
+		CASE 2
+			PRINTFORML %CALLNAME:TARGET%流露出難過神情的同時、也羞紅著臉扭捏的輕輕搖晃著尻部……
+		CASE 3
+			PRINTFORML %CALLNAME:TARGET%在受到排泄感的折磨與玩弄的同時、也不時浮現出恍惚的神情……
+		CASE 4
+			PRINTFORML %CALLNAME:TARGET%帶著恍惚的神情、靜靜享受著排泄感與腹痛……
+		CASE IS >= 5
+			PRINTFORML %CALLNAME:TARGET%は、排泄感を心ゆくまで味わっている…
+			PRINTFORML 恍惚的神態因痛苦的快感而更加不檢點的鬆懈、從唇角\@ TALENT:男性 == 0 ? 和膣口 # \@滴滴答答地流出了液体…
+		ENDSELECT
+		SIF COND("排泄：限界")
+			CALL KOJO_EVENT, "无塞浣腸事件"
+	ENDIF
+ENDIF
+EXP:浣腸経験 += 1
+PRINTFORMW 浣腸経験＋１
+
+RETURN 1
+
+
+

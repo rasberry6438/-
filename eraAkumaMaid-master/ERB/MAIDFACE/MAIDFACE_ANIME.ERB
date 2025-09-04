@@ -1,0 +1,213 @@
+﻿;-------------------------------------------------
+;动画ーションを描画する関数群。金吉獣料理様のMAIDFACE.ERBを改変
+;-------------------------------------------------
+;-------------------------------------------------
+;角色ARGの动画ーションを描画する関数。ARG:1には何人目の位置かが入っている
+;SAVEFACE_BACK:ARGとSAVEFACE_FRONT:ARGは既に@MAIDFACEで設定された値を就这様使う
+;表情はSAVEFACE_FACE_(MOUTH, EYES):ARGをベースに変化させる
+;-------------------------------------------------
+@MAIDFACE_ANIME(ARG, ARG:1)
+#FUNCTIONS
+#DIM NUM_MAIDFACE
+#DIM FSIZE
+#DIM FPOS
+#DIMS MOUTH
+#DIMS FANG
+#DIMS LEYE_UNDER
+#DIMS REYE_UNDER
+#DIMS LEYE_OVER
+#DIMS REYE_OVER
+#DIMS LEYE_HIGHLIGHT
+#DIMS REYE_HIGHLIGHT
+#DIMS LEYE
+#DIMS REYE
+#DIMS LEYE_SIROME
+#DIMS REYE_SIROME
+;睫毛
+#DIMS LEYE_EYELASH
+#DIMS REYE_EYELASH
+#DIMS EYES
+#DIMS EYE_COND
+
+NUM_MAIDFACE = ARG:1
+MOUTH = 
+LEYE = 
+REYE = 
+LEYE_UNDER = 
+REYE_UNDER = 
+LEYE_OVER = 
+REYE_OVER = 
+LEYE_HIGHLIGHT = 
+REYE_HIGHLIGHT = 
+LEYE_SIROME = 
+REYE_SIROME = 
+LEYE_EYELASH = 
+REYE_EYELASH = 
+EYES = 
+EYE_COND = 
+
+SIF CFLAG:ARG:颜绘 == 0
+	RETURNF ""
+
+FSIZE = MAIDFACESIZE()
+FPOS = NUM_MAIDFACE * NUMC_MAIDFACE()*50
+
+;口
+IF COND("種族：獣人", ARG)
+	FANG = 牙１
+ELSEIF COND("種族：吸血鬼", ARG) + COND("種族：竜人", ARG)
+	FANG = 牙２
+ENDIF
+IF CFLAG:ARG:睡眠
+	SELECTCASE ANIME_FCOUNT:NUM_MAIDFACE
+	CASE 40 TO 70
+		MOUTH = 9半開%FANG%+
+	CASEELSE
+		MOUTH = 9無口系+
+	ENDSELECT
+ELSEIF CFLAG:ARG:刚睡醒 || STATE("困倦", ARG)
+	SELECTCASE ANIME_FCOUNT:NUM_MAIDFACE
+	CASE 81 TO 109
+		MOUTH = 9哈欠大+
+	CASE 78 TO 80, 110
+		MOUTH = 9哈欠小+
+	CASEELSE
+		MOUTH = 9半開%FANG%+
+	ENDSELECT
+ENDIF
+
+;目(一番上は瞬きしないもの)
+;IF STRCOUNTS(SAVEFACE_EYES:NUM_MAIDFACE, "眯眯眼", "笑颜", "闭眼", "ほんわか", "〇〇", "＞＜", "重度三白眼")
+IF STRCOUNTS(SAVEFACE_EYES:NUM_MAIDFACE, "眯眯眼", "笑颜", "闭眼", "ほんわか", "〇〇", "＞＜")
+
+
+ELSEIF STRCOUNTS(SAVEFACE_EYES:NUM_MAIDFACE, "三白眼")
+	IF CFLAG:ARG:睡眠
+	ELSEIF CFLAG:ARG:刚睡醒 || STATE("困倦", ARG)
+		SELECTCASE ANIME_FCOUNT:NUM_MAIDFACE
+		CASE 76 TO 110
+			LEYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+			REYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+		CASEELSE
+			LEYE = 11重度三白眼左\[%CONDS("左瞳色", ARG)%\]+
+			REYE = 11重度三白眼右\[%CONDS("右瞳色", ARG)%\]+
+		ENDSELECT
+	;まばたき
+	ELSE
+		SELECTCASE ANIME_FCOUNT:NUM_MAIDFACE
+		CASE 39, 41
+			LEYE = 11重度三白眼左\[%CONDS("左瞳色", ARG)%\]+
+			REYE = 11重度三白眼右\[%CONDS("右瞳色", ARG)%\]+
+		CASE 40, 70
+			LEYE = 11闭眼三白眼左\[%CONDS("睫毛の色", ARG)%\]+
+			REYE = 11闭眼三白眼右\[%CONDS("睫毛の色", ARG)%\]+
+		ENDSELECT
+	ENDIF
+ELSE
+	IF CFLAG:ARG:睡眠
+	ELSEIF CFLAG:ARG:刚睡醒 || STATE("困倦", ARG)
+		SELECTCASE ANIME_FCOUNT:NUM_MAIDFACE
+		CASE 76 TO 110
+			LEYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+			REYE = 11眯眯眼%CONDS("閉じた目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+		CASEELSE
+			LEYE = 11斜眼左\[%CONDS("左瞳色", ARG)%\]+
+			REYE = 11斜眼右\[%CONDS("右瞳色", ARG)%\]+
+		ENDSELECT
+	;まばたき
+	ELSE
+		SELECTCASE ANIME_FCOUNT:NUM_MAIDFACE
+		CASE 39, 41
+			LEYE = 11斜眼左\[%CONDS("左瞳色", ARG)%\]+
+			REYE = 11斜眼右\[%CONDS("右瞳色", ARG)%\]+
+		CASE 40, 70
+			LEYE = 11闭眼%CONDS("閉じた目の対応番号", ARG)%左\[%CONDS("睫毛の色", ARG)%\]+
+			REYE = 11闭眼%CONDS("閉じた目の対応番号", ARG)%右\[%CONDS("睫毛の色", ARG)%\]+
+		;よそ見は保留
+		;CASE 55 TO 68, 72 TO 79
+		;	SELECTCASE CFLAG:ARG:心情差
+		;	CASE IS > 0
+		;		LEYE = 11斜眼左\[%CONDS("左瞳色", ARG)%\]よそ見+
+		;		REYE = 11斜眼右\[%CONDS("右瞳色", ARG)%\]よそ見+
+		;	CASEELSE
+		;		LEYE = 11%CONDS("左眼形", ARG)%左\[%CONDS("左瞳色", ARG)%\]よそ見+
+		;		REYE = 11%CONDS("右眼形", ARG)%右\[%CONDS("右瞳色", ARG)%\]よそ見+
+		;	ENDSELECT
+		;CASE 69, 71
+		;	LEYE = 11斜眼左\[%CONDS("左瞳色", ARG)%\]よそ見+
+		;	REYE = 11斜眼右\[%CONDS("右瞳色", ARG)%\]よそ見+
+		ENDSELECT
+	ENDIF
+ENDIF
+
+;眼形に２とかをその都度付けるのがバグの元なので最後に一回だけ見る
+LEYE_SIROME = %CONDS("左白瞳色", ARG)%
+REYE_SIROME = %CONDS("右白瞳色", ARG)%
+
+SIF STRCOUNT(CONDS("右眼形", ARG), "飘忽") + STRCOUNT(CONDS("左眼形", ARG), "飘忽")
+	EYE_COND += "飘忽"
+SIF STRCOUNT(CONDS("右眼形", ARG), "半目") + STRCOUNT(CONDS("左眼形", ARG), "半目")
+	EYE_COND += "半目"
+
+SELECTCASE CHECK_TYPE(REYE)
+CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+	REYE = 11%CHECK_TYPE(REYE)%%CHECK_NUM(CONDS("右眼形", ARG) )%%EYE_COND%右\[%CONDS("右瞳色", ARG)%\]+
+
+	SIF REYE_SIROME != "无眼白" && REYE_SIROME != ""
+		REYE_UNDER = 11%CHECK_TYPE(REYE)%%CHECK_NUM(CONDS("右眼形", ARG), REYE)%%EYE_COND%右白眼\[%REYE_SIROME%\]+
+	REYE_EYELASH = 11%CHECK_TYPE(REYE)%%CHECK_NUM(CONDS("右眼形", ARG) )%%EYE_COND%右睫毛\[%CONDS("睫毛の色", ARG)%\]+
+	;睫毛と白眼は飘忽が関係ない
+	REYE_UNDER = %REPLACE(REYE_UNDER, "飘忽", "")%
+	REYE_EYELASH = %REPLACE(REYE_EYELASH, "飘忽", "")%
+ENDSELECT
+
+SELECTCASE CHECK_TYPE(LEYE)
+CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+	LEYE = 11%CHECK_TYPE(LEYE)%%CHECK_NUM(CONDS("左眼形", ARG) )%%EYE_COND%左\[%CONDS("左瞳色", ARG)%\]+
+
+	SIF LEYE_SIROME != "无眼白" && LEYE_SIROME != ""
+		LEYE_UNDER = 11%CHECK_TYPE(LEYE)%%CHECK_NUM(CONDS("左眼形", ARG), LEYE)%%EYE_COND%左白眼\[%LEYE_SIROME%]\+
+	LEYE_EYELASH = 11%CHECK_TYPE(LEYE)%%CHECK_NUM(CONDS("左眼形", ARG) )%%EYE_COND%左睫毛\[%CONDS("睫毛の色", ARG)%\]+
+	;睫毛と白眼は飘忽が関係ない
+	LEYE_UNDER = %REPLACE(LEYE_UNDER, "飘忽", "")%
+	LEYE_EYELASH = %REPLACE(LEYE_EYELASH, "飘忽", "")%
+ENDSELECT
+
+SIF MOUTH == ""
+	MOUTH = %SAVEFACE_MOUTH:NUM_MAIDFACE%
+
+EYES = %LEYE_UNDER%%REYE_UNDER%%LEYE%%REYE%
+
+IF EYES == ""
+	EYES = %SAVEFACE_EYES:NUM_MAIDFACE%%SAVEFACE_EYES_LIGHT:NUM_MAIDFACE%%SAVEFACE_EYES_OVER:NUM_MAIDFACE%%SAVEFACE_EYES_EYELASH:NUM_MAIDFACE%
+ELSE
+	;目の変化有些なら爱心眼や高光にも変化が起きるかも
+	IF SAVEFACE_EYES_LIGHT:NUM_MAIDFACE != ""
+		REYE_HIGHLIGHT = %CHECK_HIGHLIGHT("右", REYE, ARG)%
+		LEYE_HIGHLIGHT = %CHECK_HIGHLIGHT("左", LEYE, ARG)%
+	ENDIF
+
+	IF STRCOUNT(SAVEFACE_EYES_OVER:NUM_MAIDFACE, "爱心")
+		SELECTCASE CHECK_TYPE(REYE)
+		CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+			REYE_OVER = 11%CONDS("右爱心眼の色", ARG)%爱心%CHECK_TYPE(REYE)%右+
+		ENDSELECT
+
+		SELECTCASE CHECK_TYPE(LEYE)
+		CASE "普通眼", "吊眼", "垂眼", "斜眼", "水灵眼", "縦長目", "三白眼", "重度三白眼", "Ｘ目"
+			LEYE_OVER = 11%CONDS("左爱心眼の色", ARG)%爱心%CHECK_TYPE(LEYE)%左+
+		ENDSELECT
+	ENDIF
+
+	EYES += @"%LEYE_HIGHLIGHT%%REYE_HIGHLIGHT%%LEYE_OVER%%REYE_OVER%%LEYE_EYELASH%%REYE_EYELASH%"
+ENDIF
+
+;単眼の処理
+IF COND("種族：一目", ARG)
+	EYES = %REPLACE(EYES, "単眼", "")%
+	EYES = %REPLACE(EYES, "11", "11単眼")%
+ENDIF
+
+LOCALS = %SAVEFACE_BACK:NUM_MAIDFACE%%MOUTH%%EYES%%SAVEFACE_FRONT:NUM_MAIDFACE%%SAVEFACE_MAYU:NUM_MAIDFACE%%SAVEFACE_OVER:NUM_MAIDFACE%
+
+RETURNF LOCALS

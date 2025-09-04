@@ -1,0 +1,1445 @@
+﻿;-------------------------------------------------
+;定住の誘い
+;-------------------------------------------------
+@性処理NAME_手交服务
+#FUNCTIONS
+TSTR:コマンド名受渡 = 手交服务
+
+@性処理_TOOLTIP_手交服务
+LOCALS = <br>■手交服务<br>
+LOCALS += @"用手侍奉%CALLNAME:PLAYER%肉棒的性处理。<br>"
+LOCALS += "性处理服务中最便捷经济的项目。<br>"
+LOCALS += "<br>指令类型：性处理<br>获取来源：暴露・接触・侍奉・不洁"
+LOCALS += "<br>固有经验：手淫经验(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@性処理_手交服务
+#DIM 行為回数
+
+;射精するまで刺激する
+行為回数 = 0
+DO
+	CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 200)
+	SIF TALENT:TARGET:器用な指
+		CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 50)
+	行為回数++
+LOOP CUP:PLAYER:快Ｃ + PALAM:PLAYER:快Ｃ < 10000
+TIME += 経過時間算出(行為回数)
+
+
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 20)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 50)
+CALL SOURCE_CALC_奉仕(TARGET, PLAYER, 250)
+CALL SOURCE_CALC_不潔(TARGET, PLAYER, 100)
+
+;奉仕快楽
+RCVAR:TARGET:奉仕コマンドフラグ = 1
+RCVAR:TARGET:汎用喘ぎ_文節低減フラグ = 1
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;手淫経験
+EXP:手淫経験 += 3
+
+;同性愛
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 8
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 8
+
+;売春経験がない相手に交渉を成立させた場合、あなたの買春カウントが進む
+;これにより「あなたが何人買ったか」の記録とする。
+;最初から売春経験を持ってるキャラに関しては……知らん！！！
+SIF EXP:TARGET:売春経験 == 0
+	EXP:PLAYER:買春経験 += 1
+
+EXP:TARGET:売春経験 += 1
+
+RETURN 1
+
+
+@性処理_射精時処理_手交服务
+;射精時にどこに出すかを呼び出す
+;とはいってもフィニッシュ場所を入れて関数呼ぶだけ
+CALL 射精実処理(PLAYER, TARGET, 9)
+RETURN 1
+
+
+;-------------------------------------------------
+;値段設定
+;-------------------------------------------------
+@CAN_性処理_手交服务(対象キャラ)
+#DIM 対象キャラ
+#DIM 値段計算
+#DIMS 素質名
+
+PRINTFORML 手交服务计算(%CALLNAME:TARGET%)
+DRAWLINE
+;基礎値段
+;手マン処理と同等
+IF NO:TARGET > 1000
+;EXキャラ
+;元いた世界でのカラダの価値はわかっても、空の世界での売春相場を知らない。おまけにルピもたいして持ってないのでまとまったお金がありがたい。
+;現実の一般JKが空の世界に来て1万円のつもりで1000ルピでカラダを売るイメージ。総じてリゾート内の価格帯から見ると格安。
+;……グラブルキャラたちの基本料金が高いだけ？それはそう。
+	SELECTCASE RAND:2
+	CASE 0
+	;15000円のつもり。これでもちょっと吹っ掛けたつもりで強気の値段交渉してる。
+		値段計算 = 1000
+	CASE 1
+	;5000円のつもり。これでも相場よりちょい高めのつもりで値段交渉してる。
+		値段計算 = 500
+	ENDSELECT
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSEIF TALENT:幼稚
+	;幼稚
+	;性知識うんぬん以前に、そもそもお金の価値に対する理解が足りていない。
+	;自分のカラダの価値も理解していないので、「お菓子いっぱいあげるから」とかでも許しちゃったりするイメージ。でも値段表示する仕様上お菓子たくさんとかでは買えない。
+	;本人は精一杯吹っ掛けているつもりで「じゅーまんえんくれるならいいよ」って言っても、他キャラの相場から見れば格安だったりする。
+	;でもちょいちょい「ひゃくまんえん！」とか言いはじめる。
+	SELECTCASE RAND:10
+	;４割で超高額提示
+	CASE 0
+		PRINTFORML %"基础费用", 25, LEFT%：　十万卢比！
+		値段計算 = 100000
+	CASE 1 TO 3
+		PRINTFORML %"基础费用", 25, LEFT%：　一万卢比！
+		値段計算 = 10000
+	CASE 4 TO 6
+		PRINTFORML %"基础费用", 25, LEFT%：　一千卢比！
+		値段計算 = 1000
+	CASE 7 TO 9
+		PRINTFORML %"基础费用", 25, LEFT%：　一百卢比就可以了！
+		値段計算 = 100
+	ENDSELECT
+ELSEIF 知識素質:高貴 > 0
+;高貴
+;基本的に実家が太い子らなので、そもそも目先の金銭のために体を売っているわけではない。
+;お金が欲しいからではなくあなたが頼むから、あなたに喜んでんでほしいから売ってくれているのである。つまり純愛。
+	IF 知識素質:性知識 < 0
+	;性知識がなくとも、自身のカラダは民草のそれよりも価値があるということを知っている。
+	;……のだが、相場知識がないため結局吹っ掛けたつもりでも高貴キャラとしてはお安めの価格設定
+		値段計算 = 1500
+	ELSE
+	;王侯貴族に連なるような高貴なおくちを10万円で堪能できると考えるとこれでも結構リーズナブル。良心的な価格設定でございます。
+		値段計算 = 3000
+	ENDIF
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSEIF 知識素質:性知識 < 0
+;性知識マイナス勢
+;お金の価値が分からないわけではないが、カラダの価値の相場を知らないので直感的にいま欲しい金額を言ってくる。
+;幼稚ほどブッ飛んだ値段は提示してこないが結局値段はブレる。
+	SELECTCASE RAND:4
+	;４割で高額提示
+	CASE 0
+		値段計算 = 3000
+	CASE 1
+		値段計算 = 1500
+	CASE 2
+		値段計算 = 1000
+	CASE 3
+		値段計算 = 800
+	CASE 4
+		値段計算 = 500
+	ENDSELECT
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSEIF TALENT:非戦闘キャラ
+;非戦闘キャラは、「戦うことで稼げる」キャラより相対的に肉体の価値が安く、「カラダを売って稼ぐ」ことへの抵抗感が戦闘キャラより薄いイメージ
+	値段計算 = 800
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSEIF TALENT:性転換 == 2
+;元男だと嫌がって値段を高めに設定する(でも結局買われてしゃぶらされてしまう)
+	値段計算 = 2000
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSE
+;「基本的にみんな美女である」「普段売っていないので市場価値が高い」「戦闘能力のあるキャラは相応のプライドというものがある」などの理由から
+;補正抜きで3000ルピ≒3万円とする。ここに素質で補正がかかり、地の文や口上でのプレイ内容に応じてオプションが上乗せされていく。
+;さすがにフェラで30万円は高すぎるんよ……3万ですらかなり高いのに
+	値段計算 = 1000
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ENDIF
+;好感度
+;好感度閾値の表現からして、親友あたりからお友達料金にしてくれるんじゃないかなと
+LOCAL = (50 - CFLAG:好感度レベル) * -2
+IF LOCAL < 0
+	IF CFLAG:好感度レベル <= 20
+	;友達未満だと大きく値上げ。初対面で4000円上乗せされるイメージ。普段身売りしてない美女に値段交渉するんだからそんくらい吹っ掛けてきてもおかしくないと思う。なお従業員採用に必要な好感度……
+		PRINTFORML %"关系尚浅", 25, LEFT%：＋%NUM_FORMAT(LOCAL * -4), 8%卢比
+		値段計算 -= LOCAL * 4
+	ELSE
+	;ただの友達だと若干の値上げ。値上げっていうかここまで含めて基本料金みたいなとこがある
+		PRINTFORML %"普通朋友", 25, LEFT%：＋%NUM_FORMAT(LOCAL * -1), 8%卢比
+		値段計算 -= LOCAL
+	ENDIF
+ELSE
+	;親友以上で値下げしてくれる。基本料金1万円で、好感度100で100ルピ≒1000円引きならまぁ妥当っちゃ妥当か
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORML %"友情折扣", 25, LEFT%：－%NUM_FORMAT(LOCAL), 8%卢比
+	RESETCOLOR
+	値段計算 -= LOCAL
+ENDIF
+
+;容姿
+IF TALENT:容姿 == -1
+;あなたがブサイクの場合。あえてつけてる素質のはずだけど、ストレートに「醜い」だの「ブサイク」だの書くとプレイヤーの心にトゲが刺さりそうなため表現はマイルドに
+;ブサイクに対する奉仕行為はプライドが傷つくだろうから値段高め
+	値段計算 += 300
+	PRINTFORML %"长相不合胃口", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+ENDIF
+IF TALENT:容姿 == 1
+;イケメン
+	値段計算 -= 50
+	PRINTFORML %"长相不错", 25, LEFT%：－%NUM_FORMAT(50), 8%卢比
+ENDIF
+IF TALENT:容姿 == 2
+;絶世
+	値段計算 -= 100
+	PRINTFORML %"长相超正！", 25, LEFT%：－%NUM_FORMAT(100), 8%卢比
+ENDIF
+
+;体力
+;疲れてる時に顎とか疲れそうな奉仕を頼まれたら当然吹っ掛ける
+IF BASE:TARGET:体力 < MAXBASE:TARGET:体力 / 4
+	値段計算 += 1000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"体力低下", 25, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;酩酊は値段ではなくむしろ実行判定にかかわったほうがいい気がするので移動。
+;「安く売ってしまう」よりも、「ね、いいでしょ？」ってあなたのお願いに頷いてしまうほうがイメージに近い。
+
+;恋人持ち
+IF TALENT:恋人持ち == 2
+	値段計算 += 1500
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"已有配偶", 25, LEFT%：＋%NUM_FORMAT(1500), 8%卢比
+	RESETCOLOR
+ENDIF
+IF TALENT:恋人持ち == 1
+	値段計算 += 1000
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"已有恋人", 25, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+	RESETCOLOR
+ENDIF
+IF TALENT:恋人持ち == -1
+;別に恋人になってるワケでもないのに「好きな人がいるから」ってだけで生意気にも値段を釣り上げてくるし、上昇幅は恋人持ちと同じ。
+;「ゆ、許せねぇよ……絶対買って俺のものにしてやる……！」
+;＊ あなたにケツイがみなぎった。
+	値段計算 += 1000
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORML %"心有所属", 25, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+	RESETCOLOR
+ENDIF
+;淫乱
+IF TALENT:淫乱
+	値段計算 -= 2500
+	PRINTFORML %"淫乱", 16, LEFT%：－%NUM_FORMAT(2500), 8%卢比
+ENDIF
+
+;同性愛
+IF 同性愛性癖判定(TARGET,PLAYER) == 1
+	;性癖素質:同性愛
+	IF TALENT:TARGET:性愛傾向 == 1 ||TALENT:TARGET:性愛傾向 == 2
+		素質名 = 異性愛
+	ELSE
+		素質名 = 同性愛
+	ENDIF
+	SELECTCASE 性癖素質:同性愛
+		CASE 1
+			;補正なし
+		CASE 2
+			値段計算 -= 100
+			PRINTFORML %@"%素質名%(喜好)", 16, LEFT%：－%NUM_FORMAT(100), 8%卢比
+		CASE 3
+			値段計算 -= 250
+			PRINTFORML %@"%素質名%(成瘾)", 16, LEFT%：－%NUM_FORMAT(250), 8%卢比
+		CASEELSE
+			;好奇心
+			IF TALENT:性的興味 > 0
+				値段計算 -= 50
+				PRINTFORML %@"好奇(%素質名%)", 16, LEFT%：－%NUM_FORMAT(50), 8%卢比
+			ENDIF
+			;保守的
+			IF TALENT:性的興味 < 0
+				値段計算 += 150
+				SETCOLOR カラーパレット("薄ピンク")
+				PRINTFORML %@"保守(%素質名%)", 16, LEFT%：＋%NUM_FORMAT(150), 8%卢比
+				RESETCOLOR
+			ENDIF
+	ENDSELECT
+ENDIF
+
+;気丈
+;「物怖じせず値段交渉に臨む」とするなら基本料金の一割増しくらいで吹っ掛けそう
+IF TALENT:度胸 > 0
+	値段計算 += 100
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"刚毅", 25, LEFT%：＋%NUM_FORMAT(100), 8%卢比
+	RESETCOLOR
+ENDIF
+;臆病
+;気丈の逆で「高値を吹っ掛けて値段交渉するのが苦手」とするならば一割くらいまけてくれないかな……
+IF TALENT:度胸 < 0
+	値段計算 -= 100
+	PRINTFORML %"怯懦", 25, LEFT%：－%NUM_FORMAT(100), 8%卢比
+ENDIF
+
+;プライド
+;処女のとこでも参照しているが、こちらは基本料金にかかるので別枠。
+;プライド高い
+IF TALENT:プライド > 0
+	値段計算 += 100
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"高自尊", 25, LEFT%：＋%NUM_FORMAT(100), 8%卢比
+	RESETCOLOR
+ENDIF
+;プライド低い
+IF TALENT:プライド < 0
+	値段計算 -= 100
+	PRINTFORML %"低自尊", 25, LEFT%：－%NUM_FORMAT(100), 8%卢比
+ENDIF
+
+;謎の魅力
+IF TALENT:PLAYER:謎の魅力
+	値段計算 -= 100
+	PRINTFORML %"迷之魅力", 25, LEFT%：－%NUM_FORMAT(100), 8%卢比
+ENDIF
+
+;ABL:奉仕精神
+;行為が奉仕そのものであるため金額に対する奉仕精神の影響がでかい
+IF ABL:奉仕精神
+	値段計算 -= ABL:奉仕精神 * 100
+	PRINTFORML %"侍奉精神", 25, LEFT%：－%NUM_FORMAT(ABL:奉仕精神 * 100), 8%卢比
+ENDIF
+
+;汚臭鈍感
+;鈍感だろうと奉仕内容自体に変わりはないので大した値引きにはならない
+IF TALENT:汚臭耐性 > 0
+	値段計算 -= TALENT:汚臭耐性 * 50
+	PRINTFORML %GET_TALENTNAME(61, TALENT:汚臭耐性,,TARGET), 25, LEFT%：－%NUM_FORMAT(TALENT:汚臭耐性 * 50), 8%卢比
+ENDIF
+;汚臭敏感
+IF TALENT:汚臭耐性 < 0
+	値段計算 -= TALENT:汚臭耐性 * 100
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORML %GET_TALENTNAME(61, TALENT:汚臭耐性,,TARGET), 25, LEFT%：＋%NUM_FORMAT(ABS(TALENT:汚臭耐性) * 100), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;献身的
+IF TALENT:献身的
+	値段計算 -= 100
+	PRINTFORML %"献身", 25, LEFT%：－%NUM_FORMAT(100), 8%卢比
+ENDIF
+
+;貞操観念による売春への抵抗感。これは値段高めのほうが「らしさ」が出る
+IF TALENT:貞操 == 1
+	値段計算 += 500
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORML %"贞操观念", 25, LEFT%：＋%NUM_FORMAT(500), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;男嫌い
+IF TALENT:性別嗜好 == 1 && TALENT:PLAYER:性別 == 2
+	値段計算 += 1000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"厌男", 25, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;この時点で値段がマイナスになっていた場合、強制的に0まで戻す。買ってるはずなのに買われてんじゃねぇ！
+SIF 値段計算 < 0
+	値段計算 = 0
+
+;割引クーポンはひとつまでです！
+IF TALENT:対象キャラ:恋慕
+	DRAWLINE
+	PRINTFORML 折扣
+;恋慕は完全無料
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORM %"挚爱特惠", 25, LEFT%：　　　　　%CALLNAME:PLAYER%专属100％折扣
+	CALL PRINT_STRL(@"_H_")
+	RESETCOLOR
+	値段計算 *= 0
+ELSEIF TALENT:対象キャラ:弱味
+	DRAWLINE
+	PRINTFORML 折扣
+;弱みを握ってはした金で体を売らせたい！という鉄の意志
+;せっかく値段が出るんだしタダで抱かせてもらうよりも「100円で買ってあげた」みたいののほうが尊厳を性的搾取できている感が出るので
+;本来は30,000ルピ……ですが！なんと！今回に限り！お客様だけに！99%オフの300ルピで！！のほうが絶対にシコれる。古事記にもそう書かれている。
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORM %"弱点折扣", 25, LEFT%：　　　　　99％折扣
+	CALL PRINT_STRL(@"_H_")
+	RESETCOLOR
+	値段計算 /= 100
+;ELSEIF TALENT:金欠 || TALENT:貧乏
+;お金に困っているときはちょっとお安くなるが、発情期のムラムラは値段に適用されなくなる。買っては欲しいがお金も欲しいため。
+;	SETCOLOR カラーパレット("薄ピンク")
+;	PRINTFORM %"金欠中", 25, LEFT%：　　　　　25％オフ
+;	CALL PRINT_STRL(@"_H_")
+;	RESETCOLOR
+;	値段計算 /= 4 *= 3
+ELSEIF CFLAG:TARGET:発情期フラグ < 0 && BASE:TARGET:性欲 >= 500
+	DRAWLINE
+	PRINTFORML 折扣
+;発情期
+	IF BASE:TARGET:性欲 >= 1000
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORM %"发情期饥渴中", 25, LEFT%：　　　　　30％折扣
+		CALL PRINT_STRL(@"_H_")
+		RESETCOLOR
+		値段計算 /= 10
+		値段計算 *= 7
+	ELSE
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORM %"发情期饥渴中", 25, LEFT%：　　　　　10％折扣
+		CALL PRINT_STRL(@"_H_")
+		RESETCOLOR
+		値段計算 /= 10
+		値段計算 *= 9
+	ENDIF
+ENDIF
+DRAWLINE
+IF TALENT:対象キャラ:恋慕
+	値段計算 = -1
+ELSE
+	値段計算 = MAX(0, 値段計算)
+ENDIF
+IF 値段計算 > 0
+	PRINTFORML %"合计价格", 25, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSE
+	PRINTFORM %"合计价格", 25, LEFT%：　%"免费", 8%
+	CALL PRINT_STRL(@"_H_")
+ENDIF
+
+
+RETURN 値段計算
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@性処理_ABLE_手交服务
+#DIM ループ用
+#DIM 許可好感度
+#DIM 補正後好感度
+
+;RETURN 0は非表示
+SIF GETBIT(TALENT:PLAYER:性別, 1) == 0
+	RETURN 0
+SIF TALENT:PLAYER:Ｃ感度 == -2
+	RETURN 0
+SIF TALENT:PLAYER:射精不可
+	RETURN 0
+
+;RETURN -1は表示するが選択出来ない
+許可好感度 = 40
+補正後好感度 = 補正後好感度算出(TARGET)
+SIF BASE:酩酊 > MAXBASE:酩酊 / 2
+	補正後好感度 += 20
+;経験があなたを強くする
+LOCAL = EXP:PLAYER:買春経験
+補正後好感度 += LOCAL
+IF あなた特殊能力:ルピえっち交渉術
+;口がうまくなったことで未陥落の一般客に通りやすくなった、ということで補正をかけておく。習得にかかった労力ぶんのリワード。
+;だ、だって……パパ活って一期一会みたいなイメージだし……好感度高くなくても通るイメージだし……
+;かわりに低好感度だと補正によってルピ消費ががっつり増える。
+	補正後好感度 += 50
+ENDIF
+TRYCCALLFORM 性処理業務固有補正_可不可_{NO:TARGET}_手交服务(TARGET, 補正後好感度)
+	補正後好感度 = RESULT
+CATCH
+ENDCATCH
+SIF 許可好感度 > 補正後好感度
+	RETURN -1
+
+RETURN 1
+
+;-------------------------------------------------
+;メッセージ
+;-------------------------------------------------
+
+@MESSAGE_性処理_手交服务
+#DIM 対象キャラ
+
+対象キャラ = TARGET
+
+PRINTFORM %CALLNAME:TARGET%
+IF TALENT:TARGET:恋慕
+	PRINTFORM 似乎对被需求感到高兴而微笑着
+ELSEIF TALENT:TARGET:弱味 || (TALENT:性別嗜好 == 2 && TALENT:PLAYER:性別 == 1)
+;これだけ露骨に浮かぶバリエーションが多い……なんでやろな？
+	PRINTFORM %TEXTR("不情不愿地/面露嫌恶却不甘心地/眉头紧蹙勉强地/瞪视着这边却还是")%
+ELSEIF TALENT:TARGET:恋人持ち == 3
+	PRINTFORM 向着逝去的伴侣轻声致歉后
+ELSEIF TALENT:TARGET:恋人持ち == 2
+	PRINTFORM 向着誓约的伴侣轻声致歉后
+ELSEIF TALENT:TARGET:恋人持ち == 1
+	PRINTFORM 向着现任恋人轻声致歉后
+ELSEIF TALENT:TARGET:恋人持ち == -1
+	PRINTFORM 向着心仪之人轻声致歉后
+ELSEIF TALENT:TARGET:セフレ
+	PRINTFORM 脸上浮现出戏谑的坏笑
+ELSEIF TALENT:TARGET:精神的余裕 == 2
+	PRINTFORM 轻叹有失体统却仍
+ELSEIF TALENT:TARGET:ギャル
+	PRINTFORM 落落大方地
+ELSEIF TALENT:TARGET:羞恥心
+	PRINTFORM %TEXTR("双颊绯红地/含羞垂首")%
+ELSEIF TALENT:TARGET:性的興味
+	PRINTFORM %TEXTR("饶有兴致地/满怀期待地")%
+ELSEIF TALENT:TARGET:性欲 <= -1
+	PRINTFORM 公事公办地
+ELSE
+	PRINTFORM 略带羞涩却仍
+ENDIF
+PRINTFORMW %TEXTR("应允/首肯")%，与%CALLNAME:PLAYER%%TEXTR("隐入就近的遮蔽处/至隐蔽角落/进入藏身暗处")%……
+PRINTL
+PRINTFORMW ────
+PRINTL
+;履歴
+
+IF RFLAG:コマンド結果受渡し変数 == 1
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>以工作名义最终让%CALLNAME:TARGET%免费手交</font><img src='えっちハート'>","うふふ実績")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>为心爱的%CALLNAME:PLAYER%免费手交</font><img src='えっちハート'>","うふふ実績")
+ELSEIF TALENT:対象キャラ:弱味
+	;弱味想定。いつか必要になるかもしれないし……
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%让被抓住把柄的%CALLNAME:TARGET%为我手交</font><img src='えっちハート'>","うふふ実績")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>被%CALLNAME:PLAYER%抓住弱点，区区%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%就被迫为其手交</font><img src='えっちハート'>","うふふ実績")
+ELSE
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%让对方为我手交</font><img src='えっちハート'>","うふふ実績")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("赤ピンク")%'>用%MON_FORMAT(RFLAG:コマンド結果受渡し変数２)%为%CALLNAME:PLAYER%进行了手交</font><img src='えっちハート'>","うふふ実績")
+ENDIF
+
+@MESSAGE_性処理_手交服务_非口上時
+#DIM 対象キャラ
+#DIM 値段計算
+#DIM オプション込み最終価格
+#DIM イヤイヤ
+#DIM チン嗅ぎ
+#DIM 射精煽り
+#DIM チンポに頬擦り
+#DIM チンキス
+#DIM 顔にぶっかけ
+#DIM 舌の上にぶっかけ
+#DIM 下半身ぶっかけ
+#DIM ほっぺたティッシュ
+#DIM 精液ごっくん
+#DIM 精液お持ち帰り
+;本当はアナル舐め手コキも用意したかったけど、行為の流れの中にうまいこと挟みこめなかった。無念なり。
+;#DIM アナル舐め
+
+
+対象キャラ = TARGET
+イヤイヤ = 0
+チン嗅ぎ = 0
+射精煽り = 0
+チンポに頬擦り = 0
+チンキス = 0
+顔にぶっかけ = 0
+舌の上にぶっかけ = 0
+下半身ぶっかけ = 0
+ほっぺたティッシュ = 0
+精液ごっくん = 0
+精液お持ち帰り = 0
+
+IF TALENT:TARGET:弱味 || (TALENT:PLAYER:性別 == 2 && TALENT:TARGET:性別嗜好 == 1) || TALENT:TARGET:恋人持ち >= 1 || TALENT:TARGET:恋人持ち == -1
+	イヤイヤ = 1
+ENDIF
+
+PRINTFORML %CALLNAME:PLAYER%在%CALLNAME:TARGET%藏身的暗处蹲下，向眼前人亮出勃起的肉棒。
+SELECTCASE TALENT:PLAYER:男性器サイズ
+CASE -2 TO -1
+;こどもちんこ
+IF TALENT:TARGET:弱味 && 陥落チェック(TARGET) >= 1
+;弱みに付け込むと反撃にバカにされる。面倒なので陥落チェックだけ除外
+	PRINTFORML %CALLNAME:TARGET%凝视着眼前小巧可爱的阴茎，%TEXTR("蔑视地嗤笑/讥讽地冷笑")%。
+ELSE
+	PRINTFORML %CALLNAME:TARGET%打量着眼前玲珑尺寸的阴茎，%TEXTR("戏谑地偷笑/玩味地抿嘴/不怀好意地咧嘴")%。
+ENDIF
+CASE 0
+;普通
+	PRINTFORML %CALLNAME:TARGET%面对直指眼前的阳具，呼吸略微紊乱。
+CASE 1
+;巨根
+	PRINTFORML %CALLNAME:TARGET%被眼前的雄伟巨根%TEXTR("惊得倒抽凉气/不自主吞咽唾沫")%，喉间溢出灼热喘息。
+CASE 2
+;規格外
+	PRINTFORML %CALLNAME:TARGET%被超乎常理的巨物震慑，%TEXTR("喉头颤动溢出滚烫吐息/艰难地咽下口水")%。
+ENDSELECT
+PRINTL
+
+IF RAND:2 == 0
+	;チン嗅ぎ
+	IF 陥落チェック(TARGET)
+		PRINTFORM 面对直指眼前的肉棒，%CALLNAME:TARGET%%TEXTR("将脸埋入根部/将脸贴近龟头/用鼻尖磨蹭茎身")%
+		CALL PRINT_STR(@"轻嗅_H_")
+		PRINTFORM 翕动鼻翼嗅闻气味，
+		IF 初体験済みチェック("ファーストキス", TARGET) == 0
+			PRINTFORML %TEXTR("爱怜地/媚眼如丝地")%用脸颊摩挲肉棒。
+			チンポに頬擦り = 1
+		ELSE
+			CALL PRINT_STR(@"啾_H_")
+			PRINTFORML 在龟头落下轻吻。
+			チンキス = 1
+		ENDIF
+	ELSEIF TALENT:TARGET:弱味 || (TALENT:PLAYER:性別 == 2 && TALENT:TARGET:性別嗜好 == 1) || TALENT:TARGET:恋人持ち >= 1 || TALENT:TARGET:恋人持ち == -1
+		IF TALENT:種族 == 2 || TALENT:種族 == 3
+			PRINTFORML 命令在手交前仔细嗅闻肉棒，%CALLNAME:TARGET%厌恶地皱眉却仍
+			CALL PRINT_STR(@"轻嗅_H_")
+			PRINTFORM 翕动鼻翼，逐渐在腥膻气味中
+			CALL PRINT_STR(@"恍惚_H_")
+			PRINTFORML 眼神迷离，在%CALLNAME:PLAYER%胯间深深呼吸……
+			BASE:TARGET:性欲 += 400
+		ELSE
+			PRINTFORM 命令在手交前仔细嗅闻肉棒，%CALLNAME:TARGET%皱眉
+			CALL PRINT_STR(@"轻嗅_H_")
+			PRINTFORML 勉强完成嗅闻动作。
+		ENDIF
+	ELSE
+	IF TALENT:種族 == 2 || TALENT:種族 == 3
+			PRINTFORML 命令在手交前仔细嗅闻肉棒，%CALLNAME:TARGET%最初虽显犹豫，
+			CALL PRINT_STR(@"轻嗅_H_")
+			PRINTFORM 翕动鼻翼，逐渐在腥膻气味中
+			CALL PRINT_STR(@"恍惚_H_")
+			PRINTFORML 眼神迷离，在%CALLNAME:PLAYER%胯间深深呼吸……
+			BASE:TARGET:性欲 += 400
+		ELSE
+			PRINTFORM 命令在手交前仔细嗅闻肉棒，%CALLNAME:TARGET%踌躇着
+			CALL PRINT_STR(@"轻嗅_H_")
+			PRINTFORML 勉强完成嗅闻动作。
+		ENDIF
+	ENDIF
+	PRINTL
+	チン嗅ぎ = 1
+ENDIF
+
+IF ABL:TARGET:技巧 <= 1
+;相手が低技巧の場合ここにしか分岐しない
+	PRINTFORMW %CALLNAME:TARGET%战战兢兢地伸手触碰%CALLNAME:PLAYER%的%TEXTR("肉棒/阴茎")%。
+	PRINTL
+	PRINTFORML 窥视着%CALLNAME:PLAYER%脸色生硬地上下移动手掌，笨拙的侍奉手法
+	PRINTFORML 虽因玷污纯洁的%CALLNAME:TARGET%而产生背德快感，但%TEXTR("过于生涩/用力过猛/刺激不足")%%TEXTR("毫无快感/离高潮甚远")%。
+	PRINTL
+	PRINTFORML 照此状态永远无法抵达高潮。
+	PRINTFORMW %CALLNAME:PLAYER%无奈放弃%CALLNAME:TARGET%的手交服务，决定自行解决并要求在任意部位射精。
+	PRINTL
+	PRINTFORML ────要在哪里射精呢？
+	PRINTL
+	PRINTBUTTON "[0] 颜面射精 ", 0
+	PRINTL
+	PRINTBUTTON "[1] 舌面射精", 1
+	PRINTL
+	IF TEQUIP:TARGET:下タイツあり
+		PRINTBUTTON "[2] 丝袜射精", 2
+	ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+		PRINTBUTTON "[2] 内裤射精", 2
+	ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+		PRINTBUTTON "[2] 阴贴射精", 2
+	ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+		PRINTBUTTON "[2] 兜裆布射精", 2
+	ELSE
+		PRINTBUTTON "[2] 股间射精", 2
+	ENDIF
+	PRINTL
+	BINPUT
+	SELECTCASE RESULT
+	CASE 0
+		PRINTFORMW %CALLNAME:PLAYER%边自渎边命令%CALLNAME:TARGET%闭目，将精液瞄准其俏丽面容喷射。
+		PRINTL
+		CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+		PRINTL
+		PRINTFORML 脉动肉棒喷射的浓稠精液尽数洒落%CALLNAME:TARGET%的脸上。
+		IF アイドル判定(対象キャラ)
+			PRINTW
+			PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+			PRINTFORM 粉丝们梦寐以求的紧闭眼睑、秀发与朱唇，此刻正被%CALLNAME:PLAYER%黏腻的欲望
+			SIF 固有素質チェック(TARGET, "眼鏡")
+				PRINTFORM 隔着镜片
+			PRINTFORMW 彻底玷污……
+		ELSE
+			PRINTL
+			PRINTFORM %CALLNAME:PLAYER%的黏浊欲望正将%CALLNAME:TARGET%的
+			IF 固有素質チェック(TARGET, "眼鏡")
+			;表記ゆれができた場合は眼鏡判定を新設する
+				PRINTFORM 眼镜
+			ELSE
+				PRINTFORM 紧闭的双眼
+			ENDIF
+			PRINTFORMW 连同发丝与嘴唇染上白浊……
+		ENDIF
+		PRINTL 
+		PRINTFORML 当%CALLNAME:PLAYER%用%CALLNAME:TARGET%柔软的%TEXTR("面颊/脸蛋")%擦拭龟头残液时，
+		PRINTFORML 浑身精污的%CALLNAME:TARGET%在弥漫的腥膻中缓缓睁眼拭去浊液……
+		PRINTL
+		顔にぶっかけ = 1
+		ほっぺたティッシュ = 1
+		RFLAG:性処理射精先 = 5 + 10
+	CASE 1
+		PRINTFORMW %CALLNAME:PLAYER%边自渎边命令%CALLNAME:TARGET%伸舌，将精液瞄准其舌面倾泻。
+		PRINTL
+		CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+		PRINTL
+		PRINTFORML 脉动肉棒将白浊液体尽数喷射至%CALLNAME:TARGET%舌面。
+		IF アイドル判定(対象キャラ)
+			PRINTW
+			PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+			PRINTL
+			PRINTFORML 本该用歌声传递爱与友情的纯洁双唇，此刻那曾被粉丝渴求的圣洁之口，正沦为%CALLNAME:PLAYER%%TEXTR("专属/")%%TEXTR("精液容器/泄欲工具/性处理装置")%。
+			PRINTFORMW %CALLNAME:PLAYER%的黏浊精液正将%CALLNAME:TARGET%的%TEXTR("舌面/口腔")%玷污，使其歌声浸染%TEXTR("欲望/性欲")%腥膻……
+		ELSE
+			PRINTL
+			PRINTFORMW 黏浊精液污染着%CALLNAME:TARGET%恭顺伸出的舌头，将味觉改写为%TEXTR("欲望/性欲")%的滋味……
+		ENDIF
+		PRINTL 
+		PRINTFORML 当%CALLNAME:PLAYER%命令吞咽舌面精液时，
+		PRINTFORML 因侍奉不力而愧疚的%CALLNAME:TARGET%皱眉艰难咽下……
+		PRINTL
+		舌の上にぶっかけ = 1
+		精液ごっくん = 1
+		RFLAG:性処理射精先 = 2 + 10
+	CASE 2
+		PRINTFORM %CALLNAME:PLAYER%边自渎边命令
+		IF TEQUIP:TARGET:下半身服あり
+			IF TEQUIP:TARGET:スカートめくり可
+				PRINTFORM %CALLNAME:TARGET%掀起裙摆
+			ELSE
+			;ずらし可じゃないズボンもずらす扱い。表現上では問題ないはず
+				PRINTFORM %CALLNAME:TARGET%褪下裤装
+			ENDIF
+		ELSE
+		;下半身服なし。全裸リゾートとか
+			PRINTFORM %CALLNAME:TARGET%的
+		ENDIF
+		IF TEQUIP:TARGET:下タイツあり
+			PRINTFORM 丝袜
+			下半身ぶっかけ = 1
+		ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+			PRINTFORM 内裤
+			下半身ぶっかけ = 2
+		ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+			PRINTFORM 阴贴
+			下半身ぶっかけ = 3
+		ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+			PRINTFORM 兜裆布
+			下半身ぶっかけ = 4
+		ELSE
+			PRINTFORM 股间
+			下半身ぶっかけ = 5
+		ENDIF
+		PRINTFORMW 作为射精目标。
+		PRINTL
+		CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+		PRINTL
+		PRINTFORML 脉动肉棒喷射的精液尽数洒落%CALLNAME:TARGET%下半身。
+		PRINTL
+		PRINTFORM %CALLNAME:PLAYER%黏浊的欲望液体
+		IF TEQUIP:TARGET:下タイツあり
+			PRINTFORMW 将%CALLNAME:TARGET%的丝袜染成白浊，渗透布料向深处蔓延……
+			下半身ぶっかけ = 1
+		ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+			PRINTFORMW 将%CALLNAME:TARGET%的内裤浸透白浊，逐渐渗向隐秘部位……
+			下半身ぶっかけ = 2
+		ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+		;阴贴は撥水素材なんじゃないか？
+			PRINTFORMW 精液从%CALLNAME:TARGET%的阴贴滴落，在防水层表面形成浊流……
+			下半身ぶっかけ = 3
+		ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+			PRINTFORMW 白浊液体渗透%CALLNAME:TARGET%的兜裆布，在褶皱间留下痕迹……
+			下半身ぶっかけ = 4
+		ELSE
+		;女がやることしか想定してない
+			PRINTFORMW 沿着%CALLNAME:TARGET%的股沟流淌，玷污敏感部位……
+			下半身ぶっかけ = 5
+		ENDIF
+		PRINTL 
+		PRINTFORML 当%CALLNAME:PLAYER%要求保持精液污染状态度过整日时，
+		PRINTFORML 因侍奉失职的愧疚，%CALLNAME:TARGET%勉强同意了这项耻辱要求。
+		PRINTL
+		精液お持ち帰り = 1
+		RFLAG:性処理射精先 = 6 + 10
+	ENDSELECT
+ELSE
+	PRINTL
+	PRINTFORML %CALLNAME:TARGET%缓缓伸手触碰%CALLNAME:PLAYER%的%TEXTR("肉棒/阴茎")%，开始轻柔地侍奉。
+	PRINTL
+	IF TALENT:応答 == 1 && イヤイヤ != 1
+	;生意気
+		PRINTFORML 垂落唾液润滑后%TEXTR("用手心揉捏龟头/用指环套弄茎身/重点刺激冠状沟")%的快感令%CALLNAME:PLAYER%腰肢颤动，
+		PRINTFORM %CALLNAME:対象キャラ%戏谑地%TEXTR("窃笑/坏笑")%着
+		SELECTCASE RAND:3
+		CASE 0
+			CALL PRINT_STR(@"低语着「射吧_H_射吧_H_」")
+			PRINTFORMW 煽动%CALLNAME:PLAYER%射精。
+		CASE 1
+			PRINTFORMW 吐出舌头模仿口交动作刺激%CALLNAME:PLAYER%。
+		CASE 2
+			CALL PRINT_STR(@"吹出「呼～_H_」的温热吐息")
+			PRINTFORMW 煽动%CALLNAME:PLAYER%射精。
+		ENDSELECT
+		PRINTL
+		射精煽り = 1
+	ELSE
+		PRINTFORMW 垂落唾液润滑后%TEXTR("用手心揉捏龟头/用指环套弄茎身/重点刺激冠状沟")%的快感令%CALLNAME:PLAYER%腰肢酥麻，下腹涌起阵阵射精冲动。
+		PRINTL
+	ENDIF
+	IF 陥落チェック(TARGET)
+		IF 射精煽り == 1
+			PRINTFORM 面对被煽动至临界点的%CALLNAME:PLAYER%，%CALLNAME:TARGET%
+		ELSE
+			PRINTFORM 感知到%CALLNAME:PLAYER%射精预兆的%CALLNAME:TARGET%
+		ENDIF
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW 加速套弄动作的同时闭目仰面迎接射精。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒喷射的浓稠精液尽数洒落%CALLNAME:TARGET%的脸上。
+			IF アイドル判定(対象キャラ)
+				PRINTW
+				PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+				PRINTFORM 粉丝们梦寐以求的紧闭眼睑、秀发与朱唇，此刻正被%CALLNAME:PLAYER%黏腻的欲望
+				SIF 固有素質チェック(TARGET, "眼鏡")
+					PRINTFORM 隔着镜片
+				PRINTFORMW 彻底玷污。
+			ELSE
+				PRINTL
+				PRINTFORM %CALLNAME:PLAYER%的黏浊欲望正将%CALLNAME:TARGET%的
+				IF 固有素質チェック(TARGET, "眼鏡")
+				;表記ゆれができた場合は眼鏡判定を新設する
+					PRINTFORM 眼镜
+				ELSE
+					PRINTFORM 紧闭的双眼
+				ENDIF
+				PRINTFORMW 连同发丝与嘴唇染上白浊。
+			ENDIF
+			PRINTFORMW 浑身精污的%CALLNAME:TARGET%对着%TEXTR("濡湿面庞/流淌颊侧")%的精液发出恍惚喘息……
+			PRINTL 
+			顔にぶっかけ = 1
+			RFLAG:性処理射精先 = 5 + 10
+		CASE 1
+			PRINTFORMW 加速套弄的同时将脸庞贴近肉棒，张口伸出舌头。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒将白浊液体尽数喷射至%CALLNAME:TARGET%舌面。
+			IF アイドル判定(対象キャラ)
+				PRINTW
+				PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+				PRINTL
+				PRINTFORML 本该用歌声传递爱与友情的纯洁双唇，此刻那曾被粉丝渴求的圣洁之口，正沦为%CALLNAME:PLAYER%%TEXTR("专属/")%%TEXTR("精液容器/泄欲工具/性处理装置")%。
+				PRINTFORMW %CALLNAME:PLAYER%的黏浊精液正将%CALLNAME:TARGET%的%TEXTR("舌面/口腔")%玷污，使其歌声浸染%TEXTR("欲望/性欲")%腥膻……
+			ELSE
+				PRINTL
+				PRINTFORMW 黏浊精液污染着%CALLNAME:TARGET%恭顺伸出的舌头，将味觉改写为%TEXTR("欲望/性欲")%的滋味……
+			ENDIF
+			PRINTL 
+			PRINTFORMW 当%CALLNAME:PLAYER%结束射精后，%CALLNAME:TARGET%喉头滚动着吞咽精液发出恍惚喘息……
+			PRINTL
+			舌の上にぶっかけ = 1
+			精液ごっくん = 1
+			RFLAG:性処理射精先 = 2 + 10
+		CASE 2
+			PRINTFORM 边侍奉边起身，
+			IF TEQUIP:TARGET:下半身服あり
+				IF TEQUIP:TARGET:スカートめくり可
+					PRINTFORM 掀起裙摆
+				ELSE
+				;ずらし可じゃないズボンもずらす扱い。表現上では問題ないはず
+					PRINTFORM 褪下裤装
+				ENDIF
+			ELSE
+				;下半身服なし。全裸リゾートとか
+				PRINTFORM 将肉棒对准
+			ENDIF
+			IF TEQUIP:TARGET:下タイツあり
+				PRINTFORMW 紧身衣
+				下半身ぶっかけ = 1
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+				PRINTFORMW 内裤
+				下半身ぶっかけ = 2
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+				PRINTFORMW 阴贴
+				下半身ぶっかけ = 3
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+				PRINTFORMW 兜裆布
+				下半身ぶっかけ = 4
+			ELSE
+				PRINTFORM 股间
+				下半身ぶっかけ = 5
+			ENDIF
+			PRINTFORMW 暴露部位。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒喷射的精液尽数洒落%CALLNAME:TARGET%下半身。
+			PRINTL
+			PRINTFORM %CALLNAME:PLAYER%黏浊的欲望液体
+			IF TEQUIP:TARGET:下タイツあり
+				PRINTFORMW 将%CALLNAME:TARGET%的丝袜染成白浊，渗透布料煽动情欲……
+				下半身ぶっかけ = 1
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+				PRINTFORMW 将%CALLNAME:TARGET%的内裤浸透白浊，逐渐渗向隐秘部位……
+				下半身ぶっかけ = 2
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+			;阴贴は撥水素材なんじゃないか？
+				PRINTFORMW 精液从%CALLNAME:TARGET%的防水阴贴滴落形成浊流……
+				下半身ぶっかけ = 3
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+				PRINTFORMW 白浊液体渗透%CALLNAME:TARGET%的兜裆布褶皱……
+				下半身ぶっかけ = 4
+			ELSE
+			;女がやることしか想定してない
+				PRINTFORMW 沿着%CALLNAME:TARGET%的股沟玷污敏感部位……
+				下半身ぶっかけ = 5
+			ENDIF
+			PRINTL 
+			PRINTFORML 当%CALLNAME:PLAYER%要求保持精液污染状态度过整日时，
+			PRINTFORMW %CALLNAME:TARGET%嗤笑着接受了这项耻辱要求……
+			PRINTL
+			精液お持ち帰り = 1
+			RFLAG:性処理射精先 = 6 + 10
+		ENDSELECT
+	ELSEIF (TALENT:種族 == 2 && チン嗅ぎ == 1) || (TALENT:種族 == 3 && チン嗅ぎ == 1)
+		SIF 射精煽り == 1
+			PRINTFORM 被%CALLNAME:TARGET%煽动至临界点的
+		PRINTFORM %CALLNAME:PLAYER%
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW 要求颜面射精时，完全陷入情欲的%CALLNAME:TARGET%加速侍奉并闭目迎接。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒喷射的浓稠精液尽数洒落%CALLNAME:TARGET%的脸上。
+			IF アイドル判定(対象キャラ)
+				PRINTW
+				PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+				PRINTFORM 粉丝们梦寐以求的紧闭眼睑、秀发与朱唇，此刻正被%CALLNAME:PLAYER%黏腻的欲望
+				SIF 固有素質チェック(TARGET, "眼鏡")
+					PRINTFORM 隔着镜片
+				PRINTFORMW 彻底玷污。
+			ELSE
+				PRINTL
+				PRINTFORM %CALLNAME:PLAYER%的黏浊欲望正将%CALLNAME:TARGET%的
+				IF 固有素質チェック(TARGET, "眼鏡")
+				;表記ゆれができた場合は眼鏡判定を新設する
+					PRINTFORM 眼镜
+				ELSE
+					PRINTFORM 紧闭的双眼
+				ENDIF
+				PRINTFORMW 连同发丝与嘴唇染上白浊。
+			ENDIF
+			PRINTFORMW 浑身精污的%CALLNAME:TARGET%对着%TEXTR("濡湿面庞/流淌颊侧")%的精液发出恍惚喘息……
+			PRINTL 
+			顔にぶっかけ = 1
+			RFLAG:性処理射精先 = 5 + 10
+		CASE 1
+			PRINTFORMW 当要求进行舌面射精时，完全陷入情欲的%CALLNAME:TARGET%顺从接受，加速侍奉动作的同时闭目张口伸舌。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒将白浊液体尽数喷射至%CALLNAME:TARGET%舌面。
+			IF アイドル判定(対象キャラ)
+				PRINTW
+				PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+				PRINTL
+				PRINTFORML 本该用歌声传递爱与友情的纯洁双唇，此刻那曾被粉丝渴求的圣洁之口，正沦为%CALLNAME:PLAYER%%TEXTR("专属/")%%TEXTR("精液容器/泄欲工具/性处理装置")%。
+				PRINTFORMW %CALLNAME:PLAYER%的黏浊精液正将%CALLNAME:TARGET%的%TEXTR("舌面/口腔")%玷污，使其歌声浸染%TEXTR("欲望/性欲")%腥膻……
+			ELSE
+				PRINTL
+				PRINTFORMW 黏浊精液污染着%CALLNAME:TARGET%恭顺伸出的舌头，将味觉改写为%TEXTR("欲望/性欲")%的滋味……
+			ENDIF
+			PRINTL 
+			PRINTFORML 当%CALLNAME:PLAYER%命令吞咽舌面精液时，
+			PRINTFORMW %CALLNAME:TARGET%喉头滚动着吞咽精液，发出恍惚的喘息……
+			PRINTL
+			舌の上にぶっかけ = 1
+			精液ごっくん = 1
+			RFLAG:性処理射精先 = 2 + 10
+		CASE 2
+			IF TEQUIP:TARGET:下タイツあり
+				PRINTFORM 丝袜
+				下半身ぶっかけ = 1
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+				PRINTFORM 内裤
+				下半身ぶっかけ = 2
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+				PRINTFORM 阴贴
+				下半身ぶっかけ = 3
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+				PRINTFORM 兜裆布
+				下半身ぶっかけ = 4
+			ELSE
+				PRINTFORM 股间
+				下半身ぶっかけ = 5
+			ENDIF
+			PRINTFORM 当要求进行射精时，完全陷入情欲的%CALLNAME:TARGET%顺从接受并起身调整姿势，
+			IF TEQUIP:TARGET:下半身服あり
+				IF TEQUIP:TARGET:スカートめくり可
+					PRINTFORMW 掀起裙摆。
+				ELSE
+				;ずらし可じゃないズボンもずらす扱い。表現上では問題ないはず
+					PRINTFORMW 褪下裤装。
+				ENDIF
+			ELSE
+				;下半身服なし。全裸リゾートとか
+				PRINTFORMW 暴露股间。
+			ENDIF
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒喷射的精液尽数洒落%CALLNAME:TARGET%下半身。
+			PRINTL
+			PRINTFORM %CALLNAME:PLAYER%黏浊的欲望液体
+			IF TEQUIP:TARGET:下タイツあり
+				PRINTFORMW 将%CALLNAME:TARGET%的丝袜染成白浊，渗透布料向深处蔓延……
+				下半身ぶっかけ = 1
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+				PRINTFORMW 将%CALLNAME:TARGET%的内裤浸透白浊，逐渐渗向隐秘部位……
+				下半身ぶっかけ = 2
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+			;阴贴は撥水素材なんじゃないか？
+				PRINTFORMW 精液从%CALLNAME:TARGET%的阴贴滴落，在防水层表面形成浊流……
+				下半身ぶっかけ = 3
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+				PRINTFORMW 白浊液体渗透%CALLNAME:TARGET%的兜裆布，在褶皱间留下痕迹……
+				下半身ぶっかけ = 4
+			ELSE
+			;女がやることしか想定してない
+				PRINTFORMW 沿着%CALLNAME:TARGET%的股沟玷污敏感部位……
+				下半身ぶっかけ = 5
+			ENDIF
+			PRINTL 
+			PRINTFORML 当%CALLNAME:PLAYER%要求保持精液污染状态度过整日时，
+			PRINTFORMW %CALLNAME:TARGET%在弥漫的精臭中恍惚着接受了要求……
+			PRINTL
+			精液お持ち帰り = 1
+			RFLAG:性処理射精先 = 6 + 10
+		ENDSELECT
+	ELSEIF TALENT:TARGET:弱味 || (TALENT:PLAYER:性別 == 2 && TALENT:TARGET:性別嗜好 == 1) || TALENT:TARGET:恋人持ち >= 1 || TALENT:TARGET:恋人持ち == -1
+		PRINTFORM %CALLNAME:PLAYER%
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW 当要求进行颜面射精时，%CALLNAME:TARGET%不情愿地接受并加速侍奉动作闭目迎接。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒喷射的浓稠精液尽数洒落%CALLNAME:TARGET%的脸上。
+			IF アイドル判定(対象キャラ)
+				PRINTW
+				PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+				PRINTFORM 粉丝们梦寐以求的紧闭眼睑、秀发与朱唇，此刻正被%CALLNAME:PLAYER%黏腻的欲望
+				SIF 固有素質チェック(TARGET, "眼鏡")
+					PRINTFORM 隔着镜片
+				PRINTFORMW 彻底玷污……
+			ELSE
+				PRINTL
+				PRINTFORM %CALLNAME:PLAYER%的黏浊欲望正将%CALLNAME:TARGET%的
+				IF 固有素質チェック(TARGET, "眼鏡")
+				;表記ゆれができた場合は眼鏡判定を新設する
+					PRINTFORM 眼镜
+				ELSE
+					PRINTFORM 紧闭的双眼
+				ENDIF
+				PRINTFORMW 连同发丝与嘴唇染上白浊……
+			ENDIF
+			PRINTL 
+			顔にぶっかけ = 1
+			RFLAG:性処理射精先 = 5 + 10
+		CASE 1
+			PRINTFORMW 当要求进行舌面射精时，%CALLNAME:TARGET%勉强接受并加速侍奉动作，闭目张口伸舌。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒将白浊液体尽数喷射至%CALLNAME:TARGET%舌面。
+			IF アイドル判定(対象キャラ)
+				PRINTW
+				PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+				PRINTL
+				PRINTFORML 本该用歌声传递爱与友情的纯洁双唇，此刻那曾被粉丝渴求的圣洁之口，正沦为%CALLNAME:PLAYER%%TEXTR("专属/")%%TEXTR("精液容器/泄欲工具/性处理装置")%。
+				PRINTFORMW %CALLNAME:PLAYER%的黏浊精液正将%CALLNAME:TARGET%的%TEXTR("舌面/口腔")%玷污，使其歌声浸染%TEXTR("欲望/性欲")%腥膻……
+			ELSE
+				PRINTL
+				PRINTFORMW 黏浊精液污染着%CALLNAME:TARGET%恭顺伸出的舌头，将味觉改写为%TEXTR("欲望/性欲")%的滋味……
+			ENDIF
+			PRINTL 
+			PRINTFORML 当%CALLNAME:PLAYER%命令吞咽舌面精液时，
+			PRINTFORMW %CALLNAME:TARGET%皱眉艰难吞咽着%CALLNAME:PLAYER%的精液……
+			PRINTL
+			舌の上にぶっかけ = 1
+			精液ごっくん = 1
+			RFLAG:性処理射精先 = 2 + 10
+		CASE 2
+			IF TEQUIP:TARGET:下タイツあり
+				PRINTFORM 丝袜
+				下半身ぶっかけ = 1
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+				PRINTFORM 内裤
+				下半身ぶっかけ = 2
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+				PRINTFORM 阴贴
+				下半身ぶっかけ = 3
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+				PRINTFORM 兜裆布
+				下半身ぶっかけ = 4
+			ELSE
+				PRINTFORM 股间
+				下半身ぶっかけ = 5
+			ENDIF
+			PRINTFORM 当要求进行下半身射精时，%CALLNAME:TARGET%不情愿地起身调整姿势，
+			IF TEQUIP:TARGET:下半身服あり
+				IF TEQUIP:TARGET:スカートめくり可
+					PRINTFORMW 掀起裙摆。
+				ELSE
+				;ずらし可じゃないズボンもずらす扱い。表現上では問題ないはず
+					PRINTFORMW 褪下裤装。
+				ENDIF
+			ELSE
+				;下半身服なし。全裸リゾートとか
+				PRINTFORMW 暴露股间。
+			ENDIF
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒喷射的精液尽数洒落%CALLNAME:TARGET%下半身。
+			PRINTL
+			PRINTFORM %CALLNAME:PLAYER%黏浊的欲望液体
+			IF TEQUIP:TARGET:下タイツあり
+				PRINTFORMW 将%CALLNAME:TARGET%的丝袜染成白浊，渗透布料向深处蔓延……
+				下半身ぶっかけ = 1
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+				PRINTFORMW 将%CALLNAME:TARGET%的内裤浸透白浊，逐渐渗向隐秘部位……
+				下半身ぶっかけ = 2
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+			;阴贴は撥水素材なんじゃないか？
+				PRINTFORMW 精液从%CALLNAME:TARGET%的阴贴滴落，在防水层表面形成浊流……
+				下半身ぶっかけ = 3
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+				PRINTFORMW 白浊液体渗透%CALLNAME:TARGET%的兜裆布，在褶皱间留下痕迹……
+				下半身ぶっかけ = 4
+			ELSE
+			;女がやることしか想定してない
+				PRINTFORMW 沿着%CALLNAME:TARGET%的股沟流淌，玷污敏感部位……
+				下半身ぶっかけ = 5
+			ENDIF
+			PRINTL 
+			PRINTFORMW 当%CALLNAME:PLAYER%结束射精并要求保持精液污染状态时，%CALLNAME:TARGET%勉强同意了这项要求……
+			PRINTL
+			精液お持ち帰り = 1
+			RFLAG:性処理射精先 = 6 + 10
+		ENDSELECT
+	ELSE
+		PRINTFORM %CALLNAME:PLAYER%
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW 当要求颜面射精时，%CALLNAME:TARGET%加速侍奉动作闭目迎接。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒喷射的浓稠精液尽数洒落%CALLNAME:TARGET%的脸上。
+			IF アイドル判定(対象キャラ)
+				PRINTW
+				PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+				PRINTFORM 粉丝们梦寐以求的紧闭眼睑、秀发与朱唇，此刻正被%CALLNAME:PLAYER%黏腻的欲望
+				SIF 固有素質チェック(TARGET, "眼鏡")
+					PRINTFORM 隔着镜片
+				PRINTFORMW 彻底玷污……
+			ELSE
+				PRINTL
+				PRINTFORM %CALLNAME:PLAYER%的黏浊欲望正将%CALLNAME:TARGET%的
+				IF 固有素質チェック(TARGET, "眼鏡")
+				;表記ゆれができた場合は眼鏡判定を新設する
+					PRINTFORM 眼镜
+				ELSE
+					PRINTFORM 紧闭的双眼
+				ENDIF
+				PRINTFORMW 连同发丝与嘴唇染上白浊……
+			ENDIF
+			PRINTL 
+			顔にぶっかけ = 1
+			RFLAG:性処理射精先 = 5 + 10
+		CASE 1
+			PRINTFORMW 当要求舌面射精时，%CALLNAME:TARGET%加速侍奉动作闭目伸舌。
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒将白浊液体尽数喷射至%CALLNAME:TARGET%舌面。
+			IF アイドル判定(対象キャラ)
+				PRINTW
+				PRINTFORML 本该用偶像身份魅惑众生、被万千宠爱的%CALLNAME:対象キャラ%。
+				PRINTL
+				PRINTFORML 本该用歌声传递爱与友情的纯洁双唇，此刻那曾被粉丝渴求的圣洁之口，正沦为%CALLNAME:PLAYER%%TEXTR("专属/")%%TEXTR("精液容器/泄欲工具/性处理装置")%。
+				PRINTFORMW %CALLNAME:PLAYER%的黏浊精液正将%CALLNAME:TARGET%的%TEXTR("舌面/口腔")%玷污，使其歌声浸染%TEXTR("欲望/性欲")%腥膻……
+			ELSE
+				PRINTL
+				PRINTFORMW 黏浊精液污染着%CALLNAME:TARGET%恭顺伸出的舌头，将味觉改写为%TEXTR("欲望/性欲")%的滋味……
+			ENDIF
+			PRINTL 
+			PRINTFORML 当%CALLNAME:PLAYER%命令吞咽舌面精液时，
+			PRINTFORMW %CALLNAME:TARGET%皱眉艰难吞咽着%CALLNAME:PLAYER%的精液……
+			PRINTL
+			舌の上にぶっかけ = 1
+			精液ごっくん = 1
+			RFLAG:性処理射精先 = 2 + 10
+		CASE 2
+			IF TEQUIP:TARGET:下タイツあり
+				PRINTFORM 丝袜
+				下半身ぶっかけ = 1
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+				PRINTFORM 内裤
+				下半身ぶっかけ = 2
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+				PRINTFORM 阴贴
+				下半身ぶっかけ = 3
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+				PRINTFORM 兜裆布
+				下半身ぶっかけ = 4
+			ELSE
+				PRINTFORM 股间
+				下半身ぶっかけ = 5
+			ENDIF
+			PRINTFORM 当要求下半身射精时，%CALLNAME:TARGET%起身调整侍奉姿势，
+			IF TEQUIP:TARGET:下半身服あり
+				IF TEQUIP:TARGET:スカートめくり可
+					PRINTFORMW 掀起裙摆。
+				ELSE
+				;ずらし可じゃないズボンもずらす扱い。表現上では問題ないはず
+					PRINTFORMW 褪下裤装。
+				ENDIF
+			ELSE
+				;下半身服なし。全裸リゾートとか
+				PRINTFORMW 暴露股间。
+			ENDIF
+			PRINTL
+			CALL PRINT_STRL(@"────噗咚_H__H__H_咕嘟_H__H__H_滋噜噜噜～～……っ_H__H__H__H_")
+			PRINTL
+			PRINTFORML 脉动肉棒喷射的精液尽数洒落%CALLNAME:TARGET%下半身。
+			PRINTL
+			PRINTFORM %CALLNAME:PLAYER%黏浊的欲望液体
+			IF TEQUIP:TARGET:下タイツあり
+				PRINTFORMW 将%CALLNAME:TARGET%的丝袜染成白浊，渗透布料向深处蔓延……
+				下半身ぶっかけ = 1
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 1
+				PRINTFORMW 将%CALLNAME:TARGET%的内裤浸透白浊，逐渐渗向隐秘部位……
+				下半身ぶっかけ = 2
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 2
+			;阴贴は撥水素材なんじゃないか？
+				PRINTFORMW 精液从%CALLNAME:TARGET%的阴贴滴落，在防水层表面形成浊流……
+				下半身ぶっかけ = 3
+			ELSEIF TEQUIP:TARGET:下半身下着あり == 3
+				PRINTFORMW 白浊液体渗透%CALLNAME:TARGET%的兜裆布，在褶皱间留下痕迹……
+				下半身ぶっかけ = 4
+			ELSE
+			;女がやることしか想定してない
+				PRINTFORMW 沿着%CALLNAME:TARGET%的股沟流淌，玷污敏感部位……
+				下半身ぶっかけ = 5
+			ENDIF
+			;阴贴ぶっかけの場合しみ込んでないからお持ち帰りできない可能性がある。除外したほうがいいかも？
+			PRINTL 
+			PRINTFORMW 当%CALLNAME:PLAYER%结束射精并要求保持精液污染状态时，%CALLNAME:TARGET%勉强同意了这项要求……
+			PRINTL
+			精液お持ち帰り = 1
+			RFLAG:性処理射精先 = 6 + 10
+		ENDSELECT
+	ENDIF
+ENDIF
+
+;書き終わってから「手に出させてもらう」と「ぶっかけなし」を書いてないことに気付いたけど……いまさらめんどくさい！！！！！
+
+DRAWLINE
+
+;最終的な料金　1ルピ＝10円程度という想定で書いてる
+IF RFLAG:コマンド結果受渡し変数２ > 0
+	PRINTFORML %"基础费用", 25, LEFT%：　%NUM_FORMAT(RFLAG:コマンド結果受渡し変数２), 8%卢比
+ELSE
+	PRINTFORM %"基础费用", 25, LEFT%：　%"免费", 8%
+	CALL PRINT_STRL(@"_H_")
+ENDIF
+
+DRAWLINE
+
+値段計算 = 0
+PRINTFORML 附加选项
+
+IF チン嗅ぎ == 1
+	IF TALENT:汚臭耐性 < 0
+	;汚臭敏感
+		値段計算 -= TALENT:汚臭耐性 * 300
+		SETCOLOR カラーパレット("薄ピンク")
+		PRINTFORML %"闻肉棒", 25, LEFT%：＋%NUM_FORMAT(ABS(TALENT:汚臭耐性) * 400), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 200
+		SETCOLOR カラーパレット("薄ピンク")
+		PRINTFORML %"闻肉棒", 25, LEFT%：＋%NUM_FORMAT(200), 8%卢比
+		RESETCOLOR
+	ENDIF
+ENDIF
+IF 射精煽り == 1
+	値段計算 += 300
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"煽动射精", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+	RESETCOLOR
+ENDIF
+IF チンポに頬擦り == 1
+	値段計算 += 300
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"用脸颊摩擦肉棒", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+	RESETCOLOR
+ENDIF
+IF チンキス == 1
+	IF 知識素質:高貴 > 0
+	;高貴
+	;性知識ありだとこのくらい値が張ってもおかしくない
+		IF 知識素質:性知識 < 0
+			値段計算 += 1000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"尊贵之吻", 25, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+			RESETCOLOR
+		ELSE
+			値段計算 += 2000
+			SETCOLOR カラーパレット("赤ピンク")
+			PRINTFORML %"尊贵之吻", 25, LEFT%：＋%NUM_FORMAT(2000), 8%卢比
+			RESETCOLOR
+		ENDIF
+	ELSEIF TALENT:恋人持ち == 1 ||TALENT:恋人持ち == 2
+		値段計算 += 500
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"偷情之吻", 25, LEFT%：＋%NUM_FORMAT(500), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 300
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"亲吻肉棒", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+		RESETCOLOR
+	ENDIF
+ENDIF
+IF 顔にぶっかけ == 1
+	値段計算 += 750
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"颜射", 25, LEFT%：＋%NUM_FORMAT(750), 8%卢比
+	RESETCOLOR
+ENDIF
+IF 舌の上にぶっかけ == 1
+	値段計算 += 1000
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"舌面射精", 25, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+	RESETCOLOR
+ENDIF
+IF 下半身ぶっかけ == 1
+	値段計算 += 300
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"丝袜射精", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+	RESETCOLOR
+ELSEIF 下半身ぶっかけ == 2
+	IF 知識素質:高貴 > 0
+	;高級品。これでもだいぶ負けてくれている
+		値段計算 += 1000
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"高档内衣射精", 25, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+		RESETCOLOR
+	ELSEIF RAND:4 == 0
+	;運がいいのか悪いのか
+		値段計算 += 500
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"心爱内裤射精", 25, LEFT%：＋%NUM_FORMAT(500), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 300
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"内裤射精", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+		RESETCOLOR
+	ENDIF
+ELSEIF 下半身ぶっかけ == 3
+;素肌に近いのでちょい高
+	値段計算 += 400
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"阴贴射精", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+	RESETCOLOR
+ELSEIF 下半身ぶっかけ == 4
+;兜裆布は構造上ほかの下着に比べて不快感が少なそう
+	値段計算 += 200
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"兜裆布射精", 25, LEFT%：＋%NUM_FORMAT(200), 8%卢比
+	RESETCOLOR
+ELSEIF 下半身ぶっかけ == 5
+;素肌は高め
+	値段計算 += 500
+	SETCOLOR カラーパレット("赤ピンク")
+	PRINTFORML %"股间射精", 25, LEFT%：＋%NUM_FORMAT(500), 8%卢比
+	RESETCOLOR
+ENDIF
+
+IF ほっぺたティッシュ == 1
+	IF TALENT:プライド > 0
+	;汚臭敏感
+		値段計算 += 500
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"面颊擦拭精液", 25, LEFT%：＋%NUM_FORMAT(500), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 300
+		SETCOLOR カラーパレット("ピンク")
+		PRINTFORML %"面颊擦拭精液", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+		RESETCOLOR
+	ENDIF
+ENDIF
+IF 精液ごっくん == 1
+	IF TALENT:汚臭耐性 < 0
+	;汚臭敏感
+		値段計算 -= TALENT:汚臭耐性 * 500
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"吞咽精液", 25, LEFT%：＋%NUM_FORMAT(ABS(TALENT:汚臭耐性) * 500), 8%卢比
+		RESETCOLOR
+	ELSE
+		値段計算 += 300
+		SETCOLOR カラーパレット("赤ピンク")
+		PRINTFORML %"吞咽精液", 25, LEFT%：＋%NUM_FORMAT(300), 8%卢比
+		RESETCOLOR
+	ENDIF
+ENDIF
+IF 精液お持ち帰り == 1
+;下着ぐっしょりだしこぼれてきてそこそこ不快だろうから高め
+	値段計算 += 1000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"把精液打包带走", 25, LEFT%：＋%NUM_FORMAT(1000), 8%卢比
+	RESETCOLOR
+ENDIF
+
+;オプションは基本的に割引クーポン対象外となっております～
+;恋慕は完全無料
+IF TALENT:対象キャラ:恋慕
+	DRAWLINE
+	PRINTFORML 折扣
+	SETCOLOR カラーパレット("ピンク")
+	PRINTFORM %"挚爱特惠", 25, LEFT%：　　　　　%CALLNAME:PLAYER%专属100％折扣
+	RESETCOLOR
+	CALL PRINT_STRL(@"_H_")
+	値段計算 *= 0
+ELSEIF TALENT:対象キャラ:弱味
+	DRAWLINE
+	PRINTFORML 折扣
+	SETCOLOR カラーパレット("赤")
+	PRINTFORM %"弱点折扣", 25, LEFT%：　　　　　99％折扣
+	RESETCOLOR
+	CALL PRINT_STRL(@"_H_")
+	値段計算 /= 100
+ENDIF
+DRAWLINE
+値段計算 = MAX(0, 値段計算)
+;オプション分のMONEY処理
+MONEY -= 値段計算
+
+オプション込み最終価格 = 値段計算 + RFLAG:コマンド結果受渡し変数２
+IF オプション込み最終価格 > 0
+	PRINTFORML %"含附加选项最终价格", 25, LEFT%：　%NUM_FORMAT(オプション込み最終価格), 8%卢比
+ELSE
+	PRINTFORM %"含附加选项最终价格", 25, LEFT%：　%"免费", 8%
+	CALL PRINT_STRL(@"_H_")
+ENDIF
+DRAWLINE
+
+PRINTFORML %NUM_FORMAT(MONEY + オプション込み最終価格)% - %NUM_FORMAT(オプション込み最終価格)% = %NUM_FORMAT(MONEY)%卢比

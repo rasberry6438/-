@@ -1,0 +1,135 @@
+﻿
+;-------------------------------------------------
+;美術館で鉴赏美术品
+;-------------------------------------------------
+@COMNAME_PLACE_380_2_102
+#FUNCTION
+TSTR:コマンド名受渡 = 鉴赏美术品
+RETURNF 1
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_380_2_102
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+		
+@COM380_2_102
+#DIM DYNAMIC 順番シャッフル用配列, キャラクタ数上限
+#DIM シャッフル数
+
+IF 知識素質:TARGET:絵師 != 0 && !TCVAR:TARGET:美術館鑑賞フラグ
+	;ターゲットが作品ある場合、一日1回は絶対それを見る
+	RFLAG:コマンド結果受渡し変数 = TARGET
+	RETURN 1
+ENDIF
+
+;仮置きなので適当に定住者からランダムに選ぶ
+IF RAND:2
+	;キャラの作品
+	CALL キャラ番号配列_初期化_シャッフル(順番シャッフル用配列, 0)
+	シャッフル数 = RESULT
+
+	FOR LOCAL, 0, シャッフル数
+		;定住でも従業員でもないキャラはスルー
+		SIF !TALENT:(順番シャッフル用配列:LOCAL):従業員 && !TALENT:(順番シャッフル用配列:LOCAL):定住者
+			CONTINUE
+		;定住でも従業員でもないキャラはスルー
+		SIF !TALENT:(順番シャッフル用配列:LOCAL):従業員 && !TALENT:(順番シャッフル用配列:LOCAL):定住者
+			CONTINUE
+		;絵師が０だとスルー（マイナスはOK）
+		SIF 知識素質:(順番シャッフル用配列:LOCAL):絵師 == 0
+			CONTINUE
+		;一番最初に見つけたキャラを登録しておしまい
+		RFLAG:コマンド結果受渡し変数 = 順番シャッフル用配列:LOCAL
+		BREAK
+	NEXT
+	RETURN 1
+ENDIF
+
+;キャラ作品ではない時は汎用
+RFLAG:コマンド結果受渡し変数 = -1
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE380_2_102
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(380)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM380_2_102
+
+IF RFLAG:コマンド結果受渡し変数 == -1
+	PRINTFORM %CALLNAME:PLAYER%正在
+	PRINTDATA
+		DATA 端详着从古董商处购得的
+		DATA 凝视着在迷宫中发现的
+		DATA 观赏着杂货店推销的
+		DATA 细细品味流浪艺术家转让的
+	ENDDATA
+	PRINTDATA
+		DATA 绘画
+		DATA 雕像
+		DATA 陶壶
+		DATA 宝刀
+	ENDDATA
+	PRINTL ，
+	PRINTDATAL
+		DATA 似乎磨炼了鉴赏眼光！
+		DATA 内心逐渐平静下来……
+		DATA 感受到这件作品着实趣味盎然。
+		DATA 发现某个部位从不同角度看竟像乳房！
+	ENDDATA
+ELSE
+	;ここに口上用の分岐いれるけど今はまだ空っぽ
+	PRINTFORM %CALLNAME:PLAYER%正在观赏%CALLNAME:(RFLAG:コマンド結果受渡し変数)%绘制的
+	PRINTDATA
+		DATA 风景画
+		DATA 插画
+		DATA 油画
+		DATA 人物画
+		DATA 肖像画
+		DATA 魔物画像
+	ENDDATA
+	PRINTL ，
+	SELECTCASE 知識素質:(RFLAG:コマンド結果受渡し変数):絵師
+		CASE -1
+			PRINTDATAL
+				DATAFORM 这是......什么玩意儿？猫？狗？看了标题才发现写着《%CALLNAME:PLAYER%》……
+				DATA 难以名状的画作。虽有着仿佛随时会动起来的魄力……等等，真的在动？难道孕育出了未知生命体？
+				DATA 如同视错觉画般令人越看越不安。若以撼动心灵为标准，或许算得上名作范畴
+			ENDDATA
+		CASE 1
+			PRINTDATAL
+				DATA 虽显粗犷但能感受到意志力的佳作
+				DATA 虽不及专业水准，但别有一番风味的优秀画作
+				DATA 相当出色的画作。懂行之人必能察觉其中天赋
+			ENDDATA
+		CASE 2
+			PRINTDATAL
+				DATA 每笔触都蕴含深意的优秀画作
+				DATA 整体构图展现精湛技艺的精心之作
+				DATA 将大胆用色完美统合的挑战性作品
+			ENDDATA
+		CASE 3
+			PRINTDATAL
+				DATA ……堪称世界级杰作！单凭此画就足以吸引观光客
+				DATA 实乃传世名作！若估价可达数亿卢比……
+				DATA 说是美学的极致也不为过。光是观赏就令人心绪澄明
+			ENDDATA
+	ENDSELECT
+ENDIF

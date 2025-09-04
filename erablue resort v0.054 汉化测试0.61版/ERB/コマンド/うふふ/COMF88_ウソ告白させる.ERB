@@ -1,0 +1,825 @@
+﻿;-------------------------------------------------
+;强迫虚假告白
+;-------------------------------------------------
+@COMNAME88
+#FUNCTIONS
+TSTR:コマンド名受渡 = 强迫虚假告白
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_88
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ")
+
+@COM_TOOLTIP_88
+LOCALS = <br>■强迫虚假告白<br>
+LOCALS += "强迫对方说出「对你的爱语」。<br>仅当目标具有「出借经验」时可用。"
+LOCALS += "<br>即使并非真心，反复强求将使目标逐渐习惯并减弱抗拒感。"
+LOCALS += "<br>当完全习惯之时，这些『违心之言』将深深刻入潜意识。"
+LOCALS += "<br>指令类型：嘿咻<br>获取来源：反感・屈从・爱情・爱慕度・征服(PLAYER)"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM88
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+#DIM 性愛レベル保存
+#DIM 恋心レベル保存
+
+;セクハラ胸揉みの拒絶が反感200なので，最初はその倍の反感400くらいを基準とする
+;話術5の口説くの愛情が600，恋心が200。「自分で言わせる」から「他人に言われる」よりも影響がデカいものとする。
+SELECTCASE CFLAG:TARGET:嘘告白カウント
+CASE 0 TO 5
+;最初は反感バチバチで愛情なんて上がるもんかっ！って感じ。屈辱なので屈従いっぱい
+;このほかにもなんらかをマイナスにしてもいい気がする。信頼度とか
+	CALL SOURCE_CALC_征服(PLAYER, TARGET, 250)
+	CALL SOURCE_CALC_反感(TARGET, PLAYER, 400)
+	CALL SOURCE_CALC_屈従(TARGET, PLAYER, 400)
+	CALL SOURCE_CALC_愛情(TARGET, PLAYER, 3)
+	CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 1)
+CASE 6 TO 10
+;徐々に言わされ慣れてきた。最初ほどの屈辱感はないので反感と一緒に屈従も減る
+	CALL SOURCE_CALC_征服(PLAYER, TARGET, 250)
+	CALL SOURCE_CALC_反感(TARGET, PLAYER, 300)
+	CALL SOURCE_CALC_屈従(TARGET, PLAYER, 300)
+	CALL SOURCE_CALC_愛情(TARGET, PLAYER, 60)
+	CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 20)
+CASE 11 TO 24
+;嫌だけどもう言わされ慣れた。刷り込みがこのあたりからぐっと進み始める。『言わされる』形式自体はそのままなので，以後屈従加算値はこれ以上下がらない
+	CALL SOURCE_CALC_征服(PLAYER, TARGET, 250)
+	CALL SOURCE_CALC_反感(TARGET, PLAYER, 150)
+	CALL SOURCE_CALC_屈従(TARGET, PLAYER, 200)
+	CALL SOURCE_CALC_愛情(TARGET, PLAYER, 400)
+	CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 140)
+CASEELSE
+;言わされることが完全に定着した。もはや反感も浮かばないが屈服しきっている自覚はある。
+;本当に『心にもないこと』だって，自信をもって言えるかな？んん？
+	CALL SOURCE_CALC_征服(PLAYER, TARGET, 250)
+	CALL SOURCE_CALC_反感(TARGET, PLAYER, 10)
+	CALL SOURCE_CALC_屈従(TARGET, PLAYER, 200)
+	CALL SOURCE_CALC_愛情(TARGET, PLAYER, 800)
+	CALL SOURCE_CALC_好感度要素_恋心度UP(TARGET, PLAYER, 280)
+ENDSELECT
+
+性愛レベル保存 = 100 / 2
+FOR LOCAL, 0, 100
+	IF 経験値テーブル:LOCAL >= CFLAG:TARGET:性愛度
+		性愛レベル保存 = LOCAL / 2
+		BREAK
+	ENDIF
+NEXT
+恋心レベル保存 = 100
+FOR LOCAL, 0, 100
+	IF 経験値テーブル:LOCAL >= CFLAG:TARGET:恋心度
+		恋心レベル保存 = LOCAL
+		BREAK
+	ENDIF
+NEXT
+
+;特殊イベント発生判定
+;・性愛度の半分と恋心度の合計が80以上(性愛度100だと恋心30，性愛度80だと恋心40)で発生
+;・1度発生するとそのうふふ中は再発生しない
+IF 性愛レベル保存 + 恋心レベル保存 >= 80 && !TALENT:TARGET:恋慕 && !寝取らせ_嘘告白特殊イベント発生済
+	RFLAG:コマンド結果受渡し変数 = 1
+ELSE
+	RFLAG:コマンド結果受渡し変数 = 0
+ENDIF
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;EXPにするかCFLAGにするか……
+;ステ画面に『嘘告白経験』って残らないほうが，ズブズブ感出るんじゃないか？ってことでCFLAGにしておく。
+
+TCVAR:TARGET:嘘告白カウント_一日 += 1
+SIF TCVAR:TARGET:嘘告白カウント_一日 <= 4
+	CFLAG:TARGET:嘘告白カウント += 1
+
+RETURN 1
+
+@CAN_COM88(ARG)
+;暫定
+#DIM CONST 必要実行値 = 24
+#DIM 実行値
+#DIM ＋表示フラグ
+
+SKIPDISP ARG
+PRINTFORML 强迫虚假告白(%CALLNAME:TARGET%)
+;-------------------------------------------------
+;実行判定処理
+;-------------------------------------------------
+実行値 = 0
+＋表示フラグ = 0
+
+;すべての命令に共通の要素を考慮
+CALL COM_ORDER
+実行値 = RESULT
+＋表示フラグ = RESULT:1
+
+;嘘告白回数
+IF CFLAG:嘘告白カウント
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += CFLAG:嘘告白カウント * 1
+	PRINTFORM 虚假告白{CFLAG:嘘告白カウント}次({CFLAG:嘘告白カウント})
+	＋表示フラグ = 1
+ENDIF
+
+;ABL:欲望
+IF ABL:欲望
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:欲望 * 1
+	PRINTFORM 欲望LV{ABL:欲望}({ABL:欲望 * 1})
+	＋表示フラグ = 1
+ENDIF
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:奉仕精神 * 4
+	PRINTFORM 侍奉精神LV{ABL:奉仕精神}({ABL:奉仕精神 * 4})
+	＋表示フラグ = 1
+ENDIF
+;ABL:マゾ性感
+IF ABL:マゾ性感
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:マゾ性感 * 2
+	PRINTFORM 受虐倾向LV{ABL:マゾ性感}({ABL:マゾ性感 * 2})
+	＋表示フラグ = 1
+ENDIF
+;ABL:精液中毒
+IF ABL:精液中毒
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:精液中毒 * 3
+	PRINTFORM 精液成瘾LV{ABL:精液中毒}({ABL:精液中毒 * 3})
+	＋表示フラグ = 1
+ENDIF
+
+IF MARK:快楽刻印
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += MARK:快楽刻印 * 1
+	PRINTFORM 快乐刻印LV{MARK:快楽刻印}({MARK:快楽刻印 * 1})
+	＋表示フラグ = 1
+ENDIF
+;PALAM:欲情
+IF GETPALAMLV(PALAM:欲情, 5)
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += GETPALAMLV(PALAM:欲情, 5) * 1
+	PRINTFORM 情欲LV{GETPALAMLV(PALAM:欲情, 5)}({GETPALAMLV(PALAM:欲情, 5) * 1})
+	＋表示フラグ = 1
+ENDIF
+;恥じらい
+IF TALENT:羞恥心 > 0
+	PRINT  - 
+	実行値 -= 1
+	PRINT 害羞(1)
+	＋表示フラグ = 1
+ENDIF
+
+;倒錯的
+IF TALENT:倒錯的
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 10
+	PRINT 反常(10)
+	＋表示フラグ = 1
+ENDIF
+
+;態度
+IF TALENT:態度 == -1
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 6
+	PRINT 顺从(6)
+	＋表示フラグ = 1
+ELSEIF TALENT:態度 == 1
+	PRINT  - 
+	実行値 -= 4
+	PRINT 叛逆(4)
+	＋表示フラグ = 1
+ENDIF
+
+;プライド
+IF TALENT:プライド == -1
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 4
+	PRINT 低自尊(4)
+	＋表示フラグ = 1
+ELSEIF TALENT:プライド == 1
+	PRINT  - 
+	実行値 -= 6
+	PRINT 高自尊(6)
+	＋表示フラグ = 1
+ENDIF
+
+;快感の否定（淫乱，娼婦で無効）
+IF TALENT:快感応答 < 0 && !TALENT:淫乱
+	PRINT  - 
+	実行値 -= 1
+	PRINT 否定快感(1)
+	＋表示フラグ = 1
+ENDIF
+;男嫌い（恋慕，親愛で無効）
+IF TALENT:性別嗜好 & 1 && !(TALENT:PLAYER:性別 & 1) && (!TALENT:恋慕 || PLAYER != MASTER)
+	PRINT  - 
+	実行値 -= 12
+	PRINT 厌男(12)
+	＋表示フラグ = 1
+ENDIF
+
+;セフレ
+IF TALENT:セフレ
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 10
+	PRINT 炮友(10)
+	＋表示フラグ = 1
+ENDIF
+
+;発情期
+IF CFLAG:発情期フラグ < 0
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 6
+	PRINT 发情中(6)
+	＋表示フラグ = 1
+ENDIF
+
+;寝取らせ夜這い時のフレーバー
+IF TCVAR:言いなり && 寝取らせ_主導キャラ > 0
+	PRINT  - 
+	実行値 -= 100
+	PRINTFORM %CALLNAME:寝取らせ_主導キャラ%正在观看(100)
+	＋表示フラグ = 1
+ENDIF
+
+;言いなり
+IF TCVAR:言いなり
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 999
+	PRINT 绝对服从(999)
+	＋表示フラグ = 1
+ENDIF
+
+;合計を表示(必要実行値以上で実行)　暫定
+PRINTFORM  = {実行値}
+
+SIF 実行値 < 必要実行値
+	PRINT  < 
+SIF 実行値 == 必要実行値
+	PRINT  = 
+SIF 実行値 > 必要実行値
+	PRINT  > 
+PRINTFORM 执行值{必要実行値}
+
+WAIT
+SKIPDISP 0
+
+;実行できない
+SIF 実行値 < 必要実行値
+	RETURN 0
+
+RETURN 1
+;-------------------------------------------------
+;嘘告白実行判定
+;-------------------------------------------------
+@COM_ABLE88
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+
+;一括管理
+SIF GLOBAL_COMABLE(0)
+	RETURN RESULT
+;相手に貸出経験がないなら無理
+SIF EXP:貸出経験 == 0
+	RETURN 0
+;口を何かに使ってるなら無理
+SIF TEQUIP:PLAYER:口
+	RETURN 0
+SIF TEQUIP:TARGET:口
+	RETURN 0
+;恋慕がついていると嘘じゃなくなるので無理
+SIF TALENT:恋慕
+	RETURN 0
+;通常モード限定。「させるコマンド」だから指示っぽくはあるんだけど，タブ移動のひと手間がめんどくさい
+;同時モードではできないようにしたほうが分岐が楽なので
+SIF FLAG:モード管理 != 0
+	RETURN 0
+;貸出経験なくても人妻とかには使えてもいい気がしないでもない
+
+RETURN 1
+
+;-------------------------------------------------
+;嘘告白時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM88
+#DIM 入力値
+
+PRINTFORM %CALLNAME:PLAYER%在
+
+IF TCVAR:言いなり == 1
+	PRINTFORM %CALLNAME:寝取らせ_主導キャラ%%TEXTR("在注视下/刻意展示般")%
+ENDIF
+
+IF MODE_存在判定_完全一致("Ｖ挿入系", PLAYER, TARGET)
+	;あなたがチンポ突っ込んでる
+		PRINTFORM %CALLNAME:TARGET%%TEXTR("的雌穴/的蜜穴/")%被%TEXTR("肆意/")%侵犯的同时，
+ELSEIF MODE_存在判定_完全一致("Ｖ挿入系", TARGET, PLAYER)
+	;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+		PRINTFORM %CALLNAME:TARGET%%TEXTR("侵犯着/被迫承受侵犯")%的同时，
+ELSEIF MODE_存在判定_完全一致("Ａ挿入系", PLAYER, TARGET)
+	;あなたがチンポ突っ込んでる
+		PRINTFORM %CALLNAME:TARGET%的%TEXTR("尻穴/肛门/菊穴")%被%TEXTR("肆意/")%侵犯的同时，
+ELSEIF MODE_存在判定_完全一致("Ａ挿入系", TARGET, PLAYER)
+	;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+	PRINTFORM %CALLNAME:TARGET%%TEXTR("用肛门承受着/被迫接受肛交")%的同时，
+ELSE
+	PRINTFORM ，
+ENDIF
+;他にもパイズリさせながら，とかもできるはずだけど今回は省略
+
+PRINTFORM 强迫%CALLNAME:TARGET%
+
+SELECTCASE CFLAG:TARGET:嘘告白カウント
+CASE 0 TO 5
+;最初のうちは言わせる内容はシンプルに。相手に「発言内容を選ぶ」及び「こちらの望まない発言をする」余地を与えない
+	IF  (MODE_存在判定_完全一致("Ｖ挿入系", PLAYER, TARGET) && RAND:3 == 0) || (MODE_存在判定_完全一致("Ｖ挿入系", TARGET, PLAYER) && RAND:3 == 0) || (MODE_存在判定_完全一致("Ａ挿入系", PLAYER, TARGET) && RAND:3 == 0) || (MODE_存在判定_完全一致("Ａ挿入系", TARGET, PLAYER) && RAND:3 == 0)
+		PRINTFORM 说出对%CALLNAME:PLAYER%的感谢话语，即使那是谎言。
+		PRINTL
+		PRINTFORM %CALLNAME:TARGET%强忍着被%CALLNAME:PLAYER%侵犯的娇喘%TEXTR("拼命/努力")%%TEXTR("压抑着/克制着")%，
+		PRINTFORML 用%TEXTR("极度厌恶的表情/充满憎恶的颤抖声线/饱含屈辱的颤音")%说出：「您能%TEXTR("侵犯我/和我做爱/拥抱我")%，%TEXTR("我很满足/非常感谢")%」……
+	ELSE
+		PRINTFORM 说出对%CALLNAME:PLAYER%的爱语
+		PRINTFORML 。
+	;	PRINTFORML 言いながら%TEXTR("キスを捧げる/唇を捧げる/キスする")%よう強要した。
+	;	意図せずにファーストキス捧げるの嫌な人もいそうだけど，シチュとしては欲しい気もする。どうしたものか
+		PRINTL
+		PRINTFORM %CALLNAME:TARGET%
+		IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+		;あなたがチンポ突っ込んでる
+			PRINTFORM 强忍被%CALLNAME:PLAYER%侵犯的娇喘%TEXTR("拼命/努力")%%TEXTR("压抑着/克制着")%，
+		ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+			;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+			PRINTFORM 压抑着与%CALLNAME:PLAYER%交合时的喘息%TEXTR("拼命/努力")%%TEXTR("克制着/忍耐着")%，
+		ENDIF
+		PRINTFORML 用%TEXTR("极度抗拒的嗓音/充满嫌恶的颤音")%说出：「%CALLNAME:PLAYER%，%TEXTR("最喜欢你了/我爱你")%」……
+	ENDIF
+CASE 6 TO 10
+;フェーズ自体は進行しているものの，いい感じの差分が思いつかない。
+;むしろ差がつくのはリアクションだとは思うものの，一応分けておく
+	IF  (MODE_存在判定_完全一致("Ｖ挿入系", PLAYER, TARGET) && RAND:3 == 0) || (MODE_存在判定_完全一致("Ｖ挿入系", TARGET, PLAYER) && RAND:3 == 0) || (MODE_存在判定_完全一致("Ａ挿入系", PLAYER, TARGET) && RAND:3 == 0) || (MODE_存在判定_完全一致("Ａ挿入系", TARGET, PLAYER) && RAND:3 == 0)
+		PRINTFORML 说出对%CALLNAME:PLAYER%的感谢话语，即使那是谎言。
+		PRINTL
+		PRINTFORM %CALLNAME:TARGET%强忍被侵犯的娇喘%TEXTR("拼命/努力")%%TEXTR("压抑着/克制着")%，
+		PRINTFORML 用%TEXTR("不情愿的/流露憎恶的声线/不甘心的/饱含屈辱的颤音")%说出：「您能%TEXTR("侵犯我/和我做爱/拥抱我")%，%TEXTR("我很满足/非常感谢")%」……
+	ELSE
+		PRINTFORM 说出对%CALLNAME:PLAYER%的爱语
+		PRINTFORML 。
+		PRINTL
+		PRINTFORM %CALLNAME:TARGET%
+		IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+		;あなたがチンポ突っ込んでる
+			PRINTFORM %CALLNAME:PLAYER%
+			SIF TALENT:PLAYER:性別 & 2
+				PRINTFORM 被%TEXTR("阴茎/肉棒")%
+			PRINTFORM 侵犯着发出娇喘，
+		ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+			;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+			PRINTFORM 漏出与%CALLNAME:PLAYER%交合的喘息，
+		ENDIF
+		PRINTFORML 用%TEXTR("抗拒的/不情不愿的/因重复命令而麻木的")%声线说出：「%CALLNAME:PLAYER%，%TEXTR("最喜欢你了/我爱你")%」……
+	ENDIF
+CASE 11 TO 24
+;このあたりから，「誰か」を選択式にして，対象にあなたを選ばせる。
+;繰り返しで慣れてきたのを見計らって，こっそり「嘘でもいいから」を取っ払う
+	IF  (MODE_存在判定_完全一致("Ｖ挿入系", PLAYER, TARGET) && RAND:4 == 0) || (MODE_存在判定_完全一致("Ｖ挿入系", TARGET, PLAYER) && RAND:4 == 0) || (MODE_存在判定_完全一致("Ａ挿入系", PLAYER, TARGET) && RAND:4 == 0) || (MODE_存在判定_完全一致("Ａ挿入系", TARGET, PLAYER) && RAND:4 == 0)
+		PRINTFORML 强迫%CALLNAME:TARGET%对%CALLNAME:PLAYER%表达感谢
+		PRINTL
+		PRINTFORM %CALLNAME:TARGET%在%CALLNAME:PLAYER%的侵犯下发出娇喘，
+		PRINTFORM 用%TEXTR("夹杂快感的犹豫声线/沉溺快感的懊恼语气")%反复说着：「您能%TEXTR("侵犯我/和我做爱/拥抱我/使用我")%，%TEXTR("我很满足/非常感谢")%」
+		CALL PRINT_STR("，啾_H_」")
+		PRINTFORML ……
+	ELSEIF TCVAR:言いなり == 1
+	;寝取りっクス中。主導キャラが見てる
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORM 命令表达对%CALLNAME:PLAYER%的爱意
+			PRINTFORML 。
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘，
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 漏出与%CALLNAME:PLAYER%交合的喘息，
+			ENDIF
+			PRINTFORML 用%TEXTR("夹杂快感的犹豫声线/沉溺快感的懊恼语气")%反复说着：「%CALLNAME:PLAYER%，%TEXTR("最喜欢你了/我爱你")%」
+		CASE 1
+			PRINTFORML 命令承认与%CALLNAME:寝取らせ_主導キャラ%相比%CALLNAME:PLAYER%的性技更好
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘，
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 在与%CALLNAME:PLAYER%交合中喘息着，
+			ENDIF
+			PRINTFORML 用%TEXTR("夹杂快感的犹豫声线/沉溺快感的懊恼语气")%反复说着：「%CALLNAME:PLAYER%的%TEXTR("性技/表现")%更%TEXTR("舒服/棒")%」……
+		CASE 2
+			PRINTFORML 命令承认与%CALLNAME:寝取らせ_主導キャラ%相比更喜欢%CALLNAME:PLAYER%
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘，
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 在与%CALLNAME:PLAYER%交合中喘息着，
+			ENDIF
+			PRINTFORML 用%TEXTR("夹杂快感的犹豫声线/沉溺快感的懊恼语气")%反复说着：「我更喜欢%CALLNAME:PLAYER%」
+		ENDSELECT
+	ELSE
+	;寝取りっクス中じゃない。主導キャラの見てないところでの，プライベートっクス。
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORM 命令表达对%CALLNAME:PLAYER%的爱意
+			PRINTFORML 。
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘，
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 漏出与%CALLNAME:PLAYER%交合的喘息，
+			ENDIF
+			PRINTFORML 用%TEXTR("夹杂快感的犹豫声线/沉溺快感的懊恼语气")%反复说着：「%CALLNAME:PLAYER%，%TEXTR("最喜欢你了/我爱你")%」
+		CASE 1
+			PRINTFORML 命令回答与谁做爱最舒服
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORML ，用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%反复说着：「是%CALLNAME:PLAYER%」
+		CASE 2
+			PRINTFORML 命令回答她最喜欢的人是谁
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORML 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%反复确认：「最喜欢%CALLNAME:PLAYER%了」
+		ENDSELECT
+	ENDIF
+CASEELSE
+;言わされることが完全に定着した。もはや反感も浮かばず屈服しきっている自覚がある。
+;これが本当に『嘘』告白なのかどうかは本人のみぞ知る……
+	IF  (MODE_存在判定_完全一致("Ｖ挿入系", PLAYER, TARGET) && RAND:5 == 0) || (MODE_存在判定_完全一致("Ｖ挿入系", TARGET, PLAYER) && RAND:5 == 0) || (MODE_存在判定_完全一致("Ａ挿入系", PLAYER, TARGET) && RAND:5 == 0) || (MODE_存在判定_完全一致("Ａ挿入系", TARGET, PLAYER) && RAND:5 == 0)
+		PRINTFORML 强迫%CALLNAME:TARGET%对%CALLNAME:PLAYER%表达感谢
+		PRINTL
+		PRINTFORM %CALLNAME:TARGET%在%CALLNAME:PLAYER%的侵犯下发出娇喘，
+		PRINTFORM 用%TEXTR("夹杂快感的犹豫声线/沉溺快感的懊恼语气")%反复说着：「您能%TEXTR("侵犯我/和我做爱/拥抱我/使用我")%，%TEXTR("我很满足/非常感谢")%」
+		CALL PRINT_STR("♡_H__H_」")
+		PRINTFORML ……
+	ELSEIF TCVAR:言いなり == 1
+	;寝取りっクス中。主導キャラが見てる
+		SELECTCASE RAND:5
+		CASE 0
+			PRINTFORM 命令表达对%CALLNAME:PLAYER%的爱意
+			PRINTFORML 。
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘，
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 漏出与%CALLNAME:PLAYER%交合的喘息，
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			IF RFLAG:コマンド結果受渡し変数
+				;刷り込みが完了して，性愛快楽を恋慕感情と脳が勘違いしてしまった哀れな末路
+				;・発生判定はソース追加処理参照
+				;イベントが発生したことを記憶(一度発生するとそのうふふ中は再発生しない)
+				寝取らせ_嘘告白特殊イベント発生済 = 1
+				PRINTFORMW 当着%CALLNAME:寝取らせ_主導キャラ%的面说出：「我%TEXTR("最爱/深爱")%的%CALLNAME:PLAYER%，请让我成为您的所有物」
+				PRINTL
+				PRINTFORML ──要如何处置？
+				PRINTL
+				PRINTBUTTON "[0]作为恋人接受", 0
+				PRINTL
+				IF DT_SELECT("関係性データベース", @"(対象キャラ１ = {CFLAG:TARGET:人物番号} Or 対象キャラ１ = {CFLAG:寝取らせ_主導キャラ:人物番号}) And (対象キャラ２ = {CFLAG:TARGET:人物番号} Or 対象キャラ２ = {CFLAG:寝取らせ_主導キャラ:人物番号}) And (関係性種別 = '恋慕')")
+					;対象と寝取らせ主導キャラが恋慕関係だった場合のみ関係を破棄させる選択肢を追加
+					PRINTBUTTON @"[1]以断绝与%CALLNAME:寝取らせ_主導キャラ%关系为条件接受", 1
+					PRINTL
+				ENDIF
+				PRINTBUTTON "[2]拒绝", 2
+				PRINTL
+				BINPUT
+				入力値 = RESULT
+				SELECTCASE 入力値
+				CASE 0, 1
+					PRINTFORML ──虽然缔结了缘分，但%CALLNAME:寝取らせ_主導キャラ%似乎并非%CALLNAME:TARGET%的真命天子
+					PRINTFORML 怀着压倒性的优越感，%CALLNAME:PLAYER%从%CALLNAME:寝取らせ_主導キャラ%手中夺走了%CALLNAME:TARGET%……
+					PRINTL
+					PRINTFORM 将%CALLNAME:PLAYER%带来的快感误认为「爱」的可悲%CALLNAME:TARGET%
+					CALL PRINT_STRW("彻底陷入了［爱慕］状态……_H__H_")
+					CALL COM88_嘘告白_恋慕陥落処理(TARGET, 寝取らせ_主導キャラ, 入力値)
+				CASEELSE
+					PRINTFORML 虽然提议诱人，但决定让%CALLNAME:TARGET%继续保持与%CALLNAME:寝取らせ_主導キャラ%的关系
+					PRINTFORML %CALLNAME:PLAYER%拒绝了提议，重新投入游戏……
+				ENDSELECT
+			ELSE
+				PRINTFORML 反复说着：「%CALLNAME:PLAYER%，%TEXTR("最喜欢你了/我爱你")%」……
+			ENDIF
+		CASE 1
+			PRINTFORML 命令承认与%CALLNAME:寝取らせ_主導キャラ%相比%CALLNAME:PLAYER%的性技更好
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复说着：「%CALLNAME:PLAYER%的%TEXTR("技巧/表现")%更%TEXTR("舒服/棒")%」……
+		CASE 2
+			PRINTFORML 命令承认与%CALLNAME:寝取らせ_主導キャラ%相比更喜欢%CALLNAME:PLAYER%
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复确认：「我更喜欢%CALLNAME:PLAYER%」……
+		CASE 3
+			PRINTFORML 命令回答她是属于谁的
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复说着：「我是%CALLNAME:PLAYER%的所有物」……
+		CASE 4
+			PRINTFORML 命令回答想要%TEXTR("怀上谁的孩子/为谁生孩子")%
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复说着：「想要怀%CALLNAME:PLAYER%的%TEXTR("孩子/宝宝")%」……
+		ENDSELECT
+	ELSE
+	;寝取りっクス中じゃない。主導キャラの見てないところでの，プライベートっクス。
+		SELECTCASE RAND:5
+		CASE 0
+			PRINTFORM 命令表达对%CALLNAME:PLAYER%的爱意
+			PRINTFORML 。
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘，
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 漏出与%CALLNAME:PLAYER%交合的喘息，
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复说着：「%CALLNAME:PLAYER%，%TEXTR("最喜欢你了/我爱你")%」……
+		CASE 1
+			PRINTFORML 命令回答与谁做爱最舒服
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复说着：「是%CALLNAME:PLAYER%」……
+		CASE 2
+			PRINTFORML 命令回答她最喜欢的人是谁
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复说着：「最喜欢%CALLNAME:PLAYER%了」……
+		CASE 3
+			PRINTFORML 命令回答她是属于谁的
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复说着：「我是%CALLNAME:PLAYER%的所有物」……
+		CASE 4
+			PRINTFORML 命令回答想要%TEXTR("怀上谁的孩子/为谁生孩子")%
+			PRINTL
+			PRINTFORM %CALLNAME:TARGET%
+			IF MODE_存在判定_完全一致("ＶＡ挿入系", PLAYER, TARGET)
+			;あなたがチンポ突っ込んでる
+				PRINTFORM %CALLNAME:PLAYER%
+				SIF TALENT:PLAYER:性別 & 2
+					PRINTFORM 被%TEXTR("阴茎/肉棒")%
+				PRINTFORM 侵犯着发出娇喘
+			ELSEIF MODE_存在判定_完全一致("ＶＡ挿入系", TARGET, PLAYER)
+				;あなたがチンポ咥えこんでる。ペニバンの可能性もあるので詳細な描写は省く
+				PRINTFORM 与%CALLNAME:PLAYER%交合中喘息着
+			ENDIF
+			PRINTFORM 用%TEXTR("完全沉溺的声线/甜腻的堕落之音/彻底臣服的媚声/确信本心的撒娇语气")%
+			PRINTFORML 反复说着：「想要怀%CALLNAME:PLAYER%的%TEXTR("孩子/宝宝")%」……
+		ENDSELECT
+	ENDIF
+ENDSELECT
+
+@COM88_嘘告白_恋慕陥落処理(対象キャラ, 寝取られ元キャラ, 関係破棄フラグ)
+#DIM 対象キャラ
+#DIM 寝取られ元キャラ
+#DIM 関係破棄フラグ
+#DIM 恋慕対象数
+#DIM 恋慕レベル初期値
+#DIM 恋慕レベル補正基準値
+#DIM CONST 嘘告白回数下限 = 24
+
+;恋慕対象に登録する処理
+;ゲージ区分を恋慕に変更(恋慕レベルが上がるようにする)
+CFLAG:対象キャラ:ゲージ起動分類 = 1
+
+;恋慕レベルの設定
+;・嘘告白すればするほど初期レベルが上がりやすくなる感じに
+;基本値：告白が成功するようになるレベル(Lv50)
+恋慕レベル初期値  = 50
+;補正値1：下限値から10回ごとに+1
+恋慕レベル補正基準値 = MAX(CFLAG:対象キャラ:嘘告白カウント - 嘘告白回数下限, 1)
+恋慕レベル初期値 += 恋慕レベル補正基準値 / 10
+;補正値2：0～[嘘告白回数 - 下限値]の乱数
+恋慕レベル初期値 += RAND:恋慕レベル補正基準値
+;上限100
+CFLAG:対象キャラ:恋慕レベル = MIN(恋慕レベル初期値, 100)
+
+IF !INRANGEARRAY(恋慕対象フラグ, 対象キャラ, 対象キャラ)
+	;リストに登録
+	;・このタイミングで「実はリスト上限なんだけどどうする？やめる？」って聞かれると興が醒めると思うので上限無視して登録しちゃう
+	;恋慕対象数をカウントして登録位置を決定
+	恋慕対象数 = INRANGEARRAY(恋慕対象フラグ, 1, キャラクタ数上限)
+	恋慕対象フラグ:恋慕対象数 = 対象キャラ
+ENDIF
+
+;- 恋慕陥落したときの処理(COM352_告白するの処理をベースに調整)
+;恋慕陥落素質を取得
+TALENT:対象キャラ:恋慕 = 1
+CLEARBIT TALENT:対象キャラ:陥落不可, 0
+;恋慕陥落した日付を記憶
+初体験日:対象キャラ:恋慕 = DAY
+
+IF TALENT:対象キャラ:恋人持ち > 0
+	IF !TALENT:対象キャラ:浮気
+		;浮気素質の取得(寝取らせ時に取得済だと思うけど一応)
+		TALENT:対象キャラ:浮気 = 1
+		PRINTFORM %CALLNAME:対象キャラ%获得
+		SETCOLOR カラーパレット("えっちな色")
+		PRINT [出轨]
+		RESETCOLOR
+		PRINT 特质……
+	ENDIF
+ELSEIF TALENT:対象キャラ:恋人持ち == -1
+	; 想い人ありの消失
+	TALENT:TARGET:恋人持ち = 0
+	PRINTFORM %CALLNAME:対象キャラ%获得
+	SETCOLOR カラーパレット("えっちな色")
+	PRINT [心有所属]
+	RESETCOLOR
+	PRINT 特质已消失……
+ENDIF
+
+;履歴登録
+CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>以[爱慕]方式攻略%CALLNAME:対象キャラ%，将%CALLNAME:対象キャラ%从%CALLNAME:寝取られ元キャラ%手中夺走</font><img src='えっちハート'>","うふふ実績")
+CALL 履歴データベース登録(CFLAG:対象キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>被%CALLNAME:PLAYER%从%CALLNAME:寝取られ元キャラ%手中夺走，获得被攻略特质[爱慕]</font><img src='えっちハート'>","うふふ実績")
+CALL 履歴データベース登録(CFLAG:寝取られ元キャラ:人物番号, @"%CALLNAME:対象キャラ%被%CALLNAME:PLAYER%从前爱人手中夺走","うふふ実績")
+
+;寝取られ元キャラとの関係破棄
+SIF 関係破棄フラグ
+	CALL COM88_嘘告白_関係破棄処理(対象キャラ, 寝取られ元キャラ)
+
+@COM88_嘘告白_関係破棄処理(対象キャラ, 寝取られ元キャラ)
+#DIM 対象キャラ
+#DIM 寝取られ元キャラ
+#DIM 人物番号1 
+#DIM 人物番号2
+#DIMS 関係性種別
+#DIMS DT_NAME
+#DIMS DT_FILT_EXP ; FILT_EXP > FILTER EXPRESSION
+#DIM  DT_ID
+
+DT_NAME = 関係性データベース
+人物番号1 = CFLAG:対象キャラ:人物番号
+人物番号2 = CFLAG:寝取られ元キャラ:人物番号
+{
+DT_FILT_EXP = (対象キャラ１ = {人物番号1} Or 対象キャラ１ = {人物番号2})
+          And (対象キャラ２ = {人物番号1} Or 対象キャラ２ = {人物番号2})
+          And (関係性種別 = '恋慕' Or 関係性種別 = 'セフレ')
+}
+IF DT_SELECT(DT_NAME, DT_FILT_EXP, , DT_ID)
+	人物番号1 = DT_CELL_GET(DT_NAME, DT_ID, "対象キャラ１", 1)
+	人物番号2 = DT_CELL_GET(DT_NAME, DT_ID, "対象キャラ２", 1)
+	関係性種別 '= DT_CELL_GETS(DT_NAME, DT_ID, "関係性種別", 1)
+	; DEBUGPRINTFORML {DT_ID}/{人物番号1}/{人物番号2}/%関係性種別%
+	DT_ROW_REMOVE DT_NAME, DT_ID
+ENDIF
+CALL 履歴データベース登録(CFLAG:対象キャラ:人物番号, @"结束了与%CALLNAME:寝取られ元キャラ%的%関係性種別%关系","うふふ実績")
+

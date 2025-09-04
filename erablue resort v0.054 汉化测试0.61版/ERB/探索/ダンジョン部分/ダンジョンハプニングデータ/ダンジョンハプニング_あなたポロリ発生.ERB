@@ -1,0 +1,78 @@
+﻿@ダンジョンハプニング_あなたポロリ発生(対象キャラ番号)
+#DIM 対象キャラ番号
+
+WSTR:(K++) = 遭到魔物突然袭击！
+KSTR:(K++) = 虽成功击退，但%CALLNAME:PLAYER%的衣装因突袭而凌乱，
+SELECTCASE TALENT:PLAYER:バストサイズ
+	CASE IS <= 0
+		KSTR:(K++) = 胸部区域暴露在外。_PAGE
+	CASEELSE
+		KSTR:(K++) = 丰满的玉兔从衣物中蹦跳而出。_PAGE
+ENDSELECT
+
+CALL メッセージ欄表示用関数()
+CALL 口上変数初期化
+
+CALL セクハラ反応タイプ判定(対象キャラ番号)
+TRYCALLFORM KOJO_ハプニング_あなたポロリ発生_{NO:対象キャラ番号}(対象キャラ番号)
+IF 口上有無確認(0, 1) == 0
+	SELECTCASE RFLAG:コマンド結果受渡し変数２
+		CASE 1
+			;無知
+			KSTR:(K++) = %CALLNAME:対象キャラ番号%若无其事地继续探索。
+		CASE 2
+			;無反応
+			KSTR:(K++) = %CALLNAME:対象キャラ番号%若无其事地继续探索。
+		CASEELSE
+			;汎用
+			IF TALENT:対象キャラ番号:性別 == TALENT:PLAYER:性別 || TALENT:PLAYER:性別 == 0
+				;同性、あるいは無性なら大した反応はしない
+				KSTR:(K++) = %CALLNAME:対象キャラ番号%提醒%CALLNAME:PLAYER%注意仪表。
+			ELSE
+				SELECTCASE RFLAG:コマンド結果受渡し変数
+					CASE 1
+						;拒絶
+						KSTR:(K++) = %CALLNAME:対象キャラ番号%慌忙别开视线向%CALLNAME:PLAYER%致歉。
+					CASE 2
+						;受入れ
+						KSTR:(K++) = %CALLNAME:対象キャラ番号%用身体遮挡他人视线护住%CALLNAME:PLAYER%。
+					CASE 3
+						;喜び
+						KSTR:(K++) = %CALLNAME:対象キャラ番号%一边用身体掩护%CALLNAME:PLAYER%一边提醒注意着装。
+				ENDSELECT
+			ENDIF
+	ENDSELECT
+	CALL メッセージ欄表示用関数()
+ENDIF
+
+;ソース増減部分
+SELECTCASE RFLAG:コマンド結果受渡し変数
+	CASE 1
+		;拒絶
+		CALL SOURCE_CALC_反感(対象キャラ番号, PLAYER, 40)
+		CALL SOURCE_CALC_露出(PLAYER, 対象キャラ番号, 120)
+	CASE 2
+		;受け入れ
+		CALL SOURCE_CALC_歓楽(対象キャラ番号, PLAYER, 50)
+		CALL SOURCE_CALC_露出(PLAYER, 対象キャラ番号, 120)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(対象キャラ番号, PLAYER, 30)
+	CASE 3
+		;喜び
+		CALL SOURCE_CALC_歓楽(対象キャラ番号, PLAYER, 100)
+		CALL SOURCE_CALC_露出(PLAYER, 対象キャラ番号, 120)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(対象キャラ番号, PLAYER, 60)
+ENDSELECT
+
+
+
+@ダンジョンハプニング_ABLE_あなたポロリ発生(判定キャラ番号)
+#DIM 判定キャラ番号
+
+SIF TALENT:PLAYER:性別 == 2
+	RETURN 0
+;すでに上半身裸だと発生しない
+SIF !TEQUIP:PLAYER:上半身服あり && !TEQUIP:PLAYER:上半身鎧あり && !TEQUIP:PLAYER:上タイツあり && !TEQUIP:PLAYER:上半身下着あり
+	RETURN 0
+
+
+RETURN 1

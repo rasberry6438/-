@@ -1,0 +1,49 @@
+﻿
+@アイテム個別文章表示_复活药剂(ARGS)
+;蘇生薬
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 3000
+ENDIF
+
+LOCALS = 
+LOCALS += @"■复活药剂　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "复活药剂")}<br>"
+;LOCALS += -------------------------------------------------|←文字横幅ここまで
+LOCALS += "空之世界广泛使用的通用复活类药剂。<br>"
+LOCALS += "需要多种材料且炼制难度较高，<br>"
+LOCALS += "能制作此药可称得上合格炼金术师。<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "使战斗不能的队友恢复[１００]ＨＰ<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_复活药剂
+CALL 汎用使用先表示("味方単体")
+
+@アイテム効果処理_复活药剂(ARG)
+;ARG = 隊列の何番目か
+
+IF !BATTLE_STATE:ARG:キャラ登録番号
+	RETURN 0
+ENDIF
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "复活药剂") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:ＨＰ > 0
+	PRINTW 目标未处于战斗不能状态
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:最大ＨＰ < 100
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＨＰ恢复了{BATTLE_STATE:ARG:最大ＨＰ}
+ELSE
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＨＰ恢复了100
+ENDIF
+
+BATTLE_STATE:ARG:ＨＰ = MIN(BATTLE_STATE:ARG:ＨＰ + 100, BATTLE_STATE:ARG:最大ＨＰ)
+
+RETURN 1

@@ -1,0 +1,313 @@
+﻿;
+;  玲子専用のCOM_CHECK
+;    指令の派生確認に使う
+;
+@RYOKO_COM_CHECK(ARGS)
+#FUNCTION
+	; TARGETの確認
+	SIF NO:TARGET != 32
+		RETURNF 0
+
+	SELECTCASE ARGS
+		CASE "素股誤挿入"
+			SIF SELECTCOM != 93
+				RETURNF 0
+			SIF FIRSTCOM(SELECTCOM) == 0
+				RETURNF 0
+			SIF EXP:Ｖ性交経験 == 0
+				RETURNF 0
+			SIF CHECK_COM("展示肉棒")
+				RETURNF 0
+			SIF CEVENT("調教：素股誤挿入") || CEVENT("調教：素股誤挿入発生済み")
+				RETURNF 0
+			SIF !CHECK_CLO("Ｖ露出")
+				RETURNF 0
+			SIF PALAM:Ｖ潤 < 3000
+				RETURNF 0
+			;SIF RAND:4
+			;	RETURNF 0
+			
+			RETURNF 1
+	ENDSELECT
+
+	RETURNF 0
+
+@RYOKO_ALTNATE_COM(ARGS)
+
+	; TARGETの確認
+	SIF NO:TARGET != 32
+		RETURN 0
+
+	SELECTCASE ARGS
+		CASE "素股誤挿入"
+			; 素股中に挿入してしまったというシチュエーション
+			; 擬似的な正常位 or 騎乗位になる
+
+			SIF SELECTCOM != 93
+				RETURN 0
+
+			TFLAG:地の文スキップ = 1
+			CALL SET_CEVENT, "調教：素股誤挿入"
+			CALL SET_CEVENT, "調教：素股誤挿入発生済み"
+
+			; 素股の地の文をマニュアル表示
+			CALL TRAIN_MESSAGE_COM93
+
+			; 口上を表示
+			CALL KOJO_MESSAGE_COM_K32
+
+			; 派生描画はここで行う
+			PRINTW …………
+			PRINTFORM %CALLNAME:TARGET%将%TEXTR("爱液/淫蜜")%从%TEXTR("那里/女性器/秘裂处")%那里滴落、%CALLNAME:PLAYER%の%TEXTR("陰茎/肉棒/肉竿")%
+			IF TEQUIP:推倒
+				PRINTFORM を%TEXTR("压迫着/压倒着")%像舔%TEXTR("冰激凌/糖果")%一样%TEXTR("摩擦着入口处的褶皱/用柔软的阴道口摩擦")%……
+			ELSE
+				PRINTFORM 像要%TEXTR("扑过来/舔遍/猛扑过来")%一样吸附着……
+			ENDIF
+			PRINTFORMW 
+			PRINTFORMW 因为配合着%CALLNAME:PLAYER%的%TEXTR("腰的动作/冲刺")%%CALLNAME:TARGET%%TEXTR("焦急地/畏缩着/欲求不满的")%扭着身子、%CALLNAME:PLAYER%的%TEXTR("肉棒/男性器")%似乎侵入到%TEXTR("女性器/肉壶")%里面……
+			PRINTFORMW 因为%CALLNAME:TARGET%反复着%TEXTR("只有龟頭/浅浅的")%%TEXTR("进进出出/抽插")%的动作而露出了%TEXTR("复杂的/害羞的/带有批判色彩的")%表情、但%TEXTR("像是在欢迎的/像迎接一样")%的腰部摆动似乎没有要停止的意思……
+			PRINTFORMW 不久、
+			PRINTL
+			CALL PRINT_STRW,  "　　　　　　　　_爱心_冒出_BHH_"
+			PRINTL
+			PRINTFORMW 　　　　感受到%TEXTR("不成形的/柔软的肉的/淌满爱液的肉壶的")%抵抗、%CALLNAME:PLAYER%的%TEXTR("肉棒/长处")%%TEXTR("到根部/毫无保留地")%%CALLNAME:TARGET%被%TEXTR("肉壶/女性器/胎内/阴道/那里")%吞入了……
+
+			; 指令の派生を表示
+			PRINTL 
+			PRINT 素股　→　素股誤挿入
+			IF TEQUIP:推倒
+				PRINTL 騎乗位
+			ELSE
+				PRINTL 正常位
+			ENDIF
+			PRINTL 
+
+			; 追加地の文
+			CALL TEXT,"追加地の文：Ｖ挿入後",TARGET
+
+			; 実指令の変更
+			SELECTCOM = 60
+			SIF TEQUIP:推倒
+				SELECTCOM = 65
+
+	ENDSELECT
+
+	RETURN 0
+
+; 何らかの処理をまとめた関数
+; 描画ではなく、値の管理のみを行う
+@RYOKO_SET_FLAG(ARGS)
+#DIM  MEMO
+#DIMS MEMOS
+#DIM  SAMEN_VAL
+#DIMS TMPS
+#DIM  CNT
+	; TARGETの確認
+	SIF NO:TARGET != 32
+		RETURN 0
+
+SELECTCASE ARGS
+	CASE "換装：服を着替えた"
+		; 服を着替えさせたときに発生する諸々の一括処理
+		IF CHECK_SHIRT("巫女")
+			IF !CHECK_CLO("没穿内褲")
+				CALL SET_PANTIES, ""
+				CFLAG:内衣確認済 = 3
+			ENDIF
+			SIF EQUIP:胸罩
+				CALL SET_BRA, ""
+		ENDIF
+	CASE "性処理：膣内使用済み避孕套破れ"
+		; 性処理後、膣内に残していた避孕套が破れた
+
+		; フローがよくわからぬ……
+		;   汎用処理とは異なる動作をさせたいので、結局、自作
+		; Ref.
+		;   CALL SETFLAG, "膣内精液経験", PLAYER, TARGET
+
+		DEBUGPRINTFORML CSTR:被Ｖ中出 = %CSTR:被Ｖ中出%
+		DEBUGPRINTFORML 　　　　　　　　　　　　↓
+
+		; 射精（されていた）量の決定
+		MEMO       = 1
+		MEMOS      = %TOSTR(BASE:PLAYER:識別番号)%
+		SAMEN_VAL  = 3
+		SAMEN_VAL  = (SAMEN_VAL * 3 / 2) + 1
+		SAMEN_VAL *= MEMO
+		SAMEN_VAL  = MULTIPLY(SAMEN_VAL, 100 + RAND:51)
+
+		; 経験の増加
+		EXP:TARGET:膣内精液経験 += MEMO
+		CFLAG:Ｖ已中出 += SAMEN_VAL
+		SIF TALENT:妊娠
+			BASE:胎児への栄養 += MEMO
+
+		;妊娠用判定
+		CALL CHECK_PREGNANT, TARGET, MEMO, MEMOS
+
+		CALL ADD_STAIN, TARGET, "Ｖ", "精液"
+		EX:Ｖ中出し      += 1
+		NOWEX:Ｖ中出し   += 1
+		EX:Ｖ中出し量    += SAMEN_VAL
+		NOWEX:Ｖ中出し量 += SAMEN_VAL
+
+		;Ｖ液体追加のソース
+		SOURCE:Ｖ液体追加 += 100 * MEMO
+
+		;記録を分解する
+		VARSET LOCALS
+		SPLIT CSTR:被Ｖ中出, "/", LOCALS
+		TMPS = 
+
+		FOR CNT, 0, 30
+			SIF LOCALS:CNT == ""
+				BREAK
+
+			;今回と同じ相手のものかどうか
+			IF MEMOS != "" && MEMOS == SUBSTRING(LOCALS:CNT, 0, STRLENS(MEMOS) )
+				;相手：量 となっているので"量"部分を抜き出して、今回の数値を加算する
+				LOCALS:CNT = %MEMOS%%TOSTR(TOINT(EXTSTR(LOCALS:CNT, "：") ) + SAMEN_VAL)%
+
+				;MEMOSは加算して用済みなので初期化
+				MEMOS = 
+
+				;記録する文字列を再構築
+				TMPS = %LOCALS:CNT%/%TMPS%
+			ELSE
+				TMPS = %TMPS%%LOCALS:CNT%/
+			ENDIF
+		NEXT
+
+		;初めての相手ならMEMOSは文字列が入っている
+		SIF MEMOS != ""
+			TMPS = %MEMOS%%TOSTR(SAMEN_VAL)%/%TMPS%
+		CSTR:被Ｖ中出 = %TMPS%
+
+		; 確認用
+		DEBUGPRINTFORML CSTR:被Ｖ中出 = %CSTR:被Ｖ中出%
+
+		; ついでに潤滑も増える
+		;   増加量については要調整
+		PALAM:Ｖ潤 += (500 + RAND:100) * (RAND:((ABL:精液中毒 + 1)) + 1)
+
+ENDSELECT
+RETURN 1
+
+@RYOKO_COND(ARGS, ARG)
+#FUNCTION
+
+	SIF ARG == 0 && TARGET > 0
+		ARG = TARGET
+	; TARGETの確認
+	SIF NO:ARG != 32
+		RETURNF 0
+
+	SELECTCASE ARGS
+		CASE "淫紋：愛液過多"
+			SIF MARK:ARG:淫紋 < 2
+				RETURNF 0
+			RETURNF 1
+		CASE "処女"
+			SIF EXP:ARG:Ｖ性交経験 > 0
+				RETURNF 0
+			RETURNF 1
+		CASE "告白可能"
+			SIF !TALENT:ARG:恋慕
+				RETURNF 0
+			SIF !CEVENT("イベント：初妊娠", ARG)
+				RETURNF 0
+			RETURNF 1
+	ENDSELECT
+
+	RETURNF 0
+
+
+;===========================================================
+; RYOKO_SWEET_VOICE_RAND
+;   汎用喘ぎ関数
+;   「%RYOKO_SWEET_VOICE_RAND()%」としての使用を想定
+;===========================================================
+@RYOKO_SWEET_VOICE_RAND()
+#FUNCTIONS
+#DIMS VOICE
+#DIMS SITUATION
+
+	VARSET VOICE
+	VARSET SITUATION
+
+	RETURNF VOICE
+
+;===========================================================
+; RYOKO_SWEET_VOICE_RAND_SITUATION
+;   汎用喘ぎ関数のシチュエーション判断
+;   〇〇/○○/○○/... 形式
+;===========================================================
+@RYOKO_SWEET_VOICE_RAND_SITUATION
+#FUNCTIONS
+#DIMS SITUATION
+
+	VARSET SITUATION
+
+	; 大本のシチュエーション
+	SIF COND("調教中")
+		SITUATION += "調教中/"
+	SIF COND("约会中")
+		SITUATION += "约会中/"
+	SIF COND("性処理中")
+		SITUATION += "性処理中/"
+	SIF COND("朝袭相手") && COND("朝")
+		SITUATION += "朝袭中/"
+
+	; PLAY内容
+	IF INSERT("Ｖ挿入")
+		SITUATION += "Ｖ挿入/"
+		IF TEQUIP:PLAYER:避孕套
+			SITUATION += "避孕套ハメ中/"
+		ELSE
+			IF COND("危険日")
+				SITUATION += "危険日ナマハメ中/"
+			ELSE
+				SITUATION += "ナマハメ中/"
+			ENDIF
+		ENDIF
+	ENDIF
+	SIF INSERT("Ａ挿入")
+		SITUATION += "Ａ挿入/"
+	SIF COND("喜欢的体位中")
+		SITUATION += "喜欢的体位/"
+	SIF COND("Ｈ的いちゃつき中", MASTER)
+		SITUATION += "Ｈ的いちゃつき中/"
+
+	; 服装系
+	SIF CHECK_CLO("裸体")
+		SITUATION += "裸体/"
+	SIF CHECK_CLO("内衣姿")
+		SITUATION += "内衣姿/"
+	SIF CHECK_CLO("没穿外衣")
+		SITUATION += "没穿外衣/"
+	SIF CHECK_CLO("没穿下衣")
+		SITUATION += "没穿下衣/"
+	SIF CHECK_CLO("没穿内褲")
+		SITUATION += "没穿内褲/"
+	SIF CHECK_CLO("无胸罩")
+		SITUATION += "无胸罩/"
+	SIF CHECK_CLO("泳装姿")
+		SITUATION += "泳装姿/"
+
+	; 場所
+	IF PLACE("野外")
+		SITUATION += "屋外/%SAVESTR:現在位置%/"
+	ELSE
+		SITUATION += "屋内/%SAVESTR:現在位置%/"
+	ENDIF
+
+	; 他情報
+	SIF COND("危険日")
+		SITUATION += "危険日/"
+	SIF MARK:淫紋 == 1
+		SITUATION += "淫紋贴纸/"
+	SIF MARK:淫紋 >= 2
+		SITUATION += "淫紋/"
+
+	RETURNF SITUATION

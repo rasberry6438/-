@@ -1,0 +1,63 @@
+﻿
+@アイテム個別文章表示_芝士汉堡(ARGS)
+;チーズバーガー
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 320
+ENDIF
+
+LOCALS = 
+LOCALS += @"■芝士汉堡　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "芝士汉堡")}<br>"
+LOCALS += "夹着芝士与肉排的美味汉堡。<br>"
+LOCALS += "据说使用１００％纯牛肉制作。<br>"
+LOCALS += "食用后可恢复少量体力和魔力。<br>"
+LOCALS += "无法在战斗中使用。<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "我方单体ＨＰ恢复[１００]、ＭＰ恢复[５０]。<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_芝士汉堡
+;戦闘時使用不可
+CALL 汎用使用先表示("味方単体", -1)
+
+@アイテム効果処理_芝士汉堡(ARG)
+#DIM CONST HP回復量 = 100
+#DIM CONST MP回復量 = 50
+;ARG = 隊列の何番目か
+
+IF !BATTLE_STATE:ARG:キャラ登録番号
+	RETURN 0
+ENDIF
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "芝士汉堡") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:最大ＨＰ == BATTLE_STATE:ARG:ＨＰ && BATTLE_STATE:ARG:最大ＭＰ == BATTLE_STATE:ARG:ＭＰ
+	PRINTW ＨＰ和ＭＰ已满
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:ＨＰ < 1
+	PRINTW 无法治疗战斗不能状态
+	RETURN 0
+ENDIF
+
+IF BATTLE_STATE:ARG:最大ＨＰ - BATTLE_STATE:ARG:ＨＰ < HP回復量
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＨＰ恢复了{BATTLE_STATE:ARG:最大ＨＰ - BATTLE_STATE:ARG:ＨＰ}
+ELSE
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＨＰ恢复了{HP回復量}
+ENDIF
+IF BATTLE_STATE:ARG:最大ＭＰ - BATTLE_STATE:ARG:ＭＰ < MP回復量
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＭＰ恢复了{BATTLE_STATE:ARG:最大ＭＰ - BATTLE_STATE:ARG:ＭＰ}
+ELSE
+	PRINTFORMW %CALLNAME:(BATTLE_STATE:ARG:キャラ登録番号)%的ＭＰ恢复了{MP回復量}
+ENDIF
+
+BATTLE_STATE:ARG:ＨＰ = MIN(BATTLE_STATE:ARG:ＨＰ + HP回復量, BATTLE_STATE:ARG:最大ＨＰ)
+BATTLE_STATE:ARG:ＭＰ = MIN(BATTLE_STATE:ARG:ＭＰ + MP回復量, BATTLE_STATE:ARG:最大ＭＰ)
+
+RETURN 1

@@ -1,0 +1,68 @@
+﻿
+@COMNAME403
+#FUNCTIONS
+TSTR:コマンド名受渡 = 休息
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_403
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+
+@COM_TOOLTIP_403
+LOCALS = <br>■休息<br>
+LOCALS += "通过休息恢复体力的指令。<br>基础耗时60分钟，[恢复缓慢]追加20分钟，[恢复迅速]减少20分钟。"
+LOCALS += "<br>指令类型：可单独执行<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+;-------------------------------------------------
+;休息
+;-------------------------------------------------
+@COM403
+IF TIME_PROGRESS(CFLAG:MASTER:314) >= 960 && !CFLAG:MASTER:睡眠
+	PRINTFORMW %CALLNAME:MASTER%本想小憩却陷入深眠
+	CFLAG:MASTER:睡眠 = 1
+	CFLAG:MASTER:就寝時刻 = DAY * 1440 + TIME
+	FLAG:一日終了 = 1
+ELSE
+	TIME += 60
+	RFLAG:休憩選択フラグ = 1
+ENDIF
+RETURN 1
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE403
+;移動実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(403)
+	RETURN RESULT
+;私室設定
+IF CFLAG:MASTER:現在マップ種別 == 0
+	SIF CFLAG:MASTER:現在位置 != CFLAG:MASTER:自室位置
+		RETURN 0
+ELSE
+	RETURN 0
+ENDIF
+SIF TIME_PROGRESS(CFLAG:MASTER:314) >= 960 && BATHROOM(CFLAG:MASTER:現在位置)
+	RETURN 0
+SIF CFLAG:うふふ == 2
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM403
+IF BATHROOM(CFLAG:MASTER:現在位置)
+	PRINTFORML %CALLNAME:PLAYER%在浴场放松身心
+ELSE
+	PRINTFORML %CALLNAME:PLAYER%进行了短暂休息
+ENDIF
+
+

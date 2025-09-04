@@ -1,0 +1,443 @@
+﻿;;;=========================
+;;;迷你游戏 ダエモスラビヤ20XX呼び出しメソッド
+;;;=========================
+@D20XX_Start
+	#DIMS FromPlace
+	SETBGCOLOR 30,0,0
+	REDRAW 0
+	FromPlace = %SAVESTR:現在位置%
+
+	SAVESTR:現在位置 = 魔界 
+	CALL D20XX_SelectStage
+	
+	CALL D20XX_EndGame
+	SAVESTR:現在位置 = %FromPlace%
+;;;=========================
+;;;ステージ選択メソッド
+;;;まだステージ解放処理とか作ってないよ
+;;;=========================
+@D20XX_SelectStage
+	#DIMS StageList
+	#DIMS CHOICES
+	StageList = チュートリアル/デバッグ用MAP
+
+	VARSET LOCALS
+	SPLIT StageList, "/", LOCALS
+	PRINTFORML シナリオ選択
+	PRINTFORML ※未完成だよ！更新待っててね！
+
+	CALL PRINT_SELECT(StageList,"返回")
+
+	CHOICES = %LOCALS:RESULT%
+	SELECTCASE CHOICES
+		CASE "チュートリアル"
+			CALL D20XX_MAP_チュートリアル
+			;CALL D20XX_MAP_チュートリアル_開始メッセージ
+			CALL D20XX_Main
+			IF RESULT == 1
+				;勝利のメッセージをモチモチ
+				;CALL D20XX_MAP_チュートリアル_勝利 
+			ELSEIF RESULT == 2;敗北時
+				;敗北のメッセージをモチモチ
+				;CALL D20XX_MAP_チュートリアル_敗北
+			ELSE
+				;中断したときのメッセージをモチモチ
+				;CALL D20XX_MAP_チュートリアル_撤退
+			ENDIF
+		CASE "デバッグ用MAP"
+			CALL D20XX_MAP_デバッグ用MAP
+			CALL D20XX_Main
+		CASE "返回"
+			RETURN 1
+	ENDSELECT
+	
+;;;=========================
+;;;D20XXメインメソッド
+;;;ARGS = MAP情報三次元データ
+;;;ARGS:1 = ユ针织データ
+;;;=========================
+@D20XX_Main
+	#DIM DYNAMIC X_View
+	#DIM DYNAMIC Y_View
+	#DIM DYNAMIC LCount
+
+	#DIMS DYNAMIC WeaponList,3
+
+	#DIMS IsEND
+
+	#DIM DYNAMIC SelectX
+	#DIM DYNAMIC SelectY
+	#DIM DYNAMIC Temp;何か別の名前つけたい
+
+	;#region 初期化
+		X_View = 0 ;い移開はMAP事に初期描画位置を変えられるようにする予定でございまする
+		Y_View = 0 ;い移開はMAP事に初期描画位置を変えられるようにする予定でございまする
+		
+		D20XX_TarnMode = System
+
+		CALL D20XX_MoveCostMap_Constructor
+		CALL D20XX_AttackRangeMap_Constructor
+
+		;これはテスト用だよ、
+		D20XX_SelectCommandMode = 移動
+		D20XX_SelectWeapon = None
+
+	;#endregion
+
+	;CALL D20XX_MAP_チュートリアル
+	;メインループ
+	$MainLoop
+		;---------------------------------
+		;PLAYヤーのターン(先手が解放軍のパターンにもしやすいようにモジュール化したいなぁ)
+		;---------------------------------
+		D20XX_TarnMode = Player
+		$PlayerLoop
+			CALL D20XX_GenerateHTML(X_View,Y_View)
+			CALL D20XX_ViewHTML
+			INPUT
+			;ユ针织ボタンが押ささった時
+			IF RESULT >= 2000000
+				Temp = RESULT - 2000000
+				SelectY = Temp / 1000
+				SelectX = Temp % 1000
+				IF D20XX_SelectUnit == 0
+					IF D20XX_SelectUnit != TOINT(D20XX_MAP:SelectY:SelectX:1)
+						IF D20XX_Unit:TOINT(D20XX_MAP:SelectY:SelectX:1):0 == "自軍"
+							D20XX_SelectUnit = 0
+							D20XX_SelectUnit = TOINT(D20XX_MAP:SelectY:SelectX:1)
+						ELSE
+							CALL D20XX_KOJO_イェニェル("敵ユ针织選択警告")
+						ENDIF
+					ELSEIF D20XX_SelectUnit == TOINT(D20XX_MAP:SelectY:SelectX:1)
+						D20XX_SelectUnit = 0;同じユ针织が押された時は選択中ユ针织を重置(解除)するわよ
+						;#region 武器選択初期化
+							VARSET WeaponList:0 ,"None"
+							D20XX_SelectWeapon = None
+						;#endregion
+					ENDIF
+				ELSEIF D20XX_SelectCommandMode == "移動"
+					IF D20XX_SelectUnit != TOINT(D20XX_MAP:SelectY:SelectX:1)
+						IF D20XX_Unit:TOINT(D20XX_MAP:SelectY:SelectX:1):0 == "自軍"
+							D20XX_SelectUnit = TOINT(D20XX_MAP:SelectY:SelectX:1);選択ユ针织を変更するわよ
+							;#region 武器選択初期化
+								VARSET WeaponList:0 ,"None"
+								D20XX_SelectWeapon = None
+							;#endregion
+						ELSEIF D20XX_Unit:TOINT(D20XX_MAP:SelectY:SelectX:1):0 == "敵"
+							CALL D20XX_KOJO_イェニェル("敵ユ针织選択警告")
+						ENDIF
+					ELSEIF D20XX_SelectUnit == TOINT(D20XX_MAP:SelectY:SelectX:1)
+						D20XX_SelectUnit = 0;同じユ针织が押された時は選択中ユ针织を重置(解除)するわよ
+						;#region 武器選択初期化
+							VARSET WeaponList:0 ,"None"
+							D20XX_SelectWeapon = None
+						;#endregion
+					ENDIF
+				ELSEIF D20XX_SelectCommandMode == "攻撃"
+					IF D20XX_Unit:TOINT(D20XX_MAP:SelectY:SelectX:1):0 == "自軍"
+						D20XX_SelectUnit = TOINT(D20XX_MAP:SelectY:SelectX:1)
+						D20XX_SelectWeapon = None
+					ELSE
+						CALL D20XX_HitCalc(SelectY,SelectX)
+					ENDIF
+				ENDIF
+				;GOTO PlayerLoop
+			;領帯ルボタンが押ささった時
+			ELSEIF RESULT >= 1000000
+				IF D20XX_SelectUnit != 0
+					Temp = RESULT - 1000000
+					SelectY = Temp / 1000
+					SelectX = Temp % 1000
+					SIF SelectY == 1000
+						SelectY = 0
+					
+					IF D20XX_SelectCommandMode == "移動"
+						CALL D20XX_Move(SelectY,SelectX)
+					ELSEIF D20XX_SelectCommandMode == "攻撃"
+						CALL D20XX_HitCalc(SelectY,SelectX)
+					ENDIF
+
+					;CALL D20XX_MoveCostMap_Constructor
+					;CALL D20XX_AttackRangeMap_Constructor
+					
+					;移動してもユ针织選択解除しないほうが玩耍やすかったですわ
+					;移動したらユ针织選択を解除するわよ
+					;D20XX_SelectUnit = 0
+				ENDIF
+				;GOTO PlayerLoop
+			;其他指令が押ささった時
+			ELSE
+				;指令モード変更ボタンとかターン終了ボタンとかの処理回りね
+				;#region 武器選択
+					IF RESULT == 1;武器1が選ばれた場合
+						VARSET WeaponList:0 ,"None"
+						SPLIT D20XX_Unit:D20XX_SelectUnit:6,",",WeaponList
+						D20XX_SelectWeapon = %WeaponList:0%
+						D20XX_SelectCommandMode = 攻撃
+					ELSEIF RESULT == 2;武器2が選ばれた場合
+						VARSET WeaponList:0 ,"None"
+						SPLIT D20XX_Unit:D20XX_SelectUnit:6,",",WeaponList
+						D20XX_SelectWeapon = %WeaponList:1%
+						D20XX_SelectCommandMode = 攻撃
+					ELSEIF RESULT == 3;武器3が選ばれた場合
+						VARSET WeaponList:0 ,"None"
+						SPLIT D20XX_Unit:D20XX_SelectUnit:6,",",WeaponList
+						D20XX_SelectWeapon = %WeaponList:2%
+						D20XX_SelectCommandMode = 攻撃
+				;#endregion
+
+				;#region MAP移動キー
+					ELSEIF RESULT == 100;↑
+						SIF Y_View > 0
+							Y_View--
+					ELSEIF RESULT == 102;→
+						SIF X_View < 200
+							X_View++
+					ELSEIF RESULT == 101;←
+						SIF X_View > 0
+							X_View--
+					ELSEIF RESULT == 103;↓
+						SIF Y_View < 200
+							Y_View++ 
+				;#endregion
+
+				;#region 命令モード変更
+					ELSEIF RESULT == 200
+						IF D20XX_SelectCommandMode == "移動"
+							D20XX_SelectCommandMode = 攻撃
+						ELSEIF D20XX_SelectCommandMode == "攻撃"
+							D20XX_SelectCommandMode = 移動
+						ENDIF
+				;#endregion
+
+
+				;#region Debug用 後で消す
+					ELSEIF RESULT == 500
+						CALL D20XX_UnitSearch (1)
+						PRINTFORML 見つかった？ = {RESULT:0} Y = {RESULT:1}   X = {RESULT:2}
+						CALL D20XX_UnitSearch (2)
+						PRINTFORML 見つかった？ = {RESULT:0} Y = {RESULT:1}   X = {RESULT:2}
+						CALL D20XX_AI_AsterByUnit(1,2)
+				;#endregion
+
+					ELSEIF RESULT == 800
+						CALL D20XX_BlackMarket
+					
+					ELSEIF RESULT == 900;マニュアル
+						CALL D20XX_Manual
+					ELSEIF RESULT == 998
+						;PLAYヤーのターン終了よ
+						D20XX_SelectUnit = 0
+						GOTO EndPlayerLoop
+					ELSEIF RESULT == 999
+						RETURN 0;後々、途中退室処理も作らねばならぬなぁ
+					ENDIF
+			ENDIF
+		GOTO PlayerLoop
+		$EndPlayerLoop
+		;---------------------------------
+		;敵のターン(先手が種族解放軍のパターンにもしやすいようにモジュール化したいなぁ)
+		;---------------------------------
+		D20XX_TarnMode = Enemy
+		CALL D20XX_AI_Test
+		;---------------------------------
+		;ターン終了時の処理
+		;---------------------------------
+		D20XX_TarnMode = System
+		CALL D20XX_Judgment
+		IF RESULT == 1
+			PRINTFORML 
+			PRINTFORML !!勝利!!
+			PRINTFORMW 
+			RETURN 1
+			;CALL CALL_LIB(@"勝利_%D20XX_StageName%")
+		ELSEIF RESULT == -1
+			PRINTFORML 
+			PRINTFORML 敗北...
+			PRINTFORMW 
+			RETURN 2
+		ELSE
+			CALL D20XX_UnitMovePower_Constructor
+			GOTO MainLoop
+		ENDIF
+@D20XX_ViewHTML
+	#DIM DYNAMIC LCount
+	#DIM DYNAMIC UnitFace
+	#DIMS DYNAMIC Fcsv
+	#DIMS DYNAMIC Weapon,4
+		;CLEARLINE LINECOUNT
+		CALL DEL_MOB
+		FOR LCount,0,28
+			HTML_PRINT @"%D20XX_HTML:LCOUNT%"
+		NEXT
+		DRAWLINE
+		IF D20XX_SelectUnit > 0
+			STR:0 = 選択中ユ针织：%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"ユ针织名")%
+			STR:1 = HTML:　HP:%D20XX_Unit:D20XX_SelectUnit:2%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"HP")%　<nonbutton pos='3000'>-武装-</nonbutton>
+			STR:2 = HTML:　行動力:%D20XX_Unit:D20XX_SelectUnit:3%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"行動力")%　
+			STR:3 = HTML:　指揮統制率:%D20XX_Unit:D20XX_SelectUnit:4%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"指揮統制率")%　
+			STR:4 = HTML:　ERA:%D20XX_Unit:D20XX_SelectUnit:5%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"ERA")%　
+			STR:5 = HTML:　
+			STR:6 = HTML:　
+			STR:7 = HTML:　
+			STR:8 = HTML:　
+			SPLIT D20XX_Unit:D20XX_SelectUnit:6,",",Weapon
+			FOR LCount, 0, 3
+				IF Weapon:LCount != ""
+					IF D20XX_SelectWeapon == Weapon:LCount
+						STR:((LCount*2)+2) += @"<button pos='3100' value = '{LCount + 1}' title= '%D20XX_GET_WEAPONDATA(Weapon:LCount,"解説")%'><font color='Yellow'><b>%D20XX_GET_WEAPONDATA(Weapon:LCount,"武器名")%</b></font></button>"
+						STR:((LCount*2)+3) += @"<nonbutton pos='3200'>威力:%D20XX_GET_WEAPONDATA(Weapon:LCount,"威力")%×%D20XX_GET_WEAPONDATA(Weapon:LCount,"射撃回数")%　命中率：%D20XX_GET_WEAPONDATA(Weapon:LCount,"命中率")%　制圧力：%D20XX_GET_WEAPONDATA(Weapon:LCount,"制圧力")%</nonbutton>"
+					ELSE
+						STR:((LCount*2)+2) += @"<button pos='3100' value = '{LCount + 1}' title= '%D20XX_GET_WEAPONDATA(Weapon:LCount,"解説")%'>%D20XX_GET_WEAPONDATA(Weapon:LCount,"武器名")%</button>"
+						STR:((LCount*2)+3) += @"<nonbutton pos='3200'>威力:%D20XX_GET_WEAPONDATA(Weapon:LCount,"威力")%×%D20XX_GET_WEAPONDATA(Weapon:LCount,"射撃回数")%　命中率：%D20XX_GET_WEAPONDATA(Weapon:LCount,"命中率")%　制圧力：%D20XX_GET_WEAPONDATA(Weapon:LCount,"制圧力")%</nonbutton>"
+					ENDIF
+				ELSE 
+					
+				ENDIF
+			NEXT
+			
+			IF D20XX_Unit:D20XX_SelectUnit:10 == "None"||D20XX_Unit:D20XX_SelectUnit:10 == ""
+				CALL D20XX_Generate_UniqueFcsv, "兵士"
+				Fcsv = %RESULTS%
+				CALL D20XX_FACE_DFRAME(Fcsv, "")
+			ELSE
+				Fcsv = %D20XX_Leader:TOINT(D20XX_Unit:D20XX_SelectUnit:10):0%
+				CALL D20XX_FACE_DFRAME(Fcsv, "")
+			ENDIF
+			CLEARLINE 1
+			DRAWLINE
+			SETCOLOR 0xffdc00
+			IF D20XX_Unit:D20XX_SelectUnit:10 != "None"
+			HTML_PRINT @"　　- %D20XX_Leader:TOINT(D20XX_Unit:D20XX_SelectUnit:10):1% -"
+			ELSE
+				PRINTFORML 　　- 路人リーダー -
+			ENDIF
+			RESETCOLOR
+			PRINTFORML 口上入力スペース
+			PRINTFORML 口上入力スペース
+
+			
+			;PRINTFORML 選択中ユ针织：%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"ユ针织名")%
+			;PRINTFORML HP:%D20XX_Unit:D20XX_SelectUnit:2%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"HP")%　
+			;PRINTFORML 行動力:%D20XX_Unit:D20XX_SelectUnit:3%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"行動力")%　
+			;PRINTFORML 指揮統制率:%D20XX_Unit:D20XX_SelectUnit:4%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"指揮統制率")%　
+			;PRINTFORML ERA:%D20XX_Unit:D20XX_SelectUnit:5%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"ERA")%　
+			;PRINTFORML 　-武装-
+			;SPLIT D20XX_Unit:D20XX_SelectUnit:6,",",Weapon
+			;FOR LCount, 0, 3
+			;	IF Weapon:LCount != ""
+			;		IF D20XX_SelectWeapon == Weapon:LCount
+			;			HTML_PRINT @"<shape type='space' param='200'><button value = '{LCount + 1}' title= '%D20XX_GET_WEAPONDATA(Weapon:LCount,"解説")%'><font color='Yellow'><b>%D20XX_GET_WEAPONDATA(Weapon:LCount,"武器名")%</b></font></button>"
+			;			HTML_PRINT @"<shape type='space' param='300'>威力:%D20XX_GET_WEAPONDATA(Weapon:LCount,"威力")%×%D20XX_GET_WEAPONDATA(Weapon:LCount,"射撃回数")%　命中率：%D20XX_GET_WEAPONDATA(Weapon:LCount,"命中率")%　制圧力：%D20XX_GET_WEAPONDATA(Weapon:LCount,"制圧力")%"
+			;		ELSE
+			;			HTML_PRINT @"<shape type='space' param='200'><button value = '{LCount + 1}' title= '%D20XX_GET_WEAPONDATA(Weapon:LCount,"解説")%'>%D20XX_GET_WEAPONDATA(Weapon:LCount,"武器名")%</button>"
+			;			HTML_PRINT @"<shape type='space' param='300'>威力:%D20XX_GET_WEAPONDATA(Weapon:LCount,"威力")%×%D20XX_GET_WEAPONDATA(Weapon:LCount,"射撃回数")%　命中率：%D20XX_GET_WEAPONDATA(Weapon:LCount,"命中率")%　制圧力：%D20XX_GET_WEAPONDATA(Weapon:LCount,"制圧力")%"
+			;		ENDIF
+			;	ELSE 
+			;		PRINTL
+			;		PRINTL
+			;	ENDIF
+			;NEXT
+		ELSE
+			STR:0 = 選択中ユ针织：无
+			STR:1 = HTML:　HP:0/0　<nonbutton pos='3000'>-武装-</nonbutton>
+			STR:2 = HTML:　行動力:0/0　<nonbutton pos='3100'>Null</nonbutton>
+			STR:3 = HTML:　指揮統制率:0
+			STR:4 = HTML:　ERA:0
+			STR:5 = 　
+			STR:6 = 　
+			STR:7 = 　
+			STR:8 = 　
+
+			IF CFLAG:MASTER:颜绘 == 0
+				CALL D20XX_Generate_UniqueFcsv, "無人"
+				Fcsv = %RESULTS%
+				CALL D20XX_FACE_DFRAME(Fcsv, "無人")
+			ELSE
+				CALL DIALOGUE_FRAME(MASTER,"憤怒/托下巴/对话框・・・")
+			ENDIF
+			CLEARLINE 1
+			DRAWLINE
+			SETCOLOR 0xffdc00
+			PRINTFORML 　　- %NAME:MASTER% -
+			RESETCOLOR
+			PRINTFORML (どうするか行動を決めなくては...)
+			PRINTFORML 
+
+
+		;	CALL CREATE_MOB, "イェニェル"
+		;	Yenyel = CNUM("イェニェル")
+		;	STR:1 = - _黄色_イェニェル_ -
+		;	STR:2 = 「%PRINT_NamariF("どいつえの命令をするのか教えてくれ")%」
+		;	CALL DIALOGUE_FRAME(Yenyel, "本")
+		;	RESETCOLOR 
+		;	PRINTFORML 
+		;	PRINTFORML 
+		;	CALL D20XX_KOJO_イェニェル("ユ针织未選択")
+		;	FOR LCount, 0, 11
+		;		PRINTL 
+		;	NEXT 
+		ENDIF
+
+		DRAWLINE
+		;TRYCALLFORM D20XX_Start_KOJO_K15
+		PRINTFORML [800] イェニェル兵器廠社 [900] 操作説明 [999] 迷你游戏を終了する
+
+@D20XX_ViewHTML_Enemy
+	#DIM DYNAMIC LCount
+	#DIMS DYNAMIC Weapon,4
+	#DIMS DYNAMIC Fcsv
+		;CLEARLINE LINECOUNT
+		CALL DEL_MOB
+		FOR LCount,0,28
+			HTML_PRINT @"%D20XX_HTML:LCOUNT%"
+		NEXT
+		DRAWLINE
+		IF D20XX_SelectUnit > 0
+			STR:0 = 選択中ユ针织：%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"ユ针织名")%
+			STR:1 = HTML:　HP:%D20XX_Unit:D20XX_SelectUnit:2%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"HP")%　<nonbutton pos='3000'>-武装-</nonbutton>
+			STR:2 = HTML:　行動力:%D20XX_Unit:D20XX_SelectUnit:3%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"行動力")%　
+			STR:3 = HTML:　指揮統制率:%D20XX_Unit:D20XX_SelectUnit:4%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"指揮統制率")%　
+			STR:4 = HTML:　ERA:%D20XX_Unit:D20XX_SelectUnit:5%/%D20XX_GET_UNITDATA(D20XX_Unit:D20XX_SelectUnit:1,"ERA")%　
+			STR:5 = HTML:　
+			STR:6 = HTML:　
+			STR:7 = HTML:　
+			STR:8 = HTML:　
+			SPLIT D20XX_Unit:D20XX_SelectUnit:6,",",Weapon
+			FOR LCount, 0, 3
+				IF Weapon:LCount != ""
+					IF D20XX_SelectWeapon == Weapon:LCount
+						STR:((LCount*2)+2) += @"<button pos='3100' value = '{LCount + 1}' title= '%D20XX_GET_WEAPONDATA(Weapon:LCount,"解説")%'><font color='Yellow'><b>%D20XX_GET_WEAPONDATA(Weapon:LCount,"武器名")%</b></font></button>"
+						STR:((LCount*2)+3) += @"<nonbutton pos='3200'>威力:%D20XX_GET_WEAPONDATA(Weapon:LCount,"威力")%×%D20XX_GET_WEAPONDATA(Weapon:LCount,"射撃回数")%　命中率：%D20XX_GET_WEAPONDATA(Weapon:LCount,"命中率")%　制圧力：%D20XX_GET_WEAPONDATA(Weapon:LCount,"制圧力")%</nonbutton>"
+					ELSE
+						STR:((LCount*2)+2) += @"<button pos='3100' value = '{LCount + 1}' title= '%D20XX_GET_WEAPONDATA(Weapon:LCount,"解説")%'>%D20XX_GET_WEAPONDATA(Weapon:LCount,"武器名")%</button>"
+						STR:((LCount*2)+3) += @"<nonbutton pos='3200'>威力:%D20XX_GET_WEAPONDATA(Weapon:LCount,"威力")%×%D20XX_GET_WEAPONDATA(Weapon:LCount,"射撃回数")%　命中率：%D20XX_GET_WEAPONDATA(Weapon:LCount,"命中率")%　制圧力：%D20XX_GET_WEAPONDATA(Weapon:LCount,"制圧力")%</nonbutton>"
+					ENDIF
+				ELSE 
+					
+				ENDIF
+			NEXT
+			
+			IF D20XX_Unit:D20XX_SelectUnit:10 == "None"||D20XX_Unit:D20XX_SelectUnit:10 == ""
+				CALL D20XX_Generate_UniqueFcsv, "兵士"
+				Fcsv = %RESULTS%
+				CALL D20XX_FACE_DFRAME(Fcsv, "")
+			ELSE
+				Fcsv = %D20XX_Unit:D20XX_SelectUnit:10%
+				CALL D20XX_FACE_DFRAME(Fcsv, "")
+			ENDIF
+			CLEARLINE 1
+			DRAWLINE
+			SETCOLOR 0xffdc00
+			PRINTFORML 　　- 敵軍角色名を挿入 -
+			RESETCOLOR
+			PRINTFORML 敵軍口上入力スペース
+			PRINTFORML 敵軍口上入力スペース
+			DRAWLINE
+			PRINTFORML 計算を実行中...
+		ENDIF
+;背景色変更する領帯ミングを用意するために、迷你游戏終了時はココに来るようにする。
+@D20XX_EndGame
+	CALL D20XX_KOJO_イェニェル("游戏終了")
+	RESETBGCOLOR
+	RETURN 0

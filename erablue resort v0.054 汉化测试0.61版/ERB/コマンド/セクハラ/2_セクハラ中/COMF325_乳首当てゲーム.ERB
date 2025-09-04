@@ -1,0 +1,306 @@
+﻿
+@COMNAME325
+#FUNCTIONS
+TSTR:コマンド名受渡 = 寻找乳头游戏
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_325
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("セクハラ&飲み会")
+
+@COM_TOOLTIP_325
+LOCALS = <br>■寻找乳头游戏<br>
+LOCALS += "透过衣物轻戳胸部，猜测乳头位置的游戏指令。<br>需要获得对方同意。"
+LOCALS += "<br>指令类型：性骚扰和酒会游戏<br>获取来源：接触・暴露・快感值Ｂ"
+LOCALS += "<br>专属经验值：乳头开发(TARGET・特定条件时)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+
+@COM325
+
+;乳首当てゲーム
+LOCAL = 乳首当て結果判定(TARGET)
+SELECTCASE LOCAL
+	CASE 0 TO 4
+		RFLAG:コマンド結果受渡し変数４ = 1
+		TFLAG:乳首当て連続記録 += 1
+		RCVAR:乳首開発フラグ = 1
+		CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 100)
+	CASE 5 TO 8
+		;口上のために連続記録０は後で行う
+		RFLAG:コマンド結果受渡し変数４ = -1
+	CASE 9
+		RFLAG:コマンド結果受渡し変数４ = 2
+		TFLAG:乳首当て連続記録 += 1
+		RCVAR:乳首開発フラグ = 2
+		SIF TALENT:陥没乳首
+		CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 150)
+ENDSELECT
+
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 1
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 1
+	
+;結果に関わりなく発生する快楽部分
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 150)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 150)
+CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 50)
+SIF TALENT:PLAYER:器用な指
+	CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 50)
+
+CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 30)
+CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+TIME += 20
+RETURN 1
+
+@CAN_COM325(ARG)
+#DIM CONST 必要実行値 = 20
+#DIM 実行値
+#DIM ＋表示フラグ
+
+SKIPDISP ARG
+PRINTFORML 寻找乳头游戏(%CALLNAME:TARGET%)
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+実行値 = 0
+＋表示フラグ = 0
+
+;すべての命令に共通の要素を考慮
+CALL COM_ORDER
+実行値 = RESULT
+＋表示フラグ = RESULT:1
+
+IF ABL:欲望
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += ABL:欲望 * 1
+	PRINTFORM 欲望LV{ABL:欲望}({ABL:欲望 * 1})
+	＋表示フラグ = 1
+ENDIF
+
+IF MARK:快楽刻印
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += MARK:快楽刻印 * 2
+	PRINTFORM 快乐刻印LV{MARK:快楽刻印}({MARK:快楽刻印 * 2})
+	＋表示フラグ = 1
+ENDIF
+
+;恥じらい
+IF TALENT:羞恥心 > 0
+	PRINT  - 
+	実行値 -= 1
+	PRINT 害羞(1)
+	＋表示フラグ = 1
+ENDIF
+;恋慕
+IF TALENT:恋慕
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 5
+	PRINT 爱慕(5)
+	＋表示フラグ = 1
+ENDIF
+;セフレ
+IF TALENT:セフレ
+	SIF ＋表示フラグ
+		PRINT  + 
+	実行値 += 3
+	PRINT 炮友(3)
+	＋表示フラグ = 1
+ENDIF
+
+CALL セクハラ反応タイプ判定(TARGET)
+;RFLAG:コマンド結果受渡し変数
+;1:拒絶  2:受け入れ 3:喜び
+;RFLAG:コマンド結果受渡し変数２
+;1:無知  2:無反応 3:嫌悪  4:拒否  5:余裕  6:羞恥  7:愉悦  8:汎用
+
+;セクハラ強は基本的に喜び以外に入らないはず（合意条件であり、合意に入るにはそれなりに仲良くならなければならないため）
+
+SELECTCASE RFLAG:コマンド結果受渡し変数２
+	CASE 1
+		;無知
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 10
+		PRINT 反应类型：无知(10)
+		＋表示フラグ = 1
+	CASE 2
+		;無反応
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 5
+		PRINT 反应类型：无反应(5)
+		＋表示フラグ = 1
+	CASE 3
+		;嫌悪
+		PRINT  - 
+		実行値 -= 10
+		PRINT 反应类型：厌恶(10)
+		＋表示フラグ = 1
+	CASE 4
+		;拒否
+		PRINT  - 
+		実行値 -= 5
+		PRINT 反应类型：拒绝(5)
+		＋表示フラグ = 1
+	CASE 5
+		;余裕
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 5
+		PRINT 反应类型：从容(5)
+		＋表示フラグ = 1
+	CASE 6
+		;羞恥
+		PRINT  - 
+		実行値 -= 10
+		PRINT 反应类型：羞耻(10)
+		＋表示フラグ = 1
+	CASE 7
+		;愉悦
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 10
+		PRINT 反应类型：愉悦(10)
+		＋表示フラグ = 1
+ENDSELECT
+
+;合計を表示(20以上で実行)
+PRINTFORM  = {実行値}
+
+SIF 実行値 < 必要実行値
+	PRINT  < 
+SIF 実行値 == 必要実行値
+	PRINT  = 
+SIF 実行値 > 必要実行値
+	PRINT  > 
+PRINTFORM 执行值{必要実行値}
+
+WAIT
+SKIPDISP 0
+
+;実行できない
+SIF 実行値 < 必要実行値
+	RETURN 0
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE325
+;実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;Bがない場合駄目
+SIF TALENT:TARGET:Ｂ感度 == -2
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(325)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM325
+
+;乳首当てゲーム
+SELECTCASE RFLAG:コマンド結果受渡し変数２
+	CASE 1
+		;無知
+		PRINT 完全不明白将要发生什么
+	CASE 2
+		;無反応
+		PRINT 面无表情仿佛毫不在意
+	CASE 3
+		;嫌悪
+		PRINT 用嫌弃的眼神瞪视着你
+	CASE 4
+		;拒否
+		PRINT 面露不悦却仍保持等待
+	CASE 5
+		;余裕
+		PRINT 边饮酒边观察你的举动
+	CASE 6
+		;羞恥
+		PRINT 脸颊绯红闭目等待
+	CASE 7
+		;愉悦
+		PRINT 带着挑衅笑容期待后续
+ENDSELECT
+
+PRINTFORMW 将手指缓缓伸向%CALLNAME:TARGET%胸前乳头的位置。
+
+CALL 乳首当てゲーム結果メッセージ(TARGET)
+
+
+
+@乳首当てゲーム結果メッセージ(対象キャラ)
+#DIM 対象キャラ
+
+SELECTCASE RFLAG:コマンド結果受渡し変数４
+	CASE 1
+		PRINTW 【命中！】
+		IF TEQUIP:対象キャラ:上半身鎧あり
+			PRINTFORML %CALLNAME:PLAYER%成功定位%CALLNAME:対象キャラ%的乳头位置，但因护甲阻隔未能实际触碰…
+		ELSE
+			PRINTFORM %CALLNAME:PLAYER%成功命中%CALLNAME:対象キャラ%的
+			IF TCVAR:対象キャラ:陥没乳首露出フラグ || (!TALENT:対象キャラ:陥没乳首 && (PALAM:対象キャラ:欲情 >= PALAMLV:3 || (発情期判定(対象キャラ) && RISKY_DAY(対象キャラ) > 0)))
+				PRINTFORM 勃起状态的
+			ELSEIF TALENT:対象キャラ:陥没乳首
+				PRINTFORM 凹陷状态的
+			ENDIF
+			PRINTFORML 乳头并成功戳中！
+		ENDIF
+	CASE -1
+		PRINTW 【偏了…】
+		IF RAND:2 && !TEQUIP:対象キャラ:上半身鎧あり && TALENT:対象キャラ:恋慕 && (TCVAR:対象キャラ:陥没乳首露出フラグ || PALAM:対象キャラ:欲情 >= PALAMLV:3 || (発情期判定(対象キャラ) && RISKY_DAY(対象キャラ) > 0))
+			PRINTFORML %CALLNAME:PLAYER%似乎误判了乳头位置…
+			;男性にもできるから「乳肉」はどうかな……
+			SELECTCASE RAND:3
+				CASE 2
+				PRINTFORML 擅自认定失败却主动挺胸的%CALLNAME:対象キャラ%意外享受乳肉被触摸的乐趣…
+				CASE 1
+				PRINTFORML 没有戳中勃起乳头时，%CALLNAME:対象キャラ%发出遗憾的轻哼…
+				CASE 0
+				PRINTFORML 指尖划过膨胀的乳晕时，%CALLNAME:対象キャラ%的乳头愈发挺立…
+			ENDSELECT
+		ELSE
+			PRINTFORML %CALLNAME:PLAYER%似乎判断错了乳头位置…
+		ENDIF
+	CASE 2
+		PRINTW 【命中！…但是】
+		IF TEQUIP:対象キャラ:上半身鎧あり
+			PRINTFORML %CALLNAME:PLAYER%成功定位%CALLNAME:対象キャラ%的乳头位置，但因护甲阻隔未能实际触碰…
+			PRINTFORML %CALLNAME:対象キャラ%便以未实际触碰为由抵赖…
+			PRINTFORML 于是%CALLNAME:PLAYER%强行从护甲缝隙伸入手指，强行触碰%CALLNAME:対象キャラ%的乳头…
+		;乳首が陥没している＋その乳首が勃起している
+		ELSEIF TALENT:対象キャラ:陥没乳首 && TCVAR:対象キャラ:陥没乳首露出フラグ
+			PRINTFORML %CALLNAME:PLAYER%准确命中勃起的乳头，但%CALLNAME:対象キャラ%却坚称偏离目标…
+			PRINTFORML 不过在%CALLNAME:PLAYER%用指尖捏住挺立乳头时，%CALLNAME:対象キャラ%终于认输…
+		;おちくびが陥没しているor通常乳首
+		ELSE
+			PRINTFORM %CALLNAME:PLAYER%成功命中%CALLNAME:対象キャラ%的
+			SIF TALENT:対象キャラ:陥没乳首
+				PRINTFORM 凹陷状态的
+			PRINTFORML 乳头，却遭%CALLNAME:対象キャラ%矢口否认…
+			PRINTFORM 通过旋转按压的刺激手法
+			IF TALENT:対象キャラ:陥没乳首
+				PRINTFORM 将凹陷乳头挑出后
+			ELSE
+				PRINTFORM ，
+			ENDIF
+			PRINTFORML 终于迫使%CALLNAME:対象キャラ%认输…
+		ENDIF
+ENDSELECT

@@ -1,0 +1,1197 @@
+﻿;-------------------------------------------------
+;セックス系コマンド
+;-------------------------------------------------
+@COMNAME62
+#FUNCTIONS
+TSTR:コマンド名受渡 = 插入肛门
+SIF MODE_存在判定_順不同("插入肛门系", PLAYER, TARGET)
+	TSTR:コマンド名受渡 = 变更肛交体位
+
+;弱点コマンド欄に専用の文字列を表示したい場合，これを設定すること
+弱点コマンド欄表示名 = 插入肛门
+
+SIF 派生名フラグ
+	TSTR:コマンド名受渡 = 插入肛门
+
+;許可時の特別文章はここに記入
+IF TFLAG:オートコマンドフラグ >= 4000
+	;反転時，つまりあなたが入れる方
+	許可取り文章 = %CALLNAME:TARGET%希望%CALLNAME:PLAYER%进行[肛门插入]…
+ELSE
+	許可取り文章 = %CALLNAME:PLAYER%想要对%CALLNAME:TARGET%进行[肛门插入]…
+ENDIF
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_62
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("Ａ系")
+SIF CFLAG:TARGET:睡眠
+	TFLAG:コマンドタイプ受渡 = COMTYPE("セクハラ強")
+睡眠中許可 = 1
+;弱点コマンドカテゴリ = A
+同時モード許可 = 3
+同時モード拡張許可 = 1
+オートコマンド許可 = 3
+反転オート許可 = 3
+
+@COM_TOOLTIP_62
+LOCALS = <br>■插入肛门<br>
+LOCALS += "插入对方肛门进行肛交的指令。<br>Ａ插入系模式中转变为[变更肛交体位]。<br>进入Ａ插入模式，在模式变更或性行为结束前持续产生快感。"
+LOCALS += "<br>指令类型：Ａ系<br>获取来源：快Ａ・暴露・接触・痛苦"
+LOCALS += "<br>专属经验值：Ｃ性交经验_Ａ插入(PLAYER)・Ａ性交经验(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM62
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+#DIM ランダム候補, 20
+#DIMS 体位名
+#DIMS 显示名
+
+IF TFLAG:オートコマンドフラグ
+	;オートで実行する場合
+	;ランダムで体位を決定して実行する
+	VARSET ランダム候補, -1
+	LOCAL:1 = 0
+	FOR LOCAL, 0, 12
+		TRYCALLFORM COM_ABLE62_{LOCAL}
+		IF RESULT
+			ランダム候補:(LOCAL:1) = LOCAL
+			LOCAL:1 ++
+		ENDIF
+	NEXT
+	LOCAL = ランダム候補:(RAND:(LOCAL:1))
+	TRYCALLFORM COM62_{LOCAL}
+	;メッセージ用に体位の種類を保存
+	RFLAG:コマンド結果受渡し変数 = LOCAL
+	CALL オート体位変更Ａ
+	RETURN 1
+ELSEIF GETBIT(FLAG:モード管理, モードビット_同時)
+	IF RFLAG:コマンド結果受渡し変数 == 12
+		TRYCALLFORM COM62_12(強さ初期値記録, 速さ初期値記録)
+	ELSE
+		強さ初期値記録 = 0
+		速さ初期値記録 = 0
+		$体位_LOOP2
+		DRAWLINE
+		PRINTL ■请选择初始速度・强度
+		PRINT 　　肛门插入强度：
+		PRINTBUTTON "[-]", 899
+		FOR LOCAL, 0, 6
+			IF 強さ初期値記録 >= LOCAL
+				PRINTBUTTON "■", 900 + LOCAL
+			ELSE
+				PRINTBUTTON "□", 900 + LOCAL
+			ENDIF
+		NEXT
+		PRINTBUTTON "[+]", 906
+		PRINT 　　
+		PRINT 肛门插入速度：
+		PRINTBUTTON "[-]", 909
+		FOR LOCAL, 0, 6
+			IF 速さ初期値記録 >= LOCAL
+				PRINTBUTTON "■", 910 + LOCAL
+			ELSE
+				PRINTBUTTON "□", 910 + LOCAL
+			ENDIF
+		NEXT
+		PRINTBUTTON "[+]", 916
+		PRINTL
+		PRINTL
+		PRINTBUTTONLC "[998]決定", 998
+		PRINTBUTTONLC "[999]返回", 999
+
+		BINPUT
+
+		LOCAL = RESULT
+		SELECTCASE LOCAL
+			CASE 900 TO 905
+				強さ初期値記録 = LOCAL - 900
+				GOTO 体位_LOOP2
+			CASE 910 TO 915
+				速さ初期値記録 = LOCAL - 910
+				GOTO 体位_LOOP2
+			CASE 899
+				強さ初期値記録 = MAX(強さ初期値記録 - 1, 0)
+				GOTO 体位_LOOP2
+			CASE 906
+				強さ初期値記録 = MIN(強さ初期値記録 + 1, 5)
+				GOTO 体位_LOOP2
+			CASE 909
+				速さ初期値記録 = MAX(速さ初期値記録 - 1, 0)
+				GOTO 体位_LOOP2
+			CASE 916
+				速さ初期値記録 = MIN(速さ初期値記録 + 1, 5)
+				GOTO 体位_LOOP2
+			CASE 999
+				RETURN -1
+		ENDSELECT
+		LOCAL:10 = TARGET
+		FOR LOCAL, 0, 同時モード_選択数
+			SIF 同時モード_選択キャラ:LOCAL < 0
+				BREAK
+			RESULT = 0
+			TARGET = 同時モード_選択キャラ:LOCAL
+			TRYCALLFORM COM_ABLE62_12
+			IF RESULT == 0
+				TARGET = LOCAL:10
+				RETURN -1
+			ENDIF
+			RESULT = 1
+			TRYCALLFORM CAN_Ａ体位12(1)
+			IF !RESULT
+				TRYCALLFORM CAN_Ａ体位12(0)
+				RETURN -1
+			ENDIF
+		NEXT
+		TARGET = LOCAL:10
+
+		TRYCALLFORM COM62_12(強さ初期値記録, 速さ初期値記録)
+		;メッセージ用に体位の種類を保存
+		RFLAG:コマンド結果受渡し変数 = 12
+	ENDIF
+	RETURN 1
+ELSE
+	IF MODE_存在判定_完全一致("插入肛门系", PLAYER, TARGET)
+		強さ初期値記録 = A挿入強さ
+		速さ初期値記録 = A挿入速さ
+	ELSE
+		強さ初期値記録 = 0
+		速さ初期値記録 = 0
+	ENDIF
+	$体位_LOOP
+	DRAWLINE
+	PRINTL ■请选择体位
+	PRINTL
+	LOCAL:1 = 0
+	FOR LOCAL, 0, 20
+		TRYCCALLFORM COM_ABLE62_{LOCAL}
+			SELECTCASE LOCAL
+				CASE 0
+					体位名 = Ａ正常位
+					显示名 = Ａ正常位
+				CASE 1
+					体位名 = Ａ後背位
+					显示名 = Ａ后背位
+				CASE 2
+					体位名 = Ａ寝バック
+					显示名 = Ａ仰卧位
+				CASE 3
+					体位名 = Ａ対面座位
+					显示名 = Ａ対面座位
+				CASE 4
+					体位名 = Ａ背面座位
+					显示名 = Ａ背面座位
+				CASE 5
+					体位名 = Ａ騎乗位
+					显示名 = Ａ骑乘位
+				CASE 6
+					体位名 = Ａ側位
+					显示名 = Ａ侧卧位
+				CASE 7
+					体位名 = Ａ屈曲位
+					显示名 = Ａ屈曲位
+				CASE 8
+					体位名 = Ａ駅弁
+					显示名 = Ａ火车便当位
+				CASE 9
+					体位名 = Ａ背面駅弁
+					显示名 = Ａ背面火车便当位
+				CASE 10
+					体位名 = Ａ対面立位
+					显示名 = Ａ站立正面位
+				CASE 11
+					体位名 = Ａ立ちバック
+					显示名 = Ａ站立背面位
+				CASEELSE
+					CONTINUE
+			ENDSELECT
+			TRYCALLFORM 固有Ａ体位ABLE_プレイヤー側%体位名%_{NO:PLAYER}(PLAYER)
+			TRYCALLFORM 固有Ａ体位ABLE_ターゲット側%体位名%_{NO:TARGET}(TARGET)
+			IF RESULT
+				LOCAL:1 ++
+				PRINTBUTTONLC @"[{LOCAL}]%显示名%", LOCAL
+			ENDIF
+		CATCH
+			CONTINUE
+		ENDCATCH
+	NEXT
+	IF !LOCAL:1
+		PRINTW 当前无可选体位，取消操作
+		RETURN -1
+	ENDIF
+
+	PRINTL
+	PRINTL
+	PRINTL ■请选择初始速度・强度
+	PRINT 　　肛门插入强度：
+	PRINTBUTTON "[-]", 899
+	FOR LOCAL, 0, 6
+		IF 強さ初期値記録 >= LOCAL
+			PRINTBUTTON "■", 900 + LOCAL
+		ELSE
+			PRINTBUTTON "□", 900 + LOCAL
+		ENDIF
+	NEXT
+	PRINTBUTTON "[+]", 906
+	PRINT 　　
+	PRINT 肛门插入速度：
+	PRINTBUTTON "[-]", 909
+	FOR LOCAL, 0, 6
+		IF 速さ初期値記録 >= LOCAL
+			PRINTBUTTON "■", 910 + LOCAL
+		ELSE
+			PRINTBUTTON "□", 910 + LOCAL
+		ENDIF
+	NEXT
+	PRINTBUTTON "[+]", 916
+	PRINTL
+	PRINTL
+	PRINTBUTTONLC "[999]返回", 999
+
+	$INPUT_LOOP
+	INPUT
+
+	LOCAL = RESULT
+	SELECTCASE LOCAL
+		CASE 0 TO 11
+			TRYCALLFORM COM_ABLE62_{LOCAL}
+			IF RESULT
+				IF TARGET == MASTER
+					TARGET = PLAYER
+					PLAYER = MASTER
+					RFLAG:指示モード対象あなたフラグ = 1
+					TRYCALLFORM CAN_Ａ体位{LOCAL}(1)
+					IF !RESULT
+						TRYCALLFORM CAN_Ａ体位{LOCAL}(0)
+						PLAYER = TARGET
+						TARGET = MASTER
+						GOTO 体位_LOOP
+					ENDIF
+					RFLAG:指示モード対象あなたフラグ = 0
+					PLAYER = TARGET
+					TARGET = MASTER
+				ELSE
+					TRYCALLFORM CAN_Ａ体位{LOCAL}(1)
+					IF !RESULT
+						TRYCALLFORM CAN_Ａ体位{LOCAL}(0)
+						GOTO 体位_LOOP
+					ENDIF
+				ENDIF
+				TRYCALLFORM COM62_{LOCAL}(強さ初期値記録, 速さ初期値記録)
+				;メッセージ用に体位の種類を保存
+				RFLAG:コマンド結果受渡し変数 = LOCAL
+				
+				CALL オート体位変更Ａ
+				RETURN 1
+			ENDIF
+			GOTO INPUT_LOOP
+		CASE 900 TO 905
+			強さ初期値記録 = LOCAL - 900
+			GOTO 体位_LOOP
+		CASE 910 TO 915
+			速さ初期値記録 = LOCAL - 910
+			GOTO 体位_LOOP
+		CASE 899
+			強さ初期値記録 = MAX(強さ初期値記録 - 1, 0)
+			GOTO 体位_LOOP
+		CASE 906
+			強さ初期値記録 = MIN(強さ初期値記録 + 1, 5)
+			GOTO 体位_LOOP
+		CASE 909
+			速さ初期値記録 = MAX(速さ初期値記録 - 1, 0)
+			GOTO 体位_LOOP
+		CASE 916
+			速さ初期値記録 = MIN(速さ初期値記録 + 1, 5)
+			GOTO 体位_LOOP
+		CASE 999
+			A挿入強さ = 強さ初期値記録
+			A挿入速さ = 速さ初期値記録
+			RETURN -1
+		CASEELSE
+			GOTO INPUT_LOOP
+	ENDSELECT
+ENDIF
+
+@オート体位変更Ａ
+;Ｖ挿入中
+IF MODE_存在判定_ターゲット側("Ｖ挿入系", TARGET)
+	LOCAL = DT_CELL_GET("体位モードデータベース", モードID受渡し, "実行キャラ", 1)
+	SELECTCASE RFLAG:コマンド結果受渡し変数
+		;Ａ後背位
+		CASE 1
+			CALL MODE_CHANGE("騎乗位", LOCAL, TARGET)
+		;背面座位
+		CASE 4
+			CALL MODE_CHANGE("対面座位", LOCAL, TARGET)
+		;騎乗位
+		CASE 5
+			CALL MODE_CHANGE("正常位", LOCAL, TARGET)
+		;背面駅弁
+		CASE 9
+			CALL MODE_CHANGE("対面立位", LOCAL, TARGET)
+		;立ちバック
+		CASE 11
+			CALL MODE_CHANGE("駅弁", LOCAL, TARGET)
+	ENDSELECT
+ENDIF
+
+@COM62_0(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;引数は前から快楽量，露出量，接触量
+CALL Ａ体位COM(400, 50, 150)
+CALL MODE_CHANGE("Ａ正常位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_1(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;後背位
+CALL Ａ体位COM(400, 70, 100)
+CALL MODE_CHANGE("Ａ後背位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_2(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;寝バック
+CALL Ａ体位COM(600, 50, 150)
+CALL MODE_CHANGE("Ａ寝バック", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_3(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;対面座位
+CALL Ａ体位COM(550, 70, 200)
+CALL MODE_CHANGE("Ａ対面座位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_4(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;背面座位
+CALL Ａ体位COM(450, 90, 120)
+CALL MODE_CHANGE("Ａ背面座位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_5(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;騎乗位
+CALL Ａ体位COM(500, 120, 150)
+CALL SOURCE_CALC_奉仕(TARGET, PLAYER, 250)
+CALL MODE_CHANGE("Ａ騎乗位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_6(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;側位
+CALL Ａ体位COM(500, 70, 100)
+CALL MODE_CHANGE("Ａ側位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_7(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;屈曲位
+CALL Ａ体位COM(550, 70, 100)
+CALL MODE_CHANGE("Ａ屈曲位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_8(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;駅弁
+CALL Ａ体位COM(450, 70, 200)
+CALL MODE_CHANGE("Ａ駅弁", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_9(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;背面駅弁
+CALL Ａ体位COM(400, 110, 120)
+CALL MODE_CHANGE("Ａ背面駅弁", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_10(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;対面立位
+CALL Ａ体位COM(400, 70, 150)
+CALL MODE_CHANGE("Ａ対面立位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_11(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;立ちバック
+CALL Ａ体位COM(450, 90, 100)
+CALL MODE_CHANGE("Ａ立ちバック", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+RETURN RESULT
+
+@COM62_12(強さ初期値記録, 速さ初期値記録)
+#DIM 強さ初期値記録
+#DIM 速さ初期値記録
+;同時挿入
+CALL Ａ体位COM(350, 70, 90)
+IF BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	CALL MODE_CHANGE("Ａ後背位", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+ELSE
+	CALL MODE_CHANGE("Ａ立ちバック", PLAYER, TARGET, , , 強さ初期値記録, 速さ初期値記録)
+ENDIF
+RETURN RESULT
+
+
+
+@Ａ体位COM(ARG, ARG:1, ARG:2)
+;-------------------------------------------------
+;COM別FLAGの設定
+;-------------------------------------------------
+
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+CALL SOURCE_CALC_快Ａ(TARGET, PLAYER, ARG)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, ARG:1)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, ARG:2)
+
+IF !MODE_存在判定_ターゲット側("假阳具", PLAYER)
+	CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, ARG)
+ELSE
+	CALL SOURCE_CALC_快Ｖ(PLAYER, TARGET, ARG / 3)
+ENDIF
+
+;苦痛
+LOCAL = 800 * PAIN_CHECK_A(TARGET) / 1000
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, LOCAL)
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+IF EXP:Ａ性交経験 == 0
+	CALL 履歴データベース登録(CFLAG:PLAYER:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>夺取%CALLNAME:TARGET%的肛门处女</font><img src='えっちハート'>","うふふ")
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>向%CALLNAME:PLAYER%に献上肛门处女</font><img src='えっちハート'>","うふふ")
+ENDIF
+EXP:PLAYER:Ｃ性交経験_Ａ挿入 ++
+EXP:Ａ性交経験 ++
+;A処女喪失
+CALL LOST_A_VIRGIN(TARGET, PLAYER, 1)
+CALL LOST_MAN_A_VIRGIN(PLAYER, TARGET)
+;同性愛
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 4
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 4
+
+
+;愛情経験
+EXP:愛情経験 += TALENT:恋慕
+
+RETURN 1
+
+@CAN_Ａ体位0(ARG)
+;正常位
+;実行に必要な基準値を投げる
+SKIPDISP ARG
+CALL CAN_Ａ体位(30)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位1(ARG)
+;後背位
+SKIPDISP ARG
+CALL CAN_Ａ体位(32)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位2(ARG)
+;寝バック
+SKIPDISP ARG
+CALL CAN_Ａ体位(32)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位3(ARG)
+;対面座位
+SKIPDISP ARG
+CALL CAN_Ａ体位(40)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位4(ARG)
+;背面座位
+SKIPDISP ARG
+CALL CAN_Ａ体位(42)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位5(ARG)
+;騎乗位
+SKIPDISP ARG
+CALL CAN_Ａ体位(40)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位6(ARG)
+;側位
+SKIPDISP ARG
+CALL CAN_Ａ体位(40)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位7(ARG)
+;屈曲位
+SKIPDISP ARG
+CALL CAN_Ａ体位(45)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位8(ARG)
+;駅弁
+SKIPDISP ARG
+CALL CAN_Ａ体位(47)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位9(ARG)
+;背面駅弁
+SKIPDISP ARG
+CALL CAN_Ａ体位(49)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位10(ARG)
+;対面立位
+SKIPDISP ARG
+CALL CAN_Ａ体位(30)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位11(ARG)
+;立ちバック
+SKIPDISP ARG
+CALL CAN_Ａ体位(32)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+@CAN_Ａ体位12(ARG)
+;同時挿入
+SKIPDISP ARG
+CALL CAN_Ａ体位(40)
+LOCAL = RESULT
+SKIPDISP 0
+RETURN LOCAL
+
+
+@CAN_Ａ体位(必要実行値)
+#DIM 必要実行値
+#DIM 実行値
+#DIM ＋表示フラグ
+
+SIF CFLAG:TARGET:睡眠
+	RETURN 1
+
+;-------------------------------------------------
+;実行判定処理
+;-------------------------------------------------
+;縄で縛られている場合は無視（縄が無い時のみ実行判定を行う）
+;IF TEQUIP:縄 == 0
+	実行値 = 0
+	＋表示フラグ = 0
+
+	;すべての命令に共通の要素を考慮
+	CALL COM_ORDER
+	実行値 = RESULT
+	＋表示フラグ = RESULT:1
+
+	;ABL:欲望
+	IF ABL:欲望
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += ABL:欲望 * 3
+		PRINTFORM 欲望LV{ABL:欲望}({ABL:欲望 * 3})
+		＋表示フラグ = 1
+	ENDIF
+	IF RFLAG:指示モード対象あなたフラグ
+		;ABL:Ｃ感覚
+		IF ABL:Ｃ感覚
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += ABL:Ｃ感覚 * 3
+			PRINTFORM Ｃ感觉LV{ABL:Ｃ感覚}({ABL:Ｃ感覚 * 3})
+			＋表示フラグ = 1
+		ENDIF
+	ELSE
+		;ABL:Ａ感覚
+		IF ABL:Ａ感覚
+			SIF ＋表示フラグ
+				PRINT  + 
+			実行値 += ABL:Ａ感覚 * 2
+			PRINTFORM Ａ感觉LV{ABL:Ａ感覚}({ABL:Ａ感覚 * 2})
+			＋表示フラグ = 1
+		ENDIF
+	ENDIF
+	;快楽刻印
+	IF MARK:快楽刻印
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += MARK:快楽刻印 * 3
+		PRINTFORM 快乐刻印LV{MARK:快楽刻印}({MARK:快楽刻印 * 3})
+		＋表示フラグ = 1
+	ENDIF
+	;PALAM:潤滑（の不足）
+	IF RFLAG:指示モード対象あなたフラグ
+		LOCAL = PALAM:MASTER:潤滑
+	ELSE
+		LOCAL = PALAM:潤滑
+	ENDIF
+	IF LOCAL < PALAMLV:3
+		PRINT  - 
+		実行値 -= 5
+		PRINT 润滑不足(5)
+		＋表示フラグ = 1
+	ENDIF
+	;PALAM:欲情
+	IF GETPALAMLV(PALAM:欲情, 5)
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += GETPALAMLV(PALAM:欲情, 5) * 3
+		PRINTFORM 情欲LV{GETPALAMLV(PALAM:欲情, 5)}({GETPALAMLV(PALAM:欲情, 5) * 3})
+		＋表示フラグ = 1
+	ENDIF
+	;恥じらい
+	IF TALENT:羞恥心 > 0
+		PRINT  - 
+		実行値 -= 2
+		PRINT 羞耻心(2)
+		＋表示フラグ = 1
+	ENDIF
+	;快感の否定
+	IF TALENT:快感応答 < 0 && !TALENT:恋慕
+		PRINT  - 
+		実行値 -= 5
+		PRINT 否定快感(5)
+		＋表示フラグ = 1
+	ENDIF
+	;恋慕
+	IF TALENT:恋慕
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 15
+		PRINT 爱慕(15)
+		＋表示フラグ = 1
+	ELSE
+		;男嫌い（恋慕で無効）
+		IF TALENT:性別嗜好 & 1 && TALENT:PLAYER:性別 == 2
+			PRINT  - 
+			実行値 -= 12
+			PRINT 厌男(12)
+			＋表示フラグ = 1
+		ENDIF
+		;女嫌い（恋慕で無効）
+		IF TALENT:性別嗜好 & 2 && TALENT:PLAYER:性別 == 1
+			PRINT  - 
+			実行値 -= 12
+			PRINT 厌女(12)
+			＋表示フラグ = 1
+		ENDIF
+	ENDIF
+	;Ａ経験
+	IF RFLAG:指示モード対象あなたフラグ
+		;C経験
+		IF EXP:Ｃ経験 < EXPLV:2
+			PRINT  - 
+			実行値 -= 5
+			PRINT Ｃ经验不足(5)
+			＋表示フラグ = 1
+		ENDIF
+	ELSE
+		IF EXP:Ａ経験 < EXPLV:2
+			PRINT  - 
+			実行値 -= 15
+			PRINT Ａ经验不足(15)
+			＋表示フラグ = 1
+		ENDIF
+	ENDIF
+
+	;調教者がふたなり
+	IF (TALENT:PLAYER:性別 & 3) == 3
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 4
+		PRINT 扶她(4)
+		＋表示フラグ = 1
+	ENDIF
+
+	;媚薬
+	IF TEQUIP:媚薬
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 6
+		PRINT 春药(6)
+		＋表示フラグ = 1
+	ENDIF
+
+	;発情期
+	IF CFLAG:発情期フラグ < 0
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 4
+		PRINT 发情中(4)
+		＋表示フラグ = 1
+	ENDIF
+
+	;言いなり
+	IF TCVAR:言いなり
+		SIF ＋表示フラグ
+			PRINT  + 
+		実行値 += 999
+		PRINT 绝对服从(999)
+		＋表示フラグ = 1
+	ENDIF
+
+	;合計を表示(必要実行値以上で実行)
+	PRINTFORM  = {実行値}
+
+	SIF 実行値 < 必要実行値
+		PRINT  < 
+	SIF 実行値 == 必要実行値
+		PRINT  = 
+	SIF 実行値 > 必要実行値
+		PRINT  > 
+	PRINTFORM 执行值{必要実行値}
+
+	WAIT
+
+	;実行できない
+	SIF 実行値 < 必要実行値
+		RETURN 0
+;ENDIF
+RETURN 1
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@COM_ABLE62
+;插入肛门共通実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(62)
+	RETURN RESULT
+;Aがない場合駄目
+SIF TALENT:TARGET:Ａ感度 == -2
+	RETURN 0
+;調教者がオトコ，半人半妖，ふたなりの場合はある程度勃起してないとダメ
+SIF (TALENT:PLAYER:性別 & 2) && BASE:PLAYER:勃起 < 1000
+	RETURN 0
+;一定のＡ経験が必要
+SIF EXP:2 < EXPLV:3
+	RETURN 0
+;処女でなくとも潤滑不足はだめ
+SIF PALAM:潤滑 < PALAMLV:2
+	RETURN 0
+
+;調教者がオトコ，半人半妖，ふたなり，もしくは假阳具がないとダメ
+SIF !(TALENT:PLAYER:性別 & 2) && !MODE_存在判定_ターゲット側("假阳具", PLAYER)
+	RETURN 0
+
+;下半身着衣
+;前鎧，めくれない服，タイツがあると無理
+SIF TEQUIP:下腹部前鎧あり
+	RETURN 0
+SIF TEQUIP:下半身服あり && (!TEQUIP:スカートめくり可 && !TEQUIP:ずらし可)
+	RETURN 0
+SIF TEQUIP:下タイツあり && !TEQUIP:下タイツ破れ
+	RETURN 0
+
+IF !MODE_存在判定_順不同("插入肛门系", PLAYER, TARGET)
+	;ペニスを何かに使ってるなら無理（插入肛门中は許可）
+	SIF TEQUIP:PLAYER:ペニス
+		RETURN 0
+	;アナルを何かに使ってるなら無理（插入肛门中は許可）
+	SIF TEQUIP:TARGET:アナル
+		RETURN 0
+ENDIF
+
+;オートコマンド中の制限
+IF FLAG:オートコマンド判定中フラグ
+	IF GETBIT(TALENT:PLAYER:性別, 0) && TALENT:TARGET:性別 == 2
+		SIF 性癖素質:PLAYER:逆アナル < 1
+			RETURN 0
+	ENDIF
+	SIF EXP:PLAYER:Ａ経験 == 0 || EXP:TARGET:Ａ経験 == 0
+		RETURN 0
+	SIF MODE_存在判定_順不同("插入肛门系", PLAYER, TARGET)
+		RETURN 0
+	SIF MODE_存在判定_プレイヤー側("插入肛门系", PLAYER)
+		RETURN 0
+	SIF MODE_存在判定_ターゲット側("插入肛门系", TARGET)
+		RETURN 0
+ENDIF
+;睡姦の制限
+IF CFLAG:TARGET:睡眠
+	;陥落のみ
+	SIF 陥落チェック(TARGET) == 0
+		RETURN 0
+	;初ウフフずみ
+	SIF 初体験日取得("初うふふ", TARGET, MASTER) < 1
+		RETURN 0
+	;熟知や経験必要
+	SIF EXP:TARGET:肉体熟知 < 500
+		RETURN 0
+	SIF EXP:PLAYER:Ｃ性交経験_Ａ挿入 + EXP:TARGET:肉体熟知 < 1500
+		RETURN 0
+ENDIF
+
+RETURN 1
+
+@COM_ABLE62_0
+;正常位
+;お風呂場プレイ中は游戏垫が無いとダメ
+IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ELSE
+	;ベッドがないとダメ
+	SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		RETURN 0
+ENDIF
+;Ｖ挿入中ダメ
+SIF MODE_存在判定_ターゲット側("Ｖ挿入系", TARGET)
+	RETURN 0
+;相手が挿入しているとダメ
+SIF MODE_存在判定_プレイヤー側("Ｖ插入肛门系", TARGET)
+	RETURN 0
+;相手が別人と立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_1
+;後背位
+;だいたいいつでもOK
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;相手が別人と立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_2
+;寝バック
+;お風呂場プレイ中は游戏垫が無いとダメ
+IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ELSE
+	;ベッドがないとダメ
+	SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		RETURN 0
+ENDIF
+;Ｖ挿入中ダメ
+SIF MODE_存在判定_ターゲット側("Ｖ挿入系", TARGET)
+	RETURN 0
+;相手が別人と立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_3
+;対面座位
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;お風呂場プレイ中はOK
+IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 1
+ELSE
+	;ベッドがないとダメ
+	SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		RETURN 0
+ENDIF
+;Ｖ挿入中ダメ
+SIF MODE_存在判定_ターゲット側("Ｖ挿入系", TARGET)
+	RETURN 0
+;相手が挿入しているとダメ
+SIF MODE_存在判定_プレイヤー側("Ｖ插入肛门系", TARGET)
+	RETURN 0
+;相手が別人と立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_4
+;背面座位
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;お風呂場プレイ中はOK
+IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 1
+ELSE
+	;ベッドがないとダメ
+	SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		RETURN 0
+ENDIF
+;相手が別人と立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_5
+;騎乗位
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;お風呂場プレイ中は游戏垫が無いとダメ
+IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ELSE
+	;ベッドがないとダメ
+	SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		RETURN 0
+ENDIF
+;相手が別人と立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_6
+;側位
+;お風呂場プレイ中は游戏垫が無いとダメ
+IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ELSE
+	;ベッドがないとダメ
+	SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		RETURN 0
+ENDIF
+;Ｖ挿入中ダメ
+SIF MODE_存在判定_ターゲット側("Ｖ挿入系", TARGET)
+	RETURN 0
+;相手が別人と立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_7
+;屈曲位
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;お風呂場プレイ中は游戏垫が無いとダメ
+IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	SIF ITEM:20 == 0 && NOITEM == 0
+		RETURN 0
+ELSE
+	;ベッドがないとダメ
+	SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		RETURN 0
+ENDIF
+;Ｖ挿入中ダメ
+SIF MODE_存在判定_ターゲット側("Ｖ挿入系", TARGET)
+	RETURN 0
+;相手が挿入しているとダメ
+SIF MODE_存在判定_プレイヤー側("Ｖ插入肛门系", TARGET)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_8
+;駅弁
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;TARGETのほうが3サイズ大きいと抱えきれない
+SIF 体格差計算(PLAYER, TARGET) >= 3
+	RETURN 0
+;Ｖ挿入中ダメ
+SIF MODE_存在判定_ターゲット側("Ｖ挿入系", TARGET)
+	RETURN 0
+;相手が挿入しているとダメ
+SIF MODE_存在判定_プレイヤー側("Ｖ插入肛门系", TARGET)
+	RETURN 0
+;相手が別人と非立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ非立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_9
+;背面駅弁
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;TARGETのほうが3サイズ大きいと抱えきれない
+SIF 体格差計算(PLAYER, TARGET) >= 3
+	RETURN 0
+;相手が別人と非立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ非立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_10
+;対面立位
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;TARGETのほうが4サイズ大きいと届かない
+SIF 体格差計算(PLAYER, TARGET) >= 4
+	RETURN 0
+;Ｖ挿入中ダメ
+SIF MODE_存在判定_ターゲット側("Ｖ挿入系", TARGET)
+	RETURN 0
+;相手が挿入しているとダメ
+SIF MODE_存在判定_プレイヤー側("Ｖ插入肛门系", TARGET)
+	RETURN 0
+;相手が別人と非立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ非立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_11
+;立ちバック
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;TARGETのほうが4サイズ大きいと届かない
+SIF 体格差計算(PLAYER, TARGET) >= 4
+	RETURN 0
+;相手が別人と非立位中だとベッドがないとダメ
+SIF MODE_存在判定_プレイヤー側("ＶＡ非立位挿入系", TARGET) && !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	RETURN 0
+
+RETURN 1
+
+@COM_ABLE62_12
+;同時挿入
+
+;睡眠中ダメ
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+;TARGETのほうが4サイズ大きいなら游戏垫かベッドが必要
+IF 体格差計算(PLAYER, TARGET) >= 4
+	IF BATHROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+		SIF ITEM:20 == 0 && NOITEM == 0
+			RETURN 0
+	ELSE
+		SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+			RETURN 0
+	ENDIF
+ENDIF
+;插入肛门中ダメ
+SIF MODE_存在判定_ターゲット側("插入肛门系", TARGET)
+	RETURN 0
+
+RETURN 1
+
+
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM62
+#DIM 同時キャラ番号
+
+
+IF !MODE_存在判定_ターゲット側("假阳具", PLAYER)
+	LOCALS = 坚硬而勃起的阴茎
+ELSE
+	LOCALS = 假阳具
+ENDIF
+
+SELECTCASE RFLAG:コマンド結果受渡し変数
+	CASE 0
+		;正常位
+		PRINTFORML %CALLNAME:PLAYER%以传教士体位将%LOCALS%插入%CALLNAME:TARGET%的肛门
+	CASE 1
+		;後背位
+		PRINTFORML %CALLNAME:PLAYER%从后方将%LOCALS%插入趴伏的%CALLNAME:TARGET%的肛门
+	CASE 2
+		;寝バック
+		PRINTFORML %CALLNAME:PLAYER%将俯卧的%CALLNAME:TARGET%双腿分开将%LOCALS%插入肛门
+	CASE 3
+		;対面座位
+		PRINTFORML %CALLNAME:PLAYER%与%CALLNAME:TARGET%相对而坐将%LOCALS%缓缓插入肛门
+	CASE 4
+		;背面座位
+		PRINTFORML %CALLNAME:PLAYER%让%CALLNAME:TARGET%跨坐上来用肛门吞入%LOCALS%
+	CASE 5
+		;騎乗位
+		PRINTFORML %CALLNAME:PLAYER%强迫%CALLNAME:TARGET%将%LOCALS%插入肛门
+	CASE 6
+		;側位
+		PRINTFORML %CALLNAME:PLAYER%在侧卧体位下将%LOCALS%缓缓插入%CALLNAME:TARGET%的菊穴
+	CASE 7
+		;屈曲位
+		PRINTFORML %CALLNAME:PLAYER%抬起%CALLNAME:TARGET%的双腿将%LOCALS%顶入肛门深处
+	CASE 8
+		;駅弁
+		PRINTFORML %CALLNAME:PLAYER%面对着%CALLNAME:TARGET%将其抱起，并将%LOCALS%插入肛门
+	CASE 9
+		;背面駅弁
+		PRINTFORML %CALLNAME:PLAYER%从%CALLNAME:TARGET%身后将其抱起，并将%LOCALS%插入肛门
+	CASE 10
+		;対面立位
+		PRINTFORML %CALLNAME:PLAYER%在站立姿势下%LOCALS%深深贯入%CALLNAME:TARGET%的肛门
+	CASE 11
+		;立ちバック
+		PRINTFORML %CALLNAME:PLAYER%让%CALLNAME:TARGET%扶墙翘臀迎接%LOCALS%侵入肛门
+	CASE 12
+		;同時導入
+		PRINTFORM %CALLNAME:PLAYER%
+		FOR 同時キャラ番号, 0, 同時モード_選択数
+			SIF 同時キャラ番号 > 0
+				PRINT ，
+			PRINTFORM %CALLNAME:(同時モード_選択キャラ:同時キャラ番号)%
+		NEXT
+		PRINTFORML 排列整齐，依次用%LOCALS%贯穿她们的菊穴
+ENDSELECT
+
+IF CFLAG:TARGET:睡眠
+	PRINTFORML %CALLNAME:TARGET%发出细微呻吟却仍未从梦境中醒来…
+ELSEIF TCVAR:TARGET:泥酔眠姦
+	PRINTFORML %CALLNAME:PLAYER%每挺进一次，身体就%TEXTR("摇晃/剧烈摇晃")%着，
+	PRINTFORML 烂醉如泥的%CALLNAME:TARGET%似乎完全不明白正在遭受何等对待…
+ENDIF

@@ -1,0 +1,241 @@
+﻿;-------------------------------------------------
+;この角色独自の衣装を設定する。制服、体操服、泳装は既存のものから選ぶのが楽です
+;-------------------------------------------------
+@CLOTHES_K60, ARGS
+
+SELECTCASE ARGS
+;角色クター独自の内衣の組み合わせを設定できます。設定必須です。一定の確率で着用します
+;もしも普段は付けない、という事ならCSTR:胖次 = と等号の右側を書き込まない事で出来ます
+;CFLAG:随机内衣OFF = 1とした場合には、ここで設定した内衣のみを身に着けるようになります
+CASE "内衣"
+	CSTR:胖次 = 內褲/淡色/简约/
+	CSTR:胸罩 = 简约胸罩/淡色/
+
+;衣装に関わらず常に付けている飾品です。設定しなくてもかまいません
+CASE "飾品"
+	CALL SET_OTHER, "黑色黑框眼鏡"
+
+;学園での便装です。設定必須です。
+;水手服, 露脐装超短裙水手服, 西装外衣, 露脐装超短裙西装外衣, 背心,美式校服、V领毛衣など
+;黑色水手服を着せたい場合には CALL SET_COSTUME, "水手服/黒" のように書き込むことで色を変えることが出来ます
+;また、V领毛衣に限りCALL SET_COSTUME, "V领毛衣/濃紫/萌え袖"のようにして色の他に"萌え袖"をオプション指定できます
+;(RESOURCES→MAIDFACE→13服 フォルダ内にある MAIDFACE13.csv の該当衣装を見て色を選ばないとならないため上級者向きです)
+;また、女式衬衫等の上に裤吊帯を着けたい場合には CALL SET_OTHER, "裤吊帯" として下さい
+CASE "制服"
+	CALL SET_COSTUME, "西装外衣/茶色"
+;学園の体育の授業で着ます。この格好のまま部室に現れたりもする。設定必須です
+;体操服布鲁马, 体操服高開衩布鲁马, 体操服五分褲, 体操服紧身短褲, 体操服运动衫など
+CASE "体操服"
+	CALL SET_COSTUME, "体操服布鲁马"
+;学園の水泳の授業で着ます。この格好のまま部室に現れたりもする。設定必須です
+;死库水, 競泳泳装, 白比基尼, 黒比基尼など
+CASE "泳装"
+	CALL SET_COSTUME, "死库水"
+
+;自宅など学園外で着ます。設定必須です
+CASE "便装"
+	IF COND("冬") && RAND:3
+		CALL SET_SHIRT, "针织毛衣/紺色"
+	ELSEIF COND("夏") && RAND:3
+		CALL SET_SHIRT, "无袖Ｂ"
+		CALL SET_OTHER, "露肩夹克(黒)"
+	ELSEIF RAND:3 == 0
+		CALL SET_SHIRT, "V领毛衣/黒"
+	ELSEIF RAND:2
+		CALL SET_SHIRT, "露肩外衣/黒"
+	ELSE
+		CALL SET_SHIRT, "縦毛衣/黒"
+	ENDIF
+
+	SIF EQUIP:裙 == 0
+		CALL SET_SKIRT, "裙"
+
+	IF COND("冬") + COND("秋")
+		CALL SET_BOTTOM, "连褲襪"
+	ELSE
+		CALL SET_SOCKS, "短襪"
+	ENDIF
+
+;自分的房間(not主人公的房間)で着ます
+CASE "居家服"
+	IF RAND:2
+		ARGS = 便装
+		RESTART
+	ELSE
+		CALL SET_SHIRT, "半開衬衫"
+		CALL SET_BRA, "吊帯背心"
+	ENDIF
+;约会以外で家から外出際に着ます。情人旅館呼出とかね
+CASE "外出装"
+	CALL SET_SHOES, "靴"
+	ARGS = 便装
+	RESTART
+
+;もちろん约会の際に着ます
+CASE "约会衣装"
+	CALL SET_SHOES, "靴"
+	ARGS = 便装
+	RESTART
+
+;朝Ｈの際に着ます
+CASE "朝袭衣装"
+	IF COND("同居中")
+
+	ELSE
+
+	ENDIF
+;夜袭Ｈの際に着ます
+CASE "夜袭衣装"
+
+ENDSELECT
+
+
+;-------------------------------------------------
+;時間帯や場所に応じた髪型、表情の変化を記述する。設定しなくてもかまいません
+;CALL SETFLAG, "普段の髪型復元", TARGET で変化させた髪型などを普段のものに戻すことが出来る
+;-------------------------------------------------
+@MAIDFACE_K60
+IF COND("约会中")
+	
+ELSEIF PLACE("自宅")
+	
+ELSE
+	
+ENDIF
+
+;-------------------------------------------------
+;感情やシチュに応じて、角色独自の表情を設定する。設定しなくてもかまいません
+;主にEMOTION_PLUSなどで颜绘を出す際の文字列の組み合わせの代わりに使う関数です
+;-------------------------------------------------
+@EMOTION_K60, ARGS
+
+SELECTCASE ARGS
+;一人で何かしてる状態などです
+CASE "闲"
+	STR:颜绘改髪 = 
+CASE "睡眠"
+	STR:颜绘改髪 = 闭眼/無口系２/通常眉/对话框睡眠
+CASE "欣喜"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 闭眼/半開２/紅潮２
+		ELSE
+			STR:颜绘改髪 = 紅潮２/笑颜/笑顔２/对话框爱心大量
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 嘲笑/笑颜
+	ENDIF
+CASE "甜言蜜语"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 闭眼/半開２/紅潮２
+		ELSE
+			STR:颜绘改髪 = 紅潮２/笑颜/笑顔２/对话框爱心大量
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 嘲笑/笑颜
+	ENDIF
+CASE "心情好"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 無口系２/通常眉/斜眼%CONDS("眼形の番号")%/对话框乱/紅潮２/叹气
+		ELSE
+			STR:颜绘改髪 = 闭眼/栗口２/叹气/紅潮２
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 通常眉/笑顔２/对话框開心
+	ENDIF
+
+CASE "心情差"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 对话框・・・/へ字２/蹙眉/斜眼%CONDS("眼形の番号")%
+		ELSE
+			STR:颜绘改髪 = 普通眼%CONDS("眼形の番号")%/△/通常眉２/对话框乱
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = へ字４/困惑眉/斜眼%CONDS("眼形の番号")%
+	ENDIF
+
+CASE "躁动难忍"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 通常眉３/無口系２/闭眼/赤面２/对话框乱
+		ELSE
+			STR:颜绘改髪 = 嘲笑/对话框爱心大量/笑颜/赤面２/布右
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 笑颜/嘲笑/赤面
+	ENDIF
+CASE "刚睡醒"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 無口系２/斜眉２/斜眼%CONDS("眼形の番号")%/对话框困倦
+		ELSE
+			STR:颜绘改髪 = 高光无/对话框困倦/闭眼/呀哒
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 刚睡醒/普通眼%CONDS("眼形の番号")%/微笑/对话框没有
+	ENDIF
+CASE "憤怒"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 目陰効果/通常眉３/微笑２
+		ELSE
+			STR:颜绘改髪 = 嘟嘴/斜眼%CONDS("眼形の番号")%/对话框憤怒/憤怒眉
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 目陰効果/笑顔２/高光无
+	ENDIF
+
+CASE "害羞"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = へ字４/赤面/闭眼
+		ELSE
+			STR:颜绘改髪 = 赤面/笑颜/通常眉３/
+			IF RAND:2 == 0
+				STR:颜绘改髪 += "哈欠小"
+			ELSE
+				STR:颜绘改髪 += "半開３"
+			ENDIF
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 
+	ENDIF
+
+CASE "惊嚇"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 半開２/对话框惊讶
+		ELSE
+			STR:颜绘改髪 = 〇〇/哈欠小/困惑眉/对话框！？
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 普通眼%CONDS("眼形の番号")%/困惑眉/左闭眼/微笑
+	ENDIF
+
+CASE "小悪魔"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 通常眉３/紅潮２/微笑２/普通眼%CONDS("眼形の番号")%
+		ELSE
+			STR:颜绘改髪 = 赤面２/ni↘/通常眉３/笑颜
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 紅潮２/通常眉２/嘲笑
+	ENDIF
+
+CASE "红潮恍惚"
+	IF TALENT:恋慕
+		IF CEVENT("恋慕：ささくれ")
+			STR:颜绘改髪 = 栗口２/闭眼/赤面/叹气/困惑眉
+		ELSE
+			STR:颜绘改髪 = 赤面/困惑眉/普通眼%CONDS("眼形の番号")%/左闭眼/微笑２
+		ENDIF
+	ELSE
+		STR:颜绘改髪 = 嘲笑/紅潮２/蹙眉
+	ENDIF
+CASE ""
+	STR:颜绘改髪 = 
+ENDSELECT

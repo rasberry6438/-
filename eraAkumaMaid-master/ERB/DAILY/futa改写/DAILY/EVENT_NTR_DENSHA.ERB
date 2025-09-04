@@ -1,0 +1,3298 @@
+﻿@EVENT_NTR_DENSHA
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM DENSHA_LEVEL
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = FIND_COND("电车乘坐可能")
+DENSHA_LEVEL = CFLAG:DENSHA_P1:公车猥亵等级
+
+;同步公车猥亵等级
+IF DENSHA_P2 != 0 && CFLAG:DENSHA_P2:公车猥亵等级 != DENSHA_LEVEL
+	REPEAT 4
+		DENSHA_P2 = FIND_COND("电车乘坐可能")
+		;PRINTFORMW REPEAT LOOP
+		;PRINTFORMW %CALLNAME:DENSHA_P2% 公车猥亵等级 {CFLAG:DENSHA_P2:公车猥亵等级}
+		SIF DENSHA_P2 == 0 || CFLAG:DENSHA_P2:公车猥亵等级 == DENSHA_LEVEL
+		BREAK
+	REND
+	
+	;若乱数以后还是无法凑合，就单人模式
+	SIF CFLAG:DENSHA_P1:公车猥亵等级 != CFLAG:DENSHA_P2:公车猥亵等级
+	DENSHA_P2 = 0
+ENDIF
+
+;公车便器分支
+SIF CEVENT("公车便器",DENSHA_P1) && ( DENSHA_P2 == 0 || CEVENT("公车便器",DENSHA_P2) )
+	DENSHA_LEVEL = 10
+
+;PRINTFORMW %CALLNAME:DENSHA_P1% 公车猥亵等级 {CFLAG:DENSHA_P1:公车猥亵等级} 公车便器 {CEVENT("公车便器",DENSHA_P1)}
+;PRINTFORMW %CALLNAME:DENSHA_P2% 公车猥亵等级 {CFLAG:DENSHA_P2:公车猥亵等级} 公车便器 {CEVENT("公车便器",DENSHA_P2)}
+;PRINTFORMW DENSHA_LEVEL 公车猥亵等级 {DENSHA_LEVEL}
+
+DRAWLINE
+
+CALL EVENT_NTR_DENSHA_0_START, DENSHA_P2, DENSHA_LEVEL
+
+;乱数保底，确保EVENT_NTR_DENSHA_1_EVENTLOOP至少进行两次
+A = 0
+
+REPEAT 4
+	;无事发生乱数
+	SIF A > 2 && RAND:4 == 0
+	CONTINUE
+	
+	CALL EVENT_NTR_DENSHA_1_EVENTLOOP, DENSHA_P2, DENSHA_LEVEL
+	A += 1
+	
+	;公车级别的事件都是长篇，故不重复
+	SIF DENSHA_LEVEL == 10
+		BREAK
+REND
+
+CALL EVENT_NTR_DENSHA_LEVEL_PROMOTION, DENSHA_P1
+SIF DENSHA_P2 != 0
+CALL EVENT_NTR_DENSHA_LEVEL_PROMOTION, DENSHA_P2
+CALL EVENT_NTR_DENSHA_2_END, DENSHA_P2, DENSHA_LEVEL
+
+;
+;END OF @EVENT_NTR_DENSHA
+;
+
+;ARG = DENSHA_P2, ARG:1 = DENSHA_LEVEL
+@EVENT_NTR_DENSHA_0_START, ARG, ARG:1
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM DENSHA_LEVEL
+#DIM RELATION_LEVEL
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+DENSHA_LEVEL = ARG:1
+RELATION_LEVEL = EVENT_NTR_DENSHA_GET_RELATIONSHIP(DENSHA_P2)
+
+DRAWLINE
+PRINTFORML
+PRINTFORML
+PRINTFORML
+DRAWLINE
+CALL PRINT_STRW, @"_H_-车站-_H_"
+CALL PRINT_STRW, @"被要求乘坐电车上学的_黄色_%CALLNAME:DENSHA_P1%_来到了车站 站在了站台前"
+PRINTFORMW 不出意外，今天等车的人还是一如既往的多
+SELECTCASE RELATION_LEVEL
+CASE 1		;无相性
+	CALL PRINT_STRW, @"在人潮中，发现_黄色_%CALLNAME:DENSHA_P2%_今天也来搭车"
+CASE 2		;相性○
+	CALL PRINT_STRW, @"看到了_黄色_%CALLNAME:DENSHA_P2%_今天也来搭车，而上前打招呼。"
+CASE 3,4	;相性◎相性☆
+	CALL PRINT_STRW, @"因为知道_黄色_%CALLNAME:DENSHA_P2%_今天也来搭车，而前往说好的地方汇合。"
+ENDSELECT
+
+SELECTCASE DENSHA_LEVEL
+CASE 0
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		IF CFLAG:DENSHA_P1:公车猥亵次数 == 0
+			PRINTFORMW 因为%CALLNAME:DENSHA_P1%今天第一次搭电车，心里似乎有些紧张
+		ELSE
+			PRINTFORMW 想到之前在电车上被做的事情，%CALLNAME:DENSHA_P1%不由得紧张起来
+		ENDIF
+	CASE 1		;无相性
+		PRINTFORMW 两人什么也没说，就站到了各自的位置等车，心里似乎有些紧张
+	CASE 2		;相性○
+		SIF CFLAG:DENSHA_P1:公车猥亵次数 == 0 && CFLAG:DENSHA_P2:公车猥亵次数 == 0
+		PRINTFORMW 两人聊了一些学校日常，还讨论着周末的一些计划
+		PRINTFORMW 两人稍微聊了之前电车遇到的事情，心里似乎有些紧张
+	CASE 3,4	;相性◎相性☆
+		SIF CFLAG:DENSHA_P1:公车猥亵次数 == 0 && CFLAG:DENSHA_P2:公车猥亵次数 == 0
+		PRINTFORMW 两人见面聊了不少学校日常，还讨论着周末的一些计划，打算周末一起去逛街。
+		PRINTFORMW 两人稍微聊了之前电车遇到的事情，心里似乎有些紧张
+	ENDSELECT
+	
+CASE 1,2
+	PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%稍微有些脸红。心里暗自期待着之后会遭遇的事情，下面开始湿了
+	SIF RELATION_LEVEL > 2
+	PRINTFORMW %CALLNAME:DENSHA_P1%为了遮掩害羞而和%CALLNAME:DENSHA_P2%开始聊天，但不知为何话题总是关于电车涩涩的事情
+	
+CASE 3
+	PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%脸红耳赤，呼吸稍微急促。蜜穴因兴奋而分泌大量爱液，从已经潮湿的内裤溢出，流到腿边
+	PRINTFORMW 留意到股间湿痕的一些人悄悄靠近，伸手抚摸着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的大腿，还偶尔往股间摸去
+	PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%不但没抗拒，还开始小声呻吟，等待电车时享受着被性骚扰的快感
+	SIF RELATION_LEVEL > 2
+	PRINTFORMW %CALLNAME:DENSHA_P1%不时也将注意力转向%CALLNAME:DENSHA_P2%，相互抚摸着对方
+	
+	V = 1 + RAND:2
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V + RAND:2)
+	SIF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 1 + RAND:2)
+	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", 100)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", 50*V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", 50*V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", 100)
+	
+CASE 4
+	PRINTFORMW 明显亢奋的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%因汗水和爱液泛滥的关系，衣服湿透，诱人半透明的衣服下可以看到煽情的内衣裤
+	PRINTFORMW 附近的人不客气的对%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%上下其手，一些伸手进入乳罩揉捏着乳房，一些伸入内裤用手指插入蜜穴玩弄着阴蒂
+	PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%娇喘呻吟的同时，还晃动着身体，主动寻求着快感
+	SIF RELATION_LEVEL > 2
+	PRINTFORMW 被周遭玩弄的同时，%CALLNAME:DENSHA_P1%不时将注意力转向%CALLNAME:DENSHA_P2%，一时热吻，一时相互抚摸
+	
+	V = 1 + RAND:2
+	M = 2 + RAND:2
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", V)
+	SIF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 1 + RAND:2)
+	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", 200)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", 50)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", 100*V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", 100*V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", 200)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", 100*M)
+	
+CASE 10
+	PRINTFORMW 明显欲求不满的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%衣冠不整，毫不在乎疑似跳蛋和振动棒的遥控器曝露在外，可以听见「滋滋」声响
+	PRINTFORMW 湿透的半透明衣服看到肿胀突起的乳头，几乎可以肯定%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%是真空状态
+	PRINTFORMW 附近的人不客气的对%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%上下其手，大胆的甚至拉下裤头，将%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%衣服提起
+	PRINTFORMW 将振动棒拉出后，猴急的用肉棒插入，抽插一阵就无套中出后拔出，白浊液从%TEXTR("蜜穴/菊穴")%流出来
+	PRINTFORMW 被中出的同时，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%也不忘伸手进入附近的裤子内，开始抚摸着鸡巴
+	SIF RELATION_LEVEL > 2
+	PRINTFORMW 侍奉着周遭的同时，%CALLNAME:DENSHA_P1%不时将注意力转向%CALLNAME:DENSHA_P2%，一时热吻，一时相互抚摸，偶尔还玩弄着对方的淫具
+	
+	V = 1 + RAND:2
+	A = 1 + RAND:2
+	H = 2 + RAND:2
+	M = 2 + RAND:2
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", H+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V+A+H+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "手淫経験", H)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", M)
+	SIF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 1 + RAND:2)
+	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", 400)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", 100)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", 200*V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", 200*V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", 200*A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", 400)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", 200*M)
+
+ENDSELECT
+
+PRINTFORMW
+PRINTFORMW 过一会儿，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%跟随者人潮进入了车厢中、列车缓缓启动
+PRINTFORMW
+
+;
+;END OF @EVENT_NTR_DENSHA_0_START
+;
+
+;ARG = P2, ARG:1 = DENSHA_LEVEL
+@EVENT_NTR_DENSHA_1_EVENTLOOP, ARG, ARG:1
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM DENSHA_LEVEL
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+DENSHA_LEVEL = ARG:1
+
+SELECTCASE ARG:1
+CASE 10
+	CALL EVENT_NTR_DENSHA_HARASS_10, ARG
+CASE 4
+	CALL EVENT_NTR_DENSHA_HARASS_4, ARG
+CASE 3
+	CALL EVENT_NTR_DENSHA_HARASS_3, ARG
+CASE 2
+	CALL EVENT_NTR_DENSHA_HARASS_2, ARG
+CASE 1
+	CALL EVENT_NTR_DENSHA_HARASS_1, ARG
+CASE 0
+	CALL EVENT_NTR_DENSHA_HARASS_0, ARG
+CASEELSE
+	PRINTFORMW 没符合等级{ARG:1}的事件。
+ENDSELECT
+	
+CFLAG:DENSHA_P1:当前猥亵等级猥亵次数 += 1
+CFLAG:DENSHA_P1:公车猥亵次数 += 1
+
+IF DENSHA_P2 != 0
+	CFLAG:DENSHA_P2:当前猥亵等级猥亵次数 += 1
+	CFLAG:DENSHA_P2:公车猥亵次数 += 1
+	CALL CHANGE_RELATION, 5, DENSHA_P1, DENSHA_P2
+ENDIF
+
+;因为公车级只会触发一次，特例计算，虽然到这里数值已经没意义了
+IF ARG:1 == 10
+	CFLAG:DENSHA_P1:当前猥亵等级猥亵次数 += 9
+	CFLAG:DENSHA_P1:公车猥亵次数 += 9
+	
+	IF DENSHA_P2 != 0
+		CFLAG:DENSHA_P2:当前猥亵等级猥亵次数 += 9
+		CFLAG:DENSHA_P2:公车猥亵次数 += 9
+		CALL CHANGE_RELATION, 15, DENSHA_P1, DENSHA_P2
+	ENDIF
+ENDIF
+
+PRINTFORMW
+PRINTFORMW 电车轰鸣着、不停地向前行驶着...
+PRINTFORMW
+
+;
+;END OF @EVENT_NTR_DENSHA_1_EVENTLOOP
+;
+
+@EVENT_NTR_DENSHA_LEVEL_PROMOTION, ARG
+
+IF CFLAG:ARG:当前猥亵等级猥亵次数 > 4
+	CALL PRINT_STRW, @"_H_黄色_%CALLNAME:ARG%_电车升级事件_H_"
+	IF CEVENT("公车便器",ARG)
+		PRINTFORMW 已经到达最高等级了
+		RETURN 0
+	ENDIF
+	SELECTCASE CFLAG:ARG:公车猥亵等级
+	CASE 4
+		IF TALENT:ARG:処女 == 0
+			IF MARK:ARG:淫紋 == 0
+				PRINTFORMW 如要达成称号 [公车便器] 、需有[淫紋] 特性。
+			ELSE
+				PRINTFORMW 电车到达了学校的站台、重新穿戴好衣服的%CALLNAME:ARG%在此下车
+				PRINTFORMW 刚刚踏出车门几步、小腹处的淫纹又隐隐作痛起来
+				PRINTFORMW 这时一位神秘女士靠了过来，她身着一套剪裁合身的职业套装，但领口和裙摆都显得异常松垮，仿佛随时都可能滑落。她递出一张可疑的名片，低沉沙哑的声音中带着毫不掩饰的淫荡笑意
+				CALL PRINT_STRW, @"「嗯~_H_看起来还些欲求不满，想要享受更加淫荡激烈的玩法吗?」"
+				CALL PRINT_STRW, @"「名片上有注明着特定的车厢和 _H_嗯~_H_ 时间，若有兴趣的话绝对欢淫光临~」"
+				CALL PRINT_STRW, @"「正巧时间也刚好，现在就有一趟快到了，要来享乐吗~_H_嗯哼~_H_」"
+				CALL PRINT_SELECT, "跟着/离开"
+				IF RESULT == 0
+					PRINTFORMW %CALLNAME:ARG%点了点头、跟着女士到了她所说的特定车厢。
+					PRINTFORMW 外表看似普通的车厢，却可以隐约听到肉体拍打的“啪~啪~”声，妖媚的呻吟，偶尔还听到了浪荡至极的叫喊声。
+					PRINTFORMW 进入了车厢之后，只见车内早已挤满了人，而且都处于亢奋状态，沉溺于各种无序的乱交中。。。
+					PRINTFORMW 神秘女士笑了笑说今天是普通的乱交派对，不时会有其他特别安排，若有兴趣的话就记住这里吧。
+					PRINTFORMW 她说着，脱下了那件职业套装外套，暴露了真空状态下的身体。她的胸部虽然丰满，但双乳却被紧紧勒在情趣内衣里，而她那白皙的大腿间却夹着一根犹如马屌粗壮的阴茎。
+					PRINTFORMW 虽说是真空状态，但可以明显看到女士双穴插入着振动棒，鸡巴也似乎有跳蛋在内，不断颤抖着流出前列汁
+					PRINTFORMW 人们欢呼着迎接了这位神秘女士，同时回望着被周遭气氛影响而脸红气喘的%CALLNAME:ARG%
+					PRINTFORMW 在欣赏周遭各种糜烂的淫乱混交后，%CALLNAME:ARG%下定决心参与，走进人群里。
+					PRINTFORMW 车厢里，各种身份的扶她、女性交织在一起，形成一幅令人血脉贲张的背德画卷：
+					PRINTFORMW 三人行：一位发育成熟、乳房紧紧顶住衬衫的高中生扶她被一名穿着高跟鞋的高挑女教师抱起，她的校服裙被掀到了腰部，小穴正被女老师的肉棒反复抽插，而肉棒也被身前的老师娴熟的手交。与此同时，另一位较矮的清纯女学生则跪在老师面前，用嘴舌服侍着老师的阴部和睾丸，三人形成一个紧密的性爱链，老师侵犯着两位学生，而学生也享受着被侵犯的快感。
+					PRINTFORMW 一对衣着严谨的母女正被几位扶她围住。母亲的丝质衬衫已经被掀开，丰满的乳房被揉捏把玩着，而她那看上去清纯的高中生女儿，穿着校服裙，裙摆被撩起，小穴正被一根粗壮的肉棒反复抽插。母亲眼神迷离地看着女儿被侵犯，竟然淫荡地伸出手，抚摸着女儿大腿内侧，而女儿也配合着母亲的背德调戏，发出娇媚的浪叫声。
+					PRINTFORMW 四人行：一对夫妻扶她正与另一对姐妹扶她进行着双重乱交。其中一位妻子扶她正撅着丰满的臀部如母狗趴服在地，她的小穴和菊穴同时被丈夫的肉棒和姐姐的肉棒反复抽插。与此同时，丈夫也跪在姐妹面前，将自己的肉棒插进她的嘴里，而她则将自己的肉棒插进妻子的嘴里，形成一个完美的四角乱交。
+					五人行：一位身穿白领制服的OL被四位扶她围住。一位扶她将肉棒插进她的蜜穴，一位含着她的肉棒，另一位则用手玩弄着她的胸部，而最后一位扶她则舔舐着她的耳垂，同时将手指伸进她的后庭。她被完全淹没在五人的淫欲浪潮中，身体的每一个部位都承受着不同程度的侵犯。
+					PRINTFORMW 一位看起来是白领的OL扶她，职业短裙被褪到膝盖，她正被一位身穿教师制服的扶她压在座椅上，肉棒疯狂地顶撞着她的蜜穴。白领扶她一边承受着老师的侵犯，一边将手伸向老师的胸部和胯下，挑逗着老师那因为兴奋而勃起的肉棒和女性特征。而旁边，一位女学生正用嘴含着另一位扶她老师的肉棒，仿佛在享受一场特殊的“教学”。
+					PRINTFORMW 两位看似是好姐妹的辣妹扶她，其中一位正将自己的扶她伴侣推向另一位辣妹扶她，嘴里说着“你俩也来玩啊，反正我玩腻了！”。紧接着，她被一位看起来像是孕妇的女性扶她拉了过去，那高高隆起的肚子和白嫩的巨乳形成了强烈的反差，她将自己的肉棒深深地插进辣妹的口中。辣妹们互相交换伴侣，享受着这种新鲜而刺激的乱交背德感。
+					六人行：六位辣妹扶她正在相互交换伴侣。她们形成一个淫乱的人体蜈蚣，每个人都将自己的肉棒插进前一个人的小穴，同时自己的后庭也承受着后一个人的侵犯。她们的身体紧密贴合，肉棒和蜜穴之间发出有节奏的“啪啪”声，每一次抽插都让她们发出浪荡至极的叫喊声。
+					PRINTFORMW 簇拥着%CALLNAME:ARG%的，是两位身材魁梧的扶她，她们将%CALLNAME:ARG%拉了进来，并开始一件一件地褪下她的衣服。其中一位扶她毫不客气地掀开%CALLNAME:ARG%的衬衫，揉捏着她的胸部，而另一位则将手探向她的胯下，玩弄她的蜜穴和肉棒。
+					PRINTFORMW %CALLNAME:ARG%也愉悦地任由扶她们上下其手地抚摸，最后被%TEXTR("轻柔的放倒在垫着衣服的地上/半推半就地压在了电车的座位上")%
+					PRINTFORMW 随后、小穴、菊花、口穴被肉棒一遍又一遍的凌辱、一次又一次的注入精液、直到终点
+					CALL SET_CEVENT("公车便器",ARG)
+					CALL PRINT_STRW, @"%CALLNAME:ARG%达成称号：爱心粉紅_[公车便器]"
+				ELSE
+					PRINTFORMW %CALLNAME:ARG%摇了摇头打消了这个念头、谢了对方以后大步离开了车站
+				ENDIF
+			ENDIF
+		ELSE
+			PRINTFORMW 想要达到下一个猥亵等级，需要%CALLNAME:ARG%为非处女
+		ENDIF
+		
+	CASE 3
+		IF TALENT:ARG:処女 == 0
+			IF TALENT:ARG:淫乱 == 0 || ABL:ARG:精液中毒 < 5
+				PRINTFORMW 如要进入下一个猥亵等级、需要达成 [淫乱] 特性及 [精液中毒]达到5级
+			ELSE
+				PRINTFORMW 列车的中央、浑身赤裸的%CALLNAME:ARG%正被男人从背后以双脚张开的姿势、像是展示一般抱起
+				PRINTFORMW 可以清楚的看到男人的阴茎此时正深深的插入菊穴之中、而上方爱液横流的小穴却微微张合、仿佛在邀请肉棒的进入
+				PRINTFORMW 一个健壮的男人走上前、将与之身材相称的阴茎抵在了%CALLNAME:ARG%的小腹上
+				CALL PRINT_SELECT, "接受(猥亵等级上升)/阻止"
+				IF RESULT == 1
+					PRINTFORMW 感受着男人完美形状的肉棒、%CALLNAME:ARG%还是抵抗住了欲望、用双手挡住了小穴的洞口
+					PRINTFORMW 健壮的男人也没有强求、回到了一旁
+					PRINTFORMW 而身后的男人则开始毫无顾忌的抽插起来，%CALLNAME:ARG%下流的姿态也印在了车厢每一位乘客的眼中
+				ELSE
+					PRINTFORMW 感受着男人完美形状的肉棒、%CALLNAME:ARG%顺从了欲望、握住男人的肉棒对准了自己的小穴入口
+					PRINTFORMW 男人一挺身，粗壮的肉棒没入%CALLNAME:ARG%早已湿润的小穴当中
+					PRINTFORMW %CALLNAME:ARG%发出满足的呻吟
+					PRINTFORMW 男人将%CALLNAME:ARG%早已充分湿润的腔深深贯穿了、湿滑的蜜壶将坚硬的肉棒整根吞下
+					PRINTFORMW 双穴都被填满的巨大满足感让%CALLNAME:ARG%一阵失神、可蠕动的内壁却主动的紧缩着、贪婪地缠绕着肉棒
+					PRINTFORMW 回过神的%CALLNAME:ARG%主动缠上眼前男人的脖子、一边承受着双穴的进攻、一边下流的接吻起来...
+					PRINTFORMW
+					PRINTFORMW 最终、在%CALLNAME:ARG%高亢的呻吟中、男人在%CALLNAME:ARG%的体内释放了自己的欲望....
+					IF MARK:ARG:淫紋
+						PRINTFORM 大量射精
+						PRINTFORMW 男人的玲口抵在%CALLNAME:ARG%的子宫入口处、大量的精液流入子宫之中....
+						PRINTL 
+						CALL PRINT_CUTIN, "淫紋", ARG
+						CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:ARG%被刻上的淫纹发出了妖艳的光…"
+						PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:ARG%无意识地扭起了腰…
+					ENDIF
+					PRINTFORMW
+					PRINTFORMW %CALLNAME:ARG%的电车猥亵等级上升了，下次搭乘时会被男人们做更加过激的事情....
+					CFLAG:ARG:公车猥亵等级 = 4
+					PRINTFORMW 猥亵等级	+1
+					CFLAG:ARG:当前猥亵等级猥亵次数 = 0
+				ENDIF
+			ENDIF
+		ELSE	;処女check
+			IF TALENT:ARG:淫乱 == 0 || ABL:ARG:精液中毒 < 5
+				PRINTFORMW 如要进入下一个猥亵等级、需要达成 [淫乱] 特性及 [精液中毒]达到5级
+			ELSE
+				PRINTFORMW 列车的中央、浑身赤裸的%CALLNAME:ARG%正以M字开腿的下流姿势蹲立在列车的地面上服侍着眼前的肉棒
+				PRINTFORMW 可这对于列车的人数来说、还是杯水车薪。多数人提议只要在%CALLNAME:ARG%的身上浇上自己的种子就知足了
+				PRINTFORMW 是否接受精浴
+				CALL PRINT_SELECT, "接受(猥亵等级上升)/阻止"
+				IF RESULT == 1
+					PRINTFORMW %CALLNAME:ARG%没有接受、只是继续侍奉着眼前的肉棒
+					PRINTFORMW 提议失败的男人们只好乖乖地排队等在后面...
+					RETURN 0
+				ELSE
+					PRINTFORMW %CALLNAME:ARG%看着众人充满欲望的眼神与身下挺立的肉棒、下意识的点了头
+					PRINTFORMW %CALLNAME:ARG%仰起头、双手捧起放在嘴前、摆出一副迎接精液的样子
+					PRINTFORMW 排在后面的男人们也迅速围成一圈、掏出各自的肉棒贴在了%CALLNAME:ARG%的脸上
+					PRINTFORMW 一时间、%CALLNAME:ARG%眼前、四面八方都被阴茎占满了视线、浓郁的雄性气味刺激着%CALLNAME:ARG%的神经
+					IF MARK:ARG:淫紋
+						PRINTFORMW 连小腹的淫纹都隐隐作痛、诉说着渴望精液的事实
+						PRINTL 
+						CALL PRINT_CUTIN, "淫紋", ARG
+						CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:ARG%被刻上的淫纹发出了妖艳的光…"
+						PRINTFORMW 
+					ENDIF
+					PRINTFORMW 男人们加速撸动着、即将到达极限、%CALLNAME:ARG%也张开嘴等待着
+					PRINTFORMW 终于、其中一个男人爆发了、接着像是信号一般、其他的阴茎也相继射出、大量滚烫浓郁的精液从四面八方不断飞来
+					PRINTFORMW %CALLNAME:ARG%的脸上、嘴中、头发、都被大量的精液铺满、同时、溢出的精液也顺着纤细的脖颈流向挺立的乳房、与圆润的臀上...
+					PRINTFORMW
+					PRINTFORML %CALLNAME:ARG%的电车猥亵等级上升了，下次搭乘时会被男人们做更加过激的事情....
+					CFLAG:ARG:公车猥亵等级 = 4
+					PRINTFORMW 猥亵等级	+1
+					CFLAG:ARG:当前猥亵等级猥亵次数 = 0
+				ENDIF
+			ENDIF
+		ENDIF
+	CASE 2
+		IF TALENT:ARG:処女 == 0
+			IF TALENT:ARG:淫乱 == 0 || ABL:ARG:露出癖 < 5
+				PRINTFORMW 如要进入下一个猥亵等级、需要达成 [淫乱] 特性、且需[露出癖]>5
+			ELSE
+				PRINTFORMW 男人将%CALLNAME:ARG%背过身、一边抚摸着圆润的臀部、一边将%CALLNAME:ARG%的内裤缓缓褪下、直到膝盖处
+				PRINTFORMW 接着、一根坚硬的肉棒抵在了%CALLNAME:ARG%小穴的入口、
+				PRINTFORMW 男人俯身在%CALLNAME:ARG%耳边轻声询问是否可以插入
+				CALL PRINT_SELECT, "接受(猥亵等级上升)/阻止"
+				IF RESULT == 1
+					PRINTFORMW 尽管小穴早已湿润、做好了进入的准备、%CALLNAME:ARG%还是坚决的摇了摇头
+					PRINTFORMW 男人也没有强求、只是抱紧了%CALLNAME:ARG%的身躯、一边索求着%CALLNAME:ARG%的嘴唇、一边用肉棒在她的股间不断的摩擦着
+					PRINTFORMW 最终将浓厚的精液射入%CALLNAME:ARG%的内裤中后、离开了
+				ELSE
+					PRINTFORMW 男人双手扶着%CALLNAME:ARG%的腰、慢慢的将肉棒推入小穴之中、而%CALLNAME:ARG%的小穴早已满是爱液、轻易地便将男人的肉棒吞到深处
+					PRINTFORMW 接着、人小心翼翼的摆动起腰部、在这载满乘客的电车中、慢慢的、一下又一下的抽插着%CALLNAME:ARG%的蜜壶
+					PRINTFORMW
+					PRINTFORMW 几分钟后
+					PRINTFORMW 男人的动作越发明显、%CALLNAME:ARG%也压抑不住露出的呻吟、周围的男人们也注意到了这里、纷纷投来视线
+					PRINTFORMW 可已沉浸于快感中的两人、已没有余力关注周围的变化、只是一味地享受着性交的快乐
+					PRINTFORMW 最终、在周围人的关注下、两人一同迎来了绝顶、填满子宫的浓稠精液从两人的结合处不断的流出、滴落在地上....
+					IF MARK:ARG:淫紋
+						PRINTFORM 大量射精
+						PRINTFORMW 男人的玲口抵在%CALLNAME:ARG%的子宫入口处、大量的精液流入子宫之中....
+						PRINTL 
+						CALL PRINT_CUTIN, "淫紋", ARG
+						CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:ARG%被刻上的淫纹发出了妖艳的光…"
+						PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:ARG%无意识地扭起了腰…
+					ENDIF
+					PRINTFORMW
+					PRINTFORMW %CALLNAME:ARG%的电车猥亵等级上升了，下次搭乘时会被男人们做更加过激的事情....
+					CFLAG:ARG:公车猥亵等级 = 3
+					PRINTFORMW 猥亵等级	+1
+					CFLAG:ARG:当前猥亵等级猥亵次数 = 0
+				ENDIF
+			ENDIF
+		ELSE	;処女check
+			IF TALENT:ARG:淫乱 == 0 || ABL:ARG:露出癖 < 5
+				PRINTFORMW 如要进入下一个猥亵等级、需要达成 [淫乱] 特性、且需[露出癖]>5
+			ELSE
+				PRINTFORMW 男人将%CALLNAME:ARG%背过身、一边抚摸着圆润的臀部、一边将%CALLNAME:ARG%的内裤缓缓褪下、直到膝盖处
+				PRINTFORMW 接着、一根坚硬的肉棒抵在了%CALLNAME:ARG%菊穴的入口、
+				PRINTFORMW 男人俯身在%CALLNAME:ARG%耳边轻声询问是否可以插入
+				CALL PRINT_SELECT, "接受(猥亵等级上升)/阻止"
+				IF RESULT == 1
+					PRINTFORMW 尽管小穴早已湿润、只是插入菊穴的话也并不会失去处女、%CALLNAME:ARG%还是坚决的摇了摇头
+					PRINTFORMW 男人也没有强求、只是抱紧了%CALLNAME:ARG%的身躯、一边索求着%CALLNAME:ARG%的嘴唇、一边用肉棒在她的股间不断的摩擦着
+					PRINTFORMW 最终将浓厚的精液射入%CALLNAME:ARG%的内裤中后、离开了
+				ELSE
+					PRINTFORMW 给肉棒涂上润滑液后、男人双手扶着%CALLNAME:ARG%的腰、慢慢的将肉棒推入菊穴之中、而另一边的小穴也随着插入不断的流下爱液
+					PRINTFORMW 接着、人小心翼翼的摆动起腰部、在这载满乘客的电车中、慢慢的、一下又一下的在%CALLNAME:ARG%的菊穴中抽插着
+					PRINTFORMW 坚硬的肉棒隔着肠壁顶撞着%CALLNAME:ARG%未经人事的子宫、明明是处女却体验着子宫被亲吻的快感
+					PRINTFORMW
+					PRINTFORMW 几分钟后
+					PRINTFORMW 男人的动作越发明显、%CALLNAME:ARG%也压抑不住露出的呻吟、周围的男人们也注意到了这里、纷纷投来视线
+					PRINTFORMW 可已沉浸于快感中的两人、已没有余力关注周围的变化、只是一味地享受着肛交的快乐
+					PRINTFORMW 最终、在周围人的关注下、两人一同迎来了绝顶、填满直肠的浓稠精液从两人的结合处不断的流出、滴落在地上....
+					PRINTFORMW
+					PRINTFORMW %CALLNAME:ARG%的电车猥亵等级上升了，下次搭乘时会被男人们做更加过激的事情....
+					CFLAG:ARG:公车猥亵等级 = 3
+					PRINTFORMW 猥亵等级	+1
+					CFLAG:ARG:当前猥亵等级猥亵次数 = 0
+				ENDIF
+			ENDIF
+		ENDIF
+	CASE 1
+		PRINTFORMW 男人掏出肉棒、在%CALLNAME:ARG%的内裤上摩擦了几下之后、拨开内裤、似乎想让肉棒探入其中（非本番）
+		CALL PRINT_SELECT, "接受/阻止"
+		IF RESULT == 1
+			PRINTFORMW 可却被%CALLNAME:ARG%巧妙地躲开了
+			RETURN 0
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%沉默着、似乎是默许了男人的行为
+			PRINTFORMW 再无顾忌的男人便将肉棒探入内裤之中、紧贴在%CALLNAME:ARG%已满是爱液的小穴下方、用阴唇夹着肉棒、并裹着爱液前后摩擦起来
+		ENDIF
+		PRINTFORMW
+		PRINTFORMW %CALLNAME:ARG%的电车猥亵等级上升了，下次搭乘时会被男人们做更加过激的事情....
+		CFLAG:ARG:公车猥亵等级 = 2
+		PRINTFORMW 猥亵等级	+1
+		CFLAG:ARG:当前猥亵等级猥亵次数 = 0
+	CASE 0
+		PRINTFORMW 似乎不满足于隔着胸罩抚摸，男人的将手转向衣服的纽扣、似乎想要解开
+		CALL PRINT_SELECT, "接受/阻止"
+		IF RESULT == 1
+			PRINTFORMW 可%CALLNAME:ARG%伸过手来、抓住了男人那不安分的手、阻止了他
+			RETURN 0
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%没有阻止、
+		ENDIF
+			PRINTFORMW 男人打开了胸罩下方衬衫的纽扣、将手伸入其中、穿过胸罩、从下方直接攀上了%CALLNAME:ARG%的玉峰
+		PRINTFORMW 与隔着胸罩完全不同的巨大柔软、让男人忘情的揉弄起来、胸罩下方的乳房在男人的手下不断改变着形状
+		PRINTFORMW
+		PRINTFORMW %CALLNAME:ARG%的电车猥亵等级上升了，下次搭乘时会被男人们做更加过激的事情....
+		CFLAG:ARG:公车猥亵等级 = 1
+		PRINTFORMW 猥亵等级	+1
+		CFLAG:ARG:当前猥亵等级猥亵次数 = 0
+	ENDSELECT
+ENDIF
+;
+;END OF @EVENT_NTR_DENSHA_LEVEL_PROMOTION
+;
+
+;ARG = DENSHA_P2, ARG:1 = DENSHA_LEVEL
+@EVENT_NTR_DENSHA_2_END, ARG, ARG:1
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+
+PRINTFORMW
+PRINTFORMW 过了许久、列车终于驶入了目的地、车门打开、将一位位乘客送出
+
+SELECTCASE ARG:1
+CASE 0,1,2
+	PRINTFORM 乘客当中可以看见%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW 的身影。只见%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%面红耳赤，呼吸急促，可以看见下装有着明显的湿痕。。。
+
+CASE 3,4
+	PRINTFORM 乘客当中可以看见%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW 衣冠不整的身影。%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%不时发出淫荡的娇喘声，身上沾满了可疑的乳白液体。。。
+	
+CASE 10
+	PRINTFORMW 出来的乘客们明显很异常，身上的衣服看起来非常的粘稠潮湿
+	PRINTFORMW 半透明的潮湿布料紧贴着身体，凸显着下面肿胀的乳头和勃起的肉棒，散发出很淫靡的气味
+	PRINTFORM 诡异人群中，看到了%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW 的身影。%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%眼神有些失焦，明显隆起的腹部随着娇喘晃动，两腿间不断的流下可疑的乳白液
+
+ENDSELECT
+PRINTFORMW
+PRINTFORMW
+;
+;END OF @EVENT_NTR_DENSHA_2_END
+;
+
+@EVENT_NTR_DENSHA_HARASS_0, ARG
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM RELATION_LEVEL
+#DIM BASE_JUEL_UP = 20
+#DIMS ACTION
+#DIMS EVENT_TABLE = "摸胸/摸屁股/身后抱住/"
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+RELATION_LEVEL = EVENT_NTR_DENSHA_GET_RELATIONSHIP(DENSHA_P2)
+
+ACTION = %TEXTR(EVENT_TABLE)%
+
+PRINTFORMW
+PRINTFORMW %ACTION%
+PRINTFORMW
+
+SELECTCASE ACTION
+CASE "摸胸"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 电车中的人群推推攘攘、一只手悄悄地从%CALLNAME:DENSHA_P1%的腰间向上攀去、轻轻地放在了%CALLNAME:DENSHA_P1%的胸上
+		PRINTFORMW %CALLNAME:DENSHA_P1%默默的忍受着
+		PRINTFORMW 见%CALLNAME:DENSHA_P1%没有反抗、男人的手渐渐大胆起来、动作逐渐变大、张开手指开始揉捏起来
+		
+	CASEELSE
+		PRINTFORMW 电车中的人群推推攘攘、一只手悄悄地从%CALLNAME:DENSHA_P1%的腰间向上攀去、轻轻地放在了胸上
+		PRINTFORMW 不远处，另一只手也不规矩的靠近了%CALLNAME:DENSHA_P2%，但是两人默默承受着
+		PRINTFORMW 眼见两人没有反抗、男人们的手渐渐大胆起来、动作逐渐变大、张开手指开始揉捏起来
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+
+CASE "摸屁股"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 电车中的人群推推攘攘、一只手悄悄地掀起%CALLNAME:DENSHA_P1%的裙子、放在了%CALLNAME:DENSHA_P1%的圆润的臀上
+		PRINTFORMW %CALLNAME:DENSHA_P1%默默的忍受着
+		PRINTFORMW 见%CALLNAME:DENSHA_P1%没有反抗、男人的手渐渐大胆起来、隔着内裤摩挲着、不断揉弄着%CALLNAME:DENSHA_P1%的臀部
+		
+	CASEELSE
+		PRINTFORMW 电车中的人群推推攘攘、一只手悄悄地掀起%CALLNAME:DENSHA_P1%的裙子、放在了%CALLNAME:DENSHA_P1%的圆润的臀上
+		PRINTFORMW 另一边，有人也不规矩的把手放在%CALLNAME:DENSHA_P2%的屁股，但是两人默默承受着
+		PRINTFORMW 眼见两人没有反抗、男人的手渐渐大胆起来、隔着内裤摩挲着、不断揉弄着
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP)
+	
+CASE "身后抱住"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 电车中的人群推推攘攘、一个男人双手环住%CALLNAME:DENSHA_P1%的腰、以一个亲密的姿势从背后抱住了%CALLNAME:DENSHA_P1%
+		PRINTFORMW %CALLNAME:DENSHA_P1%没有反抗
+		PRINTFORMW 男人的动作更加大胆起来、将%CALLNAME:DENSHA_P1%的身躯抱在了怀中、低下头嗅着%CALLNAME:DENSHA_P1%发丝的香气
+		
+	CASEELSE
+		PRINTFORMW 电车中的人群推推攘攘、一个男人双手环住%CALLNAME:DENSHA_P1%的腰、以一个亲密的姿势从背后抱住了%CALLNAME:DENSHA_P1%
+		PRINTFORMW 不远处，另一人也靠近了%CALLNAME:DENSHA_P2%，从后方拥抱，但是两人默默承受着
+		PRINTFORMW 男人的动作更加大胆起来、加紧拥抱的同时也低下头嗅着两人发丝的香气
+
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+ENDSELECT
+;
+;END OF @EVENT_NTR_DENSHA_HARASS_0
+;
+
+@EVENT_NTR_DENSHA_HARASS_1, ARG
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM RELATION_LEVEL
+#DIM BASE_JUEL_UP = 50
+#DIMS ACTION
+#DIMS EVENT_TABLE = "接吻/伸入胸罩/手交/"
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+RELATION_LEVEL = EVENT_NTR_DENSHA_GET_RELATIONSHIP(DENSHA_P2)
+
+ACTION = %TEXTR(EVENT_TABLE)%
+
+PRINTFORMW
+PRINTFORMW %ACTION%
+PRINTFORMW
+
+SELECTCASE ACTION
+CASE "接吻"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 拥挤的电车中、%CALLNAME:DENSHA_P1%与男人面对面地站立紧贴着、与陌生男人的亲密行为的背德感让%CALLNAME:DENSHA_P1%不由得心跳加速
+		PRINTFORMW 男人低下头、隔着口罩贴在了%CALLNAME:DENSHA_P1%的唇上、呼吸间交换着彼此的气息
+		PRINTFORMW %CALLNAME:DENSHA_P1%掀起口罩的下摆、男人便迫不及待的印了上去、吮吸起%CALLNAME:DENSHA_P1%的唇、并不断伸出舌头进攻着
+		PRINTFORMW 在男人的进攻下、%CALLNAME:DENSHA_P1%很快败下阵来、紧闭的牙关被打开、任由对方舌头在口中不断舔舐、缠绕着
+	
+	CASEELSE
+		PRINTFORMW 拥挤的电车中、%CALLNAME:DENSHA_P1%与男人面对面地站立紧贴着、与陌生男人的亲密行为的背德感让%CALLNAME:DENSHA_P1%不由得心跳加速
+		PRINTFORMW 男人低下头、隔着口罩贴在了%CALLNAME:DENSHA_P1%的唇上、呼吸间交换着彼此的气息
+		PRINTFORMW %CALLNAME:DENSHA_P1%掀起口罩的下摆、男人便迫不及待的印了上去、吮吸起%CALLNAME:DENSHA_P1%的唇、并不断伸出舌头进攻着
+		PRINTFORMW 在男人的进攻下、%CALLNAME:DENSHA_P1%很快败下阵来、紧闭的牙关被打开、任由对方舌头在口中不断舔舐、缠绕着
+		PRINTFORMW 脸红的%CALLNAME:DENSHA_P2%看着%CALLNAME:DENSHA_P1%被逼吻时，另一位男人貌似留意到%CALLNAME:DENSHA_P2%的反应而靠近
+		PRINTFORMW 男人迅速的把嘴强硬地堵住%CALLNAME:DENSHA_P2%的嘴唇，没留意到周遭的%CALLNAME:DENSHA_P2%吓了一跳，但也没明显抗拒
+		PRINTFORMW 两人就这样默默享受着陌生人的亲热
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+
+CASE "伸入胸罩"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 似乎不满足于隔着胸罩抚摸，男人的将手转向衣服的纽扣、似乎想要解开
+		PRINTFORMW 男人打开了胸罩下方衬衫的纽扣、将手伸入其中、穿过胸罩、从下方直接攀上了%CALLNAME:DENSHA_P1%的玉峰
+		PRINTFORMW 与隔着胸罩完全不同的巨大柔软、让男人忘情的揉弄起来、胸罩下方的乳房在男人的手下不断改变着形状
+
+	CASEELSE
+		PRINTFORMW 似乎不满足于隔着胸罩抚摸，男人的将手转向衣服的纽扣、解开了%CALLNAME:DENSHA_P1%胸罩下方衬衫的纽扣
+		PRINTFORMW 男人将手伸入其中、穿过胸罩、从下方直接攀上了%CALLNAME:DENSHA_P1%的玉峰，忘情的揉弄起来
+		PRINTFORMW 脸红的%CALLNAME:DENSHA_P2%看着%CALLNAME:DENSHA_P1%被揉弄时，突然察觉自己也已经被手伸入玩弄
+		PRINTFORMW 两人胸罩下方的乳房在男人的手下不断改变着形状
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	
+CASE "手交"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 似乎不满足于此、男人抓着%CALLNAME:DENSHA_P1%的手向后挪去、直到碰到了男人那滚烫而又坚硬的阴茎
+		PRINTFORMW 没有过多的交流、%CALLNAME:DENSHA_P1%的手握住了男人的阴茎、在这满是人流的车厢里、悄悄地前后套弄起来
+
+	CASEELSE
+		PRINTFORMW 似乎不满足于此、男人抓着%CALLNAME:DENSHA_P1%的手向后挪去、直到碰到了男人那滚烫而又坚硬的阴茎
+		PRINTFORMW 没有过多的交流、%CALLNAME:DENSHA_P1%的手握住了男人的阴茎、在这满是人流的车厢里、悄悄地前后套弄起来
+		PRINTFORMW %CALLNAME:DENSHA_P1%手淫着的热烫鸡巴的同时，另一人也抓住了%CALLNAME:DENSHA_P2%的手
+		PRINTFORMW 两人就这样默默的享受着手淫着陌生阴茎的背德感
+	
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "手淫経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	
+ENDSELECT
+;
+;END OF @EVENT_NTR_DENSHA_HARASS_1
+;
+
+@EVENT_NTR_DENSHA_HARASS_2, ARG
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM RELATION_LEVEL
+#DIM BASE_JUEL_UP = 100
+#DIMS ACTION
+#DIMS EVENT_TABLE = "座位口交/后背素股/浓密接吻/"
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+RELATION_LEVEL = EVENT_NTR_DENSHA_GET_RELATIONSHIP(DENSHA_P2)
+
+SIF ABL:DENSHA_P1:露出癖 >= 10 && (DENSHA_P2 == 0 || ABL:DENSHA_P2:露出癖 >= 10)
+EVENT_TABLE += "上身完全暴露揉胸/"
+
+ACTION = %TEXTR(EVENT_TABLE)%
+
+PRINTFORMW
+PRINTFORMW %ACTION%
+PRINTFORMW
+
+SELECTCASE ACTION
+CASE "座位口交"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 人流不断的涌入电车之中，一个男人站在了%CALLNAME:DENSHA_P1%面前
+		PRINTFORMW 男人跨间鼓起的地方隔着口罩轻轻的触碰%CALLNAME:DENSHA_P1%的嘴，向她发出猥亵的信号
+		PRINTFORMW %CALLNAME:DENSHA_P1%拉开男人裤子的拉链，将肉棒释放出来，并掀起口罩的一角将肉棒整个吞下
+		PRINTFORMW 由于口罩的遮挡，无法看到%CALLNAME:DENSHA_P1%嘴巴的动作，只有%CALLNAME:DENSHA_P1%前后摆动的头部和在口罩下不断进出的肉棒凸显着口交的事实
+		PRINTFORMW 男人似乎到达了极限，紧紧地抓住%CALLNAME:DENSHA_P1%的头，阴茎也全部没入了口罩之中，身体不断颤抖着
+		PRINTFORMW 这次射精量远远超过了口腔的极限，无法承受的%CALLNAME:DENSHA_P1%不得不将还在射精的肉棒从口中吐出，任由其将粘稠的精液射入口罩的内部
+		PRINTFORMW 十几秒后，完成射精的男人将肉棒收了回去，%CALLNAME:DENSHA_P1%将口罩内积留的精液也一扫而空，但一部分精液已经浸染了口罩的内部，沾满了口罩下的半张俏脸
+		PRINTFORMW 这部分的精液却无法清扫到，每一次呼吸都带着浓浓的精子味道
+		PRINTFORMW 十几秒后，射精完成的男人从口罩中将肉棒收了回去，而%CALLNAME:DENSHA_P1%也重新口罩带好
+	
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 人流不断的涌入电车之中，一个男人站在了%CALLNAME:DENSHA_P1%面前，轻轻的触碰%CALLNAME:DENSHA_P1%的嘴，向她发出猥亵的信号
+		PRINTFORMW %CALLNAME:DENSHA_P1%拉开男人裤子的拉链，将肉棒释放出来，并掀起口罩的一角将肉棒整个吞下
+		PRINTFORMW 由于口罩的遮挡，无法看到%CALLNAME:DENSHA_P1%嘴巴的动作，只有%CALLNAME:DENSHA_P1%前后摆动的头部和在口罩下不断进出的肉棒凸显着口交的事实
+		PRINTFORMW 另一边，坐在座位的%CALLNAME:DENSHA_P2%面对着站立着的男生，裤头明显隆起，男生还不时用腰顶向%CALLNAME:DENSHA_P2%的脸部
+		PRINTFORMW 终于忍不住的%CALLNAME:DENSHA_P2%伸手拉下男生裤头的拉链，拉出明显勃起的鸡巴含入口中
+		PRINTFORMW 被奉侍的两人不久就到了极限，向两人口中注入浓稠的精液，口中浓浓雄性味道让两人小穴流出了爱液
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 人流不断的涌入电车之中，两人人站在了%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的面前，向她们发出猥亵的信号
+		PRINTFORMW %CALLNAME:DENSHA_P1%拉开男人裤子的拉链，将肉棒释放出来，并掀起口罩的一角将肉棒整个吞下
+		PRINTFORMW %CALLNAME:DENSHA_P2%一边看着%CALLNAME:DENSHA_P1%口交，一边用手挑逗着另一人的肉棒
+		PRINTFORMW 挑逗不久，男生忍不住用鸡巴顶了顶%CALLNAME:DENSHA_P2%的手，%CALLNAME:DENSHA_P2%，捏了捏它才把鸡巴含入口中
+		PRINTFORMW 在拥挤的电车内，两人摇摆着头部享受着肉棒的滋味，一边吮吸着整个肉棒，一边用舌头玩弄着龟头
+		PRINTFORMW 被奉侍的两人不久就到了极限，向两人口中注入浓稠的精液，口中浓浓雄性味道让两人小穴流出了爱液
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "口交経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精飲経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+	
+CASE "后背素股"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 人群的中央、男人让%CALLNAME:DENSHA_P1%背向自己、并慢慢地将她的内裤退到膝盖、在%CALLNAME:DENSHA_P1%加紧的大腿根部的三角区中、从后方缓缓地将肉棒钻了进去
+		PRINTFORMW 垂下的裙摆很好的挡住了这里、男人也更加没有忌惮的动了起来、
+		PRINTFORMW 先走汁混合着爱液沾染了大腿、充当了良好的润滑剂、随着前后摆动、越发轻松起来
+		PRINTFORMW 
+		PRINTFORMW %CALLNAME:DENSHA_P1%也渐渐感受到了快感、每当划过阴蒂、巨大的刺激总会让%CALLNAME:DENSHA_P1%微微一颤、分泌出更多的爱液
+	
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 人群的中央、男人让%CALLNAME:DENSHA_P1%背向自己、并慢慢地将她的内裤退到膝盖、在%CALLNAME:DENSHA_P1%加紧的大腿根部的三角区中、从后方缓缓地将肉棒钻了进去
+		PRINTFORMW 垂下的裙摆很好的挡住了这里、男人也更加没有忌惮的动了起来、先走汁混合着爱液沾染了大腿、充当了良好的润滑剂
+		PRINTFORMW 另一边，面对着窗口的%CALLNAME:DENSHA_P2%也受到了饥渴男人的贴近，腿部股间感受到了肉棒的温度
+		PRINTFORMW 两人就这样承受着后背素股，每当肉棒划过敏感的阴蒂时，刺激着小穴分泌出更多的爱液
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 靠着门口的两人正在聊天时，%CALLNAME:DENSHA_P1%突然感觉到自己的内裤被慢慢的拉了下来
+		PRINTFORMW 脸红的%CALLNAME:DENSHA_P1%低声暗示着%CALLNAME:DENSHA_P2%，有些兴奋的%CALLNAME:DENSHA_P2%忍不住摆弄臀部引诱
+		PRINTFORMW 摆弄没多久，%CALLNAME:DENSHA_P2%背后也感受到男人的贴近，不久后大腿感受到肉棒的温度
+		PRINTFORMW 摆好姿态后，两人就开始摆弄着腰部，用那已经充分勃起的鸡巴不断摩擦着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的股间
+		PRINTFORMW 两人就这样承受着后背素股，每当肉棒划过敏感的阴蒂时，刺激着小穴分泌出更多的爱液
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "腰靈活経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)		
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+
+CASE "浓密接吻"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 拥挤的电车中、男人与%CALLNAME:DENSHA_P1%亲密地拥抱着、不安分的双手隔着裙子揉弄着%CALLNAME:DENSHA_P1%的屁股
+		PRINTFORMW 男人伸出舌头、示意%CALLNAME:DENSHA_P1%主动一些、会意的%CALLNAME:DENSHA_P1%主动地环抱住男人的脖子、献上了柔软的双唇
+		PRINTFORMW 才刚一接触、两人的舌尖便热烈的纠缠在一起、下流的缠绕起来、彼此交换着唾液、发出淫靡的水声
+		PRINTFORMW 男人在%CALLNAME:DENSHA_P1%屁股上的手也越发大胆起来、掀起裙子、深入内裤中揉弄起来...
+		
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 拥挤的电车中、男人与%CALLNAME:DENSHA_P1%亲密地拥抱着、不安分的双手隔着裙子揉弄着%CALLNAME:DENSHA_P1%的屁股
+		PRINTFORMW 男人伸出舌头、示意%CALLNAME:DENSHA_P1%主动一些、会意的%CALLNAME:DENSHA_P1%主动地环抱住男人的脖子、献上了柔软的双唇
+		PRINTFORMW 才刚一接触、两人的舌尖便热烈的纠缠在一起、下流的缠绕起来、彼此交换着唾液、发出淫靡的水声
+		PRINTFORMW 另一边，%CALLNAME:DENSHA_P2%幻想着电车情事时，靠在旁边的男人毫无预警的拉了%CALLNAME:DENSHA_P2%过去
+		PRINTFORMW %CALLNAME:DENSHA_P2%一时没反应过来，正要开口时，被男人堵住了嘴巴。
+		PRINTFORMW 男人毫无保留的热吻着，一边抚摸着%CALLNAME:DENSHA_P2%的乳房，一边用舌头贪婪的入侵%CALLNAME:DENSHA_P2%的嘴巴
+		PRINTFORMW 两人就这样公然和男人亲热，腼腆纠缠着，腿边可以看到爱液逐渐留下。
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 拥挤的电车中、男人与%CALLNAME:DENSHA_P1%亲密地拥抱着、不安分的双手隔着裙子揉弄着%CALLNAME:DENSHA_P1%的屁股
+		PRINTFORMW 附近看着两人亲热的%CALLNAME:DENSHA_P2%，脸红气喘着，不知觉自己的手已经深入自己的内裤里
+		PRINTFORMW 看到有机可乘的其他人就这样上前拉了拉%CALLNAME:DENSHA_P2%的衣服，一刚转身，嘴巴就已经被堵住了
+		PRINTFORMW 一接触、两人的舌尖便热烈的纠缠在一起、下流的缠绕起来、彼此交换着唾液、发出淫靡的水声
+		PRINTFORMW 纠缠一阵子，原先和%CALLNAME:DENSHA_P1%亲热的男人放开了她，转向和%CALLNAME:DENSHA_P2%亲热的男人示意
+		PRINTFORMW 理解意图的他们就这样交换了女伴，没休息多久的嘴巴就这样被不同的舌头入侵
+		PRINTFORMW 两人就这样公然和男人亲热，腼腆纠缠着，腿边可以看到爱液逐渐留下。
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	
+CASE "上身完全暴露揉胸"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 拥挤的电车、透明的玻璃门前、一个男人正从背后紧密的贴着%CALLNAME:DENSHA_P1%的身躯
+		PRINTFORMW 男人手也深入的胸前衬衣的开口中、在胸罩下方毫无阻隔的揉弄着%CALLNAME:DENSHA_P1%的乳房
+		PRINTFORMW 双手在%CALLNAME:DENSHA_P1%的胸前一颗一颗的解着衬衫的扣子、随着扣子的解开、%CALLNAME:DENSHA_P1%饱满的乳房也渐渐露出、吸引了周围人的视线
+		PRINTFORMW 随着上身衣服被脱下、胸罩也被解开、%CALLNAME:DENSHA_P1%赤裸的上半身完全暴露在满是男人的车厢中、周围也不时有火热的视线盯向这里
+		PRINTFORMW 男人则毫不在意地攀上双乳揉弄起来、并不时的进攻着%CALLNAME:DENSHA_P1%的乳头、惹得%CALLNAME:DENSHA_P1%发出阵阵娇喘
+
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 拥挤的电车、透明的玻璃门前、一个男人正从背后揉弄着%CALLNAME:DENSHA_P1%的乳房
+		PRINTFORMW 眼看%CALLNAME:DENSHA_P1%娇艳的反应，男人大胆的拉下%CALLNAME:DENSHA_P1%的上衣，还解开了%CALLNAME:DENSHA_P1%的胸罩纽扣。
+		PRINTFORMW %CALLNAME:DENSHA_P1%没有抵抗，男人色心大发，拉开了胸罩，%CALLNAME:DENSHA_P1%的双乳就这样曝露给大家看
+		PRINTFORMW 丰满的双峰吸引了不少色色的视线，承受大家视奸的%CALLNAME:DENSHA_P1%更加兴奋，可以看到乳头逐渐勃起
+		PRINTFORMW 拉下了上衣之后，男人毫不在意地揉弄着赤裸的双乳，也不时吮吸着肿胀的乳头，惹得%CALLNAME:DENSHA_P1%发出阵阵娇喘
+		PRINTFORMW 不远处看着%CALLNAME:DENSHA_P1%被玩弄的%CALLNAME:DENSHA_P2%，不单没远离他们，还面红耳赤的靠近直视着
+		PRINTFORMW 看到有机可乘的其他人就这样凑近%CALLNAME:DENSHA_P2%，开始抚摸玩弄起%CALLNAME:DENSHA_P2%的乳房
+		PRINTFORMW 眼见心甘情愿的%CALLNAME:DENSHA_P2%主动献上，顿时把车厢气氛更加淫靡，很快的%CALLNAME:DENSHA_P2%的上衣和胸罩就被脱下了
+		PRINTFORMW 赤裸着上身的两人就这样享受着众人的骚扰，不断发出愉悦的娇喘声
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 拥挤的电车、透明的玻璃门前、男人们正从背后揉弄着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的双乳
+		PRINTFORMW 眼看两人娇艳的反应，男人大胆的拉下她们的上衣，还解开了胸罩纽扣。
+		PRINTFORMW 两人不但没抗拒，还小声呻吟扭动胸部，男人色心大发，拉开了胸罩。两人的双乳就这样曝露出来，吸引了不少周遭火热的视线。
+		PRINTFORMW 男人人毫不在意地揉弄着两人赤裸的双乳，也不时吮吸着肿胀的乳头，惹得她们发出阵阵娇喘
+		PRINTFORMW 似乎还有些不满足的%CALLNAME:DENSHA_P1%看着脸红气喘的%CALLNAME:DENSHA_P2%，忍不住凑近吻了%CALLNAME:DENSHA_P2%
+		PRINTFORMW 赤裸着上身的两人就这样一边亲热，一边享受着众人的骚扰，不断发出愉悦的娇喘声
+			
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "露出経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/2)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	
+ENDSELECT
+;
+;END OF @EVENT_NTR_DENSHA_HARASS_2
+;
+
+@EVENT_NTR_DENSHA_HARASS_3, ARG
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM RELATION_LEVEL
+#DIM BASE_JUEL_UP = 200
+#DIMS ACTION
+#DIMS EVENT_TABLE = "两根口交/座位肛交/全裸浓密接吻素股/插入菊穴/"
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+RELATION_LEVEL = EVENT_NTR_DENSHA_GET_RELATIONSHIP(DENSHA_P2)
+
+SIF TALENT:DENSHA_P1:処女 == 0 && (DENSHA_P2 == 0 || TALENT:DENSHA_P2:処女 == 0)
+EVENT_TABLE += "插入小穴/座位性交/";后背位性交/
+
+ACTION = %TEXTR(EVENT_TABLE)%
+
+PRINTFORMW
+PRINTFORMW %ACTION%
+PRINTFORMW
+
+SELECTCASE ACTION
+CASE "两根口交"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 电车座位上，两个男人一左一右的站在%CALLNAME:DENSHA_P1%的两侧，将各自的肉棒从口罩的侧边插入
+		PRINTFORMW 口罩的下方，%CALLNAME:DENSHA_P1%正大张着嘴，灵活的舌头在两个龟头上来回舔舐着、发出下流的响声
+		PRINTFORMW 口罩随着%CALLNAME:DENSHA_P1%的呼吸与动作、不断上下起伏、隐约可见两根阴茎的形状
+	
+		PRINTFORMW 没过多久、在%CALLNAME:DENSHA_P1%精心的侍奉下、男人们就快射精了、口罩下方肉棒的形状越发凸显
+		PRINTFORMW 而%CALLNAME:DENSHA_P1%也不顾发出声响、更加卖力的舔舐吮吸起来
+	
+		PRINTFORMW 最终，男人无可忍耐的爆发了、浓郁粘稠的精液瞬间灌满了口罩的空隙、沾满了口罩的内壁
+		PRINTFORMW 连鼻子都被淹没了、%CALLNAME:DENSHA_P1%不得不大口大口的将精液吞下才能继续呼吸、但每一次吸气、都带着浓郁的精子气味、强烈的雄性气味让%CALLNAME:DENSHA_P1%的大脑都一阵失神
+		PRINTFORMW 射精完成的男人将阴茎从口罩的两侧拔出、口罩合拢、将浓郁的精液留在了里面
+	
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 电车座位上，两个男人一左一右的站在%CALLNAME:DENSHA_P1%的两侧，将各自的肉棒从口罩的侧边插入
+		PRINTFORMW 口罩的下方，%CALLNAME:DENSHA_P1%正大张着嘴，灵活的舌头在两个龟头上来回舔舐着、发出下流的响声
+		PRINTFORMW 口罩随着%CALLNAME:DENSHA_P1%的呼吸与动作、不断上下起伏、隐约可见两根阴茎的形状
+		PRINTFORMW 不远处座位的%CALLNAME:DENSHA_P2%留意到%CALLNAME:DENSHA_P1%的侍奉而受到了刺激，下面湿了
+		PRINTFORMW 注意到前面两个男士也直视这%CALLNAME:DENSHA_P1%们，呼吸急促，%CALLNAME:DENSHA_P2%忍不住就双手伸向两人已经勃起的裤头抚摸
+		PRINTFORMW 感受到抚摸的两人看向%CALLNAME:DENSHA_P2%，%CALLNAME:DENSHA_P2%也没停下动作，还加强了力度。男人们笑了笑，指向拉链
+		PRINTFORMW %CALLNAME:DENSHA_P2%就这样拉下了两人的拉链，掏出了两根已经肿胀的鸡巴，手淫了一阵子后开始来回贪婪的舔舐着
+		PRINTFORMW 被挑逗不久，男人们终于忍不住，两根一口的强行推入，鸡巴颤抖一阵子后爆发了，注入的浓郁粘稠的欲望。
+		PRINTFORMW 双人精液量不只充满了口腔，还流入了鼻腔内，%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%很努力的把吞下
+		PRINTFORMW 不断受到大量雄性气味刺激的两人，品尝着精液的同时一边恍惚着，只见之前一些残留的精液从嘴角和鼻子流了下来
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 站立着男人们对电车座位上的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%上下其手，一边抚摸着乳房，一边舔着身体各部位
+		PRINTFORMW 两人享受着性骚扰，不断呻吟着。受不了刺激的男人们，拉下了拉链，露出了勃起的阴茎，还可以看见顶端开始流出前列汁
+		PRINTFORMW 意犹未尽的%CALLNAME:DENSHA_P1%开始用手玩弄其两根鸡巴，努力搓弄抚摸着，不时还用指尖把玩着敏感的龟头
+		PRINTFORMW 手淫一阵子满足后，%CALLNAME:DENSHA_P1%开始轮流来回舔舐两个鸡巴，舌头纠缠着鸡巴，发出口水噗呲的下流声
+		PRINTFORMW %CALLNAME:DENSHA_P2%则早已忍不住，用口轮流深深含入另两根根鸡巴进行深喉侍奉,努力的把龟头顶到喉道深处
+		PRINTFORMW 被挑逗不久，男人们终于忍不住，两根一口的强行推入，鸡巴颤抖一阵子后爆发了，注入的浓郁粘稠的欲望。
+		PRINTFORMW 双人精液量不只充满了口腔，还流入了鼻腔内，强烈的雄性气味让%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的大脑都一阵失神
+		PRINTFORMW 释放了欲望后而满足的男人们把鸡巴抽了出来，可以看见满溢的精液从%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的嘴角鼻腔流了出来
+		PRINTFORMW 看着%CALLNAME:DENSHA_P2%痴相的%CALLNAME:DENSHA_P1%忍不住就用还含有热乎乎精液的口吻住%CALLNAME:DENSHA_P2%
+		PRINTFORMW %CALLNAME:DENSHA_P2%以舌吻回应，两口贪婪吸吮着的同时，还不时交换着参杂了精液和口水的浊液
+		PRINTFORMW 热吻一阵子后，%CALLNAME:DENSHA_P1%的%CALLNAME:DENSHA_P2%依依不舍的分开，两嘴间形成一条诱人的口水线
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "口交経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精飲経験", 2)
+	IF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	ENDIF
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+
+
+CASE "座位肛交"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 在%CALLNAME:DENSHA_P1%震惊的目光下、坐在%CALLNAME:DENSHA_P1%面前的男人、在行驶的电车上解开了裤子、露出自己挺立的阴茎
+		PRINTFORMW %CALLNAME:DENSHA_P1%害羞着、却还是在众人的目光下、脱下内裤、扶着男人的阴茎、对准菊穴、慢慢坐下
+		PRINTFORMW %CALLNAME:DENSHA_P1%就这样顺着电车摇晃摆动着身体，享受着菊穴被鸡巴填满的充实感，不断发出妖媚的呻吟声
+		PRINTFORMW 过不久，感觉到鸡巴颤抖的同时，男人两手怀抱%CALLNAME:DENSHA_P1%腰部，将阴茎顶入深处，开始注入大量的雄性液体
+		PRINTFORMW %CALLNAME:DENSHA_P1%继续维持着坐姿，呻吟享受填满着菊穴的灼热的欲液
+	
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 在%CALLNAME:DENSHA_P1%震惊的目光下、坐在%CALLNAME:DENSHA_P1%面前的男人、在行驶的电车上解开了裤子、露出自己挺立的阴茎
+		PRINTFORMW %CALLNAME:DENSHA_P1%害羞着、却还是在众人的目光下、脱下内裤、扶着男人的阴茎、对准菊穴、慢慢坐下
+		PRINTFORMW 不远处的%CALLNAME:DENSHA_P2%兴奋的看着%CALLNAME:DENSHA_P1%的时候，因后背被拍而转身，看见座位上另人也露出了自己勃起的鸡巴
+		PRINTFORMW %CALLNAME:DENSHA_P2%也没说什么，就把自己已经湿透的内裤脱下，瞄准男人的鸡巴坐了下去
+		PRINTFORMW 两人就这样顺着电车摇晃摆动着身体，享受着后穴被鸡巴填满的充实感，不断发出妖媚的呻吟声
+		PRINTFORMW 过不久，鸡巴颤抖的同时，男人们分别怀抱着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P1%腰部，将阴茎顶入深处，开始注入大量的雄性液体
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P1%继续维持着坐姿，呻吟享受填满着菊穴的灼热的欲液
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 电车座位上的男人们对站立着的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%上下其手，一边拉开衣服舔舐乳头，一边深入内裤手指插入潮湿的阴道
+		PRINTFORMW 两人享受着性骚扰，不断呻吟着。受不了刺激的男人们，拉下了拉链，露出了勃起的阴茎，对两人示意
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%脸红着，脱下了已经潮湿的内裤，瞄准肿胀的鸡巴，慢慢的坐下
+		PRINTFORMW 两人就这样顺着电车摇晃摆动着身体，享受着后穴被鸡巴填满的充实感，不断发出妖媚的呻吟声
+		PRINTFORMW 享受着温热鸡巴的同时，%CALLNAME:DENSHA_P1%向%CALLNAME:DENSHA_P2%伸出了手，开始揉捏着乳房，不时把玩着挺立的乳头
+		PRINTFORMW %CALLNAME:DENSHA_P2%忍受不了乳房刺激，拉了%CALLNAME:DENSHA_P1%过来开始热吻
+		PRINTFORMW 看两人亲热的男人们明显更加兴奋，可以感觉到肛门内灼热的肉棒进一步勃起，臃肿的肉棒不断摩擦着肠道
+		PRINTFORMW 过不久，鸡巴颤抖的同时，男人们分别怀抱着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P1%腰部，将阴茎顶入深处，开始注入大量的雄性液体
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P1%继续维持着坐姿亲热，享受填满着菊穴的灼热的欲液
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", 1)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", 1)
+	IF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	ENDIF
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP)
+
+
+CASE "全裸浓密接吻素股"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 电车的角落，一个身着大衣的男人，在人群的推攘中，不断紧贴住%CALLNAME:DENSHA_P1%的身体，双手也总是不经意间碰触着敏感部位
+		PRINTFORMW 已经习惯了骚扰的%CALLNAME:DENSHA_P1%并没有阻止男人，任由其摆弄着。没过一会，男人收回了手，悄悄对着%CALLNAME:DENSHA_P1%敞开了大衣。
+		PRINTFORMW 大衣下可以看到里面竟是全裸，稍微颤抖流出前列汁的肉棒也早已挺立着朝向%CALLNAME:DENSHA_P1%。
+		PRINTFORMW %CALLNAME:DENSHA_P1%点点头，同意了，随即钻进了大衣中。敞开的大衣仿佛两片幕布，遮挡住外部的所有视线。
+		PRINTFORMW %CALLNAME:DENSHA_P1%在其中一件一件的褪下了身上的衣物，直到浑身赤裸的站在男人面前
+		PRINTFORMW 看着眼前一幕，男人的呼吸明显粗重起来，本就勃起的肉棒变得越加粗壮
+		PRINTFORMW 无可忍耐的男人将身体贴在了%CALLNAME:DENSHA_P1%的身体上，粗暴的夺走了她的唇,两片乳房也从身体的挤压中从两边露出了半圆
+		PRINTFORMW %CALLNAME:DENSHA_P1%一边承受着嘴上的进攻，一边引导着肉棒插入大腿与阴部交界的缝隙中，前后摩擦着
+
+	CASEELSE
+		PRINTFORMW 电车的角落，一个身着大衣的男人，在人群的推攘中，不断紧贴住%CALLNAME:DENSHA_P1%的身体，双手也总是不经意间碰触着敏感部位
+		PRINTFORMW 已经习惯了骚扰的%CALLNAME:DENSHA_P1%并没有阻止男人，任由其摆弄着。没过一会，男人收回了手，悄悄对着%CALLNAME:DENSHA_P1%敞开了大衣。
+		PRINTFORMW 大衣下可以看到里面竟是全裸，稍微颤抖流出前列汁的肉棒也早已挺立着朝向%CALLNAME:DENSHA_P1%。
+		PRINTFORMW %CALLNAME:DENSHA_P1%点点头，同意了，随即钻进了大衣中。敞开的大衣仿佛两片幕布，遮挡住外部的所有视线。
+		PRINTFORMW 不远处的%CALLNAME:DENSHA_P2%默默观看的同时，注意到另一个同样身穿大衣的男人靠近。
+		PRINTFORMW 男人也没多说，拉了%CALLNAME:DENSHA_P2%的手伸入自己的大衣搓弄，%CALLNAME:DENSHA_P2%才发现这男人也一样是真空状态
+		PRINTFORMW 眼见%CALLNAME:DENSHA_P2%不只没抗拒，还积极的手淫着鸡巴，男人一样敞开了大衣让%CALLNAME:DENSHA_P2%进入
+		PRINTFORMW 两人就这样赤裸的在大衣内亲热抚摸，一边享受着鸡巴摩擦着阴蒂的素股，还不时热吻着男人
+		
+	ENDSELECT
+
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "手淫経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 1)
+	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	
+CASE "插入菊穴"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 男人将%CALLNAME:DENSHA_P1%背过身、一边抚摸着圆润的臀部、一边将%CALLNAME:DENSHA_P1%的内裤缓缓褪下、直到膝盖处
+		PRINTFORMW 接着、一根坚硬的肉棒抵在了%CALLNAME:DENSHA_P1%菊穴的入口、
+		PRINTFORMW 给肉棒涂上润滑液后、男人双手扶着%CALLNAME:DENSHA_P1%的腰、慢慢的将肉棒推入菊穴之中、而另一边的小穴也随着插入不断的流下爱液
+		PRINTFORMW 接着、人小心翼翼的摆动起腰部、在这载满乘客的电车中、慢慢的、一下又一下的在%CALLNAME:DENSHA_P1%的菊穴中抽插着
+		PRINTFORMW 坚硬的肉棒隔着肠壁顶撞着%CALLNAME:DENSHA_P1%未经人事的子宫、明明是处女却体验着子宫被亲吻的快感
+		PRINTFORMW
+		PRINTFORMW 几分钟后
+		PRINTFORMW 男人的动作越发明显、%CALLNAME:DENSHA_P1%也压抑不住露出的呻吟、周围的男人们也注意到了这里、纷纷投来视线
+		PRINTFORMW 可已沉浸于快感中的两人、已没有余力关注周围的变化、只是一味地享受着肛交的快乐
+		PRINTFORMW 最终、在周围人的关注下、两人一同迎来了绝顶、填满直肠的浓稠精液从两人的结合处不断的流出、滴落在地上....
+		
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 男人将%CALLNAME:DENSHA_P1%背过身、一边抚摸着圆润的臀部、一边将%CALLNAME:DENSHA_P1%的内裤缓缓褪下、直到膝盖处
+		PRINTFORMW 接着、一根坚硬的肉棒抵在了%CALLNAME:DENSHA_P1%菊穴的入口、
+		PRINTFORMW 给肉棒涂上润滑液后、男人双手扶着%CALLNAME:DENSHA_P1%的腰、慢慢的将肉棒推入菊穴之中、而另一边的小穴也随着插入不断的流下爱液
+		PRINTFORMW 不远处的%CALLNAME:DENSHA_P2%兴奋的看着%CALLNAME:DENSHA_P1%的时候，因后背被拍而转身，后面的人也露出了自己勃起的鸡巴
+		PRINTFORMW %CALLNAME:DENSHA_P2%也没说什么，就把自己已经湿透的内裤脱下，伸手抓住鸡巴引到自己的肛门入口
+		PRINTFORMW 男人们开始摆动起腰部、在这载满乘客的电车中、慢慢的、一下又一下的抽插着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%两人
+		PRINTFORMW 几分钟后，男人的动作越发明显、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%也压抑不住开始呻吟
+		PRINTFORMW 周围的男人们也注意到了这里、纷纷投来视线，可已沉浸于快感中的两人、已没有余力关注周围的变化。
+		PRINTFORMW 最终、在周围人的关注下、大家一同迎来了绝顶、填满直肠的浓稠精液从两人的结合处不断的流出、滴落在地上....
+
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 在电车的一个角落，男人们对%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%上下其手，一边抚摸着乳房，一边舔着身体各部位
+		PRINTFORMW 两人享受着性骚扰，不断呻吟着。受不了刺激的男人们，拉下了拉链，露出了勃起的阴茎，还可以看见顶端开始流出前列汁
+		PRINTFORMW 男人们把%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%推向墙边，拉下了两人的内裤，对准两人的菊穴，缓缓插入
+		PRINTFORMW 男人们开始摆动起腰部、在这载满乘客的电车中、慢慢的、一下又一下的抽插着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%两人
+		PRINTFORMW 几分钟后，男人的动作越发明显、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%也压抑不住开始呻吟
+		PRINTFORMW %CALLNAME:DENSHA_P1%似乎不满足于肠道的刺激，拉了%CALLNAME:DENSHA_P2%过来开始舌吻亲热，两人空出的双手也开始互摸起来
+		PRINTFORMW 周围的男人们也注意到了这里、纷纷投来视线，可已沉浸于快感中的两人、已没有余力关注周围的变化。
+		PRINTFORMW 最终、在周围人的关注下、大家一同迎来了绝顶、填满直肠的浓稠精液从两人的结合处不断的流出、滴落在地上....
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", 1)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", 1)
+	IF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	ENDIF
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP)
+	
+CASE "插入小穴"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 男人将%CALLNAME:DENSHA_P1%背过身、一边抚摸着圆润的臀部、一边将%CALLNAME:DENSHA_P1%的内裤缓缓褪下、直到膝盖处
+		PRINTFORMW 接着、一根坚硬的肉棒抵在了%CALLNAME:DENSHA_P1%小穴的入口、
+		PRINTFORMW 男人双手扶着%CALLNAME:DENSHA_P1%的腰、慢慢的将肉棒推入小穴之中、而%CALLNAME:DENSHA_P1%的小穴早已满是爱液、轻易地便将男人的肉棒吞到深处
+		PRINTFORMW 接着、人小心翼翼的摆动起腰部、在这载满乘客的电车中、慢慢的、一下又一下的抽插着%CALLNAME:DENSHA_P1%的蜜壶
+		PRINTFORMW
+		PRINTFORMW 几分钟后
+		PRINTFORMW 男人的动作越发明显、%CALLNAME:DENSHA_P1%也压抑不住露出的呻吟、周围的男人们也注意到了这里、纷纷投来视线
+		PRINTFORMW 可已沉浸于快感中的两人、已没有余力关注周围的变化、只是一味地享受着性交的快乐
+		PRINTFORMW 最终、在周围人的关注下、两人一同迎来了绝顶、填满子宫的浓稠精液从两人的结合处不断的流出、滴落在地上....
+		IF MARK:DENSHA_P1:淫紋
+			PRINTFORM 大量射精
+			PRINTFORMW 男人的玲口抵在%CALLNAME:DENSHA_P1%的子宫入口处、大量的精液流入子宫之中....
+			PRINTL 
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P1
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P1%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P1%无意识地扭起了腰…
+		ENDIF
+		
+	CASE 1,2	;无相性
+		PRINTFORMW 男人将%CALLNAME:DENSHA_P1%背过身、一边抚摸着圆润的臀部、一边将%CALLNAME:DENSHA_P1%的内裤缓缓褪下、直到膝盖处
+		PRINTFORMW 接着、一根坚硬的肉棒抵在了%CALLNAME:DENSHA_P1%小穴的入口、
+		PRINTFORMW 给肉棒涂上润滑液后、男人双手扶着%CALLNAME:DENSHA_P1%的腰、慢慢的将肉棒推入小穴之中、已经爱液泛滥的小穴轻易的吞入了肉棒
+		PRINTFORMW 不远处的%CALLNAME:DENSHA_P2%兴奋的看着%CALLNAME:DENSHA_P1%的时候，因后背被拍而转身，后面的人也露出了自己勃起的鸡巴
+		PRINTFORMW %CALLNAME:DENSHA_P2%也没说什么，就把自己已经湿透的内裤脱下，伸手抓住鸡巴引到自己湿润的蜜壶
+		PRINTFORMW 男人们开始摆动起腰部、在这载满乘客的电车中、慢慢的、一下又一下的抽插着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%两人
+		PRINTFORMW 几分钟后，男人的动作越发明显、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%也压抑不住开始呻吟
+		PRINTFORMW 周围的男人们也注意到了这里、纷纷投来视线，可已沉浸于快感中的两人、已没有余力关注周围的变化。
+		PRINTFORMW 最终、在周围人的关注下、大家一同迎来了绝顶、填满直肠的浓稠精液从两人的结合处不断的流出、滴落在地上....
+		IF MARK:DENSHA_P1:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P1
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P1%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P1%无意识地扭起了腰…
+		ELSEIF MARK:DENSHA_P2:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P2
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P2%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P2%无意识地扭起了腰…
+		ENDIF
+	
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 在电车的一个角落，男人们对%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%上下其手，一边抚摸着乳房，一边舔着身体各部位
+		PRINTFORMW 两人享受着性骚扰，不断呻吟着。受不了刺激的男人们，拉下了拉链，露出了勃起的阴茎，还可以看见顶端开始流出前列汁
+		PRINTFORMW 男人们把%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%推向墙边，拉下了两人的内裤，对准两人的小穴，缓缓插入
+		PRINTFORMW 男人们开始摆动起腰部、在这载满乘客的电车中、慢慢的、一下又一下的抽插着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%两人
+		PRINTFORMW 几分钟后，男人的动作越发明显、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%也压抑不住开始呻吟
+		PRINTFORMW %CALLNAME:DENSHA_P1%似乎不满足于子宫的刺激，拉了%CALLNAME:DENSHA_P2%过来开始舌吻亲热，两人空出的双手也开始互摸起来
+		PRINTFORMW 周围的男人们也注意到了这里、纷纷投来视线，可已沉浸于快感中的两人、已没有余力关注周围的变化。
+		PRINTFORMW 最终、在周围人的关注下、大家一同迎来了绝顶、填满直肠的浓稠精液从两人的结合处不断的流出、滴落在地上....
+		IF MARK:DENSHA_P1:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P1
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P1%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P1%无意识地扭起了腰…
+		ELSEIF MARK:DENSHA_P2:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P2
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P2%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P2%无意识地扭起了腰…
+		ENDIF
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", 1)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", 1)
+	IF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	ENDIF
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", BASE_JUEL_UP)
+
+CASE "座位性交"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 在%CALLNAME:DENSHA_P1%震惊的目光下、坐在%CALLNAME:DENSHA_P1%面前的男人、在行驶的电车上解开了裤子、露出自己挺立的阴茎
+		PRINTFORMW %CALLNAME:DENSHA_P1%害羞着、却还是在众人的目光下、脱下内裤、扶着男人的阴茎、对准小穴、慢慢坐下
+		PRINTFORMW %CALLNAME:DENSHA_P1%就这样顺着电车摇晃摆动着身体，享受着阴道被鸡巴填满的充实感，不断发出妖媚的呻吟声
+		PRINTFORMW 过不久，感觉到鸡巴颤抖的同时，男人两手怀抱%CALLNAME:DENSHA_P1%腰部，将阴茎顶向子宫口，开始注入大量的雄性液体
+		PRINTFORMW %CALLNAME:DENSHA_P1%继续维持着坐姿，呻吟享受填满着子宫内灼热的欲液
+		IF MARK:DENSHA_P1:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P1
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P1%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P1%无意识地扭起了腰…
+		ENDIF
+
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 在%CALLNAME:DENSHA_P1%震惊的目光下、坐在%CALLNAME:DENSHA_P1%面前的男人、在行驶的电车上解开了裤子、露出自己挺立的阴茎
+		PRINTFORMW %CALLNAME:DENSHA_P1%害羞着、却还是在众人的目光下、脱下内裤、扶着男人的阴茎、对准小穴、慢慢坐下
+		PRINTFORMW 不远处的%CALLNAME:DENSHA_P2%兴奋的看着%CALLNAME:DENSHA_P1%的时候，因后背被拍而转身，看见座位上另人也露出了自己勃起的鸡巴
+		PRINTFORMW %CALLNAME:DENSHA_P2%也没说什么，就把自己已经湿透的内裤脱下，瞄准男人的鸡巴坐了下去
+		PRINTFORMW 两人就这样顺着电车摇晃摆动着身体，享受着阴道被鸡巴填满的充实感，不断发出妖媚的呻吟声
+		PRINTFORMW 过不久，鸡巴颤抖的同时，男人们分别怀抱着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P1%腰部，将阴茎顶向子宫口，开始注入大量精液
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P1%继续维持着坐姿，呻吟享受填满着子宫内灼热的欲液
+		IF MARK:DENSHA_P1:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P1
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P1%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P1%无意识地扭起了腰…
+		ELSEIF MARK:DENSHA_P2:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P2
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P2%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P2%无意识地扭起了腰…
+		ENDIF
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 电车座位上的男人们对站立着的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%上下其手，一边拉开衣服舔舐乳头，一边深入内裤手指插入潮湿的阴道
+		PRINTFORMW 两人享受着性骚扰，不断呻吟着。受不了刺激的男人们，拉下了拉链，露出了勃起的阴茎，对两人示意
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%脸红着，脱下了已经潮湿的内裤，瞄准肿胀的鸡巴，慢慢的坐下
+		PRINTFORMW 两人就这样顺着电车摇晃摆动着身体，享受着后穴被鸡巴填满的充实感，不断发出妖媚的呻吟声
+		PRINTFORMW 享受着温热鸡巴的同时，%CALLNAME:DENSHA_P1%向%CALLNAME:DENSHA_P2%伸出了手，开始揉捏着乳房，不时把玩着挺立的乳头
+		PRINTFORMW %CALLNAME:DENSHA_P2%忍受不了乳房刺激，拉了%CALLNAME:DENSHA_P1%过来开始热吻
+		PRINTFORMW 看两人亲热的男人们明显更加兴奋，可以感觉到阴道内灼热的肉棒进一步勃起，臃肿的肉棒不断摩擦着阴蒂和阴道
+		PRINTFORMW 过不久，鸡巴颤抖的同时，男人们分别怀抱着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P1%腰部，将阴茎顶向子宫口，开始注入大量精液
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P1%继续维持着坐姿亲热，享受填满着子宫内灼热的欲液
+		IF MARK:DENSHA_P1:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P1
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P1%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P1%无意识地扭起了腰…
+		ELSEIF MARK:DENSHA_P2:淫紋
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P2
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P2%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P2%无意识地扭起了腰…
+		ENDIF
+		
+	ENDSELECT
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", 1)
+	IF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 1)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	ENDIF
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", BASE_JUEL_UP)
+	
+ENDSELECT
+;
+;END OF @EVENT_NTR_DENSHA_HARASS_3
+;
+
+@EVENT_NTR_DENSHA_HARASS_4, ARG
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM RELATION_LEVEL
+#DIM BASE_JUEL_UP = 400
+#DIMS ACTION
+#DIMS EVENT_TABLE = "浴精/轮流肛交/当众自慰/多根口交/"
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+RELATION_LEVEL = EVENT_NTR_DENSHA_GET_RELATIONSHIP(DENSHA_P2)
+
+ACTION = %TEXTR(EVENT_TABLE)%
+
+SIF TALENT:DENSHA_P1:処女 == 0 && (DENSHA_P2 == 0 || TALENT:DENSHA_P2:処女 == 0)
+EVENT_TABLE += "双穴插入/4P/";轮奸/
+
+PRINTFORMW
+PRINTFORMW %ACTION%
+PRINTFORMW
+
+SELECTCASE ACTION
+CASE "浴精"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 列车的中央、浑身赤裸的%CALLNAME:DENSHA_P1%正以M字开腿的下流姿势蹲立在列车的地面上服侍着眼前的肉棒
+		PRINTFORMW %CALLNAME:DENSHA_P1%仰起头、双手捧起放在嘴前、摆出一副迎接精液的样子
+		PRINTFORMW 排在后面的男人们也迅速围成一圈、掏出各自的肉棒贴在了%CALLNAME:DENSHA_P1%的脸上
+		PRINTFORMW 一时间、%CALLNAME:DENSHA_P1%眼前、四面八方都被阴茎占满了视线、浓郁的雄性气味刺激着%CALLNAME:DENSHA_P1%的神经
+		IF MARK:淫紋
+			PRINTFORMW 连小腹的淫纹都隐隐作痛、诉说着渴望精液的事实
+			PRINTL 
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P1
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P1%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 
+		ENDIF
+		PRINTFORMW 男人们加速撸动着、即将到达极限、%CALLNAME:DENSHA_P1%也张开嘴等待着
+		PRINTFORMW 终于、其中一个男人爆发了、接着像是信号一般、其他的阴茎也相继射出、大量滚烫浓郁的精液从四面八方不断飞来
+		PRINTFORMW %CALLNAME:DENSHA_P1%的脸上、嘴中、头发、都被大量的精液铺满、同时、溢出的精液也顺着纤细的脖颈流向挺立的乳房、与圆润的臀上...
+		
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 列车的中央、浑身赤裸的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%背靠背，正以M字开腿的下流姿势蹲立在列车的地面上服侍着眼前的肉棒
+		PRINTFORMW 两人仰起头、各自的双手捧起放在嘴前、摆出一副迎接精液的样子
+		PRINTFORMW 排在后面的男人们也迅速围成一圈、掏出各自的肉棒贴在了两人的脸上
+		PRINTFORMW 一时间、%CALLNAME:DENSHA_P1%的%CALLNAME:DENSHA_P2%眼前、四面八方都被阴茎占满了视线、浓郁的雄性气味刺激着两人的神经
+		PRINTFORMW 男人们加速撸动着、即将到达极限、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%也张开嘴等待着
+		PRINTFORMW 终于、其中一个男人爆发了、接着像是信号一般、其他的阴茎也相继射出、大量滚烫浓郁的精液从四面八方不断飞来
+		PRINTFORMW 两人的脸上、嘴中、头发、都被大量的精液铺满、同时、溢出的精液也顺着纤细的脖颈流向挺立的乳房、与圆润的臀上...
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 列车的中央、浑身赤裸的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%背靠背，正以M字开腿的下流姿势蹲立在列车的地面上服侍着眼前的肉棒
+		PRINTFORMW 两人仰起头、各自的双手捧起放在嘴前、摆出一副迎接精液的样子
+		PRINTFORMW 排在后面的男人们也迅速围成一圈、掏出各自的肉棒贴在了两人的脸上
+		PRINTFORMW 一时间、%CALLNAME:DENSHA_P1%的%CALLNAME:DENSHA_P2%眼前、四面八方都被阴茎占满了视线、浓郁的雄性气味刺激着两人的神经
+		PRINTFORMW 男人们加速撸动着、即将到达极限、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%也张开嘴等待着
+		PRINTFORMW 终于、其中一个男人爆发了、接着像是信号一般、其他的阴茎也相继射出、大量滚烫浓郁的精液从四面八方不断飞来
+		PRINTFORMW 两人的脸上、嘴中、头发、都被大量的精液铺满、同时、溢出的精液也顺着纤细的脖颈流向挺立的乳房、与圆润的臀上
+		PRINTFORMW 意犹未尽的%CALLNAME:DENSHA_P1%伸出舌头舔了舔精液，转过身来就抚抱%CALLNAME:DENSHA_P2%，开始上下其手，热吻起来
+		PRINTFORMW 看着被刚刚释放出的授种淫液淋浴的两人开始亲热后，男人们情绪更加高涨，开始准备第二轮的洗礼。。。
+		
+	ENDSELECT
+	
+	R = 3 + RAND:3
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", R)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", R)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", R)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "露出経験", R)
+	IF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 2 + RAND:2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 2 + RAND:2)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)	
+	ENDIF
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP)	
+	
+	
+CASE "轮流肛交"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 列车上的男人们在%CALLNAME:DENSHA_P1%的身前排起了队
+		PRINTFORMW 最前方的男人正一边与%CALLNAME:DENSHA_P1%接吻一边做着最后的冲刺
+		PRINTFORMW 随着%CALLNAME:DENSHA_P1%低声的呜咽、男人将沾满白浊的肉棒从%CALLNAME:DENSHA_P1%的菊穴中拔出
+		PRINTFORMW 从慢慢回缩的菊穴入口、可以看到粉色肠肉、以及快要溢出的白色液体
+		PRINTFORMW 可还未等精液流出、下一根肉棒又将敞开的洞口堵住、以之前的精液充当润滑剂、在%CALLNAME:DENSHA_P1%的菊穴中进攻起来
+		PRINTFORMW 不同形状的肉棒刮蹭着肠壁、进攻着不同的位置、带来了与先前肉棒不一样的刺激、让%CALLNAME:DENSHA_P1%不由地呻吟起来
+		IF TALENT:DENSHA_P1:処女
+			PRINTFORMW 在知道%CALLNAME:DENSHA_P1%身为处女的事实后、男人们都不约而同的隔着肠壁顶撞着对面的子宫
+			PRINTFORMW 让未经人事的处女子宫一次又一次的到达高潮
+		ENDIF
+
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 列车上的男人们在%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的身前排起了队
+		PRINTFORMW 最前方的男人正一边与%CALLNAME:DENSHA_P1%接吻一边做着最后的冲刺，另一人则抽插着%CALLNAME:DENSHA_P2%的同时揉捏着她的乳房
+		PRINTFORMW 随着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%低声的呜咽、男人们将沾满白浊的肉棒从两人的菊穴中拔出
+		PRINTFORMW 从慢慢回缩的菊穴入口、可以看到粉色肠肉、以及快要溢出的白色液体
+		PRINTFORMW 可还未等精液流出、下一根肉棒又将敞开的洞口堵住、以之前的精液充当润滑剂、进攻起%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的菊穴
+		PRINTFORMW 不同形状的肉棒刮蹭着肠壁、进攻着不同的位置、带来了与先前肉棒不一样的刺激、让两人不由地呻吟起来
+		IF TALENT:DENSHA_P1:処女
+			PRINTFORMW 在知道%CALLNAME:DENSHA_P1%身为处女的事实后、男人们都不约而同的隔着肠壁顶撞着对面的子宫
+			PRINTFORMW 让未经人事的处女子宫一次又一次的到达高潮
+		ELSEIF TALENT:DENSHA_P2:処女
+			PRINTFORMW 在知道%CALLNAME:DENSHA_P2%身为处女的事实后、男人们都不约而同的隔着肠壁顶撞着对面的子宫
+			PRINTFORMW 让未经人事的处女子宫一次又一次的到达高潮
+		ENDIF 
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 列车上的男人们在%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的身前排起了队
+		PRINTFORMW 最前方的男人正一边与%CALLNAME:DENSHA_P1%接吻一边做着最后的冲刺，另一人则抽插着%CALLNAME:DENSHA_P2%的同时揉捏着她的乳房
+		PRINTFORMW 随着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%低声的呜咽、男人们将沾满白浊的肉棒从两人的菊穴中拔出
+		PRINTFORMW 从慢慢回缩的菊穴入口、可以看到粉色肠肉、以及快要溢出的白色液体
+		PRINTFORMW 可还未等精液流出、下一根肉棒又将敞开的洞口堵住、以之前的精液充当润滑剂、进攻起%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的菊穴
+		PRINTFORMW 不同形状的肉棒刮蹭着肠壁、进攻着不同的位置、带来了与先前肉棒不一样的刺激、让两人不由地呻吟起来
+		PRINTFORMW 享受着后穴被鸡巴抽插的同时，%CALLNAME:DENSHA_P1%抓住了%CALLNAME:DENSHA_P2%的手，当%CALLNAME:DENSHA_P2%转过头来时吻了上去
+		PRINTFORMW %CALLNAME:DENSHA_P2%也积极回应，两人开始舌吻，舌头纠缠，开始互相抚摸摸对方
+		PRINTFORMW 受到两人亲热刺激的男人们更加卖力的摇摆着腰部，深入顶撞着肠道深处，两人的呻吟变得更大声更淫荡。。。
+		
+	ENDSELECT
+	
+	A = 2 + RAND:3
+	M = 1 + RAND:3
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", A+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", A)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", M)
+	SIF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 2 + RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+
+	
+CASE "当众自慰"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 在众人的怂恿下、%CALLNAME:DENSHA_P1%答应了自慰的要求
+		PRINTFORMW %CALLNAME:DENSHA_P1%将手伸入裙子当中、然后缓慢的将内裤褪下
+		PRINTFORMW 众人眼神紧盯着移动着的内裤、呼吸渐渐粗重
+		PRINTFORMW 脱下内裤后、发现大家正在盯着自己的%CALLNAME:DENSHA_P1%、明显害羞起来、娇俏的脸上染上一抹红晕
+		PRINTFORMW 柔软的发丝轻轻垂落在她的脸颊上、像是要挡住他人的目光一般
+		PRINTFORMW 与之相反、%CALLNAME:DENSHA_P1%将双脚抬起、慢慢的向两边张开成M型
+		PRINTFORMW 没有了内裤与裙子的遮挡、%CALLNAME:DENSHA_P1%那充满柔软感形状的性器此刻暴露在了所有人的眼中
+		PRINTFORMW 随后、%CALLNAME:DENSHA_P1%伸出手、开始玩弄起阴蒂来
+		PRINTFORMW 明明和平时自慰一模一样的手法、此刻的快感却尤为强烈
+		PRINTFORMW 动人的呻吟愈发难以压抑
+		PRINTFORMW ...
+		PRINTFORMW ..
+		PRINTFORMW 几分钟后
+		PRINTFORMW %CALLNAME:DENSHA_P1%身上的衣服已被脱到一边、内裤早已不知去向
+		PRINTFORMW 座位旁围满了不断撸动着肉棒的乘客们
+		PRINTFORMW 而中间的%CALLNAME:DENSHA_P1%、正揉搓着乳头、一边自慰着
+
+	CASEELSE
+		PRINTFORMW 在众人的怂恿下、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%答应了自慰的要求
+		PRINTFORMW 两人将手伸入裙子当中、然后缓慢的将内裤褪下
+		PRINTFORMW 众人眼神紧盯着移动着的内裤、呼吸渐渐粗重
+		PRINTFORMW 脱下内裤后、发现大家正在盯着自己的两人明显害羞起来、娇俏的脸上染上一抹红晕
+		PRINTFORMW %CALLNAME:DENSHA_P1%将双脚抬起、慢慢的向两边张开成M型
+		PRINTFORMW 没有了内裤与裙子的遮挡、%CALLNAME:DENSHA_P1%那充满柔软感形状的性器此刻暴露在了所有人的眼中
+		PRINTFORMW 随后、%CALLNAME:DENSHA_P1%伸出手、开始玩弄起阴蒂来
+		PRINTFORMW 另一边，%CALLNAME:DENSHA_P2%伸手插入自己阴道开始自慰的同时，也开始自摸着自己的乳房
+		PRINTFORMW 明明和平时自慰一模一样的手法、此刻的快感却尤为强烈
+		PRINTFORMW 动人的呻吟愈发难以压抑
+		PRINTFORMW ...
+		PRINTFORMW ..
+		PRINTFORMW 几分钟后
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%身上的衣服已被脱到一边、内裤早已不知去向
+		PRINTFORMW 座位旁围满了不断撸动着肉棒的乘客们
+		PRINTFORMW 而中间的两人不时揉搓着乳头、不时玩弄自己因兴奋而肿胀的阴蒂，忘我的自慰着
+		
+	ENDSELECT
+	
+	A = 3 + RAND:3
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "自慰経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP*3/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	
+CASE "多根口交"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 列车的座位上、%CALLNAME:DENSHA_P1%正全心全意的侍奉着眼前的三根肉棒
+		IF RAND:2 == 0
+			PRINTFORMW 灵活的双手在两边的挺立的肉棒上来回套弄着、先走汁在手心与皮肤的摩擦中发出咕啾咕啾的响声
+			PRINTFORMW 另一边、%CALLNAME:DENSHA_P1%伸长舌头将眼前的肉棒充分润滑后、缠绕着卷入口腔中、仔细的侍奉起来...
+		ELSE
+			PRINTFORMW 沐浴在浓郁的雄性气味中的%CALLNAME:DENSHA_P1%、大张着嘴伸出舌头在三根肉棒的尖端上来回的舔舐
+			PRINTFORM 唾液混合着先走汁不断的垂落在%CALLNAME:DENSHA_P1%
+			IF TALENT:DENSHA_P1:巨乳
+				PRINTFORM %TEXTR("压迫力十足地/气势十足地")%起伏着的
+			ELSEIF TALENT:DENSHA_P1:貧乳 && TALENT:DENSHA_P1:娇小
+				PRINTFORM %TEXTR("平坦的/起伏少的")%
+			ELSEIF TALENT:DENSHA_P1:貧乳
+				PRINTFORM %TEXTR("可爱地/小小地/微微地")%晃动着的
+			ELSE
+				PRINTFORM %TEXTR("幅度大地/上下")%摇晃着的
+			ENDIF
+			PRINTFORMW 柔软乳房上……
+		ENDIF
+	
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 列车的座位上、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%正全心全意的侍奉着眼前并列着的肿胀肉棒
+		PRINTFORMW %CALLNAME:DENSHA_P1%灵活的双手在不同的肉棒上来回套弄着、先走汁在手心与皮肤的摩擦中发出咕啾咕啾的响声
+		PRINTFORMW %CALLNAME:DENSHA_P2%则伸长舌头将眼前的肉棒充分润滑后、缠绕着卷入口腔中、仔细的侍奉起来...
+		PRINTFORMW 唾液混合着先走汁不断的垂落在两人的身体和胸部，沾满了淫液的乳房随着头部动作晃动着
+		PRINTFORMW 过一阵子，众人们爆发了、阴茎对着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的手和口相继射出滚烫浓郁的精液
+		PRINTFORMW 刚去了的人们满意的退下，不多久另一群人就上前，挺着勃起的鸡巴
+		PRINTFORMW 连刚刚精液都还没吞下的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%也不在意，继续的用着嘴巴和手继续侍奉
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 列车的座位上、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%正全心全意的侍奉着眼前并列着的肿胀肉棒
+		PRINTFORMW %CALLNAME:DENSHA_P1%灵活的双手在不同的肉棒上来回套弄着、先走汁在手心与皮肤的摩擦中发出咕啾咕啾的响声
+		PRINTFORMW %CALLNAME:DENSHA_P2%则伸长舌头将眼前的肉棒充分润滑后、缠绕着卷入口腔中、仔细的侍奉起来...
+		PRINTFORMW 唾液混合着先走汁不断的垂落在两人的身体和胸部，沾满了淫液的乳房随着头部动作晃动着
+		PRINTFORMW 过一阵子，众人们爆发了、阴茎对着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的手和口相继射出滚烫浓郁的精液
+		PRINTFORMW %CALLNAME:DENSHA_P1%舔了舔自己沾满精液的手后，开始用手抚摸着%CALLNAME:DENSHA_P2%的乳房
+		PRINTFORMW 受抚摸的%CALLNAME:DENSHA_P2%没忍多久，转头用嘴巴贴上%CALLNAME:DENSHA_P1%的嘴巴开始热吻
+		PRINTFORMW 热吻的同时，%CALLNAME:DENSHA_P2%将自己口内刚被注入的精液用推进%CALLNAME:DENSHA_P1%的口，两人互摸热吻的同时交换着淫液
+		PRINTFORMW 刚爆发了的众人们因为两人亲热而情绪高涨，本来开始软下的肉棒又慢慢的顶立起来
+		
+	ENDSELECT
+	
+	M = 4 + RAND:3
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "口交経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精飲経験", M)
+	IF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", 2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	ENDIF
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/4)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	
+CASE "双穴插入"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 列车的中央、浑身赤裸的%CALLNAME:DENSHA_P1%正被男人从背后以双脚张开的姿势、像是展示一般抱起
+		PRINTFORMW 可以清楚的看到男人的阴茎此时正深深的插入菊穴之中、而上方爱液横流的小穴却微微张合、仿佛在邀请肉棒的进入
+		PRINTFORMW 一个健壮的男人走上前、将与之身材相称的阴茎抵在了%CALLNAME:DENSHA_P1%的小腹上
+		PRINTFORMW %CALLNAME:DENSHA_P1%握住男人的阴茎、引导着、从小腹滑向那女性那最秘密的洞口
+		PRINTFORMW 男人将%CALLNAME:DENSHA_P1%早已充分湿润的腔深深贯穿了、湿滑的蜜壶将坚硬的肉棒整根吞下
+		PRINTFORMW 双穴都被填满的巨大满足感让%CALLNAME:DENSHA_P1%一阵失神、可蠕动的内壁却主动的紧缩着、贪婪地缠绕着肉棒
+		PRINTFORMW 回过神的%CALLNAME:DENSHA_P1%主动缠上眼前男人的脖子、一边承受着双穴的进攻、一边下流的接吻起来...
+		PRINTFORMW
+		PRINTFORMW 最终、在%CALLNAME:DENSHA_P1%高亢的呻吟中、男人在%CALLNAME:DENSHA_P1%的体内释放了自己的欲望....
+		IF MARK:DENSHA_P1:淫紋
+			PRINTFORM 大量射精
+			PRINTFORMW 男人的玲口抵在%CALLNAME:DENSHA_P1%的子宫入口处、大量的精液流入子宫之中....
+			PRINTL 
+			CALL PRINT_CUTIN, "淫紋", DENSHA_P1
+			CALL PRINT_STRW, @"爱心粉紅_%CALLNAME:DENSHA_P1%被刻上的淫纹发出了妖艳的光…"
+			PRINTFORMW 感受着精液%TEXTR("流入/注入")%子宫所带来的难以忍受的%TEXTR("疼痛感/愉悦感")%、%CALLNAME:DENSHA_P1%无意识地扭起了腰…
+		ENDIF
+
+	CASE 1,2	;无相性 相性○
+		PRINTFORMW 列车的中央、浑身赤裸的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%正被男人从背后以双脚张开的姿势、像是展示一般抱起
+		PRINTFORMW 可以清楚的看到男人的阴茎此时正深深的插入菊穴之中、而上方爱液横流的小穴却微微张合、仿佛在邀请肉棒的进入
+		PRINTFORMW 另两个健壮的男人走上前、将与之身材相称的阴茎抵在了%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的小腹上
+		PRINTFORMW 两人握住男人的阴茎、引导着、从小腹滑向那女性那最秘密的洞口
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%那早已充分湿润的腔被深深贯穿了、湿滑的蜜壶将坚硬的肉棒整根吞下
+		PRINTFORMW 双穴都被填满的巨大满足感让两人一阵恍惚失神、可蠕动的内壁却主动的紧缩着、贪婪地缠绕着肉棒
+		PRINTFORMW 情欲高涨的众人们不理会失神的两人，开始进行着双穴进行活塞运动，还不时亲吻抚摸着被贯穿的两人
+		PRINTFORMW 过不久，男人们终于忍不住，紧抱起两人，肉棒顶进深处，开始注入大量浓郁的精液
+		PRINTFORMW 感受到子宫和肠道被灼热精液洗礼的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%回过神来，开始高亢的呻吟着
+		
+	CASE 3,4	;相性◎相性☆
+		PRINTFORMW 列车的中央、浑身赤裸的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%正被男人从背后以双脚张开的姿势、像是展示一般抱起
+		PRINTFORMW 可以清楚的看到男人的阴茎此时正深深的插入菊穴之中、而上方爱液横流的小穴却微微张合、仿佛在邀请肉棒的进入
+		PRINTFORMW 另两个健壮的男人走上前、将与之身材相称的阴茎抵在了%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的小腹上
+		PRINTFORMW 两人握住男人的阴茎、引导着、从小腹滑向那女性那最秘密的洞口
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%那早已充分湿润的腔被深深贯穿了、湿滑的蜜壶将坚硬的肉棒整根吞下
+		PRINTFORMW 双穴都被填满的巨大满足感让两人高潮一阵子、爱液狂喷，蠕动的内壁贪婪地缠绕着肉棒
+		PRINTFORMW 刚高潮的%CALLNAME:DENSHA_P1%转过头和%CALLNAME:DENSHA_P2%对望，情绪因对方的痴相而更加高涨，开始热吻起来
+		PRINTFORMW 看着两人亲热的众人们更加躁动，开始着进行着活塞运动，随着两人的妖媚呻吟而进一步加速
+		PRINTFORMW 过不久，男人们终于忍不住，紧抱起两人，肉棒顶进深处，开始注入大量浓郁的精液
+		PRINTFORMW 感受到子宫和肠道被灼热精液洗礼的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%又开始高潮吹潮着，爱液撒向周围
+		
+	ENDSELECT
+	
+	V = 2 + RAND:3
+	A = 2 + RAND:3
+	M = 1 + RAND:3
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V+A+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "露出経験", V+A+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", V)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "絶頂経験", 2 + RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "接吻経験", M)
+	SIF RELATION_LEVEL > 2
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "百合経験", 2 + RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/2)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	
+CASE "4P"
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 在列车车厢的中央、几件衣服被随意的铺在了地上充当着临时的床铺
+		PRINTFORMW 众人围起的圈子中央
+		IF TALENT:DENSHA_P1:娇小
+			PRINTFORMW %CALLNAME:DENSHA_P1%尚未成熟的稚嫩身体几乎被上下两个男性完全遮盖
+			SIF TALENT:DENSHA_P1:巨乳
+				PRINTFORMW 那和身形毫不相称的巨乳在挤压中从两侧露了出来
+			PRINTFORMW 从不断传来的愉悦呻吟与男性不断耸动的动作才能知道、%CALLNAME:DENSHA_P1%的双穴都在被同时进攻着
+		ELSE
+			PRINTFORMW %CALLNAME:DENSHA_P1%那完全赤裸的诱人娇躯正夹在两个男性的中间、随着动作不断摆动着
+			PRINTFORMW 动人的呻吟从含住另一根肉棒的嘴中响起、更添一抹淫靡的韵味
+		ENDIF
+
+	CASEELSE
+		PRINTFORMW 在列车车厢的中央、几件衣服被随意的铺在了地上充当着临时的床铺
+		PRINTFORMW 众人围起的圈子中央中，只见浑身赤裸的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%早已分别被肉棒贯穿着双穴
+		PRINTFORMW 双穴都被填满的充实感让两人陷入半恍惚状态呻吟着、蠕动的阴道和肠壁贪婪地缠绕着灼热的肉棒
+		PRINTFORMW 在旁边观望着两人受不了刺激，掏出早已勃起的鸡巴，硬生生的插入了%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%因呻吟而半开着的口
+		PRINTFORMW 口部被肉棒填满的两人停止了呻吟，开始努力吸吮着肉棒，三穴不断的被肉棒刺激着.
+		PRINTFORMW 过不久，男人们终于忍不住，大家犹如有信号般，肉棒们顶进深处，开始向两人的三穴注入大量浓郁的精液
+		PRINTFORMW 被精液淹没的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%迎来了高潮，翻了白眼妖媚的浪叫着
+		
+	ENDSELECT
+	
+	V = 2 + RAND:3
+	A = 2 + RAND:3
+	M = (V+A)/2 + RAND:2
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "露出経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "絶頂経験", 2 + RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "口交経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精飲経験", M)	
+
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	
+ENDSELECT
+;
+;END OF @EVENT_NTR_DENSHA_HARASS_4
+;
+
+@EVENT_NTR_DENSHA_GET_OPPAI_TEXT(ARG)
+#FUNCTIONS
+SELECTCASE TALENT:ARG:巨乳
+CASE 3	;超乳
+	RETURNF "匪夷所思的"
+CASE 2	;爆乳
+	RETURNF "波涛汹涌的"
+CASE 1	;巨乳
+	RETURNF "丰腴饱满的"
+CASEELSE	;普通 貧乳
+	SIF TALENT:ARG:貧乳
+		RETURNF "小巧玲珑的"
+	RETURNF "圆润綿軟的"
+ENDSELECT
+RETURNF "平坦的"
+
+@EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(ARG)
+#FUNCTIONS
+SELECTCASE TALENT:ARG:阴茎
+CASE IS > 3	;腕
+	RETURNF "犹如腕臂般的凶残"
+CASE 3	;马
+	RETURNF "马屌般粗长"
+CASE 2	;巨
+	RETURNF "雄伟粗壮的"
+CASE 1	;
+	RETURNF "普通的"
+CASE 0	;
+	SIF TALENT:ARG:扶她 == 1
+		RETURNF "短小的"
+	RETURNF ""
+ENDSELECT
+RETURNF ""
+
+@EVENT_NTR_DENSHA_GET_APPEARANCE(ARG)
+#FUNCTIONS
+SELECTCASE TALENT:ARG:外見年齢
+CASE 4
+	RETURNF "人妻"
+CASE 3
+	RETURNF "大姐姐"
+CASE 2
+	RETURNF "少女"
+CASE 1
+	RETURNF "萝莉"
+CASEELSE
+	RETURNF ""
+ENDSELECT
+RETURNF ""
+
+@EVENT_NTR_DENSHA_GET_NINSHIN(ARG)
+#FUNCTION
+;臨月 分娩直前
+RETURNF (GETBIT(BASE:ARG:胎児, 8) || GETBIT(BASE:ARG:胎児, 9))
+
+@EVENT_NTR_DENSHA_HARASS_10, ARG
+#DIM DENSHA_P1
+#DIM DENSHA_P2
+#DIM RELATION_LEVEL
+#DIM BASE_JUEL_UP = 3000
+#DIMS ACTION
+#DIMS EVENT_TABLE = "乱交车/露天车/"
+#DIM TEMP_WITH_EXP
+#DIM TEMP_NO_EXP
+;===INIT===
+DENSHA_P1 = TARGET
+DENSHA_P2 = ARG
+RELATION_LEVEL = EVENT_NTR_DENSHA_GET_RELATIONSHIP(DENSHA_P2)
+
+SIF CEVENT("露天车体验",DENSHA_P1) && CEVENT("露天车体验",DENSHA_P2)
+EVENT_TABLE += "扶她车/触手车/"
+
+ACTION = %TEXTR(EVENT_TABLE)%
+
+PRINTFORMW 
+PRINTFORMW %ACTION%
+PRINTFORMW 
+
+SELECTCASE ACTION
+CASE "乱交车"
+
+	PRINTFORMW 走进车厢内、只见很多聚集在一起的人们早已情绪高涨，浑身赤裸。一些男女正在亲热着，整个车厢充满着涩瑟气氛
+	PRINTFORM 爱液早已泛滥的%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW 脱下了衣服和淫具放在一旁后，走向人群中
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+
+	;前戏
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		SELECTCASE RAND:2
+			CASE 1
+				PRINTFORMW 进入人群中被包围的%CALLNAME:DENSHA_P1%，开始全心全意的侍奉着附近的肉棒
+				PRINTFORMW 灵活的双手在两边的挺立的肉棒上来回套弄着、先走汁在手心与皮肤的摩擦中发出咕啾咕啾的响声
+				PRINTFORMW 手淫一阵子后，%CALLNAME:DENSHA_P1%伸长舌头将眼前的肉棒充分润滑后、缠绕着卷入口腔中、仔细的侍奉起来...
+				PRINTFORMW 唾液混合着先走汁不断的垂落在两人的身体和胸部，沾满了淫液的乳房随着头部动作晃动着
+				PRINTFORMW 过一阵子，众人们爆发了、阴茎对着%CALLNAME:DENSHA_P1%的口和身体继射出滚烫浓郁的精液
+				PRINTFORMW 可以看见享受着被精液淋浴的%CALLNAME:DENSHA_P1%更加湿了，爱液不断流下
+			CASE 0
+				PRINTFORMW 在众人的怂恿下、%CALLNAME:DENSHA_P1%答应了自慰的要求
+				PRINTFORMW %CALLNAME:DENSHA_P1%靠向了空出的座位，将双脚抬起，慢慢的向两边张开成M型
+				PRINTFORMW 那充满柔软感形状的性器此刻暴露在了所有人的眼中，只见小穴不断的诱人的收缩着，不断流出爱液
+				PRINTFORMW %CALLNAME:DENSHA_P1%伸出手、开始玩弄起因兴奋而早已肿胀的阴蒂
+				PRINTFORMW 似乎不满足与阴蒂的刺激，%CALLNAME:DENSHA_P1%也开始搓弄起自己的乳房，偶尔也用手插入自己的爱穴
+				PRINTFORMW 座位附近的众人配合着%CALLNAME:DENSHA_P1%呻吟，一起撸动着肿胀的肉棒
+		ENDSELECT
+	
+	CASEELSE	;双人
+		SELECTCASE RAND:2
+			CASE 1
+			PRINTFORMW 进入人群中被包围的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%开始全心全意的侍奉着附近的肉棒
+			PRINTFORMW %CALLNAME:DENSHA_P1%灵活的双手在不同的肉棒上来回套弄着、先走汁在手心与皮肤的摩擦中发出咕啾咕啾的响声
+			PRINTFORMW %CALLNAME:DENSHA_P2%则伸长舌头将眼前的肉棒充分润滑后、缠绕着卷入口腔中、仔细的侍奉起来...
+			PRINTFORMW 唾液混合着先走汁不断的垂落在两人的身体和胸部，沾满了淫液的乳房随着头部动作晃动着
+			PRINTFORMW 过一阵子，众人们爆发了、阴茎对着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的手和口相继射出滚烫浓郁的精液
+			PRINTFORMW %CALLNAME:DENSHA_P1%舔了舔自己沾满精液的手后，开始用手抚摸着%CALLNAME:DENSHA_P2%的乳房
+			PRINTFORMW 受抚摸的%CALLNAME:DENSHA_P2%没忍多久，转头用嘴巴贴上%CALLNAME:DENSHA_P1%的嘴巴开始热吻
+			PRINTFORMW 热吻的同时，%CALLNAME:DENSHA_P2%将自己口内刚被注入的精液用推进%CALLNAME:DENSHA_P1%的口，两人互摸热吻的同时交换着淫液
+			PRINTFORMW 刚爆发了的众人们因为两人亲热而情绪高涨，本来开始软下的肉棒又慢慢的顶立起来
+			
+			CASE 0
+			PRINTFORMW 在众人的怂恿下、%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%答应了当众调戏自慰的要求
+			PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%将双脚抬起、慢慢的向两边张开成M型
+			PRINTFORMW 充满柔软感形状的性器此刻暴露在了所有人的眼中，只见小穴不断的诱人的收缩着，不断流出爱液
+			PRINTFORMW 随后、%CALLNAME:DENSHA_P1%伸出手开始玩弄起阴蒂来，%CALLNAME:DENSHA_P2%则开始抚摸着自己的胸部，偶尔捏弄着乳头
+			PRINTFORMW 两人自慰不久后，意犹未尽，开始互相上下其手。
+			PRINTFORMW %CALLNAME:DENSHA_P1%将手插入%CALLNAME:DENSHA_P2%阴道，开始抽插起来
+			PRINTFORMW %CALLNAME:DENSHA_P2%则一时吸吮着%CALLNAME:DENSHA_P1%的乳头，一时凑近%CALLNAME:DENSHA_P1%开始舌吻起来
+			PRINTFORMW 座位附近的众人配合着两人的呻吟，一起撸动着肿胀的肉棒
+			
+		ENDSELECT
+	ENDSELECT
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;本番
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 气氛进一步淫靡的时候，一个健壮的男人走上前将%CALLNAME:DENSHA_P1%抬起，顺势就将粗壮的肉棒插入%CALLNAME:DENSHA_P1%的爱穴
+		PRINTFORMW %CALLNAME:DENSHA_P1%回抱着男生，两人的嘴巴就这样贴近，开始热吻起来，其他人可开始贴近，趁机抚摸着%CALLNAME:DENSHA_P1%各处
+		PRINTFORMW 亲热的同时，%CALLNAME:DENSHA_P1%也不忘空出双手，开始手淫着附近包围的肉棒，呻吟声越来越妖媚
+		PRINTFORMW 一阵子后，看着%CALLNAME:DENSHA_P1%那诱人的后穴空闲着，有人就上前，用早已泛滥的爱液和前列汁湿润后，噗呲的插入了菊穴
+		PRINTFORMW 双穴被填满的巨大满足感让%CALLNAME:DENSHA_P1%迎来了高潮，爱液喷发的同时，蠕动的内壁和肠壁主动的紧缩着，贪婪地缠绕着肉棒
+		PRINTFORMW 两人开始进行活塞动作，还很有默契的交叉着节奏，轮流攻击着子宫口和肠道
+		PRINTFORMW 双穴不断受到刺激的%CALLNAME:DENSHA_P1%开始狼叫起来，握着其他肉棒的手动作加速，兴奋地半恍惚着，口水从嘴角留下来
+		PRINTFORMW 过不久，男人们终于忍不住，两人紧抱起%CALLNAME:DENSHA_P1%，肉棒顶进深处，开始注入大量浓郁的精液
+		PRINTFORMW 感受到子宫和肠道被灼热精液洗礼的%CALLNAME:DENSHA_P1%又开始高潮吹潮着，爱液撒向周围
+	
+	CASEELSE	;双人
+		PRINTFORMW 气氛进一步淫靡的时候，两人走上前将%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%抬起，顺势就将粗壮的肉棒插入%CALLNAME:DENSHA_P1%的爱穴
+		PRINTFORMW 两人回抱着男生们，嘴巴就这样贴近，开始舌吻起来，其他人可开始贴近，趁机抚摸着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%各处
+		PRINTFORMW 亲热的同时，%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%也不忘空出双手，开始手淫着附近包围的肉棒，呻吟声越来越妖媚
+		PRINTFORMW 一阵子后，看着两人诱人的后穴空闲着，有人就上前，用早已泛滥的爱液和前列汁湿润后，噗呲的插入了两人菊穴
+		PRINTFORMW 双穴被填满的巨大满足感让%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%迎来了高潮，爱液喷发的同时，蠕动的内壁和肠壁主动的紧缩着，贪婪地缠绕着肉棒
+		PRINTFORMW 刚高潮的%CALLNAME:DENSHA_P1%转过头和%CALLNAME:DENSHA_P2%对望，情绪因对方的痴相而更加高涨，开始热吻起来
+		PRINTFORMW 看着两人亲热的众人们更加躁动，开始着进行着活塞运动，随着两人的妖媚呻吟而进一步加速
+		PRINTFORMW 过不久，男人们终于忍不住，紧抱起两人，肉棒顶进深处，开始注入大量浓郁的精液
+		PRINTFORMW 感受到子宫和肠道被灼热精液洗礼的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%又开始高潮吹潮着，爱液撒向周围
+
+	ENDSELECT
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;乱交
+	SELECTCASE RELATION_LEVEL
+	CASE 0		;单人
+		PRINTFORMW 释放了欲望后而满足的男人们把鸡巴抽了出来把%CALLNAME:DENSHA_P1%放下，可以看见满溢的精液从双穴流了出来
+		PRINTFORMW %CALLNAME:DENSHA_P1%趴在地上娇喘着，双脚大大的张开着，全身都沾满着诱人的淫液，乳房随着急促的呼吸起伏摇晃着
+		PRINTFORMW 等不及的其他人将高潮后韵未尽的%CALLNAME:DENSHA_P1%翻过身来，一人提前抢位躺在了%CALLNAME:DENSHA_P1%身下
+		PRINTFORMW 正当恍惚的%CALLNAME:DENSHA_P1%快回神时，在后背位姿态中，突然爱穴和后穴又被肉棒插入
+		PRINTFORMW 被两穴快感冲脑的%CALLNAME:DENSHA_P1%正要开口呻吟时，另一人凑向前，用肉棒塞进%CALLNAME:DENSHA_P1%的口，开始深喉口交
+		PRINTFORMW 双穴再度被填满的同时，灼热的肉棒深深的插入%CALLNAME:DENSHA_P1%的喉道，被快感淹没的%CALLNAME:DENSHA_P1%翻了白眼，开始吹潮起来
+		PRINTFORMW 众人毫不理会恍惚的%CALLNAME:DENSHA_P1%，开始进行活塞动作，激烈的摇晃让%CALLNAME:DENSHA_P1%稍微回神，感受着各处满溢着淫液被肉棒搅拌着的快感
+		PRINTFORMW 随着呻吟声提升，众人逐渐加快节奏，过不久也跟着高潮，肉棒们颤抖着向早已满溢着授种液的三洞继续注入着更加浓稠的精液
+		PRINTFORMW 可以看见被大量精液淹没的%CALLNAME:DENSHA_P1%，腹部因过量精液而好像孕妇般凸起。
+		PRINTFORMW 还以为已经不能再高潮的%CALLNAME:DENSHA_P1%就这样被另一波快感袭击而再次迎来阵阵的高潮
+	
+	CASEELSE	;双人
+		PRINTFORMW 释放了欲望后而满足的男人们把鸡巴抽了出来把%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%放下，可以看见满溢的精液从两人双穴流了出来
+		PRINTFORMW %CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%趴在地上娇喘着，双脚大大的张开着，全身都沾满着诱人的淫液，乳房随着急促的呼吸起伏摇晃着
+		PRINTFORMW 等不及的其他人将高潮后韵未尽的两人翻过身来，两人提前抢位躺在了%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的身下
+		PRINTFORMW 正当恍惚的两人快回神时，在后背位姿态中，突然爱穴和后穴又被肉棒插入
+		PRINTFORMW 被两穴快感冲脑正要开口呻吟时，另两人凑向前，用肉棒塞进%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的口，开始深喉口交
+		PRINTFORMW 双穴再度被填满的同时，灼热的肉棒深深的插入两人的喉道，被快感淹没的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%翻了白眼，开始吹潮起来
+		PRINTFORMW 众人毫不理会恍惚的两人，开始进行活塞动作，激烈的摇晃让两人稍微回神，感受着各处满溢着淫液被肉棒搅拌着的快感
+		PRINTFORMW 随着呻吟声提升，众人逐渐加快节奏，过不久也跟着高潮，肉棒们颤抖着向早已满溢着授种液的三洞继续注入着更加浓稠的精液
+		PRINTFORMW 可以看见被大量精液淹没的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%，两人腹部因过量精液而好像孕妇般凸起。
+		PRINTFORMW 还以为已经不能再高潮的%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%就这样被另一波快感袭击而再次迎来阵阵的高潮
+
+	ENDSELECT
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;结尾
+	PRINTFORMW 经过一段浪叫连连，高潮不断的爱欲时间后，电车内的人们终于开始冷静下来。
+	PRINTFORMW 虽然还有些人依然搂搂抱抱，相互亲热，但是已经没有刚刚大乱交般的淫靡气氛了。
+	PRINTFORM 在车厢中央，可以看见%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW 赤裸沾满了淫液的身影，躺在地上，不时发出满足又淫荡的娇喘声。
+	PRINTFORMW 过不久，车厢内扬声器响起声来，提醒各位目的地就快抵达，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%依依不舍的拿起了之前脱下的淫具和衣服。
+	PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%毫不在乎满身粘稠的体液，将淫具塞回相应部位后，穿起了衣服来。
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	V = 5 + RAND:3 + RAND:2
+	A = 5 + RAND:3 + RAND:2
+	H = 5 + RAND:3 + RAND:2
+	M = 5 + RAND:3 + RAND:2
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", H+M)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "露出経験", V+A+H+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", V+A+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", V - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", A - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "絶頂経験", ((V+A+M)/3)/2 + RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "手淫経験", H)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "口交経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精飲経験", M - RAND:3)	
+
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+
+CASE "露天车"
+
+	;只是双人时且只有一位有经验的情况下使用，其他场景请忽略
+	TEMP_WITH_EXP = DENSHA_P1
+	TEMP_NO_EXP = DENSHA_P2
+	IF CEVENT("露天车体验",DENSHA_P2)
+		TEMP_WITH_EXP = DENSHA_P2
+		TEMP_NO_EXP = DENSHA_P1
+	ENDIF
+
+	;单人或者双人，无经验
+	IF CEVENT("露天车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("露天车体验",DENSHA_P2) == 0)
+		PRINTFORM 走进车厢内，%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 和平时一样脱衣全裸后，留意到车厢布置稍微不一样，中央靠边平时有些座位，但今天完全没座位
+		PRINTFORMW 靠墙边摆放着全透明的展示台，台内可以看到琳琅满目的淫具，有小巧玲珑的跳蛋，不规则凸起的振动棒，大小不一的肛塞等等
+		PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%有些疑惑，正想询问附近的人时，只听见一个熟悉的声音说到
+		CALL PRINT_STRW, @"「啊啦~_H_欢迎~_H_今天我们会有比较特别的节目噢~_H_」"
+		CALL PRINT_STRW, @"「待会儿电车会在特定的地点停一阵子，然后会全透明化哦~_H_」"
+		CALL PRINT_STRW, @"「嗯？不会有问题的，已经有执照了，对外这只是广告啦~广告_H_通常还会有观众群捧场哦~_H_」"
+		CALL PRINT_STRW, @"「展示台上的淫具吗？那些是我们赞助商的实验用品，可能需要你们帮忙宣传哦~_H_」"
+		CALL PRINT_STRW, @"「除此之外，就好好享受着特殊解放的露天交欢吧，刺激感肯定不一样哦~_H_」"
+		PRINTFORMW 说完，神秘扶她和其他人聊一聊，偶尔调戏对方，不久后似乎因有其他事情，挥挥手告别后离开了车厢。。。
+		
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("露天车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("露天车体验",DENSHA_P2) == 1)
+		PRINTFORM 走进车厢内，%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 留意到车厢布置稍微不一样。因有之前体验过，知道接下来会是光天化日的露天乱交
+		PRINTFORMW 和平时一样脱衣全裸后，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%走向展示台看看新试验品，偶尔也拿了一些淫具把玩着
+		PRINTFORMW 观赏了新试验品后正要走开时，才注意到神秘扶她在旁边微笑着
+		CALL PRINT_STRW, @"「啊啦~_H_感谢再次捧场，上次玩的尽心吗~？_H_」"
+		CALL PRINT_STRW, @"「这次有一些新产品哦，虽然还是比不上真枪实物的充实感，但是相信它们一定程度上可以让你们满意的~_H_」"
+		CALL PRINT_STRW, @"「下一次可以的话会介绍其他不一样的新_HH_刺_HH_激_HH_哦~_HH_敬请期待~_H_」"
+		PRINTFORMW 说完，神秘扶她眨了眨眼，挥挥手走开。和其他人短暂聊一阵子后，似乎因有其他事情而离开了车厢。。。
+	
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+		PRINTFORMW 走进车厢内，%CALLNAME:TEMP_WITH_EXP%和%CALLNAME:TEMP_NO_EXP%留意到车厢布置稍微不一样。
+		PRINTFORMW 脱着衣服的%CALLNAME:TEMP_NO_EXP%正要询问%CALLNAME:TEMP_WITH_EXP%时，附近一个熟悉的声音说到
+		CALL PRINT_STRW, @"「啊啦~_H_欢迎~_H_看来今天有新来的人哦？让我来介绍下吧，今天的节目比较特别噢~_H_」"
+		CALL PRINT_STRW, @"「待会儿电车会在特定的地点停一阵子，然后会全透明化哦~_H_」"
+		CALL PRINT_STRW, @"「嗯？不会有问题的，已经有执照了，对外这只是广告啦~广告_H_通常还会有观众群捧场哦~_H_」"
+		CALL PRINT_STRW, @"「展示台上的淫具吗？那些是我们赞助商的实验用品，可能需要你们帮忙宣传哦~_H_」"
+		CALL PRINT_STRW, @"「除此之外，就好好享受着特殊解放的露天交欢吧，刺激感肯定不一样哦~_H_」"
+		CALL PRINT_STRW, @"「啊对了，你已经体验过了，待会儿就帮忙引导她一下吧~_H_」"
+		CALL PRINT_STRW, @"说完，神秘扶她眼神向%CALLNAME:TEMP_WITH_EXP%示意，用手捏了捏她的乳头。听到了%CALLNAME:TEMP_WITH_EXP%「啊_HH_」而微笑的神秘扶她就这样告别离开了车厢。。。"
+	
+	ENDIF
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;前戏
+	PRINTFORMW 电车轰鸣着一阵子后开始缓下，不久就停了下来。停下后，车厢侧壁逐渐透明化。
+	PRINTFORMW 透明化后，可以看见电车停在了一个稍微旷阔的空地旁，已经围聚着一群人。
+	PRINTFORM 车厢内扬声器似乎可以传播外面的声音，%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和 %CALLNAME:DENSHA_P2%
+	PRINTFORMW 听到了观众们的讨论声
+	PRINTFORMW 「所以跟你说了啊，现在来这里绝对值得。。。」「呜哇，还真的都是全裸啊，等下就真的有那个吗？」
+	;单人或者双人，无经验
+	IF CEVENT("露天车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("露天车体验",DENSHA_P2) == 0)
+		PRINTFORM 「今天好像有新手？没看过那%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(DENSHA_P1)%%\@TALENT:DENSHA_P1:扶她 == 1?"扶她"#\@%%EVENT_NTR_DENSHA_GET_APPEARANCE(DENSHA_P1)%
+		SIF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1) == 1
+		PRINTFORM ，而且还怀孕着，没问题吗
+		PRINTFORM 」
+		IF DENSHA_P2 != 0
+			PRINTFORM 「另一个%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(ARG)%%\@TALENT:DENSHA_P2:扶她 == 1?"扶她"#\@%%EVENT_NTR_DENSHA_GET_APPEARANCE(DENSHA_P2)%也好像是生面孔
+			SIF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2) == 1
+			PRINTFORM ，而且还挺着西瓜肚
+			PRINTFORM 」
+		ENDIF
+		PRINTFORMW 「不知道今天会有什么玩法」
+		
+		PRINTFORM 受到众人关注的%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 似乎有些不太习惯，满脸通红，身体扭扭捏捏的
+		PRINTFORMW 这时有人靠向%CALLNAME:DENSHA_P1%，趁她还没反应过来时亲吻着她的嘴，同时手也一边开始搓揉着%CALLNAME:DENSHA_P1%的乳房，一边玩弄着阴蒂
+		PRINTFORMW 被上下其手的%CALLNAME:DENSHA_P1%身体放松下来，开始享受着被陌生人抚摸的快感，呻吟声逐渐增大
+		IF DENSHA_P2 != 0
+			PRINTFORM 看着%CALLNAME:DENSHA_P1%被调弄的%CALLNAME:DENSHA_P2%开始兴奋起来，伸手
+			IF TALENT:DENSHA_P2:扶她
+				PRINTFORM 搓弄其自己 %EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P2)% 肉棒，
+			ELSE
+				PRINTFORM 插入自己的阴道，开始自慰起来，
+			ENDIF
+			PRINTFORMW 偶尔抚摸自己的乳房
+			PRINTFORMW 当她沉溺於自慰的同时，两个猛男挺着粗长的肉棒靠近，龟头因兴奋而不断地分泌出先走液
+			PRINTFORMW %CALLNAME:DENSHA_P2%看到了新肉棒后，一手握住一根开始手淫，一边张口将整根含入，开始吸吮
+		ENDIF
+		
+		PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%被性骚扰的同时，其他人从展示台选了一些试验淫具拿着靠近
+		PRINTFORM 他们先向观众展示着拿来的振动棒和跳蛋，之后分工合作，一口气将振动棒插入%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 的双穴后，将跳蛋贴在乳头上
+		PRINTFORMW 突然被不熟悉淫具填满刺激的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%身体一震，高潮了。。。
+	
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("露天车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("露天车体验",DENSHA_P2) == 1)
+		PRINTFORM 「那%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(DENSHA_P1)%%\@TALENT:DENSHA_P1:扶她 == 1?"扶她"#\@%%EVENT_NTR_DENSHA_GET_APPEARANCE(DENSHA_P1)%好眼熟
+		SIF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1) == 1
+		PRINTFORM ，西瓜肚好诱人
+		PRINTFORM 」
+		IF DENSHA_P2 != 0
+			PRINTFORM 「啊！是上次%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(DENSHA_P2)%%\@TALENT:DENSHA_P2:扶她 == 1?"扶她"#\@%%EVENT_NTR_DENSHA_GET_APPEARANCE(DENSHA_P2)%
+			SIF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2) == 1
+			PRINTFORM ，还居然怀孕了！？可恶！！
+			PRINTFORM 」
+		ENDIF
+		PRINTFORMW 「有人知道她们的番号吗？网上似乎都找不到。。。」
+		
+		PRINTFORM %CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 从展示台挑了玩具后向观众展示着
+		SELECTCASE RAND:2
+			
+			CASE 1	;尿道
+			
+			IF TALENT:DENSHA_P1:扶她
+				PRINTFORMW 今天%CALLNAME:DENSHA_P1%似乎想试试新型的飞机杯。几乎透明的飞机杯里面可以看见顶端连接着尿道珠链，有着大小不一的珠子
+				PRINTFORMW 向飞机杯倒入少许的润滑液后，%CALLNAME:DENSHA_P1%将自己的肉棒缓缓地插入
+				PRINTFORMW 肉棒填满飞机杯的同时，可以看见尿道珠链逐渐没入肉棒顶端，大小不一的珠子摩擦着尿道让%CALLNAME:DENSHA_P1%舒服的呻吟着
+				PRINTFORMW 让自己的肉棒完全没入飞机杯后，%CALLNAME:DENSHA_P1%按了飞机杯的按钮，飞机杯开始伸缩起来，珠链居然还开始旋转了
+			ELSE
+				PRINTFORMW 今天%CALLNAME:DENSHA_P1%似乎想试试新型的尿道棒子。几乎透明，手指般粗的棒子顶端有个U型尾巴，尾部有个凸起，似乎用于阴蒂的位置
+				PRINTFORMW 向飞尿道棒子倒入少许的润滑液后，%CALLNAME:DENSHA_P1%将棒子对准自己的尿道缓缓地插入
+				PRINTFORMW 棒子逐渐没入尿道，通过透明棒子可以看到被扩张着的尿道。棒子的长度似乎刚好抵达膀胱，尾端可以看到尿液
+				PRINTFORMW 完全没入尿道的棒子，U型尾部正好压在%CALLNAME:DENSHA_P1%的阴蒂上，让%CALLNAME:DENSHA_P1%舒服的呻吟着
+			ENDIF
+			
+			IF DENSHA_P2!= 0
+				PRINTFORMW 另一边，%CALLNAME:DENSHA_P2%拿起了不太一样的跳蛋串，可以看见两颗链接在一起的跳蛋上有着不规则的突起
+				PRINTFORMW %CALLNAME:DENSHA_P2%开了开关，开始用跳蛋取悦自己。先将跳蛋玩弄着乳头，之后压在阴蒂上。
+				PRINTFORMW 稍微热身后，%CALLNAME:DENSHA_P2%将跳蛋塞入阴道，还伸手拿了另一支粗长的自慰棒，插入阴道将跳蛋推的更深
+				PRINTFORMW 持续震动着的跳蛋们就这样被推到子宫口处，阴道快感直袭%CALLNAME:DENSHA_P2%脑神经	
+			ENDIF
+	
+			CASE 0	;二穴
+			
+			PRINTFORMW 今天%CALLNAME:DENSHA_P1%似乎想挑战阴道扩张。看着几乎比马根还粗的振动棒，%CALLNAME:DENSHA_P1%的蜜穴开始期待的紧缩着
+			PRINTFORMW %CALLNAME:DENSHA_P1%对着大众张开大腿，缓缓的将振动棒插入自己的小穴
+			SELECTCASE ABL:DENSHA_P1:Ｖ拡張
+			CASE IS > 2
+				PRINTFORMW 因习惯了%CNAME("主人")%的调教，湿润的阴道毫无阻碍的将振动棒吞入，蜜穴还贪婪的收缩着
+			CASE 2
+				PRINTFORMW 阴道慢慢被扩张，紧贴着的阴道壁和撑开着阴道的振动棒摩擦着，不断的刺激着%CALLNAME:DENSHA_P1%
+			CASEELSE
+				PRINTFORMW 阴道似乎还不太习惯被扩张，感受到插入受阻的%CALLNAME:DENSHA_P1%微微皱了眉头
+				PRINTFORMW 将振动棒拉出来后，%CALLNAME:DENSHA_P1%用润滑液涂满后，再度将振动棒插入阴道
+				PRINTFORMW 有了润滑液的帮助，振动棒缓缓的撑开着阴道，不熟悉的扩张感给%CALLNAME:DENSHA_P1%不太一样的快感
+			ENDSELECT
+			PRINTFORM 过了不久，振动棒完全消失进%CALLNAME:DENSHA_P1%的阴道，
+			IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1)
+				PRINTFORMW 感受着深入抵着自己子宫内胎儿的快感呻吟着
+			ELSE
+				PRINTFORMW 感受着深入抵着自己子宫的快感呻吟着
+			ENDIF
+			
+			IF DENSHA_P2!= 0
+				PRINTFORMW 另一边，%CALLNAME:DENSHA_P2%拿起了几乎20寸长的肛珠拉链，每颗珠子差不多和网球一样大
+				PRINTFORMW %CALLNAME:DENSHA_P2%用润滑液涂满珠链后，开始一颗一颗的将珠子塞入自己的菊穴
+				PRINTFORMW 肛珠拉链逐渐深入肠道，菊穴一合一闭的，肠壁也被一颗又一颗的珠子摩擦着
+				PRINTFORM 过了不久，肛链完全没入%CALLNAME:DENSHA_P2%的菊穴，
+				IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1)
+					PRINTFORMW 胎儿和肛珠拉链两边的压迫感给予%CALLNAME:DENSHA_P2%不太一样的快感
+				ELSE
+					PRINTFORMW %CALLNAME:DENSHA_P2%的腹部可以看见肠道因被肛珠拉链填满而微微隆起
+				ENDIF
+			ENDIF
+		ENDSELECT
+		
+		PRINTFORM 当%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 沉溺於自慰的同时，猛男们挺着粗长的肉棒靠近，龟头因兴奋而不断地分泌出先走液
+		PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%看到了新肉棒后，一手握住一根开始手淫，一边张口将整根含入后开始吸吮
+		PRINTFORMW 一边侍奉，一边利用不熟悉淫具的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%自慰不久，身体一震，开始高潮了。。。
+		
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+		PRINTFORM 「今天好像有新手？没看过那%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(TEMP_NO_EXP)%%\@TALENT:TEMP_NO_EXP:扶她 == 1?"扶她"#\@%%EVENT_NTR_DENSHA_GET_APPEARANCE(TEMP_NO_EXP)%
+		SIF EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_NO_EXP) == 1
+		PRINTFORM ，而且还怀孕着，没问题吗
+		PRINTFORM 」
+		PRINTFORM 「啊！是上次%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(TEMP_WITH_EXP)%%\@TALENT:TEMP_WITH_EXP:扶她 == 1?"扶她"#\@%%EVENT_NTR_DENSHA_GET_APPEARANCE(TEMP_WITH_EXP)%
+		SIF EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_WITH_EXP) == 1
+		PRINTFORM ，西瓜肚好诱人
+		PRINTFORM 」
+		PRINTFORMW 「有人知道她的番号吗？网上似乎都找不到。。。」
+		
+		PRINTFORMW 受到众人关注的%CALLNAME:TEMP_NO_EXP%似乎有些不太习惯，满脸通红，身体扭扭捏捏的
+		PRINTFORMW 这时%CALLNAME:TEMP_WITH_EXP%靠向%CALLNAME:TEMP_NO_EXP%，趁她还没反应过来时亲吻着她的嘴，同时手也一边开始搓揉着%CALLNAME:TEMP_NO_EXP%的乳房，一边玩弄着阴蒂
+		PRINTFORMW 被上下其手的%CALLNAME:TEMP_NO_EXP%身体放松下来，开始享受着被%CALLNAME:TEMP_WITH_EXP%抚摸的快感，呻吟声逐渐增大
+		PRINTFORMW %CALLNAME:TEMP_WITH_EXP%和%CALLNAME:TEMP_NO_EXP%亲热的同时，其他人从展示台选了一些试验淫具拿着靠近
+		PRINTFORMW %CALLNAME:TEMP_WITH_EXP%拿起了一些淫具向观众展示后，叫%CALLNAME:TEMP_NO_EXP%挑一个喜欢的来试试，自己选了一个双头振动棒插入自己的双穴，开始抽插起来
+		PRINTFORMW 脸红的%CALLNAME:TEMP_NO_EXP%选了一个吸盘式的奇形振动棒。将吸盘安置在地上后，%CALLNAME:TEMP_NO_EXP%站在振动棒上放，缓缓地低下身体将棒子吞入
+		
+		PRINTFORMW 当%CALLNAME:TEMP_WITH_EXP%和%CALLNAME:TEMP_NO_EXP%沉溺於自慰的同时，猛男们挺着粗长的肉棒靠近，龟头因兴奋而不断地分泌出先走液
+		PRINTFORMW 两人看到了新肉棒后，一手握住一根开始手淫，一边张口将整根含入后开始吸吮
+		PRINTFORMW 一边侍奉，一边被不熟悉淫具形状填满的两人，过不久身体一震，开始高潮了。。。
+	
+	ENDIF
+	
+	PRINTFORM 「
+	SIF TALENT:DENSHA_P1:扶她 || TALENT:DENSHA_P2:扶她
+	PRINTFORM 那肉棒
+	PRINTFORM 好下流。。。」
+	PRINTFORMW 「（气喘吁吁）」
+	SIF TALENT:DENSHA_P1:巨乳 > 1 || TALENT:DENSHA_P2:巨乳 > 1
+	PRINTFORM 「若被那双巨乳夹住感觉会很舒服」
+	PRINTFORM 「好色情。。。」
+	PRINTFORMW 「（脸红耳赤地注视着爱液流不停的蜜穴，裤头肿胀）」
+	PRINTFORMW 车厢扬声器的种种观众声，和透明墙外的观众反应，不断地刺激着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，吹潮的爱液喷向透明墙壁后徐徐流下
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;本番乱交
+	
+	PRINTFORM 高潮后不久，%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW 趴在地板上，呻吟娇喘着。
+	
+	;单人或者双人，无经验
+	IF CEVENT("露天车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("露天车体验",DENSHA_P2) == 0)
+		PRINTFORM 一些人靠近%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW ，开始将之前插入的淫具拔出，让两人的呻吟声更加激烈。
+		
+		PRINTFORMW 淫具去除完毕后，只见一个猛男从%CALLNAME:DENSHA_P1%后方将她抬起，双脚张开地展示了给观众看
+		PRINTFORM　只见%CALLNAME:DENSHA_P1%那肿胀地乳头勃起，
+		SIF TALENT:ARG:母乳体質
+		PRINTFORM 母乳缓缓流下，
+		SIF TALENT:ARG:扶她
+		PRINTFORM %EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P1)%肉棒充血顶立，流着猥淫的前列汁，
+		PRINTFORMW　双穴一开一合地引诱着
+		PRINTFORMW　猛男随后用他那犹如马根般地肉棒，「噗呲」一声，整根就这样插入%CALLNAME:DENSHA_P1%的蜜穴
+		PRINTFORMW　刚高潮不久的%CALLNAME:DENSHA_P1%又因被深插而失神恍惚，猛男并不理会，开始了站立活塞运动
+		PRINTFORMW　可见鸡巴进出交合处「啪！啪！」弄得淫液乱飞，一些还喷到了墙壁上，情绪高涨的观众们拿出手机开始拍摄录影
+		PRINTFORMW　过不久，猛男闷哼一声，开始注入浓厚的精液，注满后满足的拔出肉棒，「啵」一声，满溢的精液开始流出来
+		PRINTFORMW　刚刚恍神的%CALLNAME:DENSHA_P1%被热乎乎的精液刺激而回神时，另一位猛男走向前，又将她抬起，肉棒直接插入还在溢出精液的小穴
+		
+		IF DENSHA_P2 != 0
+			PRINTFORMW 另一边，猛男扶起了%CALLNAME:DENSHA_P2%，抚摸搓弄着%CALLNAME:DENSHA_P2%的同时，将她推压到电车墙边
+			PRINTFORM　紧贴着透明壁的%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(DENSHA_P2)%乳房，可以看见乳头肿胀勃起，
+			SIF TALENT:DENSHA_P2:母乳体質
+			PRINTFORM 母乳缓缓流下，
+			SIF TALENT:DENSHA_P2:扶她
+			PRINTFORM %EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P2)%肉棒充血顶立，流着猥淫地前列汁，
+			PRINTFORMW　双穴一开一合地引诱着
+			PRINTFORMW　猛男随后用他那犹如马根般地肉棒，后背位插入%CALLNAME:DENSHA_P1%的蜜穴，开始抽插起来
+			PRINTFORM　%CALLNAME:DENSHA_P2%那%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(DENSHA_P2)%乳房
+			SIF TALENT:DENSHA_P2:扶她
+			PRINTFORM 和%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P2)%肉棒
+			PRINTFORMW 随着猛男的抽插摇晃着，观众们开始交替拍摄录影着%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%的色相
+			PRINTFORMW　过不久，猛男闷哼一声，开始注入浓厚的精液，注满后满足的拔出肉棒，「啵」一声，满溢的精液开始流出来
+			PRINTFORMW　娇喘不停的%CALLNAME:DENSHA_P2%刚高潮不久，另一位猛男走向前，肉棒直接插入还在溢出精液的小穴
+		ENDIF
+		
+		PRINTFORMW 猛男们就这样，毫不留情地在观众面前轮流对%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%进行播种，偶尔还会换穴道将肠道填满欲望液
+	
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("露天车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("露天车体验",DENSHA_P2) == 1)
+	
+		PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%自己开始将之前插入的淫具拔出，还顺势摆弄身体诱惑着观众
+		PRINTFORMW 猛男们走向前，包围着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%也抚摸着数根马根般粗壮的肉棒，开始用口侍奉着
+		PRINTFORM 肉棒被侍奉的猛男们，忍不住手扶着%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 的头，猛然将肉棒深深压入食道，开始深喉抽插
+		PRINTFORMW 被深喉抽插的同时，其他猛男走向%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%空闲着的两穴，「噗呲」两声插入两穴，开始起活塞运动
+		PRINTFORMW 看着三穴被填满的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%身姿，兴奋的观众们拿出手机开始拍摄录影
+		PRINTFORM　过不久，猛男们闷哼一声，开始注入浓厚的精液，注满后满足的拔出肉棒，「啵」一声，满溢的精液开始从各穴喷出，%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 嘴边流下来不及吞咽的精液
+		PRINTFORMW　其他猛男们不理会刚被精液填满而高潮着的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，开始轮流侵犯着各穴
+		
+		IF RELATION_LEVEL > 2
+			PRINTFORMW 乱交途中，有人将%CALLNAME:DENSHA_P1%推到了%CALLNAME:DENSHA_P2%的旁边
+			PRINTFORM 因持续高潮而半恍惚的%CALLNAME:DENSHA_P1%看着阿嘿颜%CALLNAME:DENSHA_P2%的痴相，将她拉来拥抱，开始抚摸起%CALLNAME:DENSHA_P2%的乳房
+			SIF TALENT:DENSHA_P2:扶她
+			PRINTFORM 和肉棒
+			PRINTFORMW ，%CALLNAME:DENSHA_P2%很自然的嘴巴贴上%CALLNAME:DENSHA_P1%的嘴，开始舌吻起来
+			PRINTFORMW 不介意口中满溢着陌生人精液的两人舌头绞缠，交换着彼此口腔内的淫液，互相摩擦着乳房乳头
+			PRINTFORMW 看着两人亲热，猛男们更加卖力的抽动着腰部，尽力将鸡巴顶入两穴深处
+		ENDIF
+	
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+		PRINTFORMW %CALLNAME:TEMP_WITH_EXP%将自己之前插入的淫具拔出后，转向%CALLNAME:TEMP_NO_EXP%也开始将她的玩具拔出
+		PRINTFORMW 受到%CALLNAME:TEMP_NO_EXP%因拔出而发出的娇喘声刺激，%CALLNAME:TEMP_WITH_EXP%抱着她开始舌吻起来
+		PRINTFORMW 看着%CALLNAME:TEMP_NO_EXP%神情明显享受着的%CALLNAME:TEMP_WITH_EXP%满意点了点头，将%CALLNAME:TEMP_NO_EXP%推到透明壁边，伸手将%CALLNAME:TEMP_NO_EXP%双脚扒开
+		PRINTFORM 只见%CALLNAME:TEMP_NO_EXP%双脚间，
+		SIF TALENT:TEMP_NO_EXP:扶她
+		PRINTFORM 肉棒充血顶立，流着猥淫地前列汁，
+		PRINTFORMW 双穴一开一合地引诱着
+		PRINTFORMW 正当%CALLNAME:TEMP_NO_EXP%因观众视线羞红着脸时，一个猛男从%CALLNAME:TEMP_NO_EXP%后方将她抬起，用他那犹如马根般地肉棒，「噗呲」一声插入%CALLNAME:TEMP_NO_EXP%潮湿的蜜穴
+		PRINTFORMW %CALLNAME:TEMP_NO_EXP%一时受不了肉棒刺激，阿嘿颜的恍惚着，还开始吹潮起来，淫水喷满透明壁
+		PRINTFORM %CALLNAME:TEMP_WITH_EXP%不介意吹潮汁喷满身，还凑近猛男肉棒和%CALLNAME:TEMP_NO_EXP%蜜穴交合处，
+		SIF TALENT:TEMP_NO_EXP:扶她
+		PRINTFORM 用手搓弄起%CALLNAME:TEMP_NO_EXP%%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P2)%肉棒，
+		PRINTFORMW 舔着肉棒不断进出的蜜穴
+		PRINTFORMW 正当%CALLNAME:TEMP_WITH_EXP%侍奉着%CALLNAME:TEMP_NO_EXP%时，其他猛男们靠近了%CALLNAME:TEMP_WITH_EXP%空闲着的两穴，「噗呲」两声插入两穴，开始起活塞运动
+		PRINTFORMW 因两穴被填满的%CALLNAME:TEMP_WITH_EXP%受到刺激，更加卖力的吸吮着%CALLNAME:TEMP_NO_EXP%，兴奋的观众们拿出手机开始拍摄录影
+		PRINTFORMW　过不久，猛男们闷哼一声，开始注入浓厚的精液，注满后满足的拔出肉棒，「啵」一声，满溢的精液开始从各穴喷出
+		
+		IF RELATION_LEVEL > 2	
+			PRINTFORMW 第一次体验露天乱交的%CALLNAME:TEMP_NO_EXP%受不了刺激，瘫痪在地上，双脚打开着，可以看见满溢的精液开始流出来
+			PRINTFORMW %CALLNAME:TEMP_WITH_EXP%靠近%CALLNAME:TEMP_NO_EXP%趴她在身上，开始贪婪的吞食着流出精液
+			IF TALENT:TEMP_WITH_EXP:扶她
+				PRINTFORMW 精液味不断刺激着%CALLNAME:TEMP_WITH_EXP%，忍不住将腰对准%CALLNAME:TEMP_NO_EXP%还留着精液的蜜穴，将自己%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P2)%肉棒插入
+				PRINTFORMW %CALLNAME:TEMP_NO_EXP%因再度被填满而呻吟起来，娇喘声促使%CALLNAME:TEMP_WITH_EXP%更卖力的抽插，不断用肉棒攻击着%CALLNAME:TEMP_NO_EXP%的子宫口
+			ENDIF
+			PRINTFORMW 看着两人亲热，其他猛男们凑近，抬起了两人，用马根深深插入两人空闲着的洞，开始活塞运动
+		ENDIF
+	
+		PRINTFORMW 猛男们就这样，毫不留情地在观众面前轮流对两人进行播种，偶尔换穴道将肠道填满欲望液
+	
+	ENDIF
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;结尾
+	
+	PRINTFORMW 经过一段浪叫连连，高潮不断的爱欲时间后，电车内的人们终于开始冷静下来。
+	PRINTFORM 在车厢中央，可以看见%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW 赤裸沾满了淫液的身影，躺在地上，不时发出满足又淫荡的娇喘声。
+	PRINTFORMW 车厢内扬声器可以听见观众们的讨论声
+	PRINTFORMW 「。。。所以说这是什么技术啊，好真实的广告」「呃，裤头湿了」「今天迟到了，下次一定要赶上啊啊啊啊！」
+	PRINTFORM 「果然还是%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(DENSHA_P1)%%\@TALENT:DENSHA_P1:扶她 == 1?"扶她"#\@%%EVENT_NTR_DENSHA_GET_APPEARANCE(DENSHA_P1)%棒！」
+	SIF DENSHA_P2 != 0
+	PRINTFORM 「还是%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(DENSHA_P2)%%\@TALENT:DENSHA_P2:扶她 == 1?"扶她"#\@%%EVENT_NTR_DENSHA_GET_APPEARANCE(DENSHA_P2)%赞啦」
+	PRINTFORMW 「啊啊，这星期之前忍住不冲，值了！」
+	PRINTFORMW 过不久，车厢内扬声器响起声来，提醒各位电车即将离开，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%依依不舍的拿起了之前脱下的淫具和衣服。
+	PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%毫不在乎满身粘稠的体液，将淫具塞回相应部位后，穿起了衣服来。
+	PRINTFORMW 穿着衣服的同时，电车开始向前出发，电车墙壁也开始恢复原状。
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	SIF CEVENT("露天车体验",DENSHA_P1) == 0
+	CALL SET_CEVENT("露天车体验",DENSHA_P1)
+	SIF DENSHA_P2 != 0 && CEVENT("露天车体验",DENSHA_P2) == 0
+	CALL SET_CEVENT("露天车体验",DENSHA_P2)
+	
+	V = 5 + RAND:3 + RAND:2
+	A = 5 + RAND:3 + RAND:2
+	H = 5 + RAND:3 + RAND:2
+	M = 5 + RAND:3 + RAND:2
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", H+M)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "露出経験", (V+A+H+M)*3/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", V+A+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", V - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", A - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "絶頂経験", ((V+A+M)/3)/2 + RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "手淫経験", H)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "口交経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精飲経験", M - RAND:3)	
+
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP*3/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP)
+	
+CASE "扶她车"
+
+	;只是双人时且只有一位有经验的情况下使用，其他场景请忽略
+	TEMP_WITH_EXP = DENSHA_P1
+	TEMP_NO_EXP = DENSHA_P2
+	IF CEVENT("扶她车体验",DENSHA_P2)
+		TEMP_WITH_EXP = DENSHA_P2
+		TEMP_NO_EXP = DENSHA_P1
+	ENDIF
+	
+	;单人或者双人，无经验
+	IF CEVENT("扶她车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("扶她车体验",DENSHA_P2) == 0)
+		PRINTFORM 走进车厢内，%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 留意到车厢内居然充满着巨大雄伟的扶她们，雪白亮丽很显眼
+		PRINTFORMW %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%有些疑惑，正想询问附近的人时，只听见一个熟悉的声音说到
+		CALL PRINT_STRW, @"「啊啦~_H_欢迎~_H_今天我们有扶她联谊大狂欢哦~_H_」"
+		CALL PRINT_STRW, @"「力大气壮，旺盛的生命力_H_可以体验到和平时不一样的充实感哦~_H_」"
+		PRINTFORMW 这样说着的神秘扶她将附近的扶她拉过来，伸手拉下了他的裤头
+		PRINTFORMW 本来就已经鼓起的裤头一松脱，比马根还粗的肉棒露了出来
+		PRINTFORMW 神秘扶她用手开始把玩起肉棒起来，扶她的肉棒逐渐勃起，挺立起来的肉棒居然比手腕还粗
+		PRINTFORM 看着那雄伟鸡巴的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%面红耳赤，
+		IF ABL:DENSHA_P1:Ｖ拡張 > 3 && (DENSHA_P2 == 0 || ABL:DENSHA_P2:Ｖ拡張 > 3)
+			PRINTFORMW 习惯扩张的阴道微微缩紧期待着
+		ELSE
+			PRINTFORMW 鲜少体验过如此凶残肉棒的阴道居然更加泛滥了
+		ENDIF
+		CALL PRINT_STRW, @"「好好享受着扶她们的热情招待吧~_H_」"
+		PRINTFORMW 说完，神秘扶她捏了捏扶她的鸡巴后，挥挥手告别后离开了车厢。。。
+		
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("扶她车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("扶她车体验",DENSHA_P2) == 1)
+		PRINTFORM 走进车厢内，%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 留意到车厢内充满着巨大雄伟的扶她们
+		PRINTFORMW 知道即将是被众多扶她播种的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%兴奋起来，子宫渴求着扶她精液开始躁动
+		PRINTFORMW 正妄想着待会儿被蹂躏的场景时，注意到神秘扶她在旁边微笑着
+		CALL PRINT_STRW, @"「啊啦~_H_感谢再次捧场，上次玩的尽心吗~？_H_」"
+		CALL PRINT_STRW, @"「扶她们的热情招呼是不是很棒呢？~_H_%CNAME("主人")%的肉棒果然还是少了一些什么的吧~_H_」"
+		CALL PRINT_STRW, @"「下一次可以的话会介绍其他不一样的新_HH_刺_HH_激_HH_哦~_HH_敬请期待~_H_」"
+		PRINTFORMW 说完，神秘扶她眨了眨眼，挥挥手走开。和其他人短暂聊一阵子后，似乎因有其他事情而离开了车厢。。。
+		
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+		PRINTFORMW 走进车厢内，%CALLNAME:TEMP_WITH_EXP%和%CALLNAME:TEMP_NO_EXP%留意到车厢人群稍微不一样，可以看见许多巨大雄伟的扶她们
+		PRINTFORMW 脱着衣服的%CALLNAME:TEMP_NO_EXP%正要询问%CALLNAME:TEMP_WITH_EXP%时，附近一个熟悉的声音说到
+		CALL PRINT_STRW, @"「啊啦~_H_欢迎~_H_看来今天有第一次来的人哦？让我来介绍下吧，今天我们有扶她联谊大狂欢哦~_H_」"
+		CALL PRINT_STRW, @"「力大气壮，旺盛的生命力_H_可以体验到和平时不一样的充实感哦~_H_」"
+		PRINTFORMW 这样说着的神秘扶她将附近的扶她拉过来，伸手拉下了他的裤头
+		PRINTFORMW 本来就已经鼓起的裤头一松脱，比马根还粗的肉棒露了出来
+		PRINTFORMW 神秘扶她用手开始把玩起肉棒起来，扶她的肉棒逐渐勃起，挺立起来的肉棒居然比手腕还粗
+		PRINTFORM 看着那雄伟鸡巴的%CALLNAME:TEMP_NO_EXP%面红耳赤，
+		IF ABL:TEMP_NO_EXP:Ｖ拡張 > 3
+			PRINTFORMW 习惯扩张的阴道微微缩紧期待着
+		ELSE
+			PRINTFORMW 鲜少体验过如此凶残肉棒的阴道居然更加泛滥了
+		ENDIF
+		CALL PRINT_STRW, @"「好好享受着扶她们的热情招待吧~_H_」"
+		PRINTFORMW 说完，神秘扶她捏了捏扶她的鸡巴后，挥挥手告别后离开了车厢。。。
+	ENDIF
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;前戏
+	
+	PRINTFORMW 和平时一样脱下衣服和淫具放在一旁后，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%走向扶她群中
+	
+	;单人或者双人，无经验
+	IF CEVENT("扶她车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("扶她车体验",DENSHA_P2) == 0)
+		PRINTFORM 还不太习惯这气氛的%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 有些扭扭捏捏，但是眼睛还是忍不住直视着周围雄伟的鸡巴
+		PRINTFORMW 一些扶她凑近，开始抚摸着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，偶尔错弄乳房，偶尔舌吻，偶尔手指插入蜜穴
+		PRINTFORMW 受到调戏的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，也开始回应着，一时舌头绞缠，一时用手开始抚摸着周围的鸡巴
+		IF TALENT:DENSHA_P1:巨乳 > 0
+			PRINTFORMW 其中一个扶她挺着勃起的鸡巴，压在%CALLNAME:DENSHA_P1%那%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(DENSHA_P1)%乳房，%CALLNAME:DENSHA_P1%也不介意的用乳房包围着灼热的鸡巴，开始侍奉着
+			PRINTFORM 鸡巴不断流出的前列汁
+			SIF TALENT:DENSHA_P1:母乳体質
+			PRINTFORM 和受到刺激而不断流出的母乳
+			PRINTFORMW 润滑着乳房，上下滑动时不断发出「噗呲」「噗呲」声
+			PRINTFORMW 过不久扶她闷哼一声，释放出大量精液，喷满了%CALLNAME:DENSHA_P1%全身，脸上和乳房上沾满了乳白液
+		ELSE
+			PRINTFORMW 几个扶她挺着勃起的鸡巴，拍打着%CALLNAME:DENSHA_P1%的脸部，将不断流出的前列汁沾满了脸
+			PRINTFORMW %CALLNAME:DENSHA_P1%双手很努力的抚摸着鸡巴的同时，也用嘴巴交替舔着
+			PRINTFORMW 过不久扶她们闷哼一声，释放出大量精液，喷满了%CALLNAME:DENSHA_P1%脸部，大量乳白液流向乳房和身体
+		ENDIF
+		PRINTFORM 被浴精的%CALLNAME:DENSHA_P1%看到依然勃起充满生命力的鸡巴，
+		IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1)
+			PRINTFORM 子宫不理会胎儿开始躁动起来，子宫口开始下垂期待着鸡巴
+		ELSE
+			PRINTFORM 子宫渴求着扶她精液开始躁动起来，子宫口缓缓降下期待着鸡巴
+		ENDIF
+	
+		IF DENSHA_P2 != 0
+			PRINTFORMW
+			PRINTFORMW 另一边，%CALLNAME:DENSHA_P2%也很努力的用手和口侍奉着周围的肉棒
+			PRINTFORM 其他没被侍奉的扶她们将%CALLNAME:DENSHA_P2%双脚趴开，
+			IF TALENT:DENSHA_P2:扶她
+				PRINTFORMW 一时用手上下抚摸着那%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P2)%肉棒，一时用手腕粗般的鸡巴拍打着她的肉棒
+			ELSE
+				PRINTFORMW 沾满不知是润滑液还是阴液的手指一时插入早已泛滥的蜜穴，交替刺激着G点和阴蒂
+			ENDIF
+			PRINTFORMW 被粗壮肉棒包围的%CALLNAME:DENSHA_P2%享用鸡巴们不久，扶她们闷哼一声，鸡巴开始颤抖着
+			PRINTFORMW 扶她们将鸡巴瞄准%CALLNAME:DENSHA_P2%身体各处，喷发出惊人的精液量开始淋浴着她的脸部，嘴，乳房，下穴处
+			PRINTFORM 被浴精的%CALLNAME:DENSHA_P2%看到依然勃起充满生命力的鸡巴，
+			IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+				PRINTFORMW 子宫不理会胎儿开始躁动起来，子宫口开始下垂
+			ELSE
+				PRINTFORMW 子宫渴求着扶她精液开始躁动起来，子宫口缓缓降下
+			ENDIF
+		ENDIF
+	
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("扶她车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("扶她车体验",DENSHA_P2) == 1)
+		PRINTFORM %CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 快步走进扶她群中心，开始搓弄起周围雄伟的鸡巴，还不时对周遭扶她们抛媚眼
+		PRINTFORM 扶她们也开始不客气的对%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%毛手毛脚，一时揉捏着肿胀的乳头，一时挑逗着因兴奋而勃起的
+		SIF TALENT:DENSHA_P1:扶她 || TALENT:DENSHA_P2:扶她
+		PRINTFORM 鸡巴和
+		PRINTFORMW 阴蒂
+		PRINTFORM 被搓弄着鸡巴的扶她们忍不住，伸手抓住%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 的头，猛然将鸡巴深深压入食道，开始深喉抽插
+		PRINTFORMW 只见%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的喉道随着手腕般的肉棒进出而变形，发出「咕噜」「咕噜」声
+		PRINTFORM 其他扶她们也上前，将整个手伸入%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 已经习惯扶她肉棒扩张的两穴玩弄着
+		PRINTFORMW 三穴持续受蹂躏的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%被快感淹没，翻了白眼开始恍惚起来，充满鸡巴的口依然发出低哼娇喘声
+		PRINTFORMW 享受着深喉的扶她们过不久感觉要来了，紧抱着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的头部，开始往胃部注入满满的授种液
+		PRINTFORM 其他扶她们也兴奋的搓弄起自己的鸡巴，瞄准%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 开始喷发大量精液淋浴着
+		PRINTFORMW 注入欲望后满足的扶她们将鸡巴从%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%口拔出，「啵」一声，满溢的精液从口逆流着出来
+		PRINTFORMW 可怕的精液量流下乳房和因充满着精液而鼓起的腹部，连接着刚刚被其他扶她淋浴的精液
+		PRINTFORM 被精液淹没的%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%因不断高潮而瘫痪在地上，身体不断的颤抖，
+		SIF TALENT:DENSHA_P1:扶她 || TALENT:DENSHA_P2:扶她
+		PRINTFORM 自己勃起的肉棒也释放着乳白液，
+		PRINTFORMW 诱人的乳房随着娇喘起伏摇晃
+		
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+
+		PRINTFORMW 还不太习惯这气氛的%CALLNAME:TEMP_NO_EXP%有些扭扭捏捏，但是眼睛还是忍不住直视着周围雄伟的鸡巴
+		PRINTFORMW 见%CALLNAME:TEMP_NO_EXP%这样的%CALLNAME:TEMP_WITH_EXP%笑着将她推向前，凑向耳朵边轻声鼓励着
+		PRINTFORMW 一些扶她凑近，开始抚摸着%CALLNAME:TEMP_NO_EXP%，偶尔错弄乳房，偶尔舌吻，偶尔手指插入蜜穴
+		PRINTFORMW 受到调戏的%CALLNAME:TEMP_NO_EXP%，也开始回应着，一时舌头绞缠，一时用手开始抚摸着周围的鸡巴
+		IF TALENT:TEMP_NO_EXP:巨乳 > 0
+			PRINTFORMW 其中一个扶她挺着勃起的鸡巴，压在%CALLNAME:TEMP_NO_EXP%那%EVENT_NTR_DENSHA_GET_OPPAI_TEXT(TEMP_NO_EXP)%乳房，%CALLNAME:TEMP_NO_EXP%也不介意的用乳房包围着灼热的鸡巴，开始侍奉着
+			PRINTFORM 鸡巴不断流出的前列汁
+			SIF TALENT:TEMP_NO_EXP:母乳体質
+			PRINTFORM 和受到刺激而不断流出的母乳
+			PRINTFORMW 润滑着乳房，上下滑动时不断发出「噗呲」「噗呲」声
+			PRINTFORMW 过不久扶她闷哼一声，释放出大量精液，喷满了%CALLNAME:TEMP_NO_EXP%全身，脸上和乳房上沾满了乳白液
+		ELSE
+			PRINTFORMW 几个扶她挺着勃起的鸡巴，拍打着%CALLNAME:TEMP_NO_EXP%的脸部，将不断流出的前列汁沾满了脸
+			PRINTFORMW %CALLNAME:TEMP_NO_EXP%双手很努力的抚摸着鸡巴的同时，也用嘴巴交替舔着
+			PRINTFORMW 过不久扶她们闷哼一声，释放出大量精液，喷满了%CALLNAME:TEMP_NO_EXP%脸部，大量乳白液流向乳房和身体
+		ENDIF
+		PRINTFORM 被浴精的%CALLNAME:TEMP_NO_EXP%看到依然勃起充满生命力的鸡巴，
+		IF EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_NO_EXP)
+			PRINTFORMW 子宫不理会胎儿开始躁动起来，子宫口开始下垂
+		ELSE
+			PRINTFORMW 子宫渴求着扶她精液开始躁动起来，子宫口缓缓降下
+		ENDIF
+	
+		PRINTFORMW
+		PRINTFORMW 另一边，%CALLNAME:TEMP_WITH_EXP%快步走进扶她群中心，开始搓弄起周围雄伟的鸡巴，还不时对周遭扶她们抛媚眼
+		PRINTFORM 扶她们也开始不客气的对%CALLNAME:TEMP_WITH_EXP%毛手毛脚，一时揉捏着肿胀的乳头，一时挑逗着因兴奋而勃起的
+		SIF TALENT:TEMP_WITH_EXP:扶她
+		PRINTFORM 鸡巴和
+		PRINTFORMW 阴蒂
+		PRINTFORMW 被搓弄着鸡巴的扶她们忍不住，伸手抓住%CALLNAME:TEMP_WITH_EXP%的头，猛然将鸡巴深深压入食道，开始深喉抽插
+		PRINTFORMW 只见%CALLNAME:TEMP_WITH_EXP%的喉道随着手腕般的肉棒进出而变形，发出「咕噜」「咕噜」声
+		PRINTFORMW 其他扶她们也上前，将整个手伸入%CALLNAME:TEMP_WITH_EXP%已经习惯扶她肉棒扩张的两穴玩弄着
+		PRINTFORMW 三穴持续受蹂躏的%CALLNAME:TEMP_WITH_EXP%被快感淹没，翻了白眼开始恍惚起来，充满鸡巴的口依然发出低哼娇喘声
+		PRINTFORMW 享受着深喉的扶她们过不久感觉要来了，紧抱着%CALLNAME:TEMP_WITH_EXP%的头部，开始往胃部注入满满的授种液
+		PRINTFORMW 其他扶她们也兴奋的搓弄起自己的鸡巴，瞄准%CALLNAME:TEMP_WITH_EXP%开始喷发大量精液淋浴着
+		PRINTFORMW 注入欲望后满足的扶她们将鸡巴从%CALLNAME:TEMP_WITH_EXP%口拔出，「啵」一声，满溢的精液从口逆流着出来
+		PRINTFORMW 可怕的精液量流下乳房和因充满着精液而鼓起的腹部，连接着刚刚被其他扶她淋浴的精液
+		PRINTFORM 被精液淹没的%CALLNAME:TEMP_WITH_EXP%因不断高潮而瘫痪在地上，身体不断的颤抖，
+		SIF TALENT:TEMP_WITH_EXP:扶她
+		PRINTFORM 自己勃起的肉棒也释放着乳白液，
+		PRINTFORMW 诱人的乳房随着娇喘起伏摇晃
+	ENDIF
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;本番乱交
+	
+	;单人或者双人，无经验
+	IF CEVENT("扶她车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("扶她车体验",DENSHA_P2) == 0)
+		PRINTFORM 似乎觉得热身运动已经充足后,扶她们将%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 抬起,将双脚扒开,可以看见前穴似乎很期待的收缩着,蜜穴爱液缓缓流出
+		PRINTFORMW 扶她用那依然勃起的龟头开始摩擦着蜜穴入口处,不时顶撞着阴蒂,挑逗着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%
+		PRINTFORMW 被逗弄的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%呻吟连连,蜜穴贪婪的吸着贴在入口的鸡巴
+		PRINTFORMW 挑逗不久，扶她开始将龟头顶入，不断流出的爱液和前列汁充当润滑液，让那手腕般的鸡巴开始没入%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的蜜穴
+		IF ABL:DENSHA_P1:Ｖ拡張 > 3
+			PRINTFORMW %CALLNAME:DENSHA_P1%那早已被充分调教的阴道没什么抵抗，很温顺的接纳了比手腕还粗壮的的鸡巴
+			PRINTFORMW 有些惊讶的扶她发出下流的笑声，开始不客气的进行抽插,龟头不断的撞击着子宫口
+			IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1)
+				PRINTFORMW　孕育着胎儿的子宫被毫不留情的被撞击着，犹如胎儿不断被鸡巴侵犯的背德快感冲击着%CALLNAME:DENSHA_P1%脑髓
+			ELSE
+				PRINTFORMW　可以看见腹部因扶她鸡巴进出而凸起，子宫口不断的被手腕般鸡巴撞击，快感冲击着%CALLNAME:DENSHA_P1%脑髓
+			ENDIF
+			PRINTFORMW　随着%CALLNAME:DENSHA_P1%娇喘声不断变大，扶她和跟着提升抽插节奏，交合处发出「噗呲」「噗呲」声，淫水喷满地
+			PRINTFORMW　过不久，扶她闷哼一声，在%CALLNAME:DENSHA_P1%阴道深处开始注入大量浓郁粘稠的扶她精液
+		ELSE
+			PRINTFORMW %CALLNAME:DENSHA_P1%阴道逐渐被鸡巴扩张，扶她也很客气的缓下插入速度，一点一点的慢慢推进
+			PRINTFORMW 不习惯被扩张的阴道紧紧吸着扶她的庞然大物，最终依靠着淫水和前列汁的润滑终于将整根鸡巴吞入
+			IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1)
+				PRINTFORMW　孕育着胎儿的子宫外被异物填满，不习惯的扩张快感冲击着%CALLNAME:DENSHA_P1%脑髓
+			ELSE
+				PRINTFORMW　可以看见腹部因扶她鸡巴而凸起，子宫口接吻似地紧贴着扶她龟头，不习惯的扩张快感冲击着%CALLNAME:DENSHA_P1%脑髓
+			ENDIF
+			PRINTFORMW　随着%CALLNAME:DENSHA_P1%娇喘声不断变大，扶她开始缓慢的进行着活塞运动，紧密贴住鸡巴的触感很快的就让扶她迎来高潮
+			PRINTFORMW　扶她颤抖着，开始在%CALLNAME:DENSHA_P1%阴道深处注入大量浓郁粘稠的扶她精液
+			
+		ENDIF
+		IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1)
+			PRINTFORMW　因为子宫已经有了胎儿，没被接纳的精液从交接处满溢出来，从%CALLNAME:DENSHA_P1%股间流出
+		ELSE
+			PRINTFORMW　子宫被注入大量精液，%CALLNAME:DENSHA_P1%的腹部因大量精液而微微膨胀
+		ENDIF
+
+		IF (DENSHA_P2 != 0)
+			PRINTFORMW
+			IF ABL:DENSHA_P2:Ｖ拡張 > 3
+				PRINTFORMW 另一边%CALLNAME:DENSHA_P2%那早已被充分调教的阴道没什么抵抗，很温顺的接纳了比手腕还粗壮的的鸡巴
+				PRINTFORMW 有些惊讶的扶她发出下流的笑声，开始不客气的进行抽插,龟头不断的撞击着子宫口
+				IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+					PRINTFORMW　孕育着胎儿的子宫被毫不留情的被撞击着，犹如胎儿不断被鸡巴侵犯的背德快感冲击着%CALLNAME:DENSHA_P2%脑髓
+				ELSE
+					PRINTFORMW　可以看见腹部因扶她鸡巴进出而凸起，子宫口不断的被手腕般鸡巴撞击，快感冲击着%CALLNAME:DENSHA_P2%脑髓
+				ENDIF
+				PRINTFORMW　随着%CALLNAME:DENSHA_P2%娇喘声不断变大，扶她和跟着提升抽插节奏，交合处发出「噗呲」「噗呲」声，淫水喷满地
+				PRINTFORMW　过不久，扶她闷哼一声，在%CALLNAME:DENSHA_P2%阴道深处开始注入大量浓郁粘稠的扶她精液
+			ELSE
+				PRINTFORMW %CALLNAME:DENSHA_P2%阴道逐渐被鸡巴扩张，扶她也很客气的缓下插入速度，一点一点的慢慢推进
+				PRINTFORMW 不习惯被扩张的阴道紧紧吸着扶她的庞然大物，最终依靠着淫水和前列汁的润滑终于将整根鸡巴吞入
+				IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+					PRINTFORMW　孕育着胎儿的子宫外被异物填满，不习惯的扩张快感冲击着%CALLNAME:DENSHA_P2%脑髓
+				ELSE
+					PRINTFORMW　可以看见腹部因扶她鸡巴而凸起，子宫口接吻似地紧贴着扶她龟头，不习惯的扩张快感冲击着%CALLNAME:DENSHA_P2%脑髓
+				ENDIF
+				PRINTFORMW　随着%CALLNAME:DENSHA_P2%娇喘声不断变大，扶她开始缓慢的进行着活塞运动，紧密贴住鸡巴的触感很快的就让扶她迎来高潮
+				PRINTFORMW　扶她颤抖着，开始在%CALLNAME:DENSHA_P2%阴道深处注入大量浓郁粘稠的扶她精液
+			ENDIF
+			IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+				PRINTFORMW　因为子宫已经有了胎儿，没被接纳的精液从交接处满溢出来，从%CALLNAME:DENSHA_P2%股间流出
+			ELSE
+				PRINTFORMW　子宫被注入大量精液，%CALLNAME:DENSHA_P2%的腹部因大量精液而微微膨胀
+			ENDIF
+		ENDIF
+		
+		PRINTFORMW　注入后满足的扶她退下，其他扶她迫不及待上前，毫不犹豫的将鸡巴插入%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%满溢着精液的蜜穴，开始抽插起来
+		
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("扶她车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("扶她车体验",DENSHA_P2) == 1)
+	
+		PRINTFORM　看着%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW　躺在地上不断颤抖的诱人身姿，扶她们终于忍不住，将%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%抬起
+		PRINTFORMW　只见习惯了扶她肉棒的两穴不断收缩着，爱液不断流出，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%让扶她们鸡巴进一步膨胀
+		PRINTFORM　扶她们一前一后的围住%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW　，似乎心灵相通般，同时用那凶残的鸡巴插入%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的前后穴
+		PRINTFORMW　因被鸡巴填满，腹部进一步凸起，熟悉的扩张感让%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%娇喘不停
+		PRINTFORM　扶她们开始对%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW　进行活塞运动，交替的撞击着子宫口和肠道
+		PRINTFORMW　阴道壁和肠道不断的受到双边鸡巴摩擦刺激，让%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%呻吟声逐渐增大
+		PRINTFORMW　随着娇喘增大，扶她们也开始加快节奏抽插着，过不久闷哼一声，开始往%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%二穴注入大量精液
+		PRINTFORM　注入完精液的扶她们没将%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW　放下，而是让其他扶她们接手
+		PRINTFORMW　%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%就这样一直维持着二穴被填满的情况不断高潮着
+		
+		IF RELATION_LEVEL > 2
+			PRINTFORMW　抽插途中，扶她们将%CALLNAME:DENSHA_P2%推向%CALLNAME:DENSHA_P1%旁边
+			PRINTFORMW　半恍惚的%CALLNAME:DENSHA_P2%顺势拥抱%CALLNAME:DENSHA_P1%开始舌吻
+			PRINTFORMW　看着两人亲热的扶她们忍不住爆发了，开始大量注入浓郁的精液
+			PRINTFORMW　%CALLNAME:DENSHA_P2%肠道和胃部似乎已经容纳不下更多的精液，开始从食道溢出，舌吻中%CALLNAME:DENSHA_P1%可以感觉到精液从%CALLNAME:DENSHA_P2%口流入
+			PRINTFORMW　鲜少体会到这样被灌精的%CALLNAME:DENSHA_P1%兴奋起来，更加卖力的吸吮着%CALLNAME:DENSHA_P2%口里的淫液，子宫进一步下垂
+			IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1)
+				PRINTFORMW　子宫内的胎儿和两根比手腕还粗的鸡巴压迫感让高潮过度的%CALLNAME:DENSHA_P1%翻了白眼
+			ELSE
+				PRINTFORMW 「啵」一声，鸡巴居然因子宫下垂而插入子宫内部，充满精液的子宫因突然有灼热鸡巴插入，异物快感直接刺激着%CALLNAME:DENSHA_P1%脑髓
+			ENDIF
+		ELSE
+			PRINTFORM　抽插途中，扶她们似乎不太满意早已习惯扶她鸡巴的阴道触感，稍微将%CALLNAME:DENSHA_P1%
+			SIF DENSHA_P2 != 0
+			PRINTFORM 和%CALLNAME:DENSHA_P2%
+			PRINTFORMW　抬高起来
+			PRINTFORMW　%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%还没反应过来时，扶她们一边将她往下推，一边腰部往上猛戳
+			PRINTFORMW　扶她肉棒就这样「啵」一声，顺势突入子宫口，侵犯着子宫内部
+			PRINTFORMW　充满精液的子宫因突然有灼热鸡巴插入，异物快感直接刺激着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%脑髓
+		ENDIF
+	
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+		PRINTFORMW 似乎觉得热身运动已经充足后,扶她们将%CALLNAME:TEMP_NO_EXP%抬起,将双脚扒开,可以看见前穴似乎很期待的收缩着,蜜穴爱液缓缓流出
+		PRINTFORMW 扶她用那依然勃起的龟头开始摩擦着蜜穴入口处,不时顶撞着阴蒂,挑逗着%CALLNAME:TEMP_NO_EXP%
+		PRINTFORMW 被逗弄的%CALLNAME:TEMP_NO_EXP%呻吟连连,蜜穴贪婪的吸着贴在入口的鸡巴
+		PRINTFORMW 挑逗不久，扶她开始将龟头顶入，不断流出的爱液和前列汁充当润滑液，让那手腕般的鸡巴开始没入%CALLNAME:TEMP_NO_EXP%的蜜穴
+		IF ABL:TEMP_NO_EXP:Ｖ拡張 > 3
+			PRINTFORMW %CALLNAME:TEMP_NO_EXP%那早已被充分调教的阴道没什么抵抗，很温顺的接纳了比手腕还粗壮的的鸡巴
+			PRINTFORMW 有些惊讶的扶她发出下流的笑声，开始不客气的进行抽插,龟头不断的撞击着子宫口
+			IF EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_NO_EXP)
+				PRINTFORMW　孕育着胎儿的子宫被毫不留情的被撞击着，犹如胎儿不断被鸡巴侵犯的背德快感冲击着%CALLNAME:TEMP_NO_EXP%脑髓
+			ELSE
+				PRINTFORMW　可以看见腹部因扶她鸡巴进出而凸起，子宫口不断的被手腕般鸡巴撞击，快感冲击着%CALLNAME:TEMP_NO_EXP%脑髓
+			ENDIF
+			PRINTFORMW　随着%CALLNAME:TEMP_NO_EXP%娇喘声不断变大，扶她和跟着提升抽插节奏，交合处发出「噗呲」「噗呲」声，淫水喷满地
+			PRINTFORMW　过不久，扶她闷哼一声，在%CALLNAME:TEMP_NO_EXP%阴道深处开始注入大量浓郁粘稠的扶她精液
+		ELSE
+			PRINTFORMW %CALLNAME:TEMP_NO_EXP%阴道逐渐被鸡巴扩张，扶她也很客气的缓下插入速度，一点一点的慢慢推进
+			PRINTFORMW 不习惯被扩张的阴道紧紧吸着扶她的庞然大物，最终依靠着淫水和前列汁的润滑终于将整根鸡巴吞入
+			IF EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_NO_EXP)
+				PRINTFORMW　孕育着胎儿的子宫外被异物填满，不习惯的扩张快感冲击着%CALLNAME:TEMP_NO_EXP%脑髓
+			ELSE
+				PRINTFORMW　可以看见腹部因扶她鸡巴而凸起，子宫口接吻似地紧贴着扶她龟头，不习惯的扩张快感冲击着%CALLNAME:TEMP_NO_EXP%脑髓
+			ENDIF
+			PRINTFORMW　随着%CALLNAME:TEMP_NO_EXP%娇喘声不断变大，扶她开始缓慢的进行着活塞运动，紧密贴住鸡巴的触感很快的就让扶她迎来高潮
+			PRINTFORMW　扶她颤抖着，开始在%CALLNAME:TEMP_NO_EXP%阴道深处注入大量浓郁粘稠的扶她精液
+			
+		ENDIF
+		IF EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_NO_EXP)
+			PRINTFORMW　因为子宫已经有了胎儿，没被接纳的精液从交接处满溢出来，从%CALLNAME:TEMP_NO_EXP%股间流出
+		ELSE
+			PRINTFORMW　子宫被注入大量精液，%CALLNAME:TEMP_NO_EXP%的腹部因大量精液而微微膨胀
+		ENDIF
+		
+		PRINTFORMW
+		PRINTFORMW　另一边，看着%CALLNAME:TEMP_WITH_EXP%躺在地上不断颤抖的诱人身姿，扶她们终于忍不住，将%CALLNAME:TEMP_WITH_EXP%抬起
+		PRINTFORMW　只见习惯了扶她肉棒的两穴不断收缩着，爱液不断流出，%CALLNAME:TEMP_WITH_EXP%让扶她们鸡巴进一步膨胀
+		PRINTFORMW　扶她们一前一后的围住%CALLNAME:TEMP_WITH_EXP%，似乎心灵相通般，同时用那凶残的鸡巴插入她的前后穴
+		PRINTFORMW　因被鸡巴填满，腹部进一步凸起，熟悉的扩张感让%CALLNAME:TEMP_WITH_EXP%娇喘不停
+		PRINTFORMW　扶她们开始对%CALLNAME:TEMP_WITH_EXP%进行活塞运动，交替的撞击着子宫口和肠道，阴道壁和肠道不断的受到双边鸡巴摩擦刺激，让她呻吟声逐渐增大
+		PRINTFORMW　随着娇喘增大，扶她们也开始加快节奏抽插着，过不久闷哼一声，开始往%CALLNAME:TEMP_WITH_EXP%二穴深处注入大量精液
+		PRINTFORMW　注入完精液的扶她们没将%CALLNAME:TEMP_WITH_EXP%放下，而是让其他扶她们接手
+		PRINTFORMW　%CALLNAME:TEMP_WITH_EXP%就这样一直维持着二穴被填满的情况不断高潮着
+
+	ENDIF
+	
+	PRINTFORM　扶她们轮流蹂躏着%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW ，不断的释放着深不见底的欲望，搞得%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%高潮不断，浪叫连连
+	PRINTFORMW　精力旺盛的扶她们丝毫没有缓慢下来的意图，以势必让%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%怀孕的冲劲不断的轮流注入着授种液
+	PRINTFORM　因快感冲脑的%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW 身体不断高潮颤抖着，任由扶她们摆布
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;结尾
+	
+	PRINTFORM　行驶中的电车内，坐在座位上的扶她们身上，可以看见眼神失焦%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW　，扶她的雄伟鸡巴依然勃起插入着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%蜜穴
+	PRINTFORMW　%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%全身沾满了乳白液，腹部明显凸起，股间不断流出淫液
+	PRINTFORM　虽然看起来一团糟，但是%CALLNAME:DENSHA_P1%
+	SIF DENSHA_P2 != 0
+	PRINTFORM 和%CALLNAME:DENSHA_P2%
+	PRINTFORMW　露出了非常幸福满足的阿嘿颜，不断娇喘着
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	SIF CEVENT("扶她车体验",DENSHA_P1) == 0
+	CALL SET_CEVENT("扶她车体验",DENSHA_P1)
+	SIF DENSHA_P2 != 0 && CEVENT("扶她车体验",DENSHA_P2) == 0
+	CALL SET_CEVENT("扶她车体验",DENSHA_P2)
+	
+	V = 5 + RAND:3 + RAND:2
+	A = 5 + RAND:3 + RAND:2
+	H = 5 + RAND:3 + RAND:2
+	M = 5 + RAND:3 + RAND:2
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", H+M)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "露出経験", (V+A+H+M))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "子宮口経験", V/2)
+	SIF (ABL:DENSHA_P1:Ｖ拡張 < 3 || ABL:DENSHA_P2:Ｖ拡張 < 3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ拡張経験", V - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", A)
+	SIF (ABL:DENSHA_P1:Ａ拡張 < 3 || ABL:DENSHA_P2:Ａ拡張 < 3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ拡張経験", A - RAND:3)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", V+A+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", V - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", A - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "絶頂経験", ((V+A+M)/3)/2 + RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "手淫経験", H)	
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "口交経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精飲経験", M - RAND:3)	
+
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP*3/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP*3/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", BASE_JUEL_UP*3/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP*3/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP*3/2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP*3/2)
+	
+CASE "触手车"
+
+	;只是双人时且只有一位有经验的情况下使用，其他场景请忽略
+	TEMP_WITH_EXP = DENSHA_P1
+	TEMP_NO_EXP = DENSHA_P2
+	IF CEVENT("触手车体验",DENSHA_P2)
+		TEMP_WITH_EXP = DENSHA_P2
+		TEMP_NO_EXP = DENSHA_P1
+	ENDIF
+	
+	;给有触手车生产经验的分支用 触手模式 0灌精扩张 1触手生产 2触手苗床
+	T = RAND:2
+	SIF CEVENT("触手车生产",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("触手车生产",DENSHA_P2) == 1)
+	T += 1
+	
+	;单人或者双人，无经验
+	IF CEVENT("触手车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("触手车体验",DENSHA_P2) == 0)
+		PRINTFORM 走进车厢内，%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 留意到车厢不一样，虽然一边依旧是有乘客的正常车厢，但另一边布满了不断蠕动着的触手群
+		PRINTFORMW 可以看到触手群中有一些其他少女身影，各种姿态的被插入中，无数触手须进出的「噗嚅」「咕噜」声掺杂着少女们的娇喘声
+		PRINTFORMW 看着少女们痴相的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%发现少女身影中有个熟悉的人
+		CALL PRINT_STRW, @"「啊啦~_H_欢迎~_H_啊啊_HH__HH_顽皮鬼，稍等一下啦，有新客-嗯哼~_HH__HH_」"
+		PRINTFORMW 只见神秘扶她身在空中，身体被触手缠绕拉着。下身两穴被数根触手插入，似乎因理解她的话而停止了活塞抽插
+		PRINTFORMW 腹部因触手塞入而隆起，乳房和马根般的鸡巴随着身体摇摆，乳白液甩向周遭
+		CALL PRINT_STRW, @"「今天电车很特别哦~呣~_HH_，这些都是我的触手酱们~呜_HH_很温驯很可爱哦~」"
+		CALL PRINT_STRW, @"「它们和野生的不一样哦~，野生的很粗暴野蛮，最糟情况还会夺取性命呢~」"
+		CALL PRINT_STRW, @"「这些小可爱虽然偶尔会暴走，但是基本上很体贴的哦~_H_只要它们发泄一阵子后就会放你走哦~」"
+		CALL PRINT_STRW, @"「当然若没兴趣的话，也可以单纯观赏吧~_H_但是非常鼓励参与哦~」"
+		CALL PRINT_STRW, @"「就这样，好好享受吧~啊啊_HH_真是的_HH_小坏蛋别心急，再多一会儿妈咪就让你们玩啦~_HH_」"
+		CALL PRINT_STRW, @"「有兴趣的话就过来吧，小可爱们会好好照顾你们的~_H_啊！先记得把衣服和玩具放在那边噢，不然小可爱们会把它们溶解掉哦~」"
+		CALL PRINT_STRW, @"「虽然若不介意裸身回去的话我也不会反对~呵呵~_H_哎呀，小聪明知道我快说完了吗~乖乖~啊嗯_HH__HH_噢咕_HH_噢咕_HH_嗯呜~_HH_」"
+		PRINTFORMW 刚说完，几根凑近的触手直接插入神秘扶她嘴巴，其他触手也开始恢复抽插运动，布满淫液的触须挥发着迷人的触手荷尔蒙
+		
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("触手车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("触手车体验",DENSHA_P2) == 1)
+
+		SELECTCASE T
+		CASE 2
+			PRINTFORM 走进车厢内，%CALLNAME:DENSHA_P1%
+			SIF DENSHA_P2 != 0
+			PRINTFORM 和%CALLNAME:DENSHA_P2%
+			PRINTFORMW 留意到车厢不一样，整个车厢布满了既熟悉但又不太一样的触手群
+			PRINTFORMW 触手群闪烁着骇人的深红色光泽，触手表层分泌着异常浓稠的荷尔蒙液，车厢散发着很淫靡的诱人色气
+			PRINTFORMW 触手群中，可以看见少女们腹部鼓起，异常肿胀的乳头不断分泌出母乳。很多人都半张着口，露出恍惚失神的阿嘿颜
+			PRINTFORMW 车厢中央，神秘扶她狗趴似的被触手挂在空中，眼神失焦，口中突出了数根触手，似乎是从菊穴插入后贯通食道而出
+			PRINTFORMW 孕妇般的西瓜肚和肿胀的马根肉棒随着身体一阵颤抖后，排出了数只触手幼体，掉在地上
+			IF COND("乳頭奸")
+				PRINTFORMW 可以看见数根触手抽插着乳房，乳房随着触手摇晃变形，被扩张的乳头可以看见乳房内部充满着触手卵
+			ELSE
+				PRINTFORMW 可以看见不断分泌着母乳的乳房被吸盘触须紧贴着，贪婪的吸取着养分
+			ENDIF
+			PRINTFORMW 心想着之后自己也会被一样蹂躏的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%子宫发热，满脑幻想着自己被播种侵犯
+		CASE 1
+			PRINTFORM 走进车厢内，%CALLNAME:DENSHA_P1%
+			SIF DENSHA_P2 != 0
+			PRINTFORM 和%CALLNAME:DENSHA_P2%
+			PRINTFORMW 留意到车厢不一样，看到了一边布满了不断蠕动着的触手群
+			PRINTFORMW 已经经历过触手们疼爱的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%心跳加速，淫液从期待着接下来被触手蹂躏的两穴流下来
+			PRINTFORMW 触手群和往常不太一样，闪烁着靓丽的粉色光泽，群里可以看见很多少女的腹部像孕妇般鼓起，乳房不断流出母乳
+			PRINTFORMW 旁边可以看见熟悉的神秘扶她挺着西瓜肚，将一个插进少女蜜穴的触手拉出，让少女浪叫连连
+			PRINTFORMW 少女娇喘中，只见蜜穴喷出淫液，复数疑似触手的幼体随着液体被排出，掉在地上
+			PRINTFORMW 神秘扶她微微笑，怜爱地摸了摸小小地触手须后，走向%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%面前
+			CALL PRINT_STRW, @"「啊啦~_HH_感谢再次捧场，上次玩的尽心吗~？_HH_」"
+			IF CEVENT("触手车生产",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("触手车生产",DENSHA_P2) == 1)
+				CALL PRINT_STRW, @"「真巧，今天又到了触手酱的发情期哦~_HH_因为不定期，所以也很难预测呢~_HH_」"
+				CALL PRINT_STRW, @"「现在它们至少还听话，但若暴走我可能也会招架不住哦~_HH_」"
+				CALL PRINT_STRW, @"「生产很过瘾吧~_HH_机缘巧合的话说不定会有和触手孩子乱伦的机会哦~_HH_呵呵_HH__HH_」"
+			ELSE
+				CALL PRINT_STRW, @"「今天是触手酱们的发情期哦~_HH_虽然会有些粗暴，但是繁殖本能吗~无法抵抗~呵呵_HH_」"
+				CALL PRINT_STRW, @"「不会耽误太多时间的，只要吸取足够的精力，从怀孕到生产不会花太多时间的哦~_HH_」"
+				CALL PRINT_STRW, @"「嘛嘛，不会有副作用的。野生的先不说，这些小可爱们会好好的疼爱你们的哦_HH_」"
+				CALL PRINT_STRW, @"「呵呵，虽说不会有副作用，但可能体验过这样的快感之后而回不去的哦。。。？呵呵_HH_」"
+			ENDIF
+			PRINTFORMW 说完，神秘扶她满脸幸福的摸着自己的西瓜肚，挥挥手后走回触手群中
+		CASE 0
+			PRINTFORM 走进车厢内，%CALLNAME:DENSHA_P1%
+			SIF DENSHA_P2 != 0
+			PRINTFORM 和%CALLNAME:DENSHA_P2%
+			PRINTFORMW 留意到车厢不一样，看到了一边布满了不断蠕动着的触手群
+			PRINTFORMW 已经经历过触手们疼爱的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%心跳加速，淫液从期待着接下来被触手蹂躏的两穴流下来
+			PRINTFORMW 触手群中可以看见神秘扶她躺在史莱姆型触手上，透过半透明史莱姆可以看见下半身已经被吞入
+			PRINTFORMW 插入两穴的触手一直注入着精液，腹部明显鼓起，还可以看见一根较细长的触须插入那马根中
+			PRINTFORM 娇喘着的神秘扶她留意到%CALLNAME:DENSHA_P1%
+			SIF DENSHA_P2 != 0
+			PRINTFORM 和%CALLNAME:DENSHA_P2%
+			PRINTFORMW 后，挥手打招呼说到
+			CALL PRINT_STRW, @"「嗯呜_HH_嗯_HH_啊啦~_HH_感谢再次捧场，上次玩的尽心吗~？_HH_」"
+			CALL PRINT_STRW, @"「今天不耽误太多时间，呣~_HH_呣~~_HH_好好去和小可爱们玩乐吧~_HH_」"
+			PRINTFORMW 说完，神秘扶她转头，用口含入在脸旁附近等待着的触手，猛力吸吮起来
+		ENDSELECT
+		
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+		PRINTFORMW 走进车厢内，%CALLNAME:DENSHA_P1%和%CALLNAME:DENSHA_P2%留意到车厢不一样，虽然一边依旧是有乘客的正常车厢，但另一边布满了不断蠕动着的触手群
+		PRINTFORMW 已经经历过触手们疼爱的%CALLNAME:TEMP_WITH_EXP%心跳加速，而%CALLNAME:TEMP_NO_EXP%则看着触手群中其他少女各种姿态被插入中的身影
+		PRINTFORMW 正要%CALLNAME:TEMP_NO_EXP%要询问%CALLNAME:TEMP_WITH_EXP%时，触手群中一个熟悉的声音说到
+		CALL PRINT_STRW, @"「啊啦~_H_欢迎~_H_啊啊_HH__HH_顽皮鬼，稍等一下啦，有新客-嗯哼~_HH__HH_」"
+		PRINTFORMW 只见神秘扶她身在空中，身体被触手缠绕拉着。下身两穴被数根触手插入，似乎因理解她的话而停止了活塞抽插
+		PRINTFORMW 腹部因触手塞入而隆起，乳房和马根般的鸡巴随着身体摇摆，乳白液甩向周遭
+		CALL PRINT_STRW, @"「今天电车很特别哦~呣~_HH_，这些都是我的触手酱们~呜_HH_很温驯很可爱哦~」"
+		CALL PRINT_STRW, @"「它们和野生的不一样哦~，野生的很粗暴野蛮，最糟情况还会夺取性命呢~」"
+		CALL PRINT_STRW, @"「这些小可爱虽然偶尔会暴走，但是基本上很体贴的哦~_H_只要它们发泄一阵子后就会放你走哦~」"
+		CALL PRINT_STRW, @"「当然若没兴趣的话，也可以单纯观赏吧~_H_但是非常鼓励参与，毕竟你的同伴很清楚噢~_H_」"
+		CALL PRINT_STRW, @"「就这样，好好享受吧~啊啊_HH_真是的_HH_小坏蛋别心急，再多一会儿妈咪就让你们玩啦~_HH_」"
+		CALL PRINT_STRW, @"「有兴趣的话就过来吧，小可爱们会好好照顾你们的~_H_有什么事情的话，你就帮忙提醒吧~谢啦~_H_」"
+		CALL PRINT_STRW, @"「哎呀，小聪明知道我快说完了吗~乖乖~_H_来吧，来疼爱妈咪吧~啊嗯_HH__HH_噢咕_HH_噢咕_HH_嗯呜~_HH_」"
+		PRINTFORMW 刚说完，几根凑近的触手直接插入神秘扶她嘴巴，其他触手也开始恢复抽插运动，布满淫液的触须挥发着迷人的触手荷尔蒙
+
+	ENDIF
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;前戏
+	
+	IF T != 2
+		PRINTFORM 脱下衣服和淫具放在一旁后，%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 走向空闲着的触手群
+	ENDIF
+	
+	;单人或者双人，无经验
+	IF CEVENT("触手车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("触手车体验",DENSHA_P2) == 0)
+		PRINTFORMW 触手们缓缓缠上%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，开始往身体各处抚摸着，涂满了触手分泌出来的荷尔蒙液
+		PRINTFORMW 荷尔蒙液似乎有媚药成分，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%身体敏感度不断提升，每当触手蠕动用力，娇喘声就变大
+		PRINTFORM 缠上的触手越来越多，开始揉捏着%CALLNAME:DENSHA_P1%的乳房，
+		SELECTCASE TALENT:DENSHA_P1:巨乳
+		CASE IS > 2
+			PRINTFORMW 较粗壮的触手将巨乳捏变形，细长的触手则扯拉着乳头
+		CASEELSE
+			IF TALENT:DENSHA_P1:貧乳 == 1
+				PRINTFORM 两个吸盘黏上了平坦的胸部，开始吸吮着
+				SIF TALENT:DENSHA_P1:母乳体質
+				PRINTFORM 越流越多的母乳和
+				PRINTFORMW 兴奋肿胀的乳头
+			ELSE
+				PRINTFORM 两个吸罩黏上了乳房，开始吸吮着
+				SIF TALENT:DENSHA_P1:母乳体質
+				PRINTFORM 越流越多的母乳和
+				PRINTFORMW 兴奋肿胀的乳头
+			ENDIF
+		ENDSELECT
+		SELECTCASE TALENT:DENSHA_P1:扶她
+		CASE 1
+			PRINTFORMW 其他触手缠绕著%CALLNAME:DENSHA_P1%%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P1)%的肉棒，犹如自动飞机杯般开始上下摩擦着
+		CASEELSE
+			PRINTFORMW 其他触手伸向%CALLNAME:DENSHA_P1%蜜穴处，一些舔弄着已经勃起的阴蒂，一些缠住大腿不断的蠕动摩擦
+		ENDSELECT
+		IF DENSHA_P2 != 0
+			PRINTFORMW 另一边，数根触手缠向%CALLNAME:DENSHA_P2%嘴巴，不断的往脸部和嘴唇挑逗着
+			PRINTFORMW 淫液媚药成分冲鼻，刺激着她的脑。寻求更多快感的她吻了一些触手之后，开始用口将触手含入
+			PRINTFORMW 被含入的触手顺势开始抽插起来的同时，一些触手将%CALLNAME:DENSHA_P2%双脚拉开
+			SELECTCASE TALENT:DENSHA_P2:扶她
+			CASE 1
+				PRINTFORMW 触手缠绕著%CALLNAME:DENSHA_P2%%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P2)%的肉棒，犹如自动飞机杯般开始上下摩擦着
+			CASEELSE
+				PRINTFORMW 触手伸向%CALLNAME:DENSHA_P2%蜜穴处，一些舔弄着已经勃起的阴蒂，一些缠住大腿不断的蠕动摩擦
+			ENDSELECT
+		ENDIF
+		PRINTFORMW 过不久，触手们尾端喷出大量参杂着荷尔蒙的乳白精液，用淫液淋浴着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%
+		PRINTFORMW 因为身体敏感度已提升，皮肤连被精液喷射都会起反应，快感不断冲击着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%脑髓
+	
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("触手车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("触手车体验",DENSHA_P2) == 1)
+	
+		SELECTCASE T
+			CASE 2
+				PRINTFORM %CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 才刚脱下衣服和淫具，暴走中的触手迅速的将%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%捆绑抬在空中
+				PRINTFORMW 大量的触手们很迅速的就将%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的三穴扩张填满，注入着比平时浓稠的胶状凝液
+				IF COND("乳頭奸")
+					IF TALENT:DENSHA_P1:巨乳 > 2 || TALENT:DENSHA_P2:巨乳 > 2
+						PRINTFORMW 缠绕着爆乳的触手将乳头阔开，数根触手插入，也开始往乳腺注入触手凝液
+					ELSE
+						PRINTFORMW 缠绕着乳房的触手露出针状尾部，插入了乳头，开始注入不太一样的淫液
+						PRINTFORMW 随着淫液的注入，乳房逐渐膨胀，没多久就达到爆乳般大小
+					ENDIF
+				ELSE
+					PRINTFORMW 缠绕着乳房的触手露出针状尾部，插入了乳头，开始注入不太一样的淫液
+				ENDIF
+				IF TALENT:DENSHA_P1:母乳体質 || TALENT:DENSHA_P2:母乳体質
+					PRINTFORMW 本来就已经有母乳的乳房受到影响而更加大量分泌，被触手稍微挤压就已经喷满各处
+				ELSE
+					PRINTFORMW 乳房的乳腺受到淫液刺激，开始分泌母乳，乳头和触手交接处流下乳白液
+				ENDIF
+				IF TALENT:DENSHA_P1:扶她
+					PRINTFORMW 一些细长触手将%CALLNAME:DENSHA_P1%的肉棒尿道口撑开后插入，往尿道深处注入触手凝液
+					IF DENSHA_P2 != 0
+						IF TALENT:DENSHA_P2:扶她
+							PRINTFORMW %CALLNAME:DENSHA_P2%的鸡巴也没被放过，睾丸和膀胱随着凝液的注入而鼓起
+						ELSE
+							PRINTFORMW %CALLNAME:DENSHA_P2%的尿道也没被放过，膀胱随着凝液的注入而鼓起
+						ENDIF
+					ENDIF
+				ELSE
+					PRINTFORMW 一些细长触手将%CALLNAME:DENSHA_P1%的尿道口撑开后插入，往尿道深处注入触手凝液
+					IF DENSHA_P2 != 0
+						IF TALENT:DENSHA_P2:扶她
+							PRINTFORMW %CALLNAME:DENSHA_P2%的鸡巴也没被放过，睾丸和膀胱随着凝液的注入而鼓起
+						ELSE
+							PRINTFORMW %CALLNAME:DENSHA_P2%的尿道也没被放过，膀胱随着凝液的注入而鼓起
+						ENDIF
+					ENDIF
+				ENDIF
+				PRINTFORMW 尿道膀胱被强制注满，错乱的脑部尝试让膀胱收缩，但凝液的压迫感大于收缩力，没被排出
+				PRINTFORMW 早已分不清快感来源的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%任由触手蹂躏，全身各处随着高潮而痉挛着
+
+			CASE 1
+				PRINTFORM 一见%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 靠近，发情中的触手很迅速的将%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%捆绑抬在空中
+				PRINTFORMW 连嘴巴都还来不及张开，就已经有数根触手塞入%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%口中，开始注入荷尔蒙液
+				PRINTFORMW 注入淫液的同时，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%双脚被趴开，数根马根般粗的触手也插入两穴
+				PRINTFORM 插入两穴的触手
+				SIF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1) || EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+				PRINTFORM 不在乎有胎儿的子宫，
+				PRINTFORMW 开始注入大量荷尔蒙液，其他触手也没闲着，一边逗弄身体各处，一边用淫液淋浴着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%
+				PRINTFORM 内外都被淫液淹没的%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORM ，不断的被强迫高潮着，喉道和
+				SIF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1) || EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+				PRINTFORM 怀孕的
+				PRINTFORMW 腹部随着触手的插入而凸起
+				PRINTFORMW 任由触手侵犯的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%摇摆着身体，呻吟声从被触手塞满的口漏出
+
+			CASE 0
+				PRINTFORM %CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 毫不犹疑的伸手，怜爱地抚摸着触感润滑的触手
+				PRINTFORMW 触手们也迅速缠上%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，开始蹂躏着身体各处
+				PRINTFORM 没多久，%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 被触手抬在空中，两手抚摸着缠绕住的触手，嘴巴，二穴被数根形状不一的触手轮流抽插着
+				PRINTFORMW 乳房一时被吸盘吸吮，一时被吸罩贴在乳头上真空抽气玩弄
+				PRINTFORMW 身体敏感度已被提升的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%积极寻求着快感，身体动作配合触手们逐渐加快
+				PRINTFORM 过不久，插入中的触手们开始往%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 内部注入大量参杂着荷尔蒙的乳白精液
+				PRINTFORMW 外面的触手们也一起喷出淫液，淋浴着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%
+				PRINTFORM %CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 享受着全身内外被注满精液的快感，不断高潮浪叫着
+				
+		ENDSELECT
+	
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+		PRINTFORMW 触手们缓缓缠上%CALLNAME:TEMP_WITH_EXP%和%CALLNAME:TEMP_NO_EXP%，开始往身体各处抚摸着，涂满了触手分泌出来的荷尔蒙液
+		PRINTFORMW 荷尔蒙液似乎有媚药成分，两人身体敏感度不断提升，每当触手蠕动用力，娇喘声就变大
+		PRINTFORM 缠上的触手越来越多，开始揉捏着%CALLNAME:TEMP_NO_EXP%的乳房，
+		SELECTCASE TALENT:TEMP_NO_EXP:巨乳
+		CASE IS > 2
+			PRINTFORMW 较粗壮的触手将巨乳捏变形，细长的触手则扯拉着乳头
+		CASEELSE
+			IF TALENT:TEMP_NO_EXP:貧乳 == 1
+				PRINTFORM 两个吸盘黏上了平坦的胸部，开始吸吮着
+				SIF TALENT:TEMP_NO_EXP:母乳体質
+				PRINTFORM 越流越多的母乳和
+				PRINTFORMW 兴奋肿胀的乳头
+			ELSE
+				PRINTFORM 两个吸罩黏上了乳房，开始吸吮着
+				SIF TALENT:TEMP_NO_EXP:母乳体質
+				PRINTFORM 越流越多的母乳和
+				PRINTFORMW 兴奋肿胀的乳头
+			ENDIF
+		ENDSELECT
+		SELECTCASE TALENT:TEMP_NO_EXP:扶她
+		CASE 1
+			PRINTFORMW 其他触手缠绕著%CALLNAME:TEMP_NO_EXP%%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(TEMP_NO_EXP)%的肉棒，犹如自动飞机杯般开始上下摩擦着
+		CASEELSE
+			PRINTFORMW 其他触手伸向%CALLNAME:TEMP_NO_EXP%蜜穴处，一些舔弄着已经勃起的阴蒂，一些缠住大腿不断的蠕动摩擦
+		ENDSELECT
+		
+		PRINTFORMW 另一边，%CALLNAME:TEMP_WITH_EXP%毫不犹疑的伸手，怜爱地抚摸着触感润滑的触手
+		PRINTFORMW 更多的触手缠上%CALLNAME:TEMP_WITH_EXP%，开始蹂躏着身体各处
+		PRINTFORMW 没多久，%CALLNAME:TEMP_WITH_EXP%被触手抬在空中，两手抚摸着缠绕住的触手，嘴巴，二穴被数根形状不一的触手轮流抽插着
+		PRINTFORMW 乳房一时被吸盘吸吮，一时被吸罩贴在乳头上真空抽气玩弄
+		PRINTFORMW %CALLNAME:TEMP_WITH_EXP%积极寻求着快感，身体动作配合触手们逐渐加快
+		PRINTFORMW 过不久，插入%CALLNAME:TEMP_WITH_EXP%中的触手们开始往内部注入大量参杂着荷尔蒙的乳白精液
+		PRINTFORMW 其他触手也一起喷出淫液，淋浴着%CALLNAME:TEMP_WITH_EXP%和%CALLNAME:TEMP_NO_EXP%两人
+		PRINTFORMW 因为身体敏感度已提升，皮肤连被精液喷射都会起反应，快感不断冲击着两人脑髓
+	ENDIF
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;本番乱交
+	
+	;单人或者双人，无经验
+	IF CEVENT("触手车体验",DENSHA_P1) == 0 && (DENSHA_P2 == 0 || CEVENT("触手车体验",DENSHA_P2) == 0)
+		PRINTFORM 调戏了一阵子后，蠢蠢欲动的触手贴近%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 的两穴，开始缓缓插入
+		PRINTFORMW 蠕动着的触手尾端一边不时亲吻着阴道壁，一时摩擦着肠道内壁
+		SIF DENSHA_P2 != 0
+		PRINTFORM 被含在%CALLNAME:DENSHA_P2%口中的触手开始进出抽插，
+		PRINTFORMW 玩弄着%CALLNAME:DENSHA_P1%乳头的触手也将注意力转向嘴巴而插入
+		PRINTFORMW 其他空闲的触手缠向%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%乳房开始玩弄，一边揉捏乳房一边吸吮乳头
+		PRINTFORMW 全身内外几乎都变成敏感带的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，随着触手每阵摩擦抽动而高潮
+		PRINTFORM 过不久，%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 感觉到身体各处的触手颤抖一阵，开始排出大量浓稠的触手精液
+		PRINTFORM %\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的食道，
+		SIF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1) || EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+		PRINTFORM 怀着胎儿的
+		PRINTFORMW 子宫，和肠道被精液淹没，将已经高潮着的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%推向更高一层的吹潮
+	
+	;单人或者双人，都有经验
+	ELSEIF CEVENT("触手车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("触手车体验",DENSHA_P2) == 1)
+	
+		SELECTCASE T
+			CASE 2
+				PRINTFORMW 肆意将%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%苗床化的触手开始变大，开始将触手卵注入
+				IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1) || EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+					PRINTFORMW 子宫内被苹果般大小的触手卵填满，不断压迫着胎儿，腹部进一步膨大
+				ELSE
+					PRINTFORMW 子宫内被苹果般大小的触手卵填满，不断被推挤的精液溢向两旁的卵巢
+				ENDIF
+				PRINTFORMW 胃袋被口部和菊穴的触手夹攻，逐渐被触手卵填满，满溢出的卵往食道和肠道挤压着
+				SIF COND("乳頭奸")
+				PRINTFORMW 插入乳房的触手则排出较小颗的卵，乳房进一步膨胀，凸出不规则乒乓球般的小肉丘
+				PRINTFORMW 容量较小的尿道和膀胱被注入鹌鹑蛋般的小触手卵，尿道口随着卵子挤入而逐渐松弛
+				PRINTFORM 孵化着触手卵吸取着%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 的精力，很快的就开始抖动破壳
+				PRINTFORMW 感受到幼体的触手开始拉出，只见幼体们不断的从%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%各处爬出来
+				PRINTFORMW 恍惚的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%随着触手生产，高潮一波接一波
+				PRINTFORMW 暴走中的触手也没给机会休息，看着产出差不多后触手又再度插入，继续注入精液和卵
+				PRINTFORM 苗床%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 错乱的脑暂时只充斥着全身灼热的快感，刺激不停的高潮，和无底的生产欲望
+				
+			CASE 1
+				PRINTFORMW 释放完欲液的触手逐渐膨胀起来，抽插速度慢慢缓下
+				PRINTFORM 正当%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 因此而稍微放松身体时，触手猛然收紧，开始将体内苹果般大的触手卵挤进%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%内腔
+				IF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1) || EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+					PRINTFORM 已经怀着胎儿的子宫被放过，但
+				ELSE
+					PRINTFORM 触手插入子宫口，往子宫内注入触手卵的同时，
+				ENDIF
+				PRINTFORMW 胃袋被喉咙深处的触手灌入，插入后穴的触手也缓缓排出触手卵
+				PRINTFORMW 全身内外早已变成敏感带的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%随着触手排卵而持续高潮着
+				PRINTFORMW 过一会儿，触手似乎已经排卵完毕，颤抖一阵子后又排出大量浓郁的精液
+				PRINTFORMW 触手卵似乎在吸收着淫液，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%感觉到体内压迫感降低，腹部稍微收缩
+				PRINTFORM 终于满足的触手将%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 放在地板上，缠绕着身体的也开始松开，撤离到一旁
+				PRINTFORMW 倒趴在精液洼的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%娇喘着，感觉体内的触手卵温度逐渐提升
+				
+			CASE 0
+				PRINTFORM 刚刚释放欲液的触手们意犹未尽，其他蠢蠢欲动的触手们也开始凑近%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW ，将%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%缠上
+				PRINTFORMW 触手毫不理会已经有其他触手塞满，硬生生的挤进了%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的三穴
+				PRINTFORMW 随着其他触手的加入，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的食道，腹部进一步膨胀
+				PRINTFORM 一些触手为了寻求空间，将子宫口撑开之后，侵入
+				SIF EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P1) || EVENT_NTR_DENSHA_GET_NINSHIN(DENSHA_P2)
+				PRINTFORM 孕育着胎儿的
+				PRINTFORMW 子宫内部
+				PRINTFORM 身体各处被异常扩张着的%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 高潮过度翻了白眼，尿液淫液随着身体痉挛乱喷
+				PRINTFORMW 触手不理会失神的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%，开始抽插起来，撞击着胃部，子宫壁，和肠道深处
+				PRINTFORMW 过不久，触手颤抖一阵，在%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%内部的触手开始排出大量浓稠的触手精液
+				PRINTFORMW 体外的触手则用精液林遇着%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%
+				PRINTFORM 这次似乎终于满足了的触手将%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 放在地板上，缠绕着身体的也开始松开，撤离到一旁
+				PRINTFORMW 倒趴在精液洼的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%可见刚被极度扩张两穴往外张开着
+				PRINTFORMW 蜜穴内可见下垂后被触手进一步拉出的子宫口半张开着，和菊穴一样不断排出乳浊液
+				
+		ENDSELECT
+	
+	;双人，其中一人有经验
+	ELSEIF DENSHA_P2 != 0
+		PRINTFORM 调戏了一阵子后，蠢蠢欲动的触手贴近%CALLNAME:TEMP_NO_EXP%的两穴，开始缓缓插入
+		PRINTFORMW 蠕动着的触手尾端一边不时亲吻着阴道壁，一时摩擦着肠道内壁
+		PRINTFORMW 玩弄着%CALLNAME:TEMP_NO_EXP%乳头的触手也将注意力转向嘴巴而插入
+		PRINTFORMW 其他空闲的触手缠向%CALLNAME:TEMP_NO_EXP%乳房开始玩弄，一边揉捏乳房一边吸吮乳头
+		PRINTFORMW 全身内外几乎都变成敏感带的%CALLNAME:TEMP_NO_EXP%，随着触手每阵摩擦抽动而高潮
+		
+		PRINTFORM 另一边，刚刚释放欲液的触手们意犹未尽，其他蠢蠢欲动的触手们也缠上%CALLNAME:TEMP_WITH_EXP%
+		PRINTFORMW 触手毫不理会已经有其他触手塞满，硬生生的挤进了%CALLNAME:TEMP_WITH_EXP%的三穴
+		PRINTFORMW 随着其他触手的加入，%CALLNAME:TEMP_WITH_EXP%的食道，腹部进一步膨胀
+		PRINTFORM 一些触手为了寻求空间，将子宫口撑开之后，侵入
+		SIF EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_WITH_EXP)
+		PRINTFORM 孕育着胎儿的
+		PRINTFORMW 子宫内部
+		PRINTFORMW 身体各处被异常扩张着的%CALLNAME:TEMP_WITH_EXP%高潮过度翻了白眼，尿液淫液随着身体痉挛乱喷
+		
+		PRINTFORMW 过不久，%CALLNAME:TEMP_NO_EXP%和%CALLNAME:TEMP_WITH_EXP%感觉到身体各处的触手颤抖一阵，开始排出大量浓稠的触手精液
+		PRINTFORM 两人的食道，
+		SIF EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_WITH_EXP) || EVENT_NTR_DENSHA_GET_NINSHIN(TEMP_NO_EXP)
+		PRINTFORM 怀着胎儿的
+		PRINTFORMW 子宫，和肠道被精液淹没，将已经高潮着的两人推向更高一层的吹潮
+
+	ENDIF
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	;结尾
+
+	;单人或者双人，都有经验
+	IF CEVENT("触手车体验",DENSHA_P1) == 1 && (DENSHA_P2 == 0 || CEVENT("触手车体验",DENSHA_P2) == 1)
+	
+		SELECTCASE T
+			CASE 2
+				PRINTFORMW 车厢中央，苗床少女们依然被触手悬挂在空中，满地都是爬走蠕动着的触手幼体
+				PRINTFORM 身影中可见到神秘扶她，%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 依然肿大的身影
+				PRINTFORMW 一脸幸福满足的阿嘿颜半张着口，不时「唔嗝」一声幼体从口蠕动而出
+				PRINTFORMW 乳房口微微开着，暴露的乳腺不断流出母乳
+				PRINTFORMW 鸡巴尿道随着幼体爬出而凸起，幼体一爬出，精液因终于没障碍而大量喷出
+				PRINTFORMW 下体只见子宫颈和肠道承受不住生产蹂躏而脱垂，两穴不时也会排出幼体
+				PRINTFORMW 精疲力尽的身体随着排出幼体时而抖动，偶尔可以听到微弱的娇喘声
+				PRINTFORMW 虽然看似列车即将到站，但是若看时间就知道已经错过平时下车的时段
+				
+			CASE 1
+				PRINTFORM 神秘扶她走向前来，看着%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 满意的点点头说着
+				CALL PRINT_STRW, @"「就快当妈妈了哦~_HH_生下更多更多的小可爱吧~_HH_」"
+				PRINTFORMW 说着，%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%感觉体内触手卵振动起来，幼体们开始破壳而出
+				PRINTFORMW 刚出壳的幼体们先是在体内乱钻一阵子，过不久就寻求着出口爬动，撑开了%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%的口和两穴
+				PRINTFORMW 身体依然敏感的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%随着小触手涌出而再度高潮
+				IF TALENT:DENSHA_P1:母乳体質 || TALENT:DENSHA_P2:母乳体質
+					PRINTFORM 已经有母乳的乳房受到刺激而膨胀，流出更多的母乳，
+				ELSE
+					PRINTFORM 乳房受到刺激而膨胀，开始分泌出母乳，
+				ENDIF
+				PRINTFORMW 小触手们寻求着更多养分而爬到乳房旁开始贪婪的吸吮着
+				IF TALENT:DENSHA_P1:扶她 || TALENT:DENSHA_P2:扶她
+					PRINTFORM 因空间不足，一些小触手缠上
+					SIF TALENT:DENSHA_P1:扶她
+					PRINTFORM %CALLNAME:DENSHA_P1%%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P1)%鸡巴
+					SIF TALENT:DENSHA_P2:扶她
+					PRINTFORM %CALLNAME:DENSHA_P2%%EVENT_NTR_DENSHA_GET_CHINCHIN_TEXT(DENSHA_P2)%肉棒
+					PRINTFORMW ，张开尾部舔着龟头，吸取着鸡巴随着刺激而喷出的精液
+				ENDIF
+				PRINTFORMW 神秘扶她看着开始失神的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%笑一笑，伸手扶起一些幼体，也开始用自己马根鸡巴给它们哺乳
+				PRINTFORM 恍惚失神的%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 就这样趴在地上，任由身体痉挛，让自己刚生出的小触手们自由的吸取着养分
+				
+				SIF CEVENT("触手车生产",DENSHA_P1) == 0
+				CALL SET_CEVENT("触手车生产",DENSHA_P1)
+				SIF DENSHA_P2 != 0 && CEVENT("触手车生产",DENSHA_P2) == 0
+				CALL SET_CEVENT("触手车生产",DENSHA_P2)
+			CASE 0
+				PRINTFORMW 这时，和触手交欢结束的神秘扶她走向前来，看着两穴满溢而出的精液说到
+				CALL PRINT_STRW, @"「哎呀，好可惜~_HH_好浪费哦~_HH__HH_」"
+				PRINTFORM 说着，她头部凑近%CALLNAME:DENSHA_P1%
+				SIF DENSHA_P2 != 0
+				PRINTFORM 和%CALLNAME:DENSHA_P2%
+				PRINTFORMW 下体，开始从两穴轮流吸吮着不断流出的浑浊淫液.
+				PRINTFORMW 吸吮一阵子，搞得%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%浪叫连连后，神秘扶她一脸陶醉站了起来
+				PRINTFORMW 用舌头舔了自己残留着精液的嘴唇后，调皮的拍打%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%凸起的肚子
+				PRINTFORMW 身体依然敏感的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%因肚子触觉又再次高潮，身体痉挛着
+				PRINTFORMW 随着身体颤抖，两穴紧缩，「噗嚅」「噗嚅」的将淫液喷满神秘扶她身上，神秘扶她开心的说到
+				CALL PRINT_STRW, @"「呵呵，看来玩的真尽心~_HH_小可爱们似乎也很喜欢你们哦~_HH__HH_」"
+				CALL PRINT_STRW, @"「有机会的话，下次再见吧~_HH_期待你们再度光临~_HH_」"
+
+		ENDSELECT
+	
+	;单人或者双人，无经验
+	;双人，其中一人有经验
+	ELSE
+		PRINTFORM 释放欲液后心满意足的触手将%CALLNAME:DENSHA_P1%
+		SIF DENSHA_P2 != 0
+		PRINTFORM 和%CALLNAME:DENSHA_P2%
+		PRINTFORMW 放在地板上，缠绕着身体的也开始松开，撤离到一旁
+		PRINTFORMW 倒趴在精液洼的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%不断呻吟着，依旧敏感的身体感觉特别燥热
+		PRINTFORMW 这时，和触手交欢结束的神秘扶她走向前来，挺着西瓜肚说
+		CALL PRINT_STRW, @"「呵呵，玩的开心吗~_HH_我的小可爱们很有趣吧~_HH_」"
+		CALL PRINT_STRW, @"「不用担心身体，过不久就会回复原状的噢~_HH_」"
+		CALL PRINT_STRW, @"「有机会的话，下次再见吧~_HH_期待你们再度光临~_HH_」"
+		PRINTFORMW 似乎已经无力的%\@(DENSHA_P2 == 0)?%CALLNAME:DENSHA_P1%#两人\@%虽然没发声回应，但身体却因兴奋期待而缩紧
+		PRINTFORMW 随着身体一阵痉挛，两穴内淫液「噗嚅」「噗嚅」喷了出来，口水参杂着精液从嘴角流下
+		
+		SIF CEVENT("触手车体验",DENSHA_P1) == 0
+		CALL SET_CEVENT("触手车体验",DENSHA_P1)
+		SIF DENSHA_P2 != 0 && CEVENT("触手车体验",DENSHA_P2) == 0
+		CALL SET_CEVENT("触手车体验",DENSHA_P2)
+
+	ENDIF
+	
+	PRINTFORMW
+	PRINTFORMW 。。。
+	PRINTFORMW
+	
+	V = (5 + RAND:3 + RAND:2)*(1 + T)
+	A = (5 + RAND:3 + RAND:2)*(1 + T)
+	H = (5 + RAND:3 + RAND:2)*(1 + T)
+	M = (5 + RAND:3 + RAND:2)*(1 + T)
+	
+	CALL EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(DENSHA_P2)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "奉仕快楽経験", H+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "羞恥快楽経験", V+A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "露出経験", (V+A+H+M))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "触手経験", (V+A+H+M))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "特別経験", (V+A+H+M)/4)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ性交経験", V)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "子宮口経験", V/2)
+	SIF (ABL:DENSHA_P1:Ｖ拡張 < 3 || ABL:DENSHA_P2:Ｖ拡張 < 3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ｖ拡張経験", V - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ経験", A)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ性交経験", A)
+	SIF (ABL:DENSHA_P1:Ａ拡張 < 3 || ABL:DENSHA_P2:Ａ拡張 < 3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "Ａ拡張経験", A - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精液経験", V+A+M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "膣内精液経験", V - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "肛内精液経験", A - RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "絶頂経験", ((V+A+M)/3)/2 + RAND:3)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "手淫経験", H)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "口交経験", M)
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "精飲経験", M - RAND:3)
+	SIF T > 0
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(DENSHA_P2, "授乳経験", 2*T + RAND:3)
+
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "欲情", BASE_JUEL_UP*(2 + T))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "恥情", BASE_JUEL_UP*(1 + T))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｃ", BASE_JUEL_UP*(2 + T))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｖ", BASE_JUEL_UP*(2 + T))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ａ", BASE_JUEL_UP*(2 + T))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｂ", BASE_JUEL_UP*(2 + T))
+	CALL EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(DENSHA_P2, "快Ｍ", BASE_JUEL_UP*(2 + T))
+	
+ENDSELECT
+;
+;END OF @EVENT_NTR_DENSHA_HARASS_10
+;
+
+@EVENT_NTR_DENSHA_GET_RELATIONSHIP(ARG)
+#FUNCTION
+A=0
+IF ARG != 0
+	SIF MIN(RELATION:ARG:(NO:TARGET), RELATION:(NO:ARG)) >= 200	;CASE "相性☆"
+	A = 4
+	SIF MIN(RELATION:ARG:(NO:TARGET), RELATION:(NO:ARG)) >= 150	;CASE "相性◎"
+	A = 3
+	SIF MIN(RELATION:ARG:(NO:TARGET), RELATION:(NO:ARG)) >= 120	;CASE "相性○"
+	A = 2
+	A = 1
+ENDIF
+RETURNF A
+
+@EVENT_NTR_DENSHA_SHOW_EXP_JUEL_HEADER(ARG)
+;ARG P2
+#DIMS P1_HEADER
+#DIMS P2_HEADER
+
+P1_HEADER = [%CALLNAME:TARGET%]
+P2_HEADER = %\@(ARG == 0)?#[%CALLNAME:ARG%]\@%
+
+PRINTFORML
+PRINTFORML %TEXT_LJ(TEXT_RJ(P1_HEADER, 21), 25)%%TEXT_LJ(TEXT_RJ(P2_HEADER, 21), 25)%
+
+@EVENT_NTR_DENSHA_ADD_AND_SHOW_EXP(ARG, ARGS, ARG:1)
+;ARG P2
+#DIMS P1_EXP_STRING
+#DIMS P2_EXP_STRING
+
+P1_EXP_STRING = %EXPNAME:GETNUM(EXP,ARGS)% + {ARG:1}
+P2_EXP_STRING = %\@(ARG == 0)?#%EXPNAME:GETNUM(EXP,ARGS)% + {ARG:1}\@%
+
+EXP:TARGET:GETNUM(EXP,ARGS) += ARG:1
+SIF ARG != 0
+EXP:ARG:GETNUM(EXP,ARGS) += ARG:1
+
+PRINTFORML %TEXT_LJ(TEXT_RJ(P1_EXP_STRING, 21), 25)%%TEXT_LJ(TEXT_RJ(P2_EXP_STRING, 21), 25)%
+
+@EVENT_NTR_DENSHA_ADD_AND_SHOW_JUEL(ARG, ARGS, ARG:1)
+;ARG P2
+#DIMS P1_JUEL_STRING
+#DIMS P2_JUEL_STRING
+
+P1_JUEL_STRING = %PALAMNAME:GETNUM(JUEL,ARGS)%の珠 + {ARG:1}
+P2_JUEL_STRING = %\@(ARG == 0)?#%PALAMNAME:GETNUM(JUEL,ARGS)%の珠 + {ARG:1}\@%
+
+JUEL:TARGET:GETNUM(JUEL,ARGS) += ARG:1
+SIF ARG != 0
+JUEL:ARG:GETNUM(JUEL,ARGS) += ARG:1
+
+PRINTFORML %TEXT_LJ(TEXT_RJ(P1_JUEL_STRING, 21), 25)%%TEXT_LJ(TEXT_RJ(P2_JUEL_STRING, 21), 25)%

@@ -1,0 +1,624 @@
+﻿;-------------------------------------------------
+;日常イベントで特定の行動をした際に、ここで新たな行動が派生する。
+;STR:日常イベント名は重置済み
+;主に選択肢を出して色々する事となるだろう
+;ちなみにここでの行動は你の行動履歴に残す程ではないのでSAVESTR:PREV_日常イベント名 は変化しない
+;EVENT_DAILY_EXを呼んでいる場所の後でTARGETは自動的に元に戻される
+;-------------------------------------------------
+@EVENT_DAILY_EX, ARG, ARGS
+#DIMS MEMO_SAVESTR
+#DIMS MEMO_SAVESTR2
+#DIM MEMO_TARGET
+
+MEMO_TARGET = TARGET
+MEMO_SAVESTR = %SAVESTR:PREV_日常イベント名%
+MEMO_SAVESTR2 = %SAVESTR:PREV_直前行動%
+
+CALL EVENT_DAILY_EX_MAIN, ARG, ARGS
+;EVENT_DAILY_EXでの変化を記録
+CALL SET_PREV_DAILYCOM
+
+SIF TARGET <= 0
+	TARGET = MEMO_TARGET
+
+SAVESTR:PREV_日常イベント名 = %MEMO_SAVESTR%
+;直前行動が変化していたら両方記録する
+SIF SAVESTR:PREV_直前行動 != MEMO_SAVESTR2
+	SAVESTR:PREV_直前行動 = %MEMO_SAVESTR2%\/%SAVESTR:PREV_直前行動%
+
+SELECTCASE CFLAG:PREV_DAILYCATE
+CASE 4, 5, 6, 7
+CASEELSE
+	;ちんこを弄脏的ままにしておくのはあまり良くないので綺麗にする
+	IF PENIS(MASTER) && COND("Ｐ汚れ", MASTER) && COND("Ｐ汚れの相手", MASTER) && FIND_COND("性処理直後") == 0
+		IF CFLAG:睡眠 == 0
+			DRAWLINE
+			PRINTFORMW （休息后冷静下来的%CALLNAME:MASTER%、坐下后把和%CONDS("Ｐ汚れの相手", MASTER)%的Ｈ中弄脏的阴茎擦干净了）
+		ENDIF
+		CALL RESET_STAIN_EX, "Ｐ", MASTER
+	ENDIF
+ENDSELECT
+;ここで颜绘変化を一旦重置
+CVARSET CSTR, GETNUM(CSTR, "颜绘変化")
+CVARSET CFLAG, GETNUM(CFLAG, "KOJO_DAILY済")
+
+@EVENT_DAILY_EX_MAIN, ARG, ARGS
+#DIM MEMO_LINECOUNT
+#DIM MEMO_LINECOUNT_SUB
+#DIM MEMO_TARGET
+#DIM CHOICE
+;阴茎ルートor阴部ルート
+#DIM IS_PENISROUTE
+#DIMS EVENT_TABLE
+
+TFLAG:地の文スキップ = 0
+IS_PENISROUTE = 0
+MEMO_TARGET = TARGET
+
+;角色独自のイベントは、ここに書いても良い
+DRAWLINE
+MEMO_LINECOUNT = LINECOUNT
+CALL KOJO_DAILYCOM, "特殊事件", "改行没有"
+;何か起きていたらここまで
+IF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+ELSE
+	CLEARLINE 1
+ENDIF
+
+CALL BLANK_DRAWLINE
+
+MEMO_LINECOUNT = LINECOUNT
+;現在進行しているイベントの補足となるような物（指令区分で分岐）
+SELECTCASE ARG
+;Talk
+CASE 1
+	SELECTCASE SAVESTR:PREV_日常イベント名
+	;雑談中なら调戏かけやすい
+	CASE "Talk", "甜言蜜语", "夸奖"
+		;レアイベントを上に置く
+		IF COND("ながら胖次穿き替え可能") && RAND:3 == 0
+			CALL EVENT_ACADEMY, "ながら胖次穿き替え"
+		;週末が近づくと约会のお誘いをしてくれるかも
+		ELSEIF COND("约会のお誘い可能") && FLAG:対複数 == 0 && (DAY - 1)%7 - 3 > RAND:10
+			CALL EVENT_ACADEMY, "约会のお誘い"
+		;試験前は特殊なイベントが起きるかも
+		ELSEIF COND("Ｈ的約定可能")
+			CALL EVENT_ACADEMY, "Ｈ的約定"
+		ENDIF
+	ENDSELECT
+;互动
+CASE 2
+	SELECTCASE CSTR:PREV_DAILYCOM
+	CASE "睡眠姦正常位", "睡眠姦寝后背位"
+		CALL EVENT_ACADEMY, "睡眠姦"
+	CASE "睡眠姦口交", "睡眠姦逆口交"
+		CALL EVENT_ACADEMY, CSTR:PREV_DAILYCOM
+	ENDSELECT
+;卖个破绽
+CASE 3
+
+;检查内褲
+CASE 4
+
+;性処理
+CASE 6
+	SELECTCASE NAMES("性処理")
+	CASE "口交", "Ｖ性交", "Ａ性交", "尿道性交"
+		;飲尿
+		IF BASE:MASTER:尿意 >= 5000 && COND("合意：飲尿PLAY") && FLAG:二人きり + COND("合意：露出PLAY")
+			PRINTFORML ……就在這時突然一股%CALLNAME:MASTER%を\@ BASE:MASTER:尿意 >= 8000 ? 強烈 # 溫熱 \@的尿意襲來。要怎麼辦呢？
+			CALL PRINT_SELECT, @"%TEXTR("仍由尿意放出/不想麻煩自己/就用這個姿勢")%、拜託%CALLNAME:TARGET%解決/暫時離開去廁所解決"
+			SELECTCASE RESULT
+			CASE 0
+				CALL KOJO_DAILYCOM, "性処理後飲尿PLAY"
+
+				PRINTFORM %CALLNAME:PLAYER%仍由尿意從下體放出、
+				IF ABL:奉仕精神 >= 5 && RANDIF(2, ABL:精液中毒 >= 5)
+					PRINTFORM %TEXTR("在下巴下用雙手做出碗的形狀準備著的/大大地張開嘴等待著的/從張大的嘴唇中伸出舌頭準備著的")%
+				ELSEIF ABL:精液中毒 >= 5 && RAND:2
+					IF NAMES("性処理") == "口交"
+						PRINTFORM %TEXTR("將射精之後的陰莖再度連根吞入的/再度用舌頭纏住陰莖歡迎陰莖回到嘴中的/嚥下精液之後露出了興奮的表情的")%
+					ELSE
+						PRINTFORM %TEXTR("將射精之後的陰莖連根吞入的/用舌頭纏住陰莖歡迎陰莖的")%
+					ENDIF
+				ELSE
+					PRINTFORM %TEXTR("親吻了一下陰莖表示同意之後張開嘴唇等待的/還沉醉於性処理氛圍中的/沒有任何不滿的")%
+				ENDIF
+				PRINTFORMW %CALLNAME:TARGET%%TEXTR("的口当做厕所使用了/的口中放出了尿液/当做小便器使用了")%。
+				IF RAND:2
+					PRINTFORMW 為了不讓尿液溢出來%CALLNAME:TARGET%努力地仰起脖子、露出了清爽的表情\@ FLAG:二人きり ? # 一邊被別人看著一邊 \@享受起了飲尿PLAY…
+				ELSE
+					PRINTFORMW 已經有過多次經驗的%CALLNAME:TARGET%\@ FLAG:二人きり ? 用鼻子發出粗重的吐息 # 不顧周圍刺人的視線 \@、熟練地鼓動著喉嚨發出咕嚕嚕地吞嚥聲、將%CALLNAME:MASTER%的聖水一飲而盡…
+				ENDIF
+
+				BASE:尿意 += BASE:MASTER:尿意/4
+				EXP:飲尿経験 += 1
+				PRINTL 
+				PRINTFORMW 飲尿経験+１
+				CALL SETFLAG_DAILY, "廁所", MASTER
+
+				DRAWLINE
+				PRINTFORMW （一息ついて落ち着いた%CALLNAME:TARGET%は、中座してうがい手洗いをしてきたようだ）
+				STR:日常イベント名 = 性処理後飲尿PLAY
+			CASEELSE
+				PRINTL ……
+				PRINTL ………
+				PRINTL …………
+				PRINTFORMW ………………ふぅ。
+				CALL SETFLAG_DAILY, "廁所", MASTER
+			ENDSELECT
+		ENDIF
+	ENDSELECT
+CASE 7
+	;今回の性処理選択で薄着变成了
+	IF CFLAG:性処理の格好变成了 == 1
+		IF COND("性処理後没穿下衣持続可能") == 0
+			CALL SET_MEMO_DRESS, "脱掉的衣服一览", TARGET
+			CFLAG:性処理の格好变成了 = 0
+		ELSE
+			CALL PRINT_CUTIN, "見たまま正面", TARGET
+			PRINTFORMW %CALLNAME:TARGET%%TEXTR("在绝顶之后恍惚着/露出了一副清爽的表情/一副满足了的样子")%、就这样%TEXTR("露出下半身/保持着不成样子的着装/脱掉了下半身的衣服")%靠在了%NAMES("ソファ")%上…
+			CFLAG:性処理の格好变成了 = 2
+		ENDIF
+	ENDIF
+	IF NOWEX:絶頂漏尿
+		CALL BLANK_DRAWLINE
+		PRINTFORMW （休息后冷静下来的%CALLNAME:MASTER%、将在和%CALLNAME:TARGET%做的时候弄脏的环境和周围漂亮地进行了扫除）
+		;口も漱ぐ
+		SIF CHECK_STAIN(STAIN:MASTER:Ｍ, "尿")
+			CALL RESET_STAIN_EX, "Ｍ", MASTER
+	ENDIF
+ENDSELECT
+
+;CFLAG:睡眠 == 1なら睡眠から覚ます処理
+IF CFLAG:睡眠 == 1
+	DRAWLINE
+	;汚した？
+	IF COND("着衣の乱れ")
+		PRINTFORMW ……再不停下来的话就有暴露的风险了。
+		PRINTFORMW 在%TEXTR("把衣服整理好/快速清理了污迹/处理好现场情况")%销毁完证据的%CALLNAME:MASTER%的身旁、轻轻摇晃着肩膀的%CALLNAME:TARGET%从睡梦中慢慢醒来。
+	ELSEIF EXP_GAIN("睡眠悪戯経験") + EXP_GAIN("睡眠姦経験")
+		PRINTFORMW ……再不停下来的话就有暴露的风险了。
+		PRINTFORMW 已经充分享受完了的%CALLNAME:MASTER%的身旁、轻轻摇晃着肩膀的%CALLNAME:TARGET%从睡梦中慢慢醒来。
+	ELSE
+		PRINTFORMW %CALLNAME:MASTER%的身旁、轻轻摇晃着肩膀的%CALLNAME:TARGET%从睡梦中慢慢醒来。
+	ENDIF
+	CALL KOJO_DAILYCOM, "叫醒"
+	CALL SETFLAG_DAILY, "叫醒"
+ENDIF
+
+;何か起きていたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;ここより下はpartner以外も対象のイベント。TARGETが変更された場合にはイベントの記録を終えた後で戻される
+;まずはpartner以外のみ起きるイベント
+TARGET = FIND_COND("現在存在", "起床中")
+IF TARGET > 0
+	CALL CHECK_COM_ABLE, TARGET
+	CALL SETFLAG, "性処理でのPLAY内容：計算のみ", TARGET
+
+	MEMO_LINECOUNT_SUB = LINECOUNT
+	;全裸終了
+	IF COND("全裸状態終了可能") || COND("性処理の格好終了可能")
+		CALL KOJO_DAILYCOM, "服を着た", "改行没有"
+		SIF LINECOUNT == MEMO_LINECOUNT_SUB
+			PRINTFORMW 「…………」
+		SIF TFLAG:地の文スキップ == 0
+			PRINTFORMW 察觉到%CALLNAME:MASTER%的興趣从自己身上移開的%CALLNAME:TARGET%、把之前脱掉的衣服穿了回去。
+		CALL SET_MEMO_DRESS, "脱掉的衣服一览", TARGET
+		CFLAG:性処理の格好变成了 = 0
+		
+		;标记
+		ELSEIF CFLAG:做爱部部员等级 == 4 && RAND:3 == 0
+		CALL LOVEORG_FELLOWSHIP_BEGIN
+		
+	;酔酒→困倦→床イン
+	ELSEIF STATE("困倦") && PLACE("自宅") && PLACE("partner的房間") == 0 && RAND:3 == 0
+		CALL KOJO_DAILYCOM, "眠い", "改行没有"
+		SIF LINECOUNT == MEMO_LINECOUNT_SUB
+			PRINTFORMW 「…………」
+		SIF TFLAG:地の文スキップ == 0
+			PRINTFORMW 喝醉了酒很困的%CALLNAME:TARGET%、慢吞吞地回到了自己的房间……
+		CFLAG:睡眠 = 8 + RAND:5 + RAND:5
+		CALL REMOVE_STATE, TARGET, "困倦"
+		CALL MOVE_PLACE, @"%CSVCALLNAME(NO:TARGET)%的房間", TARGET
+	;兒童に胸部给
+	ELSEIF COND("兒童に胸部可能") && RAND:3
+		SIF TALENT:恋慕 || COND("恋慕取得可能")
+			CALL EMOTION_PLUS, "心情好"
+		MEMO_LINECOUNT_SUB = LINECOUNT
+		CALL KOJO_DAILYCOM, "兒童に胸部", "改行没有"
+		IF LINECOUNT == MEMO_LINECOUNT_SUB
+			IF TALENT:恋慕 || COND("恋慕取得可能")
+				PRINTFORMW 「♪～～　♪～～」
+			ELSE
+				PRINTFORMW 「…………」
+			ENDIF
+		ENDIF
+		SIF TFLAG:地の文スキップ == 0
+			PRINTFORMW %CALLNAME:TARGET%正在給孩子哺乳……
+		BASE:母乳 = MAX(BASE:母乳 - (1 + RAND:4)*2000, 1000)
+		STR:日常イベント名 = 兒童に胸部
+	ELSEIF FIND_COND("性処理直後", "性処理：挿入直後") && COND("Ｐ汚れ", MASTER) && COND("干劲性処理") + CFLAG:躁动难忍 + TALENT:气味弱点 + TALENT:汚臭敏感 + COND("発情期") && COND("自発清洁口交可能") && (RAND:3 == 0 || CFLAG:躁动难忍)
+		CALL EVENT_ACADEMY, "自発清洁口交"
+	ENDIF
+ENDIF
+;何か起きていたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;partner含め起きるイベント
+TARGET = 0
+IF ARG != 4 && COND("性処理の格好終了可能", MEMO_TARGET)
+	TARGET = MEMO_TARGET
+ELSE
+	TARGET = FIND_COND("現在存在", "起床中")
+ENDIF
+IF TARGET <= 0
+	;イベントが起きないようならDRAWLINEを消して終了
+	CLEARLINE 1
+	RETURN 0
+ENDIF
+
+;胖次イベント中は誰かがいつの間にか廁所に行くことのみ起きる
+IF ARG == 4
+	;廁所
+	IF BASE:尿意 >= 5000 && CFLAG:行動参加中 == 0
+		CALL SETFLAG_DAILY, "廁所"
+		PRINTFORMW （在%CALLNAME:MASTER%%TEXTR("不知道的時候/沒有注意的時候")%離開了位置的%CALLNAME:TARGET%回來了）
+	ENDIF
+ELSEIF COND("性処理の格好終了可能")
+	PRINTFORMW ……露出了一副下流的样子的%CALLNAME:TARGET%似乎恢复了冷静的样子。
+	PRINTFORMW %CALLNAME:TARGET%发出衣物摩擦皮肤的声音、穿上了之前脱下的衣服。
+	CALL SET_MEMO_DRESS, "脱掉的衣服一览", TARGET
+	CFLAG:性処理の格好变成了 = 0
+;汗が引いたら服を着る
+ELSEIF TEQUIP:出浴 && ARG != 5
+	IF CHECK_CLO("内衣姿") || CHECK_CLO("泳装姿") || CHECK_CLO("裸体")
+		IF CHECK_CLO("泳装姿")
+			PRINTFORM ……穿着泳装的
+		ELSEIF CHECK_CLO("内衣姿")
+			PRINTFORM ……只穿着内衣的
+		ELSE
+			PRINTFORM ……露出了不是很雅观的様子
+		ENDIF
+		PRINTFORMW %CALLNAME:TARGET%的汗水流了下来。
+
+		IF CFLAG:Cosplay中 == 0
+		 	IF PLACE("自宅")
+				PRINTFORMW %CALLNAME:TARGET%换上了平常的衣服。
+				CALL SET_COORDINATE, "便装"
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%换上了制服。
+				CALL SET_COORDINATE, "制服"
+			ENDIF
+		ENDIF
+	ENDIF
+	TEQUIP:出浴 = 0
+;薄着終了
+ELSEIF COND("薄着状態終了可能")
+	IF CHECK_CLO("泳装姿")
+		PRINTFORM ……穿着泳装的
+	ELSEIF CHECK_CLO("内衣姿")
+		PRINTFORM ……只穿着内衣的
+	ELSE
+		PRINTFORM ……露出了不是很雅观的様子
+	ENDIF
+	PRINTFORMW %CALLNAME:TARGET%的汗水流了下来。
+	PRINTFORMW %CALLNAME:TARGET%发出衣物摩擦皮肤的声音、穿上了之前脱下的衣服。
+	CALL SET_MEMO_DRESS, "脱掉的衣服一览", TARGET
+	CFLAG:薄着变成了 = 0
+
+;暑いので扇風機独占して下半身に風を当てちゃう
+ELSEIF TARGET != MEMO_TARGET && COND("股間に扇風機可能") && (COND("浑身是汗") || RAND:3 == 0)
+	CALL EVENT_ACADEMY, "扇風機独占"
+;薄着になる
+ELSEIF COND("薄着化可能") && (STATE("酔酒") || RAND:3 == 0)
+	CALL EVENT_ACADEMY, "薄着变成了"
+;廁所
+ELSEIF COND("廁所可能")
+	CALL EVENT_ACADEMY, "廁所"
+;以下のイベントはシチュを選ぶ
+ELSEIF CFLAG:刚睡醒 || ARG == 6
+
+;其他
+ELSE
+	;廁所ハプニングイベント
+	CALL EVENT_TOILET_HAPPENING
+ENDIF
+
+;何か起きていたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+SELECTCASE ARG
+CASE 1 TO 3
+	;ふいに胖次が見えたりするイベント総合
+	CALL EVENT_ACADEMY, "チラ見え"
+ENDSELECT
+
+;何か起きていたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+TARGET = MEMO_TARGET
+;partner以外の人が自撮りを送ってくるイベント
+CALL SEND_SELFY_DAILY_EX
+
+;何か起きていたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;33%で何も起きない
+IF RAND:3 == 0
+	CLEARLINE 1
+	RETURN 0
+ENDIF
+
+
+;何か起きていたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;ここより下はpartner以外の、まだ相手していない角色が対象のイベント。TARGETが変更された場合にはイベントの記録を終えた後で戻される
+TARGET = MEMO_TARGET
+
+;PRINTFORMW PARTNER = %CALLNAME:PARTNER()%, TARGET = %CALLNAME:TARGET%, FIND_COND("性処理後のお掃除可能") = {FIND_COND("性処理後のお掃除可能")}
+
+;お掃除発生しそうなら出来る人優先
+IF FIND_COND("性処理後のお掃除可能", "闲を持て余すイベント可能")
+	TARGET = FIND_COND("性処理後のお掃除可能", "闲を持て余すイベント可能")
+ELSE
+	TARGET = FIND_COND("闲を持て余すイベント可能")
+ENDIF
+;相手していない人が居ないなら、複数行動でないなら全員の中から選ぶ
+IF TARGET <= 0 && FLAG:対複数 == 0
+	TARGET = MEMO_TARGET
+	TARGET = FIND_COND("現在存在", "起床中")
+ENDIF
+;それでも候補がいない場合はDRAWLINEを消して終了
+IF TARGET <= 0
+	CLEARLINE 1
+	RETURN 0
+ENDIF
+
+;口上を出す際にTARGETとPARTNER()で参照できるようにする
+;TARGET:8 = TARGET:9 = MEMO_TARGET(本来のpartner) とすることで、現在はTARGETでは無くなっている本来のpartnerをPARTNER()で参照できる
+CALL RESET_SET_PARTNER, MEMO_TARGET
+
+
+;本来のpartnerとやってた事で大まかに分岐
+SELECTCASE SAVESTR:PREV_日常イベント名
+;雑談中や性処理中なら调戏かけやすい
+CASE "Talk", "甜言蜜语", "夸奖", "拜托処理性欲", "进行性処理"
+	;CALL PRINT_MAIDFACE, TARGET
+
+	;道端の菠萝包桑加筆
+	EVENT_TABLE = %TEXTR("悠闲看着動画的/一副清闲的様子読着雑誌的/呆呆地望着外面的")%/
+	SIF STRCOUNTS(CSTR:学年,  "司書")
+		EVENT_TABLE += "正在读预订进货书籍目录的/"
+	SIF COND("学生") || COND("教員")
+		EVENT_TABLE += "正在预习明天的课程的/"
+	SIF COND("種族：魔法使")
+		EVENT_TABLE += "一个人開始塔罗牌占卜的/"
+	SIF CONDS("尾巴") == "猫"
+		EVENT_TABLE += "開始梳理尾巴上的毛的/"
+	SIF SAVESTR:茶 != ""
+		EVENT_TABLE += @"默默喝着%SAVESTR:茶%的/"
+
+	SELECTCASE SAVESTR:PREV_日常イベント名
+	CASE "Talk"
+		PRINTFORM 和%CALLNAME:PARTNER()%%TEXTR("雑談闲聊/说些无関紧要的话/滔滔不绝")%的时候、
+	CASE "甜言蜜语", "夸奖"
+		PRINTFORM 和%CALLNAME:PARTNER()%说话的時候、
+	CASE "拜托処理性欲"
+		PRINTFORM 和%CALLNAME:PARTNER()%一起做事後処理的时候、
+	CASE "进行性処理"
+		IF COND("性処理後のお掃除可能")
+			PRINTFORM 和%CALLNAME:PARTNER()%刚刚開始性処理之后的清理的时候、
+		ELSE
+			PRINTFORM 和%CALLNAME:PARTNER()%刚刚结束性処理開始一个人清理的时候、
+		ENDIF
+	ENDSELECT
+	IF COND("性処理後のお掃除可能")
+		EVENT_TABLE += @"%TEXTR("斜望着这边/偷偷瞟着/若无其事地看着")%这边的"
+        PRINTFORMW %TEXTR(EVENT_TABLE)%%CALLNAME:TARGET%进入了视线。
+		PRINTL ……看起来并不是很忙的样子、要拜托来帮忙一起进行事后处理吗？
+
+		CALL PRINT_SELECT, @"拜托%CALLNAME:TARGET%/自己处理"
+
+		SELECTCASE RESULT
+		CASE 0
+			CALL EVENT_ACADEMY, "请求清洁口交"
+		CASEELSE
+			PRINTFORMW 因为没有需要拜托给%CALLNAME:TARGET%的事情、%CALLNAME:MASTER%一个人漂亮地把现场处理好了。
+			CALL RESET_STAIN_EX, "Ｐ", MASTER
+		ENDSELECT
+	ELSEIF COND("無自覚腋チラ可能") && RAND:3 == 0
+		CALL EVENT_ACADEMY, "無自覚腋チラ"
+	ELSEIF BASE:欲求不満 >= 50 && TALENT:自制心 == 0 && (COND("発情期") || ABL:自慰中毒 >= 5) && RAND:3
+		PRINTFORMW 眼睛的余光看到了%CALLNAME:TARGET%正一边%TEXTR("看着雑誌/玩着手机/看着漫画/想着什么")%一边%TEXTR("玩弄着自己的股間/用桌角摩擦着股間/用椅子的扶手摩擦着股間")%。
+		IF RAND:3
+			PRINTFORMW 看起来好像是、%TEXTR("身子自己擅自動了起来/無意識地開始自慰行為/并没有注意到自己在干什么")%的様子……好好陪一陪她释放一下比较好吧。
+		ELSE
+			PRINTFORMW ……注意到了%CALLNAME:MASTER%的視線看向自己股間的%CALLNAME:TARGET%、%TEXTR("一瞬间脑袋上冒出了『？』/眨了眨眼/不解地歪了歪頭")%、之後便猛然察觉了自己正在干什么、%TEXTR("身体瞬间僵硬了/脸一下子变得通红/慌忙地停止了動作")%！
+			STR:日常イベント名 = オナバレ
+		ENDIF
+		EXP:自慰経験 += 1
+		PRINTFORML 
+		PRINTFORMW 自慰経験＋１(%CALLNAME:TARGET%)
+	ELSEIF CFLAG:MASTER:茶 == 0 && (TALENT:献身 || ABL:奉仕精神 >= 5) && RAND:3 == 0
+		SAVESTR:茶 = %TEXTR(CSTR:茶)%
+		SIF SAVESTR:茶 == ""
+			SAVESTR:茶 = 茶
+
+		IF TALENT:献身
+			PRINTFORMW %CALLNAME:TARGET%端着%SAVESTR:茶%和点心走了过来。
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%准备了%SAVESTR:茶%。
+		ENDIF
+		STR:日常イベント名 = 沏茶
+		CALL KOJO_DAILYCOM, "卖个破绽"
+		CALL SETFLAG_DAILY, "茶"
+	ELSEIF (TALENT:開朗 || TALENT:粗野) && RAND:3 == 0
+		CFLAG:闲 = 1
+		PRINTFORMW %CALLNAME:TARGET%%TEXTR("把手搭在了你的肩膀上/从後面抱了上来")%。
+		CALL KOJO_DAILYCOM, "構って欲しい！", "改行没有"
+		SIF TFLAG:地の文スキップ == 0
+			PRINTFORMW ……看起来好像是、%TEXTR(@"无聊得受不了了/闲得发慌/想让%CALLNAME:MASTER%来陪")%的様子。
+	ELSEIF EQUIP:服 && COND("易出汗") && RAND:3 == 0
+		PRINTFORMW %CALLNAME:TARGET%把领口\@ CHECK_SKIRT("裙子") ? 和裙子 # \@的扣子打開、露出了正在冷却汗液的身体。
+		PRINTFORMW 不知不觉间、%TEXTR(@"被%CALLNAME:TARGET%新鲜汗水的气味吸引了注意/对%CALLNAME:TARGET%新鲜汗水的气味莫名的在意/闻到%CALLNAME:TARGET%新鲜汗水的气味兴奋了起来")%……
+	ELSE
+		IF CFLAG:MASTER:茶 == 0 && ABL:奉仕精神 && RAND:2
+			PRINTFORMW 和%TEXTR("斜望着这边/瞥看着这边/若无其事地看着这边")%的%CALLNAME:TARGET%对上了视线。
+			PRINTFORMW ……稍微%TEXTR("有点害臊地/不好意思地/有些尴尬地")%微笑着的%CALLNAME:TARGET%、像是遮羞一样从椅子上站了起来给大家倒茶。
+			STR:日常イベント名 = 沏茶
+			CALL SETFLAG_DAILY, "茶を用意"
+			CALL KOJO_DAILYCOM, "卖个破绽"
+		ELSE
+			IF RAND:2
+		        PRINTFORMW %TEXTR(EVENT_TABLE)%%CALLNAME:TARGET%进入了视线。
+			ELSE
+				PRINTFORMW 注意到%CALLNAME:TARGET%%TEXTR("正在斜眼看着我/往这边瞥了一眼/正在偷瞄这边")%。
+			ENDIF
+			IF TALENT:恋慕 && RAND:2
+				PRINTFORMW ……%TEXTR("肯能是因为心情原因/总觉得")%坐的很近。
+				PRINTFORMW %TEXTR(@"さっき/%CALLNAME:PARTNER()%と話し始める前")%はもう少し遠くに座っていた気がするのだが。
+			ELSE
+				IF COND("同居可能") || ABL:信頼 >= 3
+					PRINTFORMW %CALLNAME:TARGET%%TEXTR("不自觉地探出了身子/后背离開椅背稍微向前倾斜着")%……说着混在一起的话。
+				ELSE
+					PRINTFORMW ……虽然没说出口但似乎很想和%CALLNAME:MASTER%交往试试。
+				ENDIF
+
+				CFLAG:闲 = 1
+
+				SELECTCASE SAVESTR:PREV_日常イベント名
+				CASE "拜托処理性欲", "进行性処理"
+					IF CFLAG:性処理済 || CFLAG:性欲解消済
+						CALL PRINT_STRW, @"黄色_※%CALLNAME:TARGET%との性処理が再び可能成为了！"
+						CFLAG:性処理済 = 0
+						CFLAG:性欲解消済 = 0
+					ENDIF
+				ENDSELECT
+			ENDIF
+		ENDIF
+	ENDIF
+
+;性器観察系
+CASE "检查阴部"
+	IF COND("合意：检查阴部", PARTNER() ) && (COND("性処理：挿入直後") || CHOSE_DEVENT("检查阴部", PARTNER() ) == 1)
+		PRINTFORM %CALLNAME:PARTNER()%の
+		IF TALENT:PARTNER():男性 || (TALENT:PARTNER():扶她 && RAND:2)
+			PRINTFORM %TEXTR("阴茎/股間")%被欣赏着的同时、
+			IS_PENISROUTE = 1
+		ELSE
+			PRINTFORM %TEXTR("阴部/股間/秘密場所")%被欣赏着的同时、
+		ENDIF
+
+		;阴部の状態比較
+		LOCALS = 
+		IF IS_PENISROUTE
+			IF COND("真性包茎", PARTNER() ) && RAND:2
+				LOCALS = %TEXTR("完全被包皮覆盖着的/一点都没露出亀頭的/真性包茎的")%
+			ELSEIF COND("假性包茎", PARTNER() ) && RAND:2
+				LOCALS = %TEXTR("能看到粉紅亀頭的/大部分被皮包着的/假性包茎的")%
+			ELSE
+				LOCALS = %TEXTS("阴茎：視覚", PARTNER() )%
+			ENDIF
+			IF LOCALS == "" || RAND:2
+				IF TALENT:PARTNER():陰蒂環 && TALENT:陰蒂環 + TALENT:陰唇環 == 0
+					LOCALS = %TEXTR("將被反射著光芒的穿環穿刺著的/被穿環装飾的")%
+				ENDIF
+			ENDIF
+		ELSE
+			;中出し直後
+			IF CHOSE_DEVENT("性処理Ｖ中出し", PARTNER() )
+				LOCALS = %TEXTR("中出直後的/精液混合愛液滴下的/精液垂落的")%
+			ELSEIF COND("陰毛") >= 5
+				SELECTCASE CONDS("陰毛", PARTNER() )
+				CASE "白虎", "無毛"
+					LOCALS = %TEXTR("连长了毛的痕迹都没有的/光洁的/一点毛都没有的")%
+				CASE "脱毛処理"
+					LOCALS = 被漂亮脱毛处理过的
+				CASE "光滑无毛"
+					LOCALS = 光滑地被刮干净的
+				ENDSELECT
+			ENDIF
+			IF LOCALS == "" || RAND:3
+				IF TALENT:PARTNER():陰蒂環 + TALENT:PARTNER():陰唇環 && TALENT:陰蒂環 + TALENT:陰唇環 == 0
+					LOCALS = %TEXTR("將被反射著光芒的穿環穿刺著的/被穿環装飾的")%
+				ENDIF
+			ENDIF
+		ENDIF
+
+		IF (IS_PENISROUTE == 0 && TALENT:男性) || (IS_PENISROUTE && TALENT:男性 == 0) || TALENT:好奇心 || ABL:欲望 >= 5 || (ABL:欲望 >= 3 && TALENT:開朗) || STRCOUNT(LOCALS, "穿環")
+			PRINTFORMW %CALLNAME:TARGET%%TEXTR("探出身子/好奇地/用热腾腾的眼神/饶有兴趣地")%\@ (TALENT:害羞 == 0 || TALENT:冷静) ? # 一边脸红一边 \@%TEXTR("看着这边的情况/偷偷看向这边/凝视着这边")%。
+			IF (ABL:欲望 < 3 && TALENT:好奇心 == 0) || RAND:2
+				PRINTFORM ……看来、虽然认为%TEXTR("这很不好/这是不对的/不应该看")%但还是在
+				IF IS_PENISROUTE == 0 && (COND("教員", PARTNER() ) || AGE(PARTNER() ) == 4) && AGE(TARGET) < 4 && RAND:2
+					PRINTFORMW 目不转睛地盯着%LOCALS%成熟的阴部。
+					STR:日常イベント名 = 大人の阴部に興味津々
+				ELSEIF IS_PENISROUTE == 0 && (RAND:3 == 0 || LOCALS == "")
+					PRINTFORMW %CALLNAME:PARTNER()%の%TEXTS("割れ目", PARTNER() )%から目が離せないようだ。
+					STR:日常イベント名 = 阴部に興味津々
+				ELSE
+					PRINTFORM %CALLNAME:PARTNER()%の%LOCALS%
+					PRINTFORMW \@ IS_PENISROUTE ? %TEXTS("阴茎：呼び方",PARTNER() )% # 阴部 \@から目が離せないようだ。
+					STR:日常イベント名 = 阴茎に興味津々
+				ENDIF
+			ELSE
+				PRINTFORM ……どうやら%CALLNAME:PARTNER()%の\@ IS_PENISROUTE ? %TEXTS("阴茎：呼び方", PARTNER() )% # 阴部 \@
+				IF RAND:3 == 0 && (IS_PENISROUTE && PENIS(TARGET) ) || (IS_PENISROUTE == 0 && TALENT:男性 == 0)
+					PRINTFORMW と自分の物を頭の中で比べているようだ。
+					STR:日常イベント名 = 性器の違いに興味津々
+				ELSE
+					PRINTFORMW %TEXTR("的形状之类很在意/无法移開目光")%的样子。
+					IF IS_PENISROUTE == 0
+						STR:日常イベント名 = 阴部に興味津々
+					ELSE
+						STR:日常イベント名 = 阴茎に興味津々
+					ENDIF
+				ENDIF
+			ENDIF
+			CALL KOJO_DAILYCOM, STR:日常イベント名
+			CALL SET_PREV_DAILYCOM
+
+			IF (TALENT:PARTNER():小悪魔 || TALENT:PARTNER():好色) && ( (ABL:欲望 < 3 && TALENT:好奇心 == 0) || (IS_PENISROUTE == 0 && TALENT:男性) || RAND:3 == 0)
+				PRINTFORMW その様子に気づいた%CALLNAME:PARTNER()%は、%CALLNAME:TARGET%にもよく見えるようにと%TEXTR("ニヤニヤし/優越感を滲ませ/込み上げる笑いを噛み殺し")%ながら更に%TEXTR("大きく股を開い/腰を突き出し")%て見せつけて来た……
+				STR:日常イベント名 = 阴部見せつけ
+
+				CALL SWAP_PARTNER_TARGET
+				CALL KOJO_DAILYCOM, STR:日常イベント名
+				CALL SET_PREV_DAILYCOM
+				CALL SWAP_PARTNER_TARGET
+
+				CALL CHANGE_RELATION, 1, TARGET, PARTNER()
+				PRINTFORMW 二人的相性度+1
+			ENDIF
+		ELSE
+			PRINTFORMW 注意到了的%CALLNAME:TARGET%\@ (TALENT:害羞 == 0 || TALENT:冷静) ? # 红着脸 \@%TEXTR("看着这边的情况/看向这边")%。
+			PRINTFORMW ……虽然没有说出口、%CALLNAME:TARGET%的%TEXTR("眼神/气势/様子")%像是在高声主张着『注意場所』之类的样子。
+		ENDIF
+	ENDIF
+;股間観察系
+CASE "检查布鲁马", "股間観察"
+
+;胖次観察系
+CASE "检查内褲", "開放型開洞", "高開衩", "Ｔ字褲", "Ｃ胖次"
+
+;裙系
+CASE "掀起裙子", "撩起裙子"
+
+ENDSELECT
+
+IF LINECOUNT == MEMO_LINECOUNT
+	;イベントが起きないようならDRAWLINEを消して終了
+	CLEARLINE 1
+ELSE
+	CFLAG:闲を持て余す = 1
+ENDIF
+CALL SET_PARTNER

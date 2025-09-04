@@ -1,0 +1,113 @@
+﻿
+@RAPE_COMNAME_S20_2
+#FUNCTIONS
+TSTR:コマンド名受渡 = 刺激子宫口
+LOCAL = 0
+SIF MODE_確認_完全一致("正常位", PLAYER, TARGET) > -1
+	LOCAL += 1
+SIF MODE_確認_完全一致("屈曲位", PLAYER, TARGET) > -1
+	LOCAL += 1
+SIF LOCAL && BASE:PLAYER:勃起 >= 1500 && MAX(PALAM:PLAYER:快Ｃ, PALAM:PLAYER:快Ｖ, PALAM:PLAYER:快Ａ, PALAM:PLAYER:快Ｂ, PALAM:PLAYER:快Ｓ) >= PALAMLV:3 + ((PALAMLV:4 - PALAMLV:3) * 5 / 10)
+	TSTR:コマンド名受渡 = 强制授精压迫
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@RAPE_COMTYPE_S_20_2
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = RAPE_COMTYPE("Ｖ系")
+
+@RAPE_COM_TOOLTIP_S20_2
+CALLF RAPE_COMNAME_S20_2()
+LOCALS = <br>■%TSTR:コマンド名受渡%<br>
+IF TSTR:コマンド名受渡 == "刺激子宫口"
+	LOCALS += "用阴茎强烈刺激子宫口附近敏感带的指令。<br>仅在Ｖ插入系模式中可执行。"
+	SIF OPTION変数:子宮口挿入_封印 == 0
+	LOCALS += "<br>当子宫口开发经验达到阈值时，概率解锁「插入子宫口」指令。"
+ELSE
+	LOCALS += "意图使对方受孕而将阴茎强力顶入子宫口的指令。<br>仅在Ｖ插入系模式中可执行。"
+ENDIF
+LOCALS += "<br>强奸指令类型：Ｖ系<br>获取来源：快Ｖ・接触・痛苦・不洁(特定条件时)"
+LOCALS += "<br>专属经验值：Ｖ性交经验(TARGET)・子宫口开发(TARGET)・Ｃ性交经验_Ｖ插入(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@RAPE_COM_S20_2
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+CALLF RAPE_COMNAME_S20_2()
+SIF TSTR:コマンド名受渡 == "强制授精压迫"
+	RFLAG:コマンド結果受渡し変数 = 1
+
+
+RCVAR:ポルチオ開発フラグ = 3
+
+CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, 500)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 150)
+IF !TALENT:TARGET:妊娠 && EXP:TARGET:ポルチオ開発 > 200 && ABL:TARGET:Ｖ感覚 > 3 && OPTION変数:子宮口挿入_封印 == 0 && CFLAG:TARGET:子宮口許可フラグ == 0 && RAND:2 && RFLAG:コマンド結果受渡し変数 == 0
+	CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, 500)
+	RFLAG:コマンド結果受渡し変数２ = 1
+ENDIF
+
+CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 500)
+
+;苦痛
+LOCAL = 200 * PAIN_CHECK_V(TARGET) / 1000
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, LOCAL)
+
+;貞操観念
+IF !TALENT:恋慕
+	IF TALENT:貞操 == 1
+		CALL SOURCE_CALC_不潔(TARGET, PLAYER, 500)
+	ELSEIF TALENT:貞操 == 0
+		CALL SOURCE_CALC_不潔(TARGET, PLAYER, 250)
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+EXP:Ｖ性交経験 ++
+EXP:PLAYER:Ｃ性交経験_Ｖ挿入 ++
+
+;同性愛　レズなら戻り値1ゲイなら戻り値2
+IF HETEROSEX(TARGET,PLAYER)
+	EXP:同性愛経験 += 4
+	EXP:PLAYER:同性愛経験 += 4
+ENDIF
+
+EXP:愛情経験 += TALENT:恋慕 * 2
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@RAPE_COM_ABLE_S20_2
+;Ｇスポ責め実行判定
+;一括管理
+SIF GLOBAL_RAPE_COMABLE_S("20_2")
+	RETURN RESULT
+;Ｖ挿入系モードじゃない時はアウト
+SIF MODE_確認_完全一致("Ｖ挿入系", PLAYER, TARGET) < 0
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@RAPE_MESSAGE_COM_S20_2
+#DIM 同時キャラ番号
+PRINTFORM %CALLNAME:PLAYER%
+
+IF RFLAG:コマンド結果受渡し変数
+	PRINTFORML 全身紧贴压制着%CALLNAME:TARGET%，%TEXTR("施加体重/封锁动作")%将%TEXTR("阴茎/龟头")%向子宫口%TEXTR("顶入/紧密贴合/强力按压")%
+ELSE
+	PRINTFORML 在%CALLNAME:TARGET%阴道内抽插的同时，压迫深处子宫口的敏感带
+	IF RFLAG:コマンド結果受渡し変数２
+		PRINTL
+		PRINTFORML 因宫口快感而张开的柔软子宫，竟将%CALLNAME:PLAYER%的阴茎整个吞入！
+		PRINTFORML %CALLNAME:TARGET%被突如其来的强烈快感冲击得瞳孔涣散…
+	ENDIF
+ENDIF
+

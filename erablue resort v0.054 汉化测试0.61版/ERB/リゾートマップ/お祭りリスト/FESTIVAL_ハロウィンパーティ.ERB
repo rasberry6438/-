@@ -1,0 +1,252 @@
+﻿@MOVE_ROUTINE_FESTIVAL_ハロウィンパーティ(対象キャラ, ARGS)
+#DIM 対象キャラ
+#DIM 時間計算
+#DIM CONST 開催費用 = 10000
+
+SELECTCASE ARGS
+	CASE "お祭り説明"
+		LOCALS = <div rect='2125,500,3762,2812'>
+		LOCALS += "■万圣节派对<br>"
+		LOCALS += "<br>"
+		LOCALS += "用万圣节氛围装点整个度假村。<br>"
+		LOCALS += "可执行节日专属指令「赠送糖果」「遭遇恶作剧」。<br>"
+		LOCALS += "同一角色每２小时只能执行其中一项指令。<br>"
+		LOCALS += "<br>"
+		LOCALS += "赠送糖果：提升好感度要素：友情<br>"
+		LOCALS += "遭遇恶作剧：提升好感度要素：友情。可能演变为带有性暗示的恶作剧。<br>"
+		LOCALS += "特定角色会穿着万圣节主题服装。<br>"
+		LOCALS += "<br>"
+		IF 10000 > MONEY
+			LOCALS += @"卢比不足。（需要卢比：%NUM_FORMAT(開催費用)%）<br>"
+		ELSE
+			LOCALS += @"<button value='0'>[0] 筹办此庆典（需要卢比：%NUM_FORMAT(開催費用)%）</button><br>"
+		ENDIF
+		LOCALS += "</div>"
+		HTML_PRINT LOCALS, 1
+	CASE "出現条件"
+		;既に予定に入ってたらアウト
+		SIF 開催予定祭り名 == "FESTIVAL_ハロウィンパーティ"
+			RETURN 0
+		;秋の月限定
+		SIF DAY % 120 / 30 != 2
+			RETURN -1
+		RETURN 1
+	CASE "参加判定"
+		;ルーチンは変動させないので0を返す
+		RETURN 0
+	CASE "特設マップ"
+		;存在しない
+		RETURN 0
+	CASE "起床時刻"
+		;ルーチンは変動しないので必要なし
+	CASE "就寝時刻"
+		;ルーチンは変動しないので必要なし
+	CASE "就寝場所"
+		;ルーチンは変動しないので必要なし
+	CASE "初期位置"
+		;ルーチンは変動しないので必要なし
+	CASE "お祭り補正条件"
+		;条件なし
+		RETURN 1
+	CASE "お祭り補正内容"
+		;コマンドのみなのでなし
+	CASE "服装変更"
+		;口上設定があればそれ
+		TRYCCALLFORM KOJO_CLOTHES_FESTIVAL_ハロウィンパーティ_{NO:対象キャラ}(対象キャラ)
+		CATCH
+			;ない場合は不给治就捣蛋の画像を見る
+			IF EXIST画像FILE("resources/" + CSTR:対象キャラ:画像フォルダ + "/短冊_不给治就捣蛋")
+				RSTR:服装名受け渡し = 不给治就捣蛋
+			ENDIF
+		ENDCATCH
+ENDSELECT
+
+
+;-------------------------------------------------
+;赠送糖果
+;-------------------------------------------------
+@COMNAME_PLACE_385_FESTIVAL_ハロウィンパーティ
+#FUNCTION
+TSTR:コマンド名受渡 = 赠送糖果
+RETURNF 1
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_385_FESTIVAL_ハロウィンパーティ
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+
+@COM_TOOLTIP_385_FESTIVAL_ハロウィンパーティ
+LOCALS = <br>■赠送糖果<br>
+LOCALS += "向目标赠送糖果的指令。<br>不给糖就捣蛋！"
+LOCALS += "<br>指令类型：日常<br>获取来源：欢乐"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM385_FESTIVAL_ハロウィンパーティ
+
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 800)
+CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 500)
+TCVAR:TARGET:ハロウィンコマンド時刻 = TIME
+TIME += 5
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE385_FESTIVAL_ハロウィンパーティ
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(385)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;隠密が一致してないとダメ
+SIF CFLAG:PLAYER:隠密 != CFLAG:TARGET:隠密
+	RETURN 0
+;２時間に１回
+SIF TCVAR:TARGET:ハロウィンコマンド時刻 + 120 > TIME
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM385_FESTIVAL_ハロウィンパーティ
+
+PRINTFORML %CALLNAME:PLAYER%向%CALLNAME:TARGET%赠送了万圣节糖果
+
+@MESSAGE_COM385_FESTIVAL_ハロウィンパーティ_非口上時
+SELECTCASE RAND:3
+	CASE 2
+		PRINTFORML %CALLNAME:TARGET%笑着说自己恶作剧失败了
+	CASE 1
+		PRINTFORML %CALLNAME:TARGET%作为回礼，将糖果递给了%CALLNAME:PLAYER%
+	CASE 0
+		PRINTFORML %CALLNAME:TARGET%开心地道谢
+ENDSELECT
+
+
+;-------------------------------------------------
+;遭遇恶作剧
+;-------------------------------------------------
+@COMNAME_PLACE_386_FESTIVAL_ハロウィンパーティ
+#FUNCTION
+TSTR:コマンド名受渡 = 遭遇恶作剧
+RETURNF 1
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_386_FESTIVAL_ハロウィンパーティ
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+
+@COM_TOOLTIP_386_FESTIVAL_ハロウィンパーティ
+LOCALS = <br>■遭遇恶作剧<br>
+LOCALS += "被目标恶作剧的指令。<br>若目标已攻略且有过亲密接触，1/2概率触发性暗示恶作剧。<br>不给糖就捣蛋！"
+LOCALS += "<br>指令类型：日常<br>获取来源：欢乐・征服"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM386_FESTIVAL_ハロウィンパーティ
+#DIM セクハラ部位
+#DIM セクハラ快楽量
+セクハラ快楽量 = 0
+
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 700)
+CALL SOURCE_CALC_征服(TARGET, PLAYER, 200)
+CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 400)
+
+TCVAR:TARGET:ハロウィンコマンド時刻 = TIME
+TIME += 5
+
+IF 陥落チェック(TARGET) && 初体験日取得("初うふふ", TARGET, MASTER) && RAND:2
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+	セクハラ部位 = WEIGHTED_RANDOM_PART(PLAYER)
+	SIF セクハラ部位 == -1
+		RETURN 1
+
+	;快楽量決定、基本値から諸々補正
+	セクハラ快楽量 = RAND:100 + 100
+
+	SELECTCASE セクハラ部位
+		CASE 0
+			CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, セクハラ快楽量)
+		CASE 1
+			CALL SOURCE_CALC_快Ｖ(PLAYER, TARGET, セクハラ快楽量)
+		CASE 2
+			CALL SOURCE_CALC_快Ａ(PLAYER, TARGET, セクハラ快楽量)
+		CASE 3
+			CALL SOURCE_CALC_快Ｂ(PLAYER, TARGET, セクハラ快楽量)
+	ENDSELECT
+
+	;口上用に数値受け渡し
+	RFLAG:コマンド結果受渡し変数 = セクハラ部位
+	RFLAG:コマンド結果受渡し変数２ = セクハラ快楽量
+	;非うふふ時射精口上用に保存
+	AUTOCOM_実行番号保存 = TARGET
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE386_FESTIVAL_ハロウィンパーティ
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(386)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;隠密が一致してないとダメ
+SIF CFLAG:PLAYER:隠密 != CFLAG:TARGET:隠密
+	RETURN 0
+;２時間に１回
+SIF TCVAR:TARGET:ハロウィンコマンド時刻 + 120 > TIME
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM386_FESTIVAL_ハロウィンパーティ
+
+PRINTFORML %CALLNAME:PLAYER%遭到了%CALLNAME:TARGET%的恶作剧
+IF RFLAG:コマンド結果受渡し変数２ > 0
+	PRINTFORM %CALLNAME:TARGET%将手在%CALLNAME:PLAYER%的
+	SELECTCASE RFLAG:コマンド結果受渡し変数
+		CASE 0
+			IF GETBIT(TALENT:PLAYER:性別, 1)
+				PRINT 阴茎
+			ELSE
+				PRINT 阴蒂
+			ENDIF
+		CASE 1
+			PRINT 股间
+		CASE 2
+			PRINT 屁股
+		CASE 3
+			PRINT 胸部
+	ENDSELECT
+	PRINTL 上游移……
+ENDIF
+
+@MESSAGE_COM386_FESTIVAL_ハロウィンパーティ_非口上時
+
+IF RFLAG:コマンド結果受渡し変数２ < 1
+	SELECTCASE RAND:3
+		CASE 2
+			PRINTFORML %CALLNAME:TARGET%突然挠起了%CALLNAME:PLAYER%的痒痒！
+		CASE 1
+			PRINTFORML %CALLNAME:TARGET%在%CALLNAME:PLAYER%手心放了只大青蛙！……仔细一看原来是玩具。
+		CASE 0
+			PRINTFORML %CALLNAME:TARGET%不知从哪掏出拉炮，「砰！」地发出巨大声响。
+	ENDSELECT
+ENDIF

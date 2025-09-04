@@ -1,0 +1,153 @@
+﻿;===================================================
+;全身磨豆腐
+;===================================================
+@COMNAME_S90_1
+#FUNCTIONS
+TSTR:コマンド名受渡 = 全身磨豆腐
+SIF PLAYER == MASTER && あなた特殊能力:サキュバスボディ > 0
+	TSTR:コマンド名受渡 = 黑桃A
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_S_90_1
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ")
+弱点コマンドカテゴリ = C_女_同性
+オートコマンド許可 = 1
+
+
+;===================================================
+;ツールチップ文章
+;===================================================
+@COM_TOOLTIP_S90_1
+CALLF COMNAME_S90_1()
+TSTR:ツールチップ受渡 '= @"<br>■%TSTR:コマンド名受渡%<br>"
+TSTR:ツールチップ受渡 += "在磨豆腐的基础上，全身紧密接触实现灵肉合一的进阶指令。"
+TSTR:ツールチップ受渡 += "<br>指令类型：嘿咻<br>获取来源：快Ｃ・快Ｂ・快Ｓ・暴露・接触・不洁"
+TSTR:ツールチップ受渡 += "<br>专属经验值：乳头开发(PLAYER＆TARGET・特定条件时)<br>"
+
+
+;===================================================
+;コマンド実行処理
+;===================================================
+@COM_S90_1
+#DIM 乳首合わせ
+#DIM 快楽補正力
+;-------------------------------------------------
+;COM別FLAGの設定
+;-------------------------------------------------
+IF ABS(体格差計算(PLAYER, TARGET)) >= 2
+	;口や手より距離が近いので2サイズでも届かない
+	乳首合わせ = 0
+ELSEIF (!TALENT:TARGET:陥没乳首 || TCVAR:TARGET:陥没乳首露出フラグ) && (!TALENT:PLAYER:陥没乳首 || TCVAR:PLAYER:陥没乳首露出フラグ)
+	RCVAR:PLAYER:乳首開発フラグ = 1
+	RCVAR:TARGET:乳首開発フラグ = 1
+	乳首合わせ = 1
+ELSE
+	乳首合わせ = 0
+ENDIF
+
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+IF PLAYER == MASTER && あなた特殊能力:サキュバスボディ > 0
+	快楽補正力 = POWER(あなた特殊能力:サキュバスボディ, 2) * 10
+ELSE
+	快楽補正力 = 0
+ENDIF
+
+CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 500)
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 600 + 快楽補正力 * 10)
+IF 乳首合わせ
+	CALL SOURCE_CALC_快Ｂ(PLAYER, TARGET, 160)
+	CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 200 + 快楽補正力 * 4)
+ELSE
+	CALL SOURCE_CALC_快Ｂ(PLAYER, TARGET, 80)
+	CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 80 + 快楽補正力)
+ENDIF
+CALL SOURCE_CALC_快Ｓ(PLAYER, TARGET, 20)
+CALL SOURCE_CALC_快Ｓ(TARGET, PLAYER, 20 + 快楽補正力)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 60)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 250)
+
+CALL SOURCE_CALC_不潔(TARGET, PLAYER, 150)
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;同性愛
+SIF 同性愛性癖判定(TARGET, PLAYER)
+	EXP:TARGET:同性愛経験 += 10
+SIF 同性愛性癖判定(PLAYER, TARGET)
+	EXP:PLAYER:同性愛経験 += 10
+
+RETURN 1
+
+
+;===================================================
+;実行可能判定
+;===================================================
+@COM_ABLE_S90_1
+;全身磨豆腐実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE_S("90_1")
+	RETURN RESULT
+;貝合わせモードじゃない時はアウト
+SIF !MODE_存在判定_順不同("貝合わせ", PLAYER, TARGET)
+	RETURN 0
+
+;PLAYER側の判定
+;上半身着衣
+;鎧、はだけない服、タイツ、ブラ等があると無理
+SIF TEQUIP:PLAYER:上半身鎧あり
+	RETURN 0
+SIF TEQUIP:PLAYER:上半身服あり && !TEQUIP:PLAYER:はだけ可
+	RETURN 0
+SIF TEQUIP:PLAYER:上タイツあり && !TEQUIP:PLAYER:上タイツ破れ
+	RETURN 0
+SIF TEQUIP:PLAYER:上半身下着あり
+	RETURN 0
+
+;TARGET側の判定
+;上半身着衣
+;鎧、はだけない服、タイツ、ブラ等があると無理
+SIF TEQUIP:TARGET:上半身鎧あり
+	RETURN 0
+SIF TEQUIP:TARGET:上半身服あり && !TEQUIP:TARGET:はだけ可
+	RETURN 0
+SIF TEQUIP:TARGET:上タイツあり && !TEQUIP:TARGET:上タイツ破れ
+	RETURN 0
+SIF TEQUIP:TARGET:上半身下着あり
+	RETURN 0
+
+RETURN 1
+
+
+;===================================================
+;実行時メッセージ
+;===================================================
+@MESSAGE_COM_S90_1
+PRINTFORM %CALLNAME:PLAYER%爬在%CALLNAME:TARGET%身上，全身紧密贴合
+IF ABS(体格差計算(PLAYER, TARGET)) >= 2
+ELSEIF (!TALENT:TARGET:陥没乳首 || TCVAR:TARGET:陥没乳首露出フラグ) && (!TALENT:PLAYER:陥没乳首 || TCVAR:PLAYER:陥没乳首露出フラグ)
+	SIF PALAM:PLAYER:欲情 >= PALAMLV:3 || PALAM:TARGET:欲情 >= PALAMLV:3
+		PRINT 完全坚挺的
+	PRINT 乳头与乳头，
+ENDIF
+SIF PALAM:PLAYER:潤滑 >= PALAMLV:4 || PALAM:TARGET:潤滑 >= PALAMLV:4
+	PRINT 湿漉漉的
+PRINTL 阴唇与阴唇完全重叠
+SELECTCASE RAND:4
+	CASE 0
+		PRINTFORML 如同连体生物般交融的%CALLNAME:PLAYER%与%CALLNAME:TARGET%，开始贪婪地互相索取…
+	CASE 1
+		PRINTFORML 在黏腻水声与快感交织中，%CALLNAME:PLAYER%与%CALLNAME:TARGET%的腰肢起伏却愈发激烈…
+	CASE 2
+		PRINTFORML 沉浸在即将消融界限的快感中，%CALLNAME:PLAYER%与%CALLNAME:TARGET%忘我缠绵…
+	CASE 3
+		PRINTFORML %CALLNAME:PLAYER%开始摆动腰部，重叠的阴唇在挤压变形中刺激着%CALLNAME:TARGET%的每个敏感处…
+ENDSELECT

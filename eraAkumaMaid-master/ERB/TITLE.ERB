@@ -1,0 +1,71 @@
+﻿@SYSTEM_TITLE
+;@SYSTEM_TITLEが定義されていると、標準の标题画面の代わりにSYSTEM_TITLEが呼ばれる。
+
+;この領帯ミングでグローバル変数を読んでおけば取りこぼしが無くなる。
+;GLOBALはRESETDATAやLOADDATAによって初期化・上書きされない。
+;必要に応じてコメントアウトを解除すること。
+;LOADGLOBAL
+
+;颜绘パネルの作成
+SIF SPRITEGETCOLOR("颜绘パネル1", 0, 0) < 0
+	CALL MADEFACEPHOTO
+
+;CBG関連の重置
+CALL EFFECT_ALLRESET
+
+;标题表示
+$TITLE_SELECT
+
+;[IF_NDEBUG]
+	CALL MULTILINE, WINDOWROWS() - 10
+	HTML_PRINT "<shape type='space' param='3600'><img src='TITLE' height='3600' ypos='-3300'>"
+;[ENDIF]
+
+DRAWLINE 
+
+ALIGNMENT CENTER
+PRINTFORML %GAMEBASE_TITLE%
+PRINTFORML %VERS_eraAkumaMaid()%
+PRINTFORML %GAMEBASE_AUTHOR%
+PRINTFORML (%GAMEBASE_YEAR%)
+PRINTL 
+PRINTFORML 汉化版仅为学习日语的交流之用，禁止一切盗用、商用行为
+PRINTL
+PRINTFORML %GAMEBASE_INFO%
+ALIGNMENT LEFT
+
+
+DRAWLINE 
+
+;選択肢表示。_Rename.csvで指定した値を読むことはできないのでここで指定する必要がある。
+PRINTL [0] 從最初開始
+PRINTL [1] 讀档继續
+
+$TITLE_INPUT
+INPUT
+IF RESULT == 0
+	DRAWLINE
+	RESETDATA
+	;ADDDEFCHARAはeramakerの動作を再現するために存在する専用の関数です
+	;他の場面ではADDCHARA、ADDSPCHARA等を使うことを勧めます
+	ADDDEFCHARA
+	BEGIN FIRST
+	RETURN
+ELSEIF RESULT == 1
+	LOADGLOBAL
+	SELECTCASE GLOBAL:最新ＳＬ番号
+	CASE 0 TO 98
+		CALL LOADGAME_EX, GLOBAL:最新ＳＬ番号/NUM_SHOWSAVE()
+	CASEELSE
+		CALL LOADGAME_EX
+	ENDSELECT
+	GOTO TITLE_SELECT
+	;LOADGAME_EXでLOADを行わずに回来了場合、もう一度選択しなおす。
+ELSE
+	CLEARLINE 1
+	REUSELASTLINE 無効な値です
+	GOTO TITLE_INPUT
+ENDIF
+
+;SYSTEM_TITLE中でRETURNすると次に実行する行が無くなり、エラーになる。
+;必ずBEGIN命令かLOADGAMEを行うこと。

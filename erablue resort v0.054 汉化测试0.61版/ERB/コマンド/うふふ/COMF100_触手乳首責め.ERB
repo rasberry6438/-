@@ -1,0 +1,123 @@
+﻿;-------------------------------------------------
+;触手乳首責め
+;触手系コマンド，レベル1
+;-------------------------------------------------
+@COMNAME100
+#FUNCTIONS
+TSTR:コマンド名受渡 = 触手刺激乳头
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_100
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("触手系")
+;特殊な条件が必要なコマンドなので，弱点コマンドのランダム対象からは外す
+;弱点コマンドカテゴリ = B
+同時モード許可 = 999
+
+
+@COM_TOOLTIP_100
+LOCALS = <br>■触手刺激乳头<br>
+LOCALS += "召唤专门刺激乳头的触手，施加强烈快感的指令。"
+LOCALS += "<br>指令类型：触手系<br>获取来源：快Ｂ・暴露・接触"
+LOCALS += "<br>专属经验值：触手操控经验(PLAYER)、乳头开发(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM100
+#DIM 快楽基礎値
+
+CALL MODE_CHANGE("触手乳首責め", PLAYER, TARGET)
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+RCVAR:乳首開発フラグ = 3
+RCVAR:触手コマンドフラグ = 1
+
+快楽基礎値 = あなた特殊能力:触手変化術 * 3
+CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 快楽基礎値 * 70)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 50)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 快楽基礎値 * 20)
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;同性愛
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 1
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 1
+
+EXP:PLAYER:触手操作経験 ++
+RETURN 1
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE100
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(100)
+	RETURN RESULT
+SIF MODE_存在判定_ターゲット側("触手乳首責め", TARGET)
+	RETURN 0
+;Bがない場合駄目
+SIF TALENT:TARGET:Ｂ感度 == -2
+	RETURN 0
+;ニプレスだと不可
+SIF TEQUIP:上半身下着あり == 2
+	RETURN 0
+;胸を何かに使ってるなら無理（パイズリ中は許可）
+IF !MODE_存在判定_プレイヤー側("パイズリ系", TARGET)
+	SIF TEQUIP:TARGET:胸
+		RETURN 0
+ENDIF
+;将来的には許可する予定だけど（ユリウスとか）一旦あなた以外は封印
+SIF PLAYER != MASTER
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM100
+#DIM 同時キャラ番号
+PRINTFORM %CALLNAME:PLAYER%
+
+IF GETBIT(FLAG:モード管理, モードビット_同時)
+	PRINT 将多条触手
+	FOR 同時キャラ番号, 0, 同時モード_選択数
+		SIF 同時キャラ番号 > 0
+			PRINT ，
+		PRINTFORM %CALLNAME:(同時モード_選択キャラ:同時キャラ番号)%
+	NEXT
+	PRINT 的乳头吸附缠绕
+	RETURN 0
+ENDIF
+
+PRINTFORM 将触手伸向%CALLNAME:TARGET%的
+IF TEQUIP:上半身鎧あり
+	PRINT 从护甲缝隙
+	IF TEQUIP:上タイツあり
+		PRINT 透过紧身衣
+	ENDIF
+	PRINT 潜入，
+ELSEIF TEQUIP:上半身服あり
+	PRINT 从衣物间隙
+	IF TEQUIP:上タイツあり
+		PRINT 透过紧身衣
+	ENDIF
+	PRINT 潜入，
+ELSEIF TEQUIP:上半身下着あり == 1
+		IF TEQUIP:下タイツあり
+			PRINT 从下身紧身衣
+		ENDIF
+		PRINT 潜入胸罩，
+ENDIF
+IF TALENT:陥没乳首 && !TCVAR:陥没乳首露出フラグ
+	PRINT 仍隐藏在乳晕中的
+ELSEIF PALAM:欲情 >= PALAMLV:3
+	PRINT 傲然挺立的
+ENDIF
+PRINTL 乳头并开始吸附刺激
+

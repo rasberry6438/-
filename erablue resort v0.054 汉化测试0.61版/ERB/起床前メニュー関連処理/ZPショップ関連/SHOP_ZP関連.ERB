@@ -1,0 +1,566 @@
+﻿
+
+@ZP_取得処理(キャラ番号, 取得基礎値, 表示するか = 0)
+#DIM キャラ番号
+#DIM 取得基礎値
+#DIM ZP取得値
+#DIM 表示するか
+
+;あなたはZP算出しない
+SIF キャラ番号 < 1
+	RETURN 0
+
+;キャラの素質などにより補正予定
+ZP取得値 = 取得基礎値
+
+SIF ZP取得値 < 0
+	RETURN 0
+
+SIF 表示するか
+	PRINTFORML ZP: {FLAG:ZP所持量} + {ZP取得値}（%CALLNAME:キャラ番号%）= {FLAG:ZP所持量 + ZP取得値}
+
+;ZP加算
+RCVAR:キャラ番号:ZP取得量 += ZP取得値
+RFLAG:ZP取得量 += ZP取得値
+FLAG:ZP所持量 += ZP取得値
+
+RETURN ZP取得値
+
+
+@ZP_SHOP
+PRINTL
+DRAWLINE
+PRINTL ■欢迎来到ZP商店
+PRINTFORML 持有ZP:{FLAG:ZP所持量}.{(ZP小数点以下所持量 % 1000) / 100}{(ZP小数点以下所持量 % 100) / 10}{(ZP小数点以下所持量 % 10)}
+DRAWLINE
+PRINTBUTTON "[0]获取特殊能力", 0
+PRINTL 
+PRINTBUTTON "[1]获取特殊道具", 1
+PRINTL 
+PRINTL 
+PRINTBUTTON "[10]添加特殊角色至候选名单", 10
+PRINTL 
+PRINTBUTTON "[11]解锁特殊剧情", 11
+PRINTL 
+PRINTL 
+PRINTBUTTON "[20]改变角色特质", 20
+PRINTL 
+PRINTBUTTON "[21]调整度假村整体环境", 21
+PRINTL 
+PRINTL 
+IF MATCH(開拓エリア開発番号, 大規模番号_居住区エリア) > 0 && 居住区初来訪イベントフラグ
+	PRINTBUTTON "[22]在托儿所培养孩子", 22
+	PRINTL 
+	PRINTL
+ENDIF
+PRINTBUTTONLC "[998]系统说明", 998
+PRINTL 
+PRINTBUTTONLC "[999]返回", 999
+PRINTL 
+$INPUT_LOOP
+IF チュートリアルフラグ:ZPショップ == 0
+	RESULT = 998
+ELSE
+	BINPUT
+ENDIF
+
+SELECTCASE RESULT
+	CASE 0
+		CALL ZP_SHOP_能力
+		RESTART
+	CASE 1
+		CALL ZP_SHOP_アイテム
+		RESTART
+	CASE 10
+		CALL ZP_SHOP_EXキャラ
+		RESTART
+	CASE 11
+		CALL ZP_SHOP_EXシナリオ
+		RESTART
+	CASE 20
+		CALL ZP_SHOP_素質変化
+		RESTART
+	CASE 21
+		CALL ZP_SHOP_環境変化
+		RESTART
+	CASE 22
+		IF MATCH(開拓エリア開発番号, 大規模番号_居住区エリア) == 0 || !居住区初来訪イベントフラグ
+			REUSELASTLINE 
+			GOTO INPUT_LOOP
+		ENDIF
+		CALL ZP_SHOP_子供成長
+		RESTART
+	CASE 999
+		RETURN 0
+	CASE 998
+		CALL ZPショップチュートリアル()
+		RESTART
+ENDSELECT
+
+REUSELASTLINE 
+GOTO INPUT_LOOP
+
+
+
+@ZP_SHOP_アイテム
+#DIM 危险期调节剂購入数
+#DIM 鬼灯之香購入数
+#DIM 女士杀手購入数
+#DIM 形式婚姻许可书購入数
+#DIM CONST 価格_危险期调节剂 = 5
+#DIM CONST 価格_鬼灯之香     = 100
+#DIM CONST 価格_女士杀手     = 5
+#DIM DYNAMIC 初回実行フラグ = 1
+#DIM 開始行数
+#DIM REDRAW退避
+#DIM 購入限界
+
+IF 初回実行フラグ
+	初回実行フラグ = 0
+	開始行数 = LINECOUNT
+	REDRAW退避 = CURRENTREDRAW()
+	REDRAW 0
+ELSE
+	CLEARLINE LINECOUNT - 開始行数
+ENDIF
+
+;上下限処理
+購入限界 = FLAG:ZP所持量 / 価格_危险期调节剂
+危险期调节剂購入数 = LIMIT(危险期调节剂購入数, 1, MAX(購入限界, 1))
+購入限界 = FLAG:ZP所持量 / 価格_鬼灯之香
+鬼灯之香購入数 = LIMIT(鬼灯之香購入数, 1, MAX(購入限界, 1))
+購入限界 = FLAG:ZP所持量 / 価格_女士杀手
+女士杀手購入数 = LIMIT(女士杀手購入数, 1, MAX(購入限界, 1))
+購入限界 = FLAG:ZP所持量 / 100
+形式婚姻许可书購入数 = LIMIT(形式婚姻许可书購入数, 1, MAX(購入限界, 1))
+
+PRINTL
+DRAWLINE
+PRINTL 可花费ZP购买特殊道具。
+PRINTL 请选择购买项目
+PRINTFORML 持有ZP:%TOSTR(FLAG:ZP所持量, "#,##0")%
+; PRINTBUTTON "[0]特别招待券を購入する", 0
+; PRINTL 　　　　　値段：20ZP
+; PRINTL 　　　　　…任意のキャラを必ず招待するチケット。開発中Ver専用の特売品です。
+; PRINTL 　　　　　　開発が進み、正規の入手手段が実装された段階でこの項目は削除されます。
+; PRINTL
+; PRINTBUTTON "[1]发情诱导剂を購入する", 1
+; PRINTL 　　　　　値段：5ZP
+; PRINTL 　　　　　…陥落済みのキャラに対して、即座に発情期を開始させる薬。消耗品。
+; PRINTL 　　　　　　発情期が存在しないキャラに対しては使用出来ません。
+; PRINTL
+PRINTSL "-" * 90
+PRINTFORML 　危险期调节剂　价格：1個{価格_危险期调节剂}ZP　持有数：{ITEM:危险期调节剂}
+PRINTL 　　　　　…可重置服用者危险日，消耗品。
+PRINTL 　　　　　　仅对已攻略角色生效。
+PRINTL 　　　　　　若角色存在发情期则同步调整。
+PRINTL
+PRINT 　
+PRINTBUTTON "[-10]", 1
+PRINTBUTTON "[-1]", 2
+PRINT 　　
+IF 危险期调节剂購入数 * 価格_危险期调节剂 > FLAG:ZP所持量
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM [0]购买{危险期调节剂購入数}个(%TOSTR(危险期调节剂購入数 * 価格_危险期调节剂, "#,##0")%ZP)
+	RESETCOLOR
+ELSE
+	PRINTBUTTON @"[0]购买{危险期调节剂購入数}个(%TOSTR(危险期调节剂購入数 * 価格_危险期调节剂, "#,##0")%ZP)", 0
+ENDIF
+PRINT 　　
+PRINTBUTTON "[+1]", 3
+PRINTBUTTON "[+10]", 4
+PRINTL
+
+PRINTSL "-" * 90
+PRINTFORML 　鬼灯之香　　价格：1個{価格_鬼灯之香}ZP　持有数：{ITEM:鬼灯之香}
+PRINTL 　　　　　…可干扰目标认知的熏香，消耗品。
+PRINTL 　　　　　　按摩时使用可抑制理性恢复。
+PRINTL 　　　　　　充分渗透后可执行一些原本会被强烈拒绝的行动。
+PRINTL
+PRINT 　
+PRINTBUTTON "[-10]", 11
+PRINTBUTTON "[-1]", 12
+PRINT 　　
+IF 鬼灯之香購入数 * 価格_鬼灯之香 > FLAG:ZP所持量
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM [10]购买{鬼灯之香購入数}个(%TOSTR(鬼灯之香購入数 * 価格_鬼灯之香, "#,##0")%ZP)
+	RESETCOLOR
+ELSE
+	PRINTBUTTON @"[10]购买{鬼灯之香購入数}个(%TOSTR(鬼灯之香購入数 * 価格_鬼灯之香, "#,##0")%ZP)", 10
+ENDIF
+PRINT 　　
+PRINTBUTTON "[+1]", 13
+PRINTBUTTON "[+10]", 14
+PRINTL
+
+PRINTSL "-" * 90
+PRINTFORML 　形式婚姻许可书　价格：1个100ZP　持有数：{ITEM:形式婚姻许可书}
+PRINTL 　　　　　…用于完成婚姻誓约的道具。每位对象需消耗一个。
+PRINTL 　　　　　　在婚姻道具制作系统实装前的临时措施。
+PRINTL 　　　　　　未来将废止的道具，请注意不要过量购买。
+PRINTL
+PRINT 　
+PRINTBUTTON "[-10]", 21
+PRINTBUTTON "[-1]", 22
+PRINT 　　
+IF 形式婚姻许可书購入数 * 100 > FLAG:ZP所持量
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM [20]购买{形式婚姻许可书購入数}个(%TOSTR(形式婚姻许可书購入数 * 100, "#,##0")%ZP)
+	RESETCOLOR
+ELSE
+	PRINTBUTTON @"[20]购买{形式婚姻许可书購入数}个(%TOSTR(形式婚姻许可书購入数 * 100, "#,##0")%ZP)", 20
+ENDIF
+PRINT 　　
+PRINTBUTTON "[+1]", 23
+PRINTBUTTON "[+10]", 24
+PRINTL
+
+PRINTSL "-" * 90
+PRINTFORML 　女士杀手　价格：1個{価格_女士杀手}ZP　持有数：{ITEM:女士杀手}
+PRINTL 　　　　　…清冽甘甜易入口的高度酒。消耗品。
+PRINTL 　　　　　　使用ZP进行特殊加工后，饮用此酒容易陷入意识模糊状态。
+PRINTL
+PRINT 　
+PRINTBUTTON "[-10]", 31
+PRINTBUTTON "[-1]", 32
+PRINT 　　
+IF 女士杀手購入数 * 価格_女士杀手 > FLAG:ZP所持量
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM [30]购买{女士杀手購入数}个(%TOSTR(女士杀手購入数 * 価格_女士杀手, "#,##0")%ZP)
+	RESETCOLOR
+ELSE
+	PRINTBUTTON @"[30]购买{女士杀手購入数}个(%TOSTR(女士杀手購入数 * 価格_女士杀手, "#,##0")%ZP)", 30
+ENDIF
+PRINT 　　
+PRINTBUTTON "[+1]", 33
+PRINTBUTTON "[+10]", 34
+PRINTL
+
+PRINTSL "-" * 90
+PRINTBUTTON "[999]返回", 999
+$INPUT_LOOP
+BINPUT
+
+SELECTCASE RESULT
+	; CASE 0
+	; 	IF FLAG:ZP所持量 < 20
+	; 		PRINTW ZP不足
+	; 		RESTART
+	; 	ENDIF
+	; 	PRINTL 20ZPを支払い、特别招待券を一枚取得しますか？
+	; 	PRINTBUTTONLC "[0]确定", 0
+	; 	PRINTBUTTONLC "[1]取消", 1
+	; 	$INPUT_LOOP2
+	; 	INPUT
+	; 	SELECTCASE RESULT
+	; 		CASE 0
+	; 			FLAG:ZP所持量 -= 20
+	; 			ITEM:特别招待券 += 1
+	; 			PRINTW 特别招待券を一枚購入しました。
+	; 		CASE 1
+	; 			RESTART
+	; 		CASEELSE
+	; 			REUSELASTLINE 
+	; 			GOTO INPUT_LOOP2
+	; 	ENDSELECT
+	; CASE 1
+	; 	IF FLAG:ZP所持量 < 5
+	; 		PRINTW ZP不足
+	; 		RESTART
+	; 	ENDIF
+	; 	PRINTL 5ZPを支払い、发情诱导剂を取得しますか？
+	; 	PRINTBUTTONLC "[0]确定", 0
+	; 	PRINTBUTTONLC "[1]取消", 1
+	; 	INPUT
+	; 	IF RESULT == 0
+	; 		FLAG:ZP所持量 -= 5
+	; 		ITEM:发情诱导剂 += 1
+	; 		PRINTW 发情诱导剂を一回分購入しました。
+	; 	ENDIF
+	; 	RESTART
+	CASE 1
+		危险期调节剂購入数 -= 10
+		RESTART
+	CASE 2
+		危险期调节剂購入数 -= 1
+		RESTART
+	CASE 0
+		PRINTFORML 确认支付{危险期调节剂購入数 * 価格_危险期调节剂}ZP购买{危险期调节剂購入数}个危险期调节剂？
+		PRINTBUTTONLC "[0]确定", 0
+		PRINTBUTTONLC "[1]取消", 1
+		INPUT
+		IF RESULT == 0
+			FLAG:ZP所持量 -= 危险期调节剂購入数 * 価格_危险期调节剂
+			ITEM:危险期调节剂 += 危险期调节剂購入数
+			PRINTFORMW 成功购入{危险期调节剂購入数}个危险期调节剂。
+		ENDIF
+		危险期调节剂購入数 = 1
+		RESTART
+	CASE 3
+		危险期调节剂購入数 += 1
+		RESTART
+	CASE 4
+		危险期调节剂購入数 += 10
+		RESTART
+	CASE 11
+		鬼灯之香購入数 -= 10
+		RESTART
+	CASE 12
+		鬼灯之香購入数 -= 1
+		RESTART
+	CASE 10
+		PRINTFORML 确认支付{鬼灯之香購入数 * 価格_鬼灯之香}ZP购买{鬼灯之香購入数}个鬼灯之香？
+		PRINTBUTTONLC "[0]确定", 0
+		PRINTBUTTONLC "[1]取消", 1
+		INPUT
+		IF RESULT == 0
+			FLAG:ZP所持量 -= 鬼灯之香購入数 * 価格_鬼灯之香
+			ITEM:鬼灯之香 += 鬼灯之香購入数
+			PRINTFORMW 成功购入{鬼灯之香購入数}个鬼灯之香。
+		ENDIF
+		鬼灯之香購入数 = 1
+		RESTART
+	CASE 13
+		鬼灯之香購入数 += 1
+		RESTART
+	CASE 14
+		鬼灯之香購入数 += 10
+		RESTART
+	CASE 21
+		形式婚姻许可书購入数 -= 10
+		RESTART
+	CASE 22
+		形式婚姻许可书購入数 -= 1
+		RESTART
+	CASE 20
+		PRINTFORML 确认支付{形式婚姻许可书購入数 * 100}ZP购买{形式婚姻许可书購入数}个形式婚姻许可书？
+		PRINTBUTTONLC "[0]确定", 0
+		PRINTBUTTONLC "[1]取消", 1
+		INPUT
+		IF RESULT == 0
+			FLAG:ZP所持量 -= 形式婚姻许可书購入数 * 100
+			ITEM:形式婚姻许可书 += 形式婚姻许可书購入数
+			PRINTFORMW 成功购入{形式婚姻许可书購入数}个形式婚姻许可书。
+		ENDIF
+		形式婚姻许可书購入数 = 1
+		RESTART
+	CASE 23
+		形式婚姻许可书購入数 += 1
+		RESTART
+	CASE 24
+		形式婚姻许可书購入数 += 10
+		RESTART
+	CASE 31
+		女士杀手購入数 -= 10
+		RESTART
+	CASE 32
+		女士杀手購入数 -= 1
+		RESTART
+	CASE 30
+		PRINTFORML 确认支付{女士杀手購入数 * 価格_女士杀手}ZP购买{女士杀手購入数}个女士杀手？
+		PRINTBUTTONLC "[0]确定", 0
+		PRINTBUTTONLC "[1]取消", 1
+		INPUT
+		IF RESULT == 0
+			FLAG:ZP所持量 -= 女士杀手購入数 * 価格_女士杀手
+			ITEM:女士杀手 += 女士杀手購入数
+			PRINTFORMW 成功购入{女士杀手購入数}个女士杀手。
+		ENDIF
+		女士杀手購入数 = 1
+		RESTART
+	CASE 33
+		女士杀手購入数 += 1
+		RESTART
+	CASE 34
+		女士杀手購入数 += 10
+		RESTART
+	CASE 999
+		REDRAW REDRAW退避
+		RETURN 0
+ENDSELECT
+
+@ZP_SHOP_環境変化
+#DIM 妊娠期間変化値
+#DIM フィールド期間変化値
+#DIM 消費ZP
+
+フィールド期間変化値 = 0
+妊娠期間変化値 = 妊娠期間
+
+PRINTL
+DRAWLINE
+PRINTL 可花费ZP为全体度假村成员施加特殊效果。
+PRINTL 请选择功能模块
+PRINTFORML 持有ZP:%TOSTR(FLAG:ZP所持量, "#,##0")%
+DRAWLINE
+IF !OPTION変数:妊娠切り替え
+	PRINTBUTTON "[0]调整怀孕周期", 0
+ELSE
+	SETCOLOR 0x666666
+	PRINTPLAINFORM [0]调整怀孕周期
+ENDIF
+PRINTL 　　　　　费用：（变化的天数×1）ZP
+PRINTL 　　　　　…修改度假村内从受孕到分娩的周期。
+PRINTL
+RESETCOLOR
+
+;フィールド効果のONOFFを並べて表示
+DRAWLINE
+PRINTL 领域效果列表：
+LOCALS =
+消費ZP = 0
+FOR LOCAL, 0, 50
+	SIF ERDNAME(フィールド展開, LOCAL) == ""
+		BREAK
+	CALLFORM フィールド効果解説_%ERDNAME(フィールド展開, LOCAL)%
+	LOCAL:1 = RESULT
+	IF フィールド展開:LOCAL <= 0
+		LOCALS += @"<button value='{LOCAL + 10}'>[{LOCAL + 10}] %ERDNAME(フィールド展開, LOCAL), 30, LEFT%："
+		LOCALS += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>ON</font> / OFF"
+	ELSE
+		LOCALS += @"<font color='#%カラーパレット_HTML("えっちな色")%'>"
+		LOCALS += @"<button value='{LOCAL + 10}'>[{LOCAL + 10}] %ERDNAME(フィールド展開, LOCAL), 30, LEFT%</font>："
+		LOCALS += @"ON / <font color='#%カラーパレット_HTML("グレーアウト")%'>OFF</font>"
+		消費ZP += LOCAL:1
+	ENDIF
+	LOCALS += @"　　　　　　　每日花费ZP：{LOCAL:1, 2} ZP<br>"
+	LOCALS += @"　　　%REPLACE(TSTR:ツールチップ受渡, "<br>", "<br>　　　")%<br><br>"
+	LOCALS += "</button>"
+NEXT
+HTML_PRINT LOCALS
+PRINTFORML 当前每日ZP花费量 = {消費ZP, 3}ZP
+PRINTL
+PRINTL 
+PRINTBUTTON "[999]返回", 999
+$INPUT_LOOP
+BINPUT
+
+SELECTCASE RESULT
+	CASE 0
+		$INPUT_BEFORE2
+		PRINTL
+		DRAWLINE
+		PRINTFORML 请输入新的怀孕周期（当前：{妊娠期間}天）
+		PRINTFORML 持有ZP:%TOSTR(FLAG:ZP所持量, "#,##0")%
+		PRINTBUTTON "[<< -10] ",-999
+		PRINTBUTTON "[< -1] ",-998
+		PRINTFORM  [{妊娠期間変化値, 3}]确认变更({ABS(妊娠期間 - 妊娠期間変化値), 3}ZP)  
+		PRINTBUTTON "[+1 >] ",-997
+		PRINTBUTTON "[+10 >>] " ,-996
+		PRINTL
+		PRINTSL "-" * 80
+		PRINTBUTTON "[0]返回", 0
+		PRINTL
+		REDRAW 0
+		$INPUT_LOOP2
+		INPUT
+		消費ZP = ABS(RESULT - 妊娠期間)
+		IF RESULT == 0
+			REDRAW 1
+			RESTART
+		ELSEIF INRANGE(RESULT,-999,-996)
+			SELECTCASE RESULT
+				CASE -996
+					妊娠期間変化値 += 10
+				CASE -997
+					妊娠期間変化値 += 1
+				CASE -998
+					妊娠期間変化値 -= 1
+				CASE -999
+					妊娠期間変化値 -= 10
+			ENDSELECT
+			;上限下限処理
+			妊娠期間変化値 = LIMIT(妊娠期間変化値, MAX(妊娠期間 - FLAG:ZP所持量, 1), 妊娠期間 + FLAG:ZP所持量)
+			CLEARLINE 8
+			REUSELASTLINE 
+			GOTO INPUT_BEFORE2
+		ELSEIF RESULT < 0
+			CLEARLINE 1
+			REUSELASTLINE 不可输入0或负值
+			GOTO INPUT_LOOP2
+		ELSEIF 消費ZP > FLAG:ZP所持量
+			CLEARLINE 1
+			REUSELASTLINE ZP不足
+			GOTO INPUT_LOOP2
+		ELSEIF RESULT == 妊娠期間
+			CLEARLINE 1
+			REUSELASTLINE 与当前怀孕周期相同
+			GOTO INPUT_LOOP2
+		ELSE
+			妊娠期間変化値 = RESULT
+			REDRAW 1
+			PRINTL
+			PRINTFORML 确认支付{消費ZP}ZP将怀孕周期从{妊娠期間}天调整为{妊娠期間変化値}天？
+			PRINTL （现有角色的怀孕进度将重新计算，可能存在微小误差）
+			PRINTBUTTONLC "[0]确定", 0
+			PRINTBUTTONLC "[1]取消", 1
+			REDRAW 0
+			$INPUT_LOOP2_2
+			INPUT
+			SELECTCASE RESULT
+				CASE 0
+					FLAG:ZP所持量 -= 消費ZP
+					FOR LOCAL,0,CHARANUM
+						SIF CFLAG:LOCAL:妊娠経過日
+							CFLAG:LOCAL:妊娠経過日 = CFLAG:LOCAL:妊娠経過日 * 妊娠期間変化値 / 妊娠期間
+					NEXT
+					妊娠期間 = 妊娠期間変化値
+					REDRAW 1
+					PRINTFORMW 成功将怀孕周期调整为{妊娠期間}天。
+					RESTART
+				CASE 1
+					GOTO INPUT_BEFORE2
+				CASEELSE
+					REUSELASTLINE 
+					GOTO INPUT_LOOP2_2
+			ENDSELECT
+		ENDIF
+	CASE 999
+		SIF フィールド展開:允许色情制服 == 0
+			CALL 露出フィールド停止処理
+		RETURN 0
+	CASEELSE
+		INVERTBIT フィールド展開:(RESULT - 10), 0
+		RESTART
+ENDSELECT
+
+@露出フィールド停止処理
+#DIMS 分割文字列配列, 2
+#DIMS 制服一時配列, 100
+#DIM エロ改造制服記録, 10
+#DIM 配列番号
+#DIM 記録番号
+
+;エロ改造されてる服をデフォルトに戻す
+VARSET エロ改造制服記録, -1
+記録番号 = 0
+FOR LOCAL, 0, VARSIZE("制服改造", 1)
+	IF 制服改造:LOCAL:エロ改造フラグ
+		CALLFORM 制服改造初期化_%ERDNAME(制服改造, LOCAL, 1)%()
+		エロ改造制服記録:記録番号 = LOCAL
+		記録番号 ++
+	ENDIF
+NEXT
+
+;エロ制服を配列に登録
+SPLIT 所持エロ衣装文字列, "_", 制服一時配列
+FOR LOCAL, 0, 100
+	SPLIT 制服一時配列:LOCAL, "/", 分割文字列配列
+	RESULTS:LOCAL = %分割文字列配列:1%
+NEXT
+
+;従業員かつエロ制服だとなしにする
+FOR LOCAL, 1, CHARANUM
+	SIF TALENT:LOCAL:従業員 == 0
+		CONTINUE
+	IF MATCH(RESULTS, 現在制服:LOCAL:0)
+		現在制服:LOCAL:0 = 
+	ENDIF
+	;改造制服を着てる場合はリセットしておく
+	FOR 配列番号, 0, 記録番号
+		IF 現在制服:LOCAL:0 == ERDNAME(制服改造, エロ改造制服記録:配列番号, 1)
+			CALL CLOTHES_RESET_TRAIN(LOCAL)
+			BREAK
+		ENDIF
+	NEXT
+NEXT

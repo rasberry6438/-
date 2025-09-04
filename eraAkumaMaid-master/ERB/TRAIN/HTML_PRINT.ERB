@@ -1,0 +1,242 @@
+﻿@HPRINT_STRL, ARGS, ARGS:1, ARGS:2, ARGS:3, ARGS:4, ARGS:5, ARGS:6, ARGS:7, ARGS:8, ARGS:9
+#DIM LCOUNT
+#DIM TEXT_COLOR
+#DIMS PRINT_STR
+#DIMS END_TAG
+#DIMS ANNOTATION
+
+TEXT_COLOR = GETCOLOR()
+PRINT_STR =
+END_TAG =
+
+FOR LCOUNT, 1, 10
+	SIF ARGS:LCOUNT != ""
+		ARGS = %ARGS%_%ARGS:LCOUNT%
+NEXT
+
+VARSET LOCALS
+
+;文字列を分解する
+SPLIT ARGS, "_", LOCALS
+
+FOR LCOUNT, 0, 100
+
+	;#TEXTC=で始まっていると範囲内はその色が默认になる(指定はRGBの6桁)
+	IF SUBSTRING(LOCALS:LCOUNT, 0, 7) == "#TEXTC="
+		LOCALS:LCOUNT = 0x%SUBSTRING(LOCALS:LCOUNT, 7, -1)%
+		IF ISNUMERIC(LOCALS:LCOUNT)
+			TEXT_COLOR = TOINT(LOCALS:LCOUNT)
+		ELSE
+			PRINT_STR = エラー！
+		ENDIF
+		PRINT_STR =
+		END_TAG =
+		LOCALS:LCOUNT =
+		LCOUNT = 0
+	;その場でWAITさせるための処理
+	ELSEIF LOCALS:LCOUNT == "NW"
+		PRINT_STR = <nobr><font color='#%TOSTR(TEXT_COLOR, "X6")%'>%PRINT_STR%%END_TAG%</font>
+		HTML_PRINT @"%PRINT_STR%"
+		WAIT
+		CLEARLINE 1
+		PRINT_STR =
+		END_TAG =
+		LOCALS:LCOUNT =
+		LCOUNT = 0
+	ENDIF
+
+	;特殊な操作
+	SELECTCASE LOCALS:LCOUNT
+	;CASE ""
+	;	BREAK
+	CASE "BUTTON"
+		;次の文字をボタンにする
+		LCOUNT += 1
+		IF STRCOUNT(LOCALS:LCOUNT, "#TITLE=")
+			ANNOTATION = %EXTSTR(LOCALS:LCOUNT, "#TITLE=")%
+			LOCALS:LCOUNT = %EXTSTR(LOCALS:LCOUNT, "", "#TITLE=")%
+			ANNOTATION = %REPLACE(ANNOTATION,"<BR>","&#13;&#10;")%
+			IF NUMBER_BUTTON(LOCALS:LCOUNT) < 0
+				PRINT_STR = %PRINT_STR%<button value='%LOCALS:LCOUNT%' title='%ANNOTATION%'>%LOCALS:LCOUNT%</button>%END_TAG%
+			ELSE
+				PRINT_STR = %PRINT_STR%<button value='{NUMBER_BUTTON(LOCALS:LCOUNT)}' title='%ANNOTATION%'>%LOCALS:LCOUNT%</button>%END_TAG%
+			ENDIF
+		ELSE
+			IF NUMBER_BUTTON(LOCALS:LCOUNT) < 0
+				PRINT_STR = %PRINT_STR%<button value='%LOCALS:LCOUNT%'>%LOCALS:LCOUNT%</button>%END_TAG%
+			ELSE
+				PRINT_STR = %PRINT_STR%<button value='{NUMBER_BUTTON(LOCALS:LCOUNT)}'>%LOCALS:LCOUNT%</button>%END_TAG%
+			ENDIF
+		ENDIF
+		END_TAG =
+		CONTINUE
+	CASE "NOBUTTON"
+		;次の文字をボタンにしない
+		LCOUNT += 1
+		IF STRCOUNT(LOCALS:LCOUNT, "#TITLE=")
+			ANNOTATION = %EXTSTR(LOCALS:LCOUNT, "#TITLE=")%
+			LOCALS:LCOUNT = %EXTSTR(LOCALS:LCOUNT, "", "#TITLE=")%
+			ANNOTATION = %REPLACE(ANNOTATION,"<BR>","&#13;&#10;")%
+			PRINT_STR = %PRINT_STR%<nonbutton title='%ANNOTATION%'>%LOCALS:LCOUNT%</nonbutton>%END_TAG%
+		ELSE
+			PRINT_STR = %PRINT_STR%<nonbutton>%LOCALS:LCOUNT%</nonbutton>%END_TAG%
+		ENDIF
+		END_TAG =
+		CONTINUE
+	CASE "太字"
+		;次の文字を太字
+		PRINT_STR = %PRINT_STR%<b>
+		END_TAG = </b>%END_TAG%
+		CONTINUE
+	CASE "斜体"
+		;次の文字を斜体
+		PRINT_STR = %PRINT_STR%<i>
+		END_TAG = </i>%END_TAG%
+		CONTINUE
+	CASE "取り消し"
+		;次の文字に打消し線を引く
+		PRINT_STR = %PRINT_STR%<s>
+		END_TAG = </s>%END_TAG%
+		CONTINUE
+	CASE "下線"
+		;次の文字を下線
+		PRINT_STR = %PRINT_STR%<u>
+		END_TAG = </u>%END_TAG%
+		CONTINUE
+	CASE "-"
+		;次の文字に打消し線を引く
+		PRINT_STR = %PRINT_STR%<s>
+		END_TAG = </s>%END_TAG%
+		CONTINUE
+	CASE "L"
+		PRINT_STR = <nobr><font color='#%TOSTR(TEXT_COLOR, "X6")%'>%PRINT_STR%%END_TAG%</font>
+		HTML_PRINT @"%PRINT_STR%"
+		PRINT_STR =
+		END_TAG =
+		CONTINUE
+	CASE "W"
+		PRINT_STR = <nobr><font color='#%TOSTR(TEXT_COLOR, "X6")%'>%PRINT_STR%%END_TAG%</font>
+		HTML_PRINT @"%PRINT_STR%"
+		WAIT
+		PRINT_STR =
+		END_TAG =
+		CONTINUE
+	CASE "H"
+		CHKFONT "Times New Roman"
+		IF RESULT
+			PRINT_STR = %PRINT_STR%<font face='Times New Roman'>%UNICODE(0x2665)%</font>
+		ELSE
+			PRINT_STR = %PRINT_STR%%UNICODE(0x2665)%
+		ENDIF
+		CONTINUE
+	CASE "WH"
+		CHKFONT "Times New Roman"
+		IF RESULT
+			PRINT_STR = %PRINT_STR%<font face='Times New Roman'>%UNICODE(0x2661)%</font>
+		ELSE
+			PRINT_STR = %PRINT_STR%%UNICODE(0x2661)%
+		ENDIF
+		CONTINUE
+	CASE "BH"
+		CHKFONT "Times New Roman"
+		IF RESULT
+			PRINT_STR = %PRINT_STR%<font face='Times New Roman'>%UNICODE(0x2764)%</font>
+		ELSE
+			PRINT_STR = %PRINT_STR%%UNICODE(0x2764)%
+		ENDIF
+		CONTINUE
+	CASE "BBH"
+		CHKFONT "メイリオ"
+		IF RESULT
+			PRINT_STR = %PRINT_STR%<font face='メイリオ'>%UNICODE(0x2764)%</font>
+		ELSE
+			PRINT_STR = %PRINT_STR%%UNICODE(0x2764)%
+		ENDIF
+		CONTINUE
+	CASE "HH"
+		CHKFONT "Times New Roman"
+		IF RESULT
+			PRINT_STR = %PRINT_STR%<font face='Times New Roman' color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%UNICODE(0x2665)%</font>%END_TAG%
+		ELSE
+			PRINT_STR = %PRINT_STR%<font color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%UNICODE(0x2665)%</font>%END_TAG%
+		ENDIF
+		END_TAG =
+		CONTINUE
+	CASE "WHH"
+		CHKFONT "Times New Roman"
+		IF RESULT
+			PRINT_STR = %PRINT_STR%<font face='Times New Roman' color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%UNICODE(0x2661)%</font>
+		ELSE
+			PRINT_STR = %PRINT_STR%<font color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%UNICODE(0x2661)%</font>
+		ENDIF
+		PRINT_STR = %PRINT_STR%%END_TAG%
+		END_TAG =
+		CONTINUE
+	CASE "BHH"
+		CHKFONT "Times New Roman"
+		IF RESULT
+			PRINT_STR = %PRINT_STR%<font face='Times New Roman' color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%UNICODE(0x2764)%</font>%END_TAG%
+		ELSE
+			PRINT_STR = %PRINT_STR%<font color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%UNICODE(0x2764)%</font>%END_TAG%
+		ENDIF
+		END_TAG =
+		CONTINUE
+	CASE "BBHH"
+		CHKFONT "メイリオ"
+		IF RESULT
+			PRINT_STR = %PRINT_STR%<font face='メイリオ' color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%UNICODE(0x2764)%</font>
+		ELSE
+			PRINT_STR = %PRINT_STR%<font color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%UNICODE(0x2764)%</font>
+		ENDIF
+		PRINT_STR = %PRINT_STR%%END_TAG%
+		END_TAG =
+		CONTINUE
+	CASE "／／／", "／"
+		PRINT_STR = %PRINT_STR%<font color='#%TOSTR(DEF_COLOR("爱心粉紅"), "X6")%'>%HTML_ESCAPE("///")%</font>%END_TAG%
+		END_TAG =
+		CONTINUE
+	;一部PRINT_IMGしている物を使えるようにする
+	CASE "U便当", "Uドラゴン", "U創口貼", "U男性", "U女性", "U扶她", "U伪娘", "UH"
+		PRINT_STR = %PRINT_STR%<img src='%SUBSTRING(LOCALS:LCOUNT, 1, -1)%'>
+		CONTINUE
+	;パラレル日本語
+	CASE "Uそそ", "Uつん", "Uなお", "Uまふ", "Uはよ", "Uひに", "Uやよ", "Uゐに", "Uゐん", "U逆あ", "Uにす", "Uもむ", "Uをね", "U小ゐ", "U亜漢字1", "U亜漢字2", "U亜漢字3", "U亜漢字4"
+		PRINT_STR = %PRINT_STR%<img src='%SUBSTRING(LOCALS:LCOUNT, 1, -1)%'>
+		CONTINUE
+	CASE "UNI"
+		;次の文字をPRINT_IMG対応にする
+		LCOUNT += 1
+		PRINT_STR = %PRINT_STR%<img src='%LOCALS:LCOUNT%'>
+		CONTINUE
+	CASE "茶色", "ショッキング粉紅", "粉紅", "爱心粉紅", "赤", "紅", "黄色", "暗黄色", "イエロー", "緑", "青", "水色", "藍色", "暗灰色", "灰色", "明灰色", "白"
+		PRINT_STR = %PRINT_STR%<font color='#%TOSTR(DEF_COLOR(LOCALS:LCOUNT), "X6")%'>
+		END_TAG = </font>%END_TAG%
+		CONTINUE
+	ENDSELECT
+
+	PRINT_STR = %PRINT_STR%%LOCALS:LCOUNT%%END_TAG%
+	END_TAG =
+NEXT
+
+;空の時は改行だけはするようにスペースを入れる
+SIF PRINT_STR == ""
+	PRINT_STR += " "
+PRINT_STR = <nobr><font color='#%TOSTR(TEXT_COLOR, "X6")%'>%PRINT_STR%</font>
+HTML_PRINT @"%PRINT_STR%"
+
+
+@NUMBER_BUTTON(ARGS)
+#FUNCTION
+#DIMS NUMBER
+
+SIF STRFIND(ARGS, "[") < 0 || STRFIND(ARGS, "]") < 0
+	RETURNF -1
+
+;[ ]の中の文字を取り出す
+NUMBER = %EXTSTR_BL(ARGS, "[", "]")%
+
+;数値にできるか調べる
+SIF ISNUMERIC(NUMBER) == 0
+	RETURNF -1
+
+RETURNF TOINT(NUMBER)

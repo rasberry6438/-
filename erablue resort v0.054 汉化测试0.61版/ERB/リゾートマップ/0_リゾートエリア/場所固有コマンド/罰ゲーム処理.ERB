@@ -1,0 +1,604 @@
+﻿
+;-------------------------------------------------
+;罰ゲーム処理関連
+;-------------------------------------------------
+;代入した番号のキャラ相手に、罰ゲームを与えるか受けるかで分岐しつつ処理
+;-------------------------------------------------
+		
+@罰ゲーム(キャラ番号, 勝敗)
+#DIM キャラ番号
+#DIMS 勝敗
+#DIM 罰ゲーム種類
+#DIMS 罰ゲーム候補, 50
+#DIM 候補数
+
+
+SELECTCASE 勝敗
+	CASE "勝利"
+		$INPUT_LOOP
+		PRINTFORML 要对%CALLNAME:キャラ番号%实施何种惩罚？
+		PRINTBUTTON "[0]弹额头", 0
+		PRINTL 
+		IF TALENT:キャラ番号:飲酒拒否 < 1
+			PRINTBUTTON "[1]喝一杯酒", 1
+			PRINTL 
+		ENDIF
+		PRINTBUTTON "[2]身体接触", 2
+		PRINTL 
+		PRINTL 
+		CALL PRINT_えっちな罰ゲーム(キャラ番号)
+		BINPUT
+		
+		罰ゲーム種類 = RESULT
+		SELECTCASE RESULT
+			CASE 0
+				RFLAG:コマンド結果受渡し変数２ = 0
+				PRINTFORML %CALLNAME:MASTER%作为惩罚轻轻弹了%CALLNAME:キャラ番号%的额头
+				PRINTFORML %CALLNAME:キャラ番号%吃痛地揉着发红的额头
+			CASE 1
+				RFLAG:コマンド結果受渡し変数２ = 1
+				;いずれ子供キャラにはジュースにしたり、酩酊処理を挟んだりするが今は仮実装
+				PRINTFORML %CALLNAME:キャラ番号%作为惩罚喝下一杯酒
+				PRINTFORML %CALLNAME:キャラ番号%的面颊染上红晕
+				IF !初体験日:キャラ番号:初飲酒
+					初体験日:キャラ番号:初飲酒 = DAY
+					TCVAR:キャラ番号:初飲酒フラグ = 1
+					CALL 履歴データベース登録(CFLAG:キャラ番号:人物番号, @"初次在度假村喝酒","日常")
+				ENDIF
+				EXP:キャラ番号:飲酒経験 += RAND:3 + 1
+				BASE:キャラ番号:酩酊 += RAND:100 + 100
+				SIF BASE:キャラ番号:酩酊 >= 1000
+					CFLAG:キャラ番号:酔いすぎ = 1
+			CASE 2
+				RFLAG:罰ゲーム中 = 1
+				CALL COM306
+				IF RESULT == -1
+					GOTO INPUT_LOOP
+				ENDIF
+				RFLAG:コマンド結果受渡し変数２ = 2
+				RFLAG:コマンド結果受渡し変数４ = TOINT(REPLACE(SELECTCOM_S, "306_", ""))
+				CALLFORM MESSAGE_COM_S%RSTR:SELECTCOM_S受け渡し%
+				;口上用に変数を戻す
+				SELECTCOM_S = 
+				RSTR:SELECTCOM_S受け渡し = 
+			CASE 10 TO 18
+				RFLAG:コマンド結果受渡し変数２ = RESULT
+				CALL COM_えっちな罰ゲーム(キャラ番号, 罰ゲーム種類)
+				CALL MESSAGE_えっちな罰ゲーム(キャラ番号, 罰ゲーム種類)
+		ENDSELECT
+		
+
+	CASE "敗北"
+		;出現可能な罰ゲームを登録
+		VARSET 罰ゲーム候補
+		罰ゲーム候補:0 = デコピン
+		罰ゲーム候補:1 = 一気飲み
+		候補数 = 2
+		;体に触れる系はいるか？　いらない気がするぜぇ
+		LOCAL = ABLE_えっちな罰ゲーム(キャラ番号, 1)
+		SIF LOCAL >= 40
+			罰ゲーム候補:(候補数++) = 下着の色を言う
+		SIF LOCAL >= 50
+			罰ゲーム候補:(候補数++) = セクシーポーズで淫語を言う
+		SIF LOCAL >= 65 && TALENT:PLAYER:Ｂ感度 > -2
+			罰ゲーム候補:(候補数++) = 乳首当てゲームをする
+		SIF LOCAL >= 70
+			罰ゲーム候補:(候補数++) = 尻を揉む
+		SIF LOCAL >= 70
+			罰ゲーム候補:(候補数++) = 胸を揉む
+		SIF LOCAL >= 80 && TALENT:PLAYER:尻尾あり
+			罰ゲーム候補:(候補数++) = 尻尾の付け根を揉む
+		SIF LOCAL >= 80 && 体格差計算(キャラ番号, PLAYER) < 2
+			罰ゲーム候補:(候補数++) = 肩組み乳揉み
+		SIF LOCAL >= 80 && TALENT:PLAYER:Ｂ感度 > -2
+			罰ゲーム候補:(候補数++) = 乳首ひっかき
+		SIF LOCAL >= 90
+			罰ゲーム候補:(候補数++) = 股間を弄る
+
+		;罰ゲーム決定
+		SELECTCASE 罰ゲーム候補:(RAND:候補数)
+			CASE "デコピン"
+				RFLAG:コマンド結果受渡し変数２ = 0
+				PRINTFORMW %CALLNAME:キャラ番号%作为惩罚轻轻弹了%CALLNAME:PLAYER%的额头
+				PRINTL 额头有些火辣辣的……
+			CASE "一気飲み"
+				RFLAG:コマンド結果受渡し変数２ = 1
+				PRINTFORMW %CALLNAME:キャラ番号%要求%CALLNAME:PLAYER%作为惩罚喝下一杯酒
+				PRINTFORML %CALLNAME:PLAYER%的面颊染上红晕
+				IF !初体験日:PLAYER:初飲酒
+					初体験日:PLAYER:初飲酒 = DAY
+					TCVAR:PLAYER:初飲酒フラグ = 1
+					CALL 履歴データベース登録(CFLAG:PLAYER:人物番号, @"初次在度假村喝酒","日常")
+				ENDIF
+				EXP:PLAYER:飲酒経験 += RAND:3 + 1
+				BASE:PLAYER:酩酊 += RAND:100 + 100
+				SIF BASE:PLAYER:酩酊 >= 1000
+					CFLAG:PLAYER:酔いすぎ = 1
+			CASE "下着の色を言う"
+				PRINTFORMW %CALLNAME:キャラ番号%要求%CALLNAME:PLAYER%作为惩罚「说出内衣颜色」
+				RFLAG:コマンド結果受渡し変数２ = 10
+				PRINTFORM %CALLNAME:PLAYER%向%CALLNAME:キャラ番号%
+				IF TEQUIP:キャラ番号:下半身下着あり == 1
+					PRINTW 撩起衣角露出些许内衣
+				ELSEIF TEQUIP:キャラ番号:下半身下着あり == 0
+					PRINTW 偷偷耳语没穿内衣
+				ELSEIF TEQUIP:キャラ番号:下半身下着あり == 2
+					PRINTW 偷偷耳语穿着阴贴
+				ELSEIF TEQUIP:キャラ番号:下半身下着あり == 3
+					PRINTW 透露穿着兜裆布
+				ENDIF
+				CALL SOURCE_CALC_露出(PLAYER, キャラ番号, 100)
+				CALL SOURCE_CALC_好感度要素_友情度UP(PLAYER, キャラ番号, 10)
+				CALL SOURCE_CALC_好感度要素_性愛度UP(PLAYER, キャラ番号, 20)
+			CASE "セクシーポーズで淫語を言う"
+				PRINTFORMW %CALLNAME:キャラ番号%要求%CALLNAME:PLAYER%作为惩罚「摆出性感姿势并说淫语」
+				RFLAG:コマンド結果受渡し変数２ = 11
+				;セクシーポーズで淫語
+				CALL SOURCE_CALC_露出(PLAYER, キャラ番号, 200)
+				CALL SOURCE_CALC_好感度要素_友情度UP(PLAYER, キャラ番号, 10)
+				CALL SOURCE_CALC_好感度要素_性愛度UP(PLAYER, キャラ番号, 50)
+				PRINTFORMW %CALLNAME:PLAYER%摆出撩人姿势，在%CALLNAME:キャラ番号%耳畔低语淫靡台词
+			CASE "乳首当てゲームをする"
+				PRINTFORMW %CALLNAME:キャラ番号%要求%CALLNAME:PLAYER%进行「寻找乳头游戏」
+				PRINTFORMW %CALLNAME:PLAYER%将双手背在身后，等待%CALLNAME:キャラ番号%的触碰
+				RFLAG:コマンド結果受渡し変数２ = 12
+				;乳首当てゲーム
+				CALL SOURCE_CALC_露出(PLAYER, キャラ番号, 200)
+				CALL SOURCE_CALC_快Ｂ(PLAYER, キャラ番号, 50)
+				CALL SOURCE_CALC_好感度要素_友情度UP(PLAYER, キャラ番号, 30)
+				CALL SOURCE_CALC_好感度要素_性愛度UP(PLAYER, キャラ番号, 100)
+				SELECTCASE 乳首当て結果判定(PLAYER)
+					CASE 0 TO 4
+						RFLAG:コマンド結果受渡し変数４ = 1
+						PRINTFORMW 将手指缓缓伸向%CALLNAME:PLAYER%胸前乳头的位置
+						PRINTW 【命中！】
+						PRINTFORMW %CALLNAME:キャラ番号%准确戳中了%CALLNAME:PLAYER%的乳头！
+						CALL SOURCE_CALC_快Ｂ(PLAYER, キャラ番号, 100)
+					CASE 5 TO 9
+						RFLAG:コマンド結果受渡し変数４ = -1
+						PRINTFORMW 将手指缓缓伸向%CALLNAME:PLAYER%胸前乳头的位置
+						PRINTW 【偏了…】
+						PRINTFORMW %CALLNAME:キャラ番号%似乎判断错了乳头位置…
+				ENDSELECT
+			CASE "尻を揉む"
+				PRINTFORMW %CALLNAME:キャラ番号%选择触碰%CALLNAME:PLAYER%的身体作为惩罚
+				;CALL_COMを経由させる
+				SWAP TARGET, PLAYER
+				LOCAL = SELECTCOM
+				RSTR:SELECTCOM_S受け渡し = 
+				SELECTCOM_S = 
+				SELECTCOM = 320
+				CALL CALL_COM(キャラ番号)
+				;口上用に変数を戻す
+				SELECTCOM = LOCAL
+				CALL MESSAGE_COM320
+				SWAP TARGET, PLAYER
+				RFLAG:コマンド結果受渡し変数２ = 13
+			CASE "胸を揉む"
+				PRINTFORMW %CALLNAME:キャラ番号%选择触碰%CALLNAME:PLAYER%的身体作为惩罚
+				;CALL_COMを経由させる
+				SWAP TARGET, PLAYER
+				LOCAL = SELECTCOM
+				RSTR:SELECTCOM_S受け渡し = 
+				SELECTCOM_S = 
+				SELECTCOM = 321
+				CALL CALL_COM(キャラ番号)
+				SELECTCOM = LOCAL
+				CALL MESSAGE_COM321
+				SWAP TARGET, PLAYER
+				RFLAG:コマンド結果受渡し変数２ = 14
+			CASE "尻尾の付け根を揉む"
+				PRINTFORMW %CALLNAME:キャラ番号%选择触碰%CALLNAME:PLAYER%的身体作为惩罚
+				;CALL_COMを経由させる
+				SWAP TARGET, PLAYER
+				LOCAL = SELECTCOM
+				RSTR:SELECTCOM_S受け渡し = 
+				SELECTCOM_S = 
+				SELECTCOM = 322
+				CALL CALL_COM(キャラ番号)
+				SELECTCOM = LOCAL
+				CALL MESSAGE_COM322
+				SWAP TARGET, PLAYER
+				RFLAG:コマンド結果受渡し変数２ = 15
+			CASE "肩組み乳揉み"
+				PRINTFORMW %CALLNAME:キャラ番号%选择触碰%CALLNAME:PLAYER%的身体作为惩罚
+				;CALL_COMを経由させる
+				SWAP TARGET, PLAYER
+				LOCAL = SELECTCOM
+				RSTR:SELECTCOM_S受け渡し = 
+				SELECTCOM_S = 
+				SELECTCOM = 323
+				CALL CALL_COM(キャラ番号)
+				SELECTCOM = LOCAL
+				CALL MESSAGE_COM323
+				SWAP TARGET, PLAYER
+				RFLAG:コマンド結果受渡し変数２ = 16
+			CASE "乳首ひっかき"
+				PRINTFORMW %CALLNAME:キャラ番号%选择触碰%CALLNAME:PLAYER%的身体作为惩罚
+				;CALL_COMを経由させる
+				SWAP TARGET, PLAYER
+				LOCAL = SELECTCOM
+				RSTR:SELECTCOM_S受け渡し = 
+				SELECTCOM_S = 
+				SELECTCOM = 324
+				CALL CALL_COM(キャラ番号)
+				SELECTCOM = LOCAL
+				CALL MESSAGE_COM324
+				SWAP TARGET, PLAYER
+				RFLAG:コマンド結果受渡し変数２ = 17
+			CASE "股間を弄る"
+				PRINTFORMW %CALLNAME:キャラ番号%选择触碰%CALLNAME:PLAYER%的身体作为惩罚
+				;CALL_COMを経由させる
+				SWAP TARGET, PLAYER
+				LOCAL = SELECTCOM
+				RSTR:SELECTCOM_S受け渡し = 
+				SELECTCOM_S = 
+				SELECTCOM = 327
+				CALL CALL_COM(キャラ番号)
+				SELECTCOM = LOCAL
+				CALL MESSAGE_COM327
+				SWAP TARGET, PLAYER
+				RFLAG:コマンド結果受渡し変数２ = 18
+		ENDSELECT
+ENDSELECT
+
+TRYCALLFORM KOJO_EVENT_罰ゲーム_{NO:キャラ番号}(キャラ番号)
+
+
+@PRINT_えっちな罰ゲーム(キャラ番号)
+#DIM キャラ番号
+;複数の罰ゲームに派生させるので別関数で処理する
+
+RFLAG:罰ゲーム中 = 1
+IF CFLAG:キャラ番号:好感度レベル < 50
+	SETCOLOR 0x666666
+	PRINTPLAIN ▼情色惩罚游戏（好感度等级不足）
+	PRINTL
+	RESETCOLOR
+ELSE
+	PRINTL ▼情色惩罚游戏
+	;いずれ脱衣も実装する……絶対にだ……
+	IF ABLE_えっちな罰ゲーム(キャラ番号) > 40
+		PRINT ├
+		PRINTBUTTON "[10]说出内衣颜色", 10
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN ├[10]说出内衣颜色（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+	IF ABLE_えっちな罰ゲーム(キャラ番号) > 50
+		PRINT ├
+		PRINTBUTTON "[11]摆性感姿势说淫语", 11
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN ├[11]摆性感姿势说淫语（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+	IF ABLE_えっちな罰ゲーム(キャラ番号) > 65 && TALENT:キャラ番号:Ｂ感度 > -2
+		PRINT ├
+		PRINTBUTTON "[12]寻找乳头游戏", 12
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN ├[12]寻找乳头游戏（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+	CALL COM_ABLE320
+	IF RESULT && ABLE_えっちな罰ゲーム(キャラ番号) > 70
+		PRINT ├
+		PRINTBUTTON "[13]揉捏臀部", 13
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN ├[13]揉捏臀部（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+	CALL COM_ABLE321
+	IF RESULT && ABLE_えっちな罰ゲーム(キャラ番号) > 70
+		PRINT ├
+		PRINTBUTTON "[14]揉捏胸部", 14
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN ├[14]揉捏胸部（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+	CALL COM_ABLE322
+	IF RESULT && ABLE_えっちな罰ゲーム(キャラ番号) > 80
+		PRINT ├
+		PRINTBUTTON "[15]揉捏尾根", 15
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN ├[15]揉捏尾根（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+	CALL COM_ABLE323
+	IF RESULT && ABLE_えっちな罰ゲーム(キャラ番号) > 80
+		PRINT ├
+		PRINTBUTTON "[16]环肩揉胸", 16
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN ├[16]环肩揉胸（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+	CALL COM_ABLE324
+	IF RESULT && ABLE_えっちな罰ゲーム(キャラ番号) > 80
+		PRINT ├
+		PRINTBUTTON "[17]抓挠乳头", 17
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN ├[17]抓挠乳头（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+	CALL COM_ABLE327
+	IF RESULT && ABLE_えっちな罰ゲーム(キャラ番号) > 90
+		PRINT └
+		PRINTBUTTON "[18]把玩股间", 18
+		PRINTL 
+	ELSE
+		SETCOLOR 0x666666
+		PRINTPLAIN └[18]把玩股间（条件未满足）
+		PRINTL 
+		RESETCOLOR
+	ENDIF
+ENDIF
+
+
+
+
+@ABLE_えっちな罰ゲーム(キャラ番号, 実行側フラグ = 0)
+#FUNCTION
+#DIM キャラ番号
+#DIM 許容値
+#DIM 実行側フラグ
+;どこまで罰ゲームを許してくれるかを表す数値、高いほどいろいろ許してくれる
+
+;初期値は好感度レベル
+許容値 = CFLAG:キャラ番号:好感度レベル
+
+;素質に手を入れた後にいずれ色々追加すること
+
+;あなたが実行側の時のみ影響
+IF 実行側フラグ == 0
+	;賭博師の風格持ち時、プラス補正
+	SIF あなた特殊能力:ギャンブラー == 2
+		許容値 += 50
+ENDIF
+
+;性欲なしはダメ
+SIF TALENT:キャラ番号:性欲 == -2
+	許容値 = 0
+
+RETURNF 許容値
+
+
+
+@COM_えっちな罰ゲーム(キャラ番号, ARG)
+#DIM キャラ番号
+
+SELECTCASE ARG
+	CASE 10
+		;下着の色を言う
+		CALL SOURCE_CALC_露出(キャラ番号, PLAYER, 100)
+		CALL SOURCE_CALC_好感度要素_友情度UP(キャラ番号, PLAYER, 10)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(キャラ番号, PLAYER, 20)
+	CASE 11
+		;セクシーポーズで淫語
+		CALL SOURCE_CALC_露出(キャラ番号, PLAYER, 200)
+		CALL SOURCE_CALC_好感度要素_友情度UP(キャラ番号, PLAYER, 10)
+		CALL SOURCE_CALC_好感度要素_性愛度UP(キャラ番号, PLAYER, 50)
+	CASE 12
+		;乳首当てゲーム
+		; CALL SOURCE_CALC_露出(キャラ番号, PLAYER, 200)
+		; CALL SOURCE_CALC_快Ｂ(キャラ番号, PLAYER, 50)
+		; CALL SOURCE_CALC_好感度要素_友情度UP(キャラ番号, PLAYER, 30)
+		; CALL SOURCE_CALC_好感度要素_性愛度UP(キャラ番号, PLAYER, 100)
+		; SELECTCASE 乳首当て結果判定(キャラ番号)
+		; 	CASE 0 TO 4
+		; 		RFLAG:コマンド結果受渡し変数４ = 1
+		; 		CALL SOURCE_CALC_快Ｂ(キャラ番号, PLAYER, 100)
+		; 	CASE 5 TO 8
+		; 		RFLAG:コマンド結果受渡し変数４ = -1
+		; 	CASE 9
+		; 		RFLAG:コマンド結果受渡し変数４ = 2
+		; 		CALL SOURCE_CALC_快Ｂ(キャラ番号, PLAYER, 150)
+		; ENDSELECT
+		;弱点コマンド処理の都合上、CALL_COMを経由させる
+		LOCAL = SELECTCOM
+		RSTR:SELECTCOM_S受け渡し = 
+		SELECTCOM_S = 
+		SELECTCOM = 325
+		CALL CALL_COM(キャラ番号)
+		;口上用に変数を戻す
+		SELECTCOM = LOCAL
+		RFLAG:コマンド結果受渡し変数２ = 12
+	CASE 13
+		;弱点コマンド処理の都合上、CALL_COMを経由させる
+		LOCAL = SELECTCOM
+		RSTR:SELECTCOM_S受け渡し = 
+		SELECTCOM_S = 
+		SELECTCOM = 320
+		CALL CALL_COM(キャラ番号)
+		;口上用に変数を戻す
+		SELECTCOM = LOCAL
+		RFLAG:コマンド結果受渡し変数２ = 13
+	CASE 14
+		;弱点コマンド処理の都合上、CALL_COMを経由させる
+		LOCAL = SELECTCOM
+		RSTR:SELECTCOM_S受け渡し = 
+		SELECTCOM_S = 
+		SELECTCOM = 321
+		CALL CALL_COM(キャラ番号)
+		SELECTCOM = LOCAL
+		RFLAG:コマンド結果受渡し変数２ = 14
+	CASE 15
+		;弱点コマンド処理の都合上、CALL_COMを経由させる
+		LOCAL = SELECTCOM
+		RSTR:SELECTCOM_S受け渡し = 
+		SELECTCOM_S = 
+		SELECTCOM = 322
+		CALL CALL_COM(キャラ番号)
+		SELECTCOM = LOCAL
+		RFLAG:コマンド結果受渡し変数２ = 15
+	CASE 16
+		;弱点コマンド処理の都合上、CALL_COMを経由させる
+		LOCAL = SELECTCOM
+		RSTR:SELECTCOM_S受け渡し = 
+		SELECTCOM_S = 
+		SELECTCOM = 323
+		CALL CALL_COM(キャラ番号)
+		SELECTCOM = LOCAL
+		RFLAG:コマンド結果受渡し変数２ = 16
+	CASE 17
+		;弱点コマンド処理の都合上、CALL_COMを経由させる
+		LOCAL = SELECTCOM
+		RSTR:SELECTCOM_S受け渡し = 
+		SELECTCOM_S = 
+		SELECTCOM = 324
+		CALL CALL_COM(キャラ番号)
+		SELECTCOM = LOCAL
+		RFLAG:コマンド結果受渡し変数２ = 17
+	CASE 18
+		;弱点コマンド処理の都合上、CALL_COMを経由させる
+		LOCAL = SELECTCOM
+		RSTR:SELECTCOM_S受け渡し = 
+		SELECTCOM_S = 
+		SELECTCOM = 327
+		CALL CALL_COM(キャラ番号)
+		SELECTCOM = LOCAL
+		RFLAG:コマンド結果受渡し変数２ = 18
+ENDSELECT
+
+CALL SOURCE_補正処理(キャラ番号)
+
+
+@MESSAGE_えっちな罰ゲーム(キャラ番号, ARG)
+#DIM キャラ番号
+
+IF FLAG:汎用文章表示切り替えオプション > 0
+	IF PLAYER == MASTER
+		IF TCVAR:PLAYER:弱点コマンドフラグ
+			DRAWLINE
+			SETCOLOR カラーパレット("えっちな色")
+			PRINTFORMW <<<弱点指令！！（%CALLNAME:PLAYER%）>>>
+			RESETCOLOR
+		ELSEIF TCVAR:PLAYER:弱点シチュフラグ
+			SETCOLOR カラーパレット("えっちな色")
+			PRINT <<<弱点情境触发
+			PRINT_IMG "えっちハート"
+			PRINTFORML （%CALLNAME:PLAYER%）>>>
+			RESETCOLOR
+		ENDIF
+	ENDIF
+	FOR LOCAL, 1, CHARANUM
+		SIF TARGET:LOCAL < 1
+			BREAK
+		IF TCVAR:(TARGET:LOCAL):弱点コマンドフラグ
+			DRAWLINE
+			SETCOLOR カラーパレット("えっちな色")
+			PRINTFORMW <<<弱点指令！！（%CALLNAME:(TARGET:LOCAL)%）>>>
+			RESETCOLOR
+		ELSEIF TCVAR:(TARGET:LOCAL):弱点シチュフラグ
+			SETCOLOR カラーパレット("えっちな色")
+			PRINT <<<弱点情境触发
+			PRINT_IMG "えっちハート"
+			PRINTFORML （%CALLNAME:(TARGET:LOCAL)%）>>>
+			RESETCOLOR
+		ENDIF
+	NEXT
+ENDIF
+
+RESULT = 0
+TRYCALL MESSAGE_えっちな罰ゲーム_MOD(キャラ番号, ARG)
+SIF RESULT != 0
+	RETURN
+
+SELECTCASE ARG
+	CASE 10
+		;下着の色を言う
+		PRINTFORM %CALLNAME:キャラ番号%
+		IF TALENT:キャラ番号:羞恥心 > 0
+			PRINT 面红耳赤地
+		ELSEIF TALENT:キャラ番号:羞恥心 < 0
+			PRINT 装作若无其事地
+		ELSE
+			PRINT 略显羞涩地
+		ENDIF
+		IF TEQUIP:キャラ番号:下半身下着あり == 1
+			PRINTW 告知了自己的内衣颜色
+		ELSEIF TEQUIP:キャラ番号:下半身下着あり == 0
+			PRINTW 坦言没有穿内衣
+		ELSEIF TEQUIP:キャラ番号:下半身下着あり == 2
+			PRINTW 透露穿着阴贴
+		ELSEIF TEQUIP:キャラ番号:下半身下着あり == 3
+			PRINTW 透露穿着兜裆布
+		ENDIF
+	CASE 11
+		;セクシーポーズで淫語
+		PRINTFORM %CALLNAME:キャラ番号%
+		IF TALENT:キャラ番号:羞恥心 > 0
+			PRINTL 满脸羞红地
+		ELSEIF TALENT:キャラ番号:羞恥心 < 0
+			PRINTL 带着些许兴奋地
+		ELSE
+			PRINTL 苦笑着
+		ENDIF
+		IF 知識素質:キャラ番号:性知識 < 1
+			PRINTW 摆出滑稽的姿势说了些不着调的话
+		ELSEIF 知識素質:キャラ番号:性知識 < 3
+			PRINTW 笨拙地摆出性感姿势，勉强说出挑逗话语
+		ELSEIF 知識素質:キャラ番号:性知識 < 5
+			PRINTW 摆出魅惑姿势，说着刺激欲望的露骨言语
+		ELSE
+			PRINTFORMW 展现出儿童不宜的挑逗姿势，在%CALLNAME:MASTER%耳边低语淫靡台词
+		ENDIF
+	CASE 12
+		;乳首当てゲーム
+		IF TALENT:キャラ番号:羞恥心 > 0
+			PRINT 脸颊绯红闭目等待
+		ELSEIF TALENT:キャラ番号:羞恥心 < 0
+			PRINT 笑着说"能猜中吗？"
+		ELSE
+			PRINT 
+		ENDIF
+		PRINTFORMW 将手指缓缓伸向%CALLNAME:キャラ番号%胸前乳头的位置
+		CALL 乳首当てゲーム結果メッセージ(キャラ番号)
+	CASE 13
+		CALL MESSAGE_COM320
+	CASE 14
+		CALL MESSAGE_COM321
+	CASE 15
+		CALL MESSAGE_COM322
+	CASE 16
+		CALL MESSAGE_COM323
+	CASE 17
+		CALL MESSAGE_COM324
+	CASE 18
+		CALL MESSAGE_COM327
+ENDSELECT
+
+
+@乳首当て結果判定(対象キャラ)
+#FUNCTION
+#DIM 対象キャラ
+
+IF MAX(TEQUIP:対象キャラ:上半身鎧あり, TEQUIP:対象キャラ:上半身服あり, TEQUIP:対象キャラ:上タイツあり, TEQUIP:対象キャラ:上半身下着あり) == 0
+	RETURNF 0
+ELSE
+	RETURNF RAND:10
+ENDIF
+
+

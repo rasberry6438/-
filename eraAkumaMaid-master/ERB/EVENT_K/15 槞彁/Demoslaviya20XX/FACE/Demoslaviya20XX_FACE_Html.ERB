@@ -1,0 +1,149 @@
+﻿
+;;;nonbutton や<nobr>とかのタグを除去する
+;;;顔用なので<p>とかの情報は入らない前提
+;;;横並びの顔とかの顔データ入れちゃやーよ
+@D20XX_Face_HtmlToCoreHtml(ARGS)
+	#FUNCTIONS
+	#DIM LCOUNT
+	#DIM DYNAMIC Temp_LINECOUNT
+	;テ接吻トのインデント
+	#DIMS DYNAMIC INDENT_TEXT
+	;これもRESULT_DATAでやって良いけど、コードを読みやすくするために分離
+	#DIMS DYNAMIC HTMLF
+	#DIMS DYNAMIC Temp
+	#DIM DYNAMIC MEMO_REDRAW
+
+	MEMO_REDRAW = CURRENTREDRAW()
+	REDRAW 0
+
+	Temp_LINECOUNT = LINECOUNT
+	;颜绘を表示する(淫紋も表示される？)
+
+	HTML_PRINT ARGS
+	;表示された場合
+	IF LINECOUNT > Temp_LINECOUNT
+		;一度描画した物を解体してHPRINT_STRに適用可能な形状にする
+		HTMLF = %HTML_GETPRINTEDSTR(0)%
+		;ここでいったん表示されている画像を消し、HTMLFを整理したうえで取得しなおす
+		CLEARLINE 1
+
+		HTML_TAGSPLIT HTMLF
+		RESULTS = 
+		FOR LCOUNT, 1, RESULT-1
+			SIF LCOUNT % 3 == 0
+				RESULTS += RESULTS:LCOUNT
+		NEXT
+		;PRINTFORMW %RESULTS%
+	ENDIF
+	RETURNF RESULTS
+
+
+;;;-------------------------------------------------
+;;;任意の位置に表示する為のHTMLを作成する
+;;;<nobr>タグは返さないので、CALL元でnobrタグを追加してね
+;;;ARG=表示する人物のID
+;;;ARG:1=左から何px?動いた位置なのか(大体5150辺りが右端？)
+;;;ARGS = 颜绘変化用
+;;;ARG:2 = yposの指定(任意)
+;;;RESULTS に作成したHTMLを淹れて返す
+;;;-------------------------------------------------
+@D20XX_Face_ToHTML(ARG:0,ARG:1,ARGS,ARG:2=0)
+	#DIM LCOUNT
+	#DIM DYNAMIC Temp_LINECOUNT
+	;テ接吻トのインデント
+	#DIMS DYNAMIC INDENT_TEXT
+	;これもRESULT_DATAでやって良いけど、コードを読みやすくするために分離
+	#DIMS DYNAMIC HTMLF
+	#DIMS DYNAMIC Temp
+	#DIM DYNAMIC MEMO_REDRAW
+
+	MEMO_REDRAW = CURRENTREDRAW()
+	REDRAW 0
+
+	;颜绘変化の指定がある？
+	;CSTR:(ARG:0):颜绘変化 = %ARGS%
+
+	Temp_LINECOUNT = LINECOUNT
+	;颜绘を表示する(淫紋も表示される？)
+	CALL PRINT_DIALOGUE, ARG:0
+	;表示された場合+-
+	IF LINECOUNT > Temp_LINECOUNT
+		;一度描画した物を解体してHPRINT_STRに適用可能な形状にする
+		HTMLF = %HTML_GETPRINTEDSTR(0)%
+		;ここでいったん表示されている画像を消し、HTMLFを整理したうえで取得しなおす
+		CLEARLINE 1
+		HTML_TAGSPLIT HTMLF
+		RESULTS = 
+		FOR LCOUNT, 1, RESULT-1
+			SIF LCOUNT % 3 == 2 && LCOUNT != RESULT-2
+				RESULTS += @"<nonbutton pos='{ARG:1}'>"
+			;SIF LCOUNT % 3 == 0
+				;個々の中にypos='{ARG:2}'を封入出来ると嬉しい、簡単だと思うので後でやる
+			;	RESULTS += RESULTS:LCOUNT
+			IF LCOUNT % 3 == 0
+				;個々の中にypos='{ARG:2}'を封入出来ると嬉しい、簡単だと思うので後でやる
+				RESULTS += RESULTS:LCOUNT
+				;Temp = %RESULTS:LCOUNT%
+				;REPLACE Temp, @">" ,@" ypos='{ARG:2}'>"
+				;PRINTFORMW %Temp%
+				;RESULTS += Temp
+			ENDIF
+			SIF LCOUNT % 3 == 1 && LCOUNT != 1
+				RESULTS += "</nonbutton>"
+		NEXT
+		;PRINTFORMW %RESULTS%
+	ENDIF
+	REDRAW MEMO_REDRAW
+
+;;;CALL D20XX_Generate_UniqueFcsv, "黒服"
+;;;CALL D20XX_FACE_FcsvToSprite(RESULTS)
+;;;HTML_PRINT CONVERTSTR(RESULTS)
+@D20XX_FACE_Packaging(Fcsv)
+	#DIM DYNAMIC LCOUNT
+	#DIMS DYNAMIC Fcsv
+	#DIMS DYNAMIC MEMO_MAIDFACE
+	#DIM DYNAMIC MEMO_REDRAW
+
+	MEMO_REDRAW = CURRENTREDRAW()
+	REDRAW 0
+	VARSET LOCALS
+	VARSET LATESTFACECHARA
+	VARSET LATESTFACEID
+	
+	MEMO_MAIDFACE = %Fcsv%
+	IF MEMO_MAIDFACE != ""
+		STR:参照用MAIDFACE文字列 = %MEMO_MAIDFACE%
+		
+		;PRINTFORML MEMO_MAIDFACE = %MEMO_MAIDFACE%
+		;SIF MAIDEFACEID > 100
+		;	MAIDEFACEID = 0
+
+		CALL OVERLAY_GCREATE, MAIDEFACEID, @"%EXTSTR(MEMO_MAIDFACE, "", ",")%"
+
+		;スプライト名をつける
+		SPRITECREATE @"颜绘{MAIDEFACEID}", MAIDEFACEID
+		LOCALS += @"颜绘{MAIDEFACEID},%EXTSTR(MEMO_MAIDFACE, ",")%"
+
+		;作成した角色とIDをメモ
+		LATESTFACEID:0 = MAIDEFACEID
+
+		;MAIDEFACEIDを次のものにする
+		MAIDEFACEID += 1
+		SIF MAIDEFACEID >= 3500		;MAIDEFACEIDの保存数を変える場合はここを変える
+			MAIDEFACEID = 3000
+	ENDIF
+	TFLAG:MAX_height = 0
+	STR:颜绘再現文字列 = 
+
+	SIF LOCALS != ""
+		RESULTS = %LOCALS%
+
+	;IF LOCALS != ""
+	;	STR:颜绘再現文字列 = %LOCALS%
+	;
+	;	HTML_PRINT CONVERTSTR(STR:颜绘再現文字列)
+	;	CALL MULTILINE, TFLAG:MAX_height
+	;	TFLAG:颜绘表示中 = LINECOUNT
+	;ENDIF
+	
+	REDRAW MEMO_REDRAW

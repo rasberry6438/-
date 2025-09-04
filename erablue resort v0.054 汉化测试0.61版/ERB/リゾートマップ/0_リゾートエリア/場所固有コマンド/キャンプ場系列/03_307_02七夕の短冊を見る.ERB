@@ -1,0 +1,80 @@
+﻿
+;-------------------------------------------------
+;03_307_02查看许愿签
+;-------------------------------------------------
+@COMNAME_PLACE_381_0_307
+#FUNCTION
+
+IF 施設改造度:3:0 == 0
+	TSTR:コマンド名受渡 = 
+	RETURNF 0
+ENDIF
+TSTR:コマンド名受渡 = 查看许愿签
+RETURNF 1
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_381_0_307
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能")
+		
+@COM381_0_307
+;ランダムで滞在キャラを選び、ランダムで短冊を生成するだけ
+VARSET RESULT
+LOCAL:1 = 0
+FOR LOCAL, 1, CHARANUM
+	SIF CFLAG:LOCAL:滞在期間 < 0
+		CONTINUE
+	RESULT:(LOCAL:1) = LOCAL
+	LOCAL:1 += 1
+NEXT
+RFLAG:コマンド結果受渡し変数 = RESULT:(RAND:(LOCAL:1))
+
+;TARGETがいるなら優先して見る
+SIF TARGET > 0
+	RFLAG:コマンド結果受渡し変数 = TARGET
+
+TIME += 5
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE381_0_307
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(380)
+	RETURN RESULT
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM381_0_307
+
+PRINTFORML %CALLNAME:PLAYER%查看了竹饰上的许愿签
+PRINTFORML 发现了%CALLNAME:(RFLAG:コマンド結果受渡し変数)%的许愿签…
+
+@MESSAGE_COM381_0_307_非口上時
+IF TALENT:(RFLAG:コマンド結果受渡し変数):恋慕
+	PRINTDATA
+		DATAFORM 写着「想每天和%CALLNAME:PLAYER%亲密相处」…
+		DATAFORM 写着「渴望与%CALLNAME:PLAYER%更多接触」…
+		DATA 写着「祈求能与%CALLNAME:PLAYER%永远相伴」…
+		DATA 写着「为恋人希望变得更有魅力」
+		DATAFORM 写着「祈求能与%CALLNAME:PLAYER%相伴永远」…
+	ENDDATA
+ELSE
+	PRINTDATA
+		DATA 似乎是关于自身未来的愿望
+		DATA 像是关于当下渴望之物的愿望
+		DATA 看似与人际关系相关的愿望
+		DATA 写着世界和平的愿望
+		DATA 关于金钱方面的愿望
+	ENDDATA
+ENDIF

@@ -1,0 +1,74 @@
+﻿;-------------------------------------------------
+;str GBORDER(int xpos, int ypos, int wadth, int height, int imgsize, int style)
+;枠線を作るHTMLタグを出力する。<nobr>使用時のみ使用可能
+;int xpos, int ypos, int wadth, int heightはフォントサイズに対する％になります（100で全角一文字）
+;int imgsizeは画像の尺寸、枠を小さく作りたい時や大きくしたい時に
+;int styleは今のところは0以外に意味はない 枠線の画像が増える事をご期待ください
+;-------------------------------------------------
+@GBORDER(ARG:0, ARG:1, ARG:2 = 100, ARG:3 = 100, ARG:4 = 100, ARG:5)
+#FUNCTIONS
+#DIM DYNAMIC BORDER_XPOS,2
+#DIM DYNAMIC BORDER_YPOS,2
+#DIM DYNAMIC BORDER_WIDTH,2
+#DIM DYNAMIC BORDER_HEIGHT,2
+#DIM DYNAMIC BORDER_STYLE
+#DIM DYNAMIC IMG_SIZE
+#DIMS DYNAMIC RESULTS_HTML
+
+BORDER_STYLE = ARG:5
+IMG_SIZE = ARG:4
+
+BORDER_XPOS:0 = ARG:0
+BORDER_YPOS:0 = ARG:1
+BORDER_WIDTH:0 = ARG:2
+BORDER_HEIGHT:0 = ARG:3
+
+;右線と下線頂点の位置を計算
+BORDER_XPOS:1 = BORDER_XPOS:0 + BORDER_WIDTH:0 - IMG_SIZE
+BORDER_YPOS:1 = BORDER_YPOS:0 + BORDER_HEIGHT:0 - IMG_SIZE
+
+;上下左右の幅と高さを計算
+BORDER_WIDTH:1 = BORDER_WIDTH:0 - (IMG_SIZE * 2)
+BORDER_HEIGHT:1 = BORDER_HEIGHT:0 - (IMG_SIZE * 2)
+
+;左上
+RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:0}'><img src='枠左上{BORDER_STYLE}' width='{IMG_SIZE}' height='{IMG_SIZE}' ypos='{BORDER_YPOS:0}'></nonbutton>"
+;左下
+RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:0}'><img src='枠左下{BORDER_STYLE}' width='{IMG_SIZE}' height='{IMG_SIZE}' ypos='{BORDER_YPOS:1}'></nonbutton>"
+;右上
+RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:1}'><img src='枠右上{BORDER_STYLE}' width='{IMG_SIZE}' height='{IMG_SIZE}' ypos='{BORDER_YPOS:0}'></nonbutton>"
+;右下
+RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:1}'><img src='枠右下{BORDER_STYLE}' width='{IMG_SIZE}' height='{IMG_SIZE}' ypos='{BORDER_YPOS:1}'></nonbutton>"
+
+IF BORDER_WIDTH:1 > 0
+	;上
+	RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:0 + IMG_SIZE}'><img src='枠上{BORDER_STYLE}' width='{BORDER_WIDTH:1}' height='{IMG_SIZE}' ypos='{BORDER_YPOS:0}'></nonbutton>"
+	;下
+	RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:0 + IMG_SIZE}'><img src='枠下{BORDER_STYLE}' width='{BORDER_WIDTH:1}' height='{IMG_SIZE}' ypos='{BORDER_YPOS:1}'></nonbutton>"
+ENDIF
+
+IF BORDER_HEIGHT:1 > 0
+	;左
+	RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:0}'><img src='枠左{BORDER_STYLE}' width='{IMG_SIZE}' height='{BORDER_HEIGHT:1}' ypos='{BORDER_YPOS:0 + IMG_SIZE}'></nonbutton>"
+	;右
+	RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:1}'><img src='枠右{BORDER_STYLE}' width='{IMG_SIZE}' height='{BORDER_HEIGHT:1}' ypos='{BORDER_YPOS:0 + IMG_SIZE}'></nonbutton>"
+ENDIF
+
+SIF BORDER_WIDTH:1 > 0 && BORDER_HEIGHT:1 > 0
+	RESULTS_HTML += @"<nonbutton pos='{BORDER_XPOS:0 + IMG_SIZE}'><img src='枠中央{BORDER_STYLE}' width='{BORDER_WIDTH:1}' height='{BORDER_HEIGHT:1}' ypos='{BORDER_YPOS:0 + IMG_SIZE}'></nonbutton>"
+
+RETURNF RESULTS_HTML
+
+;-------------------------------------------------
+;HTML_PRINTのHEIGHTはフォント基準の為、一行の高さとフォントの高さが違う場合には少しずつ移開ていく
+;その補正をしてくれる、だいたいの位置にはなるはず
+;-------------------------------------------------
+@FLC(ARG)
+#FUNCTION
+#DIM DYNAMIC LINE_SIZE
+
+;一行の高さ*100/フォントサイズ
+LINE_SIZE = ARG * GETCONFIG("一行の高さ") / GETCONFIG("フォントサイズ")
+
+RETURNF LINE_SIZE
+

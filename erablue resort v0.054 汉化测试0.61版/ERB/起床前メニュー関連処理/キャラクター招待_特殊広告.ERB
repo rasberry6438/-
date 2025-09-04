@@ -1,0 +1,674 @@
+﻿@特殊広告一覧表示(左側表示文字列)
+#DIMS REF 左側表示文字列
+#DIM 関数総数
+
+LOCAL = 0
+VARSET RESULTS
+VARSET 特殊広告関数保存
+関数総数 = ENUMFUNCBEGINSWITH("特殊広告_")
+ARRAYCOPY "RESULTS", "特殊広告関数保存"
+
+IF 関数総数 > 0
+	FOR LOCAL, 0, 関数総数
+		IF LOCAL == 関数総数 - 1
+			LOCALS = └
+		ELSE
+			LOCALS = ├
+		ENDIF
+		IF 表示キー_左 == 特殊広告関数保存:LOCAL
+			左側表示文字列 += @"<font color='#%カラーパレット_HTML("黄")%'>%LOCALS%[{LOCAL + 10}] %REPLACE(特殊広告関数保存:LOCAL, "特殊広告_", "")%</font><br>"
+		ELSE
+			左側表示文字列 += @"<button value='{LOCAL + 10}'>%LOCALS%[{LOCAL + 10}] %REPLACE(特殊広告関数保存:LOCAL, "特殊広告_", "")%</button><br>"
+		ENDIF
+	NEXT
+ENDIF
+
+
+@特殊広告_发送DM（私信）(処理モード, 入力数値 = 0)
+#DIMS 処理モード
+#DIM 入力数値
+#DIM 表示候補, キャラクタ数上限
+#DIM 現在ページ
+#DIM 広告対象
+
+SELECTCASE 処理モード
+	CASE "右側表示"
+		詳細文文字列受け渡し変数 += "■发送DM（私信）<br><br>"
+		詳細文文字列受け渡し変数 += "向达到一定好感度的角色发送信件形式广告，需花费5000卢比。<br>"
+		詳細文文字列受け渡し変数 += "可指定目标角色，但花费资金较高且不保证必定到访。<br>"
+		詳細文文字列受け渡し変数 += "访问概率随好感度提升而增加。<br><br>"
+		IF MONEY < 5000
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[100] 选择DM发送对象（资金不足）</font>"
+		ELSE
+			詳細文文字列受け渡し変数 += "<button value='100'>[100] 选择DM发送对象</button>"
+		ENDIF
+	CASE "実処理"
+		VARSET 表示候補, -1
+		現在ページ = 0
+
+		;表示キャラを登録
+		LOCAL:1 = 0
+		FOR LOCAL, 1, CHARANUM
+			;招待不可キャラは排除
+			SIF CFLAG:LOCAL:招待不可フラグ
+				CONTINUE
+			;好感度レベル11以上（顔見知り以上）条件
+			SIF CFLAG:LOCAL:好感度レベル < 1+関係閾値:1
+				CONTINUE
+			;滞在済みは出さない
+			SIF CFLAG:LOCAL:滞在期間 >= 0
+				CONTINUE
+			;オプションによる制御
+			SIF 性別招待制御_実処理(LOCAL)
+				CONTINUE
+			LOCAL:3 = 0
+			FOR LOCAL:2, 0, 100
+				SIF 解放キャラ招待:(LOCAL:2) == 0
+					BREAK
+				IF 解放キャラ招待:(LOCAL:2) == LOCAL
+					LOCAL:3 = 1
+					BREAK
+				ELSEIF LOCAL:2 < 20 && スイートルーム招待:(LOCAL:2) == LOCAL
+					LOCAL:3 = 1
+					BREAK
+				ENDIF
+			NEXT
+			SIF LOCAL:3
+				CONTINUE
+			表示候補:(LOCAL:1) = LOCAL
+			LOCAL:1 += 1
+		NEXT
+
+		$表示_LOOP
+
+		;広告対象の表示
+		DRAWLINE
+		PRINTL 要向谁发送直接邮件？
+		DRAWLINE
+		LOCAL:1 = 0
+		;キャラの表示（15人まで）
+		FOR LOCAL, (現在ページ * 30), ((現在ページ * 30) + 30)
+			;登録が終わったら表示終了
+			IF 表示候補:LOCAL == -1
+				BREAK
+			ENDIF
+			PRINTBUTTON @"[{LOCAL,3,RIGHT}] %ADD_STR_SPACE(NAME表示(表示候補:LOCAL), "]"), 50, LEFT%", LOCAL
+			IF TALENT:(表示候補:LOCAL):常連
+				PRINT 常連　
+			ELSE
+				PRINT 　　　
+			ENDIF
+			SIF LOCAL % 2 != 0
+				PRINTL 
+		NEXT
+		PRINTL
+		DRAWLINE
+
+		;ページめくり表示
+		IF 現在ページ > 0
+			PRINTBUTTONLC "[900]上一页", 900
+		ELSE
+			PRINTLC 　　　
+		ENDIF
+		PRINTFORM - {現在ページ + 1} -
+		IF 表示候補:((現在ページ * 30) + 30) > 0
+			PRINTBUTTONC "[901]下一页", 901
+		ENDIF
+		PRINTL 
+		PRINTBUTTON "[999]返回", 999
+
+		$INPUT_LOOP
+		BINPUT
+
+		;広告対象のINPUT
+		SELECTCASE RESULT
+			CASE 900
+				現在ページ = MAX(現在ページ - 1, 0)
+				GOTO 表示_LOOP
+			CASE 901
+				SIF LOCAL:1 == 0
+					現在ページ += 1
+				GOTO 表示_LOOP
+			CASE 999
+				RETURN -1
+			CASE IS >= CHARANUM, IS < 0
+				REUSELASTLINE 
+				GOTO INPUT_LOOP
+			CASEELSE
+				IF 表示候補:RESULT < 0
+					REUSELASTLINE 
+					GOTO INPUT_LOOP
+				ENDIF
+				広告対象 = 表示候補:RESULT
+		ENDSELECT
+
+		DRAWLINE
+		PRINTFORMW %CALLNAME:MASTER%支付5000卢比费用，向%CALLNAME:広告対象%发送了直接邮件。
+		MONEY -= 5000
+
+		LOCAL = RAND:100
+		LOCAL:1 = 50
+		集客人数 = 1
+		;基礎確率50%、以下の素質で上下させる
+		;好感度による確率上昇。＋０％～１８％
+		LOCAL:1 += (CFLAG:広告対象:好感度レベル - 10) / 5
+		;恋慕だと確定で来る
+		IF TALENT:広告対象:恋慕
+			LOCAL:1 += 100
+		ENDIF
+
+		;実際に来るかどうかわかるのは起床後の朝だが判定はここで確定させる
+		ＤＭキャラ招待 = 広告対象
+		;失敗時、負の数にする。常連は失敗しない
+		SIF LOCAL >= LOCAL:1 && TALENT:広告対象:常連 == 0
+			ＤＭキャラ招待 = ＤＭキャラ招待 * -1
+ENDSELECT
+
+
+
+@特殊広告_定向种族广告投放(処理モード, 入力数値 = 0)
+#DIMS 処理モード
+#DIM 入力数値
+#DIM 集客候補, キャラクタ数上限
+#DIM 候補人数
+#DIM 集客人数保存
+VARSET 集客候補
+
+SELECTCASE 処理モード
+	CASE "右側表示"
+		詳細文文字列受け渡し変数 += "■定向种族广告投放<br><br>"
+		詳細文文字列受け渡し変数 += "针对特定种族投放定向广告，统一花费5000卢比。<br>"
+		詳細文文字列受け渡し変数 += "可提升目标种族到访概率，但资金效益比低于常规广告。<br>"
+		詳細文文字列受け渡し変数 += "（非绝对锁定，可能出现非目标角色混入）<br><br>"
+		IF 表示キー_右 == "ヒューマン"
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("黄")%'>[101] 人类定向广告（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）</font><br>"
+		ELSE
+			詳細文文字列受け渡し変数 += @"<button value='101'>[101] 人类定向广告</button>（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）<br>"
+		ENDIF
+		IF 表示キー_右 == "エルーン"
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("黄")%'>[102] 艾伦族定向广告（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）</font><br>"
+		ELSE
+			詳細文文字列受け渡し変数 += @"<button value='102'>[102] 艾伦族定向广告</button>（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）<br>"
+		ENDIF
+		IF 表示キー_右 == "ドラフ"
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("黄")%'>[103] 多拉夫族定向广告（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）</font><br>"
+		ELSE
+			詳細文文字列受け渡し変数 += @"<button value='103'>[103] 多拉夫族定向广告</button>（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）<br>"
+		ENDIF
+		IF 表示キー_右 == "ハーヴィン"
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("黄")%'>[104] 哈文族定向广告（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）</font><br>"
+		ELSE
+			詳細文文字列受け渡し変数 += @"<button value='104'>[104] 哈文族定向广告</button>（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）<br>"
+		ENDIF
+		IF 表示キー_右 == "星晶獣"
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("黄")%'>[105] 星晶兽定向广告（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{3 + 招待キャラ数補正算出(), 2}人）</font><br>"
+		ELSE
+			詳細文文字列受け渡し変数 += @"<button value='105'>[105] 星晶兽定向广告</button>（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{3 + 招待キャラ数補正算出(), 2}人）<br>"
+		ENDIF
+		IF 表示キー_右 == "異世界キャラ"
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("黄")%'>[106] 异世界角色定向广告（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）</font><br>"
+		ELSE
+			詳細文文字列受け渡し変数 += @"<button value='106'>[106] 异世界角色定向广告</button>（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{4 + 招待キャラ数補正算出(), 2}人）<br>"
+		ENDIF
+		詳細文文字列受け渡し変数 += "<br>"
+		IF 表示キー_右 != ""
+			IF MONEY < 5000
+				詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[110] 确认投放广告（资金不足）</font>"
+			ELSE
+				詳細文文字列受け渡し変数 += "<button value='110'>[110] 确认投放广告</button><br>"
+			ENDIF
+		ENDIF
+	CASE "実処理"
+		SELECTCASE 入力数値
+			CASE 101
+				表示キー_右 = ヒューマン
+				RETURN -1
+			CASE 102
+				表示キー_右 = エルーン
+				RETURN -1
+			CASE 103
+				表示キー_右 = ドラフ
+				RETURN -1
+			CASE 104
+				表示キー_右 = ハーヴィン
+				RETURN -1
+			CASE 105
+				表示キー_右 = 星晶獣
+				RETURN -1
+			CASE 106
+				表示キー_右 = 異世界キャラ
+				RETURN -1
+			CASE 110
+				PRINTFORMW 已投放%表示キー_右%定向广告。
+				MONEY -= 5000
+				CALL 人気上昇処理(3000)
+				;実処理
+				;集客人数を入れて、まずは通常広告処理
+				IF 表示キー_右 == "星晶獣"
+					集客人数 = RAND:2 + 2 + 招待キャラ数補正算出()
+				ELSE
+					集客人数 = RAND:3 + 2 + 招待キャラ数補正算出()
+				ENDIF
+				CALL 通常招待_実処理
+				;通常招待の方が多い時に備えて集客人数を退避
+				集客人数保存 = 集客人数
+				;その後、上書きする形で種族別の招待を処理
+				IF 表示キー_右 == "星晶獣"
+					集客人数 = RAND:2 + 2 + 招待キャラ数補正算出()
+				ELSE
+					集客人数 = RAND:3 + 2 + 招待キャラ数補正算出()
+				ENDIF
+				;上限以下にする
+				CALL ユニーク客人数チェック()
+				集客人数 = MIN(集客人数, (滞在キャラ上限 - 滞在キャラ数))
+
+				LOCAL:1 = 0
+				FOR LOCAL, 1, CHARANUM
+					;招待不可キャラは排除
+					SIF CFLAG:LOCAL:招待不可フラグ
+						CONTINUE
+					;特别招待券で呼ぶ予定のキャラは排除
+					SIF LOCAL == 特别招待券キャラ招待
+						CONTINUE
+					;オプションによる制御
+					SIF 性別招待制御_実処理(LOCAL)
+						CONTINUE
+					;種族制御
+					IF 表示キー_右 == "異世界キャラ"
+						SIF CSTR:LOCAL:出演作品 == "" || CSTR:LOCAL:出演作品 == "グランブルーファンタジー"
+							CONTINUE
+					ELSE
+						SIF TALENT:LOCAL:種族 != GETVAR(@"種族_%表示キー_右%")
+							CONTINUE
+					ENDIF
+					LOCAL:3 = 0
+					FOR LOCAL:2, 0, 100
+						SIF 解放キャラ招待:(LOCAL:2) == 0
+							BREAK
+						IF 解放キャラ招待:(LOCAL:2) == LOCAL
+							LOCAL:3 = 1
+							BREAK
+						ELSEIF LOCAL:2 < 20 && スイートルーム招待:(LOCAL:2) == LOCAL
+							LOCAL:3 = 1
+							BREAK
+						ENDIF
+					NEXT
+					SIF LOCAL:3
+						CONTINUE
+					;滞在状態ではないキャラをカウント
+					IF CFLAG:LOCAL:滞在期間 == -1
+						集客候補:(LOCAL:1) = LOCAL
+						LOCAL:1 += 1
+					ENDIF
+				NEXT
+				候補人数 = LOCAL:1
+
+				;候補人数が０の場合はそのまま終わる
+				IF 候補人数 == 0
+					集客人数 = 集客人数保存
+					RETURN 0
+				ENDIF
+
+				;候補人数が集客人数より少ない場合は全員登録
+				IF 候補人数 <= 集客人数 || 候補人数 < 2
+					FOR LOCAL, 0, 候補人数
+						通常キャラ招待:LOCAL = 集客候補:LOCAL
+					NEXT
+				ELSE
+					LOCAL:2 = 0
+					LOCAL = 候補人数 - 1
+					;集客候補配列をシャッフル
+					WHILE LOCAL > 1
+						LOCAL:1 = RAND:(LOCAL - 1)
+						SWAP 集客候補:LOCAL, 集客候補:(LOCAL:1)
+						LOCAL -= 1
+						LOCAL:2 += 1
+						;候補なしでおしまい
+						IF LOCAL < 1
+							集客人数 = LOCAL:2
+							BREAK
+						ENDIF
+						;必要分集まったらおしまい
+						SIF LOCAL:2 >= 集客人数
+							BREAK
+					WEND
+					;配列の後ろの方にランダムシャッフルされた候補が集まってるはずなので集客人数分取得
+					FOR LOCAL, 0, 集客人数
+						通常キャラ招待:LOCAL = 集客候補:(候補人数 - 1 - LOCAL)
+					NEXT
+				ENDIF
+				集客人数 = 集客人数保存
+		ENDSELECT
+ENDSELECT
+
+
+
+@特殊広告_团体客户定向广告(処理モード, 入力数値 = 0)
+#DIMS 処理モード
+#DIM 入力数値
+#DIM 集客候補, キャラクタ数上限
+#DIM 候補人数
+#DIM 集客人数保存
+VARSET 集客候補
+
+SELECTCASE 処理モード
+	CASE "右側表示"
+		詳細文文字列受け渡し変数 += "■团体客户定向广告<br><br>"
+		詳細文文字列受け渡し変数 += "针对团体客户投放广告，统一花费10000卢比。<br>"
+		詳細文文字列受け渡し変数 += "拥有5名以上同行候补的角色更易到访，同行概率提升至1.5倍。<br>但资金效益比低于常规广告。<br>"
+		詳細文文字列受け渡し変数 += "（非绝对锁定，可能出现非目标角色混入）<br><br>"
+		IF MONEY < 10000
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[100] 投放团体客户广告（资金不足）</font>"
+		ELSE
+			詳細文文字列受け渡し変数 += "<button value='100'>[100] 投放团体客户广告</button><br>"
+		ENDIF
+		詳細文文字列受け渡し変数 += @"（预计吸引：{2 + 招待キャラ数補正算出(), 2}～{3 + 招待キャラ数補正算出(), 2}人）"
+	CASE "実処理"
+		PRINTFORMW 已投放团体客户定向广告。
+		MONEY -= 10000
+		CALL 人気上昇処理(5000)
+		団体客広告フラグ = 1
+		;実処理
+		;集客人数を入れて、まずは通常広告処理
+		集客人数 = RAND:2 + 2 + 招待キャラ数補正算出()
+		CALL 通常招待_実処理
+		;通常招待の方が多い時に備えて集客人数を退避
+		集客人数保存 = 集客人数
+		;その後、上書きする形で条件該当キャラの招待を処理
+		集客人数 = RAND:2 + 2 + 招待キャラ数補正算出()
+		;上限以下にする
+		CALL ユニーク客人数チェック()
+		集客人数 = MIN(集客人数, (滞在キャラ上限 - 滞在キャラ数))
+
+		LOCAL:1 = 0
+		FOR LOCAL, 1, CHARANUM
+			;招待不可キャラは排除
+			SIF CFLAG:LOCAL:招待不可フラグ
+				CONTINUE
+			;特别招待券で呼ぶ予定のキャラは排除
+			SIF LOCAL == 特别招待券キャラ招待
+				CONTINUE
+			;オプションによる制御
+			SIF 性別招待制御_実処理(LOCAL)
+				CONTINUE
+			;同行キャラ数を見る
+			SIF MATCH(同行候補キャラ番号:LOCAL:0, 0) > 95
+				CONTINUE
+			LOCAL:3 = 0
+			FOR LOCAL:2, 0, 100
+				SIF 解放キャラ招待:(LOCAL:2) == 0
+					BREAK
+				IF 解放キャラ招待:(LOCAL:2) == LOCAL
+					LOCAL:3 = 1
+					BREAK
+				ELSEIF LOCAL:2 < 20 && スイートルーム招待:(LOCAL:2) == LOCAL
+					LOCAL:3 = 1
+					BREAK
+				ENDIF
+			NEXT
+			SIF LOCAL:3
+				CONTINUE
+			;滞在状態ではないキャラをカウント
+			IF CFLAG:LOCAL:滞在期間 == -1
+				集客候補:(LOCAL:1) = LOCAL
+				LOCAL:1 += 1
+			ENDIF
+		NEXT
+		候補人数 = LOCAL:1
+
+		;候補人数が０の場合はそのまま終わる
+		IF 候補人数 == 0
+			集客人数 = 集客人数保存
+			RETURN 0
+		ENDIF
+
+		;候補人数が集客人数より少ない場合は全員登録
+		IF 候補人数 <= 集客人数
+			FOR LOCAL, 0, 候補人数
+				通常キャラ招待:LOCAL = 集客候補:LOCAL
+			NEXT
+		ELSE
+			LOCAL:2 = 0
+			LOCAL = 候補人数 - 1
+			;集客候補配列をシャッフル
+			WHILE LOCAL > 1
+				LOCAL:1 = RAND:(LOCAL - 1)
+				SWAP 集客候補:LOCAL, 集客候補:(LOCAL:1)
+				LOCAL -= 1
+				LOCAL:2 += 1
+				;必要分集まったらおしまい
+				SIF LOCAL:2 >= 集客人数
+					BREAK
+			WEND
+			;配列の後ろの方にランダムシャッフルされた候補が集まってるはずなので集客人数分取得
+			FOR LOCAL, 0, 集客人数
+				通常キャラ招待:LOCAL = 集客候補:(候補人数 - 1 - LOCAL)
+			NEXT
+		ENDIF
+		集客人数 = 集客人数保存
+ENDSELECT
+
+
+
+@特殊広告_新客户开拓广告(処理モード, 入力数値 = 0)
+#DIMS 処理モード
+#DIM 入力数値
+#DIM 集客候補, キャラクタ数上限
+#DIM 候補人数
+#DIM 集客人数保存
+VARSET 集客候補
+
+SELECTCASE 処理モード
+	CASE "右側表示"
+		詳細文文字列受け渡し変数 += "■新客户开拓广告<br><br>"
+		詳細文文字列受け渡し変数 += "针对未到访过度假村的新客户投放宣传广告。<br>统一花费10000卢比。<br>"
+		詳細文文字列受け渡し変数 += "提升初次到访角色的出现概率。<br>"
+		詳細文文字列受け渡し変数 += "（非绝对锁定，可能出现非目标角色混入）<br><br>"
+		IF MONEY < 10000
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[100] 投放新客户广告（资金不足）</font>"
+		ELSE
+			詳細文文字列受け渡し変数 += "<button value='100'>[100] 投放新客户广告</button><br>"
+		ENDIF
+		詳細文文字列受け渡し変数 += @"（预计吸引：{5 + 招待キャラ数補正算出(), 2}～{7 + 招待キャラ数補正算出(), 2}人）"
+	CASE "実処理"
+		PRINTFORMW 已投放新客户开拓广告。
+		MONEY -= 10000
+		CALL 人気上昇処理(10000)
+		;実処理
+		;集客人数を入れて、まずは通常広告処理
+		集客人数 = RAND:3 + 5 + 招待キャラ数補正算出()
+		CALL 通常招待_実処理
+		;通常招待の方が多い時に備えて集客人数を退避
+		集客人数保存 = 集客人数
+		;その後、上書きする形で条件該当キャラの招待を処理
+		集客人数 = RAND:3 + 5 + 招待キャラ数補正算出()
+		;上限以下にする
+		CALL ユニーク客人数チェック()
+		集客人数 = MIN(集客人数, (滞在キャラ上限 - 滞在キャラ数))
+
+		LOCAL:1 = 0
+		FOR LOCAL, 1, CHARANUM
+			;招待不可キャラは排除
+			SIF CFLAG:LOCAL:招待不可フラグ
+				CONTINUE
+			;特别招待券で呼ぶ予定のキャラは排除
+			SIF LOCAL == 特别招待券キャラ招待
+				CONTINUE
+			;オプションによる制御
+			SIF 性別招待制御_実処理(LOCAL)
+				CONTINUE
+			;リゾート来訪回数を見る
+			SIF CFLAG:LOCAL:リゾート来訪回数 > 0
+				CONTINUE
+			LOCAL:3 = 0
+			FOR LOCAL:2, 0, 100
+				SIF 解放キャラ招待:(LOCAL:2) == 0
+					BREAK
+				IF 解放キャラ招待:(LOCAL:2) == LOCAL
+					LOCAL:3 = 1
+					BREAK
+				ELSEIF LOCAL:2 < 20 && スイートルーム招待:(LOCAL:2) == LOCAL
+					LOCAL:3 = 1
+					BREAK
+				ENDIF
+			NEXT
+			SIF LOCAL:3
+				CONTINUE
+			;滞在状態ではないキャラをカウント
+			IF CFLAG:LOCAL:滞在期間 == -1
+				集客候補:(LOCAL:1) = LOCAL
+				LOCAL:1 += 1
+			ENDIF
+		NEXT
+		候補人数 = LOCAL:1
+
+		;候補人数が０の場合はそのまま終わる
+		IF 候補人数 == 0
+			集客人数 = 集客人数保存
+			RETURN 0
+		ENDIF
+
+		;候補人数が集客人数より少ない場合は全員登録
+		IF 候補人数 <= 集客人数
+			FOR LOCAL, 0, 候補人数
+				通常キャラ招待:LOCAL = 集客候補:LOCAL
+			NEXT
+		ELSE
+			LOCAL:2 = 0
+			LOCAL = 候補人数 - 1
+			;集客候補配列をシャッフル
+			WHILE LOCAL > 1
+				LOCAL:1 = RAND:(LOCAL - 1)
+				SWAP 集客候補:LOCAL, 集客候補:(LOCAL:1)
+				LOCAL -= 1
+				LOCAL:2 += 1
+				;必要分集まったらおしまい
+				SIF LOCAL:2 >= 集客人数
+					BREAK
+			WEND
+			;配列の後ろの方にランダムシャッフルされた候補が集まってるはずなので集客人数分取得
+			FOR LOCAL, 0, 集客人数
+				通常キャラ招待:LOCAL = 集客候補:(候補人数 - 1 - LOCAL)
+			NEXT
+		ENDIF
+		集客人数 = 集客人数保存
+ENDSELECT
+
+
+@特殊広告_回头客定向广告(処理モード, 入力数値 = 0)
+#DIMS 処理モード
+#DIM 入力数値
+#DIM 集客候補, キャラクタ数上限
+#DIM 候補人数
+#DIM 集客人数保存
+#DIM 非常連フラグ
+VARSET 集客候補
+
+SELECTCASE 処理モード
+	CASE "右側表示"
+		詳細文文字列受け渡し変数 += "■回头客定向广告<br><br>"
+		詳細文文字列受け渡し変数 += "针对回头客投放促销广告。<br>统一花费10000卢比。<br>"
+		詳細文文字列受け渡し変数 += "提升曾到访过度假村的角色再次到访概率。<br>"
+		詳細文文字列受け渡し変数 += "（非绝对锁定，可能出现非目标角色混入）<br><br>"
+		IF MONEY < 10000
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[100] 投放回头客广告（资金不足）</font>"
+			詳細文文字列受け渡し変数 += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>[101] 投放回头客（非常客）广告（资金不足）</font>"
+		ELSE
+			詳細文文字列受け渡し変数 += "<button value='100'>[100] 投放回头客广告</button><br>"
+			詳細文文字列受け渡し変数 += "<button value='101'>[101] 投放回头客（非常客）广告</button><br>"
+		ENDIF
+		詳細文文字列受け渡し変数 += @"（预计吸引：{5 + 招待キャラ数補正算出(), 2}～{7 + 招待キャラ数補正算出(), 2}人）"
+	CASE "実処理"
+		MONEY -= 10000
+		CALL 人気上昇処理(10000)
+		;実処理
+		;集客人数を入れて、まずは通常広告処理
+		集客人数 = RAND:3 + 5 + 招待キャラ数補正算出()
+		CALL 通常招待_実処理
+		;通常招待の方が多い時に備えて集客人数を退避
+		集客人数保存 = 集客人数
+		;その後、上書きする形で条件該当キャラの招待を処理
+		集客人数 = RAND:3 + 5 + 招待キャラ数補正算出()
+		;上限以下にする
+		CALL ユニーク客人数チェック()
+		集客人数 = MIN(集客人数, (滞在キャラ上限 - 滞在キャラ数))
+
+		SELECTCASE 入力数値
+			CASE 100
+				PRINTFORMW 已投放回头客定向广告。
+				非常連フラグ = 0
+			CASE 101
+				PRINTFORMW 已投放回头客（非常客）定向广告。
+				非常連フラグ = 1
+		ENDSELECT
+
+		LOCAL:1 = 0
+		FOR LOCAL, 1, CHARANUM
+			;招待不可キャラは排除
+			SIF CFLAG:LOCAL:招待不可フラグ
+				CONTINUE
+			;特别招待券で呼ぶ予定のキャラは排除
+			SIF LOCAL == 特别招待券キャラ招待
+				CONTINUE
+			;オプションによる制御
+			SIF 性別招待制御_実処理(LOCAL)
+				CONTINUE
+			;リゾート来訪回数を見る
+			SIF CFLAG:LOCAL:リゾート来訪回数 <= 0
+				CONTINUE
+			;非常連時
+			SIF 非常連フラグ && TALENT:LOCAL:常連
+				CONTINUE
+			LOCAL:3 = 0
+			FOR LOCAL:2, 0, 100
+				SIF 解放キャラ招待:(LOCAL:2) == 0
+					BREAK
+				IF 解放キャラ招待:(LOCAL:2) == LOCAL
+					LOCAL:3 = 1
+					BREAK
+				ELSEIF LOCAL:2 < 20 && スイートルーム招待:(LOCAL:2) == LOCAL
+					LOCAL:3 = 1
+					BREAK
+				ENDIF
+			NEXT
+			SIF LOCAL:3
+				CONTINUE
+			;滞在状態ではないキャラをカウント
+			IF CFLAG:LOCAL:滞在期間 == -1
+				集客候補:(LOCAL:1) = LOCAL
+				LOCAL:1 += 1
+			ENDIF
+		NEXT
+		候補人数 = LOCAL:1
+
+		;候補人数が０の場合はそのまま終わる
+		IF 候補人数 == 0
+			集客人数 = 集客人数保存
+			RETURN 0
+		ENDIF
+
+		;候補人数が集客人数より少ない場合は全員登録
+		IF 候補人数 <= 集客人数
+			FOR LOCAL, 0, 候補人数
+				通常キャラ招待:LOCAL = 集客候補:LOCAL
+			NEXT
+		ELSE
+			LOCAL:2 = 0
+			LOCAL = 候補人数 - 1
+			;集客候補配列をシャッフル
+			WHILE LOCAL > 1
+				LOCAL:1 = RAND:(LOCAL - 1)
+				SWAP 集客候補:LOCAL, 集客候補:(LOCAL:1)
+				LOCAL -= 1
+				LOCAL:2 += 1
+				;必要分集まったらおしまい
+				SIF LOCAL:2 >= 集客人数
+					BREAK
+			WEND
+			;配列の後ろの方にランダムシャッフルされた候補が集まってるはずなので集客人数分取得
+			FOR LOCAL, 0, 集客人数
+				通常キャラ招待:LOCAL = 集客候補:(候補人数 - 1 - LOCAL)
+			NEXT
+		ENDIF
+		集客人数 = 集客人数保存
+ENDSELECT

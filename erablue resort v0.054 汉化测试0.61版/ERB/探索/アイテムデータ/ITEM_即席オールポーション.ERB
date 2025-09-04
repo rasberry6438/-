@@ -1,0 +1,57 @@
+﻿
+@アイテム個別文章表示_即效万能药(ARGS)
+;ポーション
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 800
+ENDIF
+
+LOCALS = 
+LOCALS += @"■即效万能药　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "即效万能药")}<br>"
+LOCALS += "就地取材调制的临时恢复药。<br>"
+LOCALS += "无法长期保存，探索结束后自动消失。<br>"
+LOCALS += "但相应具有较高恢复效果。<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "我方全体ＨＰ恢复[８００]。<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_即效万能药
+CALL 汎用使用先表示("味方全体")
+
+@アイテム効果処理_即效万能药(ARG)
+;ARG = 隊列の何番目か
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "即效万能药") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+LOCAL:1 = 0
+FOR LOCAL, 0, 14
+	SIF LOCAL > 3 && LOCAL < 10
+		CONTINUE
+	SIF !BATTLE_STATE:LOCAL:キャラ登録番号
+		CONTINUE
+	SIF BATTLE_STATE:LOCAL:ＨＰ < 1
+		CONTINUE
+	SIF BATTLE_STATE:LOCAL:最大ＨＰ == BATTLE_STATE:LOCAL:ＨＰ
+		CONTINUE
+	IF BATTLE_STATE:LOCAL:最大ＨＰ - BATTLE_STATE:LOCAL:ＨＰ < 800
+		PRINTFORML %CALLNAME:(BATTLE_STATE:LOCAL:キャラ登録番号)%的ＨＰ恢复了{BATTLE_STATE:LOCAL:最大ＨＰ - BATTLE_STATE:LOCAL:ＨＰ}
+	ELSE
+		PRINTFORML %CALLNAME:(BATTLE_STATE:LOCAL:キャラ登録番号)%的ＨＰ恢复了800
+	ENDIF
+	BATTLE_STATE:LOCAL:ＨＰ = MIN(BATTLE_STATE:LOCAL:ＨＰ + 800, BATTLE_STATE:LOCAL:最大ＨＰ)
+	LOCAL:1 += 1
+NEXT
+
+IF LOCAL:1 > 0
+	WAIT
+ELSE
+	PRINTW 没有可恢复对象。
+	RETURN 0
+ENDIF
+
+RETURN 1

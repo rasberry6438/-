@@ -1,0 +1,128 @@
+﻿
+@性癖開拓チャレンジ処理_首絞め(ARG)
+;首絞め
+CSTR:ARG:性癖開拓報告_記録文字列 += @"%CALLNAME:PLAYER%巧妙地将关于「窒息性爱情境」的色情书籍传递给了%CALLNAME:ARG%…<br>"
+CSTR:ARG:性癖開拓報告_記録文字列 += "<br>"
+
+;固有処理
+RESULT = 0
+CALL 口上変数初期化
+TRYCALLFORM 性癖開拓_固有条件_首絞め_{NO:ARG}(ARG)
+LOCAL = RESULT
+SIF 口上有無確認(0, 1)
+	CSTR:ARG:性癖開拓報告_記録文字列 += @"性癖開拓_固有条件"
+IF LOCAL == 1
+	CSTR:ARG:性癖開拓報告_記録文字列 += @"<br>"
+	CSTR:ARG:性癖開拓報告_記録文字列 += @"%CALLNAME:ARG%获得了性癖特质[勒脖子(兴趣)]<br>"
+	性癖素質:ARG:首絞め = 1
+	CALL 履歴データベース登録(CFLAG:ARG:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>获得性癖特质[勒脖子(兴趣)]</font>","うふふ")
+	RETURN 1
+ELSEIF LOCAL == -1
+	RETURN 0
+ENDIF
+
+;エロ本を読むかどうか
+IF 知識素質:ARG:性知識 < 性知識条件_性癖開拓チャレンジ()
+	;性知識が-1か-2だと本の内容を理解できない
+	CSTR:ARG:性癖開拓報告_記録文字列 += @"%CALLNAME:ARG%随手翻开不知何时出现在身边的色情书籍，但似乎完全无法理解内容…<br>"
+	RETURN -1
+ENDIF
+
+;基礎確率は2/20（見た目怖いので他より低い）
+LOCAL = 2
+;叡智の殿堂補正
+SIF 高速船記録:派遣先登録 == "智慧殿堂"
+	LOCAL += 1
+;自制心、性的興味、性欲が影響
+LOCAL -= TALENT:ARG:自制心
+LOCAL += TALENT:ARG:性的興味 * 2
+LOCAL += TALENT:ARG:性欲
+SIF BASE:ARG:性欲 > 1500
+	LOCAL += 1
+;マゾ性感が影響
+LOCAL += ABL:ARG:マゾ性感
+;メスドラフはなぜかちょっと高い
+SIF TALENT:ARG:種族 == 種族_ドラフ && IS_FEMALE(ARG)
+	LOCAL += 2
+
+;最低確率1割は確保
+LOCAL = MAX(LOCAL, 1)
+;性欲無しだと読まない
+SIF TALENT:ARG:性欲 == -2
+	LOCAL = -1
+;補正確率より低ければ読む
+IF RAND:20 < LOCAL
+	;読むパターン
+	CSTR:ARG:性癖開拓報告_記録文字列 += @"…%CALLNAME:ARG%发现了不知何时出现在身边的色情书籍。<br>"
+	CSTR:ARG:性癖開拓報告_記録文字列 += @"…%CALLNAME:ARG%发现了不知何时出现在身边的色情书籍。<br>"
+	CSTR:ARG:性癖開拓報告_記録文字列 += "<br>"
+	CSTR:ARG:性癖開拓報告_記録文字列 += @"%CALLNAME:ARG%获得了性癖特质[勒脖子(兴趣)]<br>"
+	性癖素質:ARG:首絞め = 1
+	CALL 履歴データベース登録(CFLAG:ARG:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>获得性癖特质[勒脖子(兴趣)]</font>","うふふ")
+	RETURN 1
+ELSE
+	;読まないパターン
+	CSTR:ARG:性癖開拓報告_記録文字列 += @"%CALLNAME:ARG%对突然出现的色情书籍露出嫌恶表情，将其扔进了垃圾桶<br>"
+ENDIF
+
+RETURN 0
+
+@性癖段階成長_首絞め(キャラ番号)
+#DIM キャラ番号
+
+SELECTCASE 性癖素質:キャラ番号:首絞め
+	CASE 1
+		;経験が足りないとダメ
+		SIF EXP:キャラ番号:首絞め絶頂経験 < 100
+			RETURN 0
+		CALL 性癖段階成長メッセージ_首絞め(キャラ番号, 性癖素質:キャラ番号:首絞め)
+		性癖素質:キャラ番号:首絞め = 2
+		;取得メッセージ
+		CALL 履歴データベース登録(CFLAG:キャラ番号:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>性癖特质[勒脖子(兴趣)]已进化为[勒脖子(喜好)]</font>","うふふ")
+		PRINTL
+
+		RETURN 1
+	CASE 2
+		;経験が足りないとダメ
+		SIF EXP:キャラ番号:首絞め絶頂経験 < 300
+			RETURN 0
+		CALL 性癖段階成長メッセージ_首絞め(キャラ番号, 性癖素質:キャラ番号:首絞め)
+		性癖素質:キャラ番号:首絞め = 3
+		;取得メッセージ
+		CALL 履歴データベース登録(CFLAG:キャラ番号:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>性癖特质[勒脖子(喜好)]已进化为[勒脖子(成瘾)]</font>","うふふ")
+		PRINTL
+
+		RETURN 2
+	CASE 3
+		;既に中毒ならスキップ
+		RETURN 0
+ENDSELECT
+
+@性癖段階成長メッセージ_首絞め(キャラ番号, 表示段階)
+#DIM キャラ番号
+#DIM 表示段階
+
+SELECTCASE 表示段階
+	CASE 1
+		;取得メッセージ
+		DRAWLINE
+		PRINTFORML %CALLNAME:キャラ番号%通过反复体验勒脖子性行为，性癖似乎得到了强化…
+		PRINTL 
+		PRINTFORML %CALLNAME:キャラ番号%的性癖特质[勒脖子(兴趣)]已进化为[勒脖子(喜好)]
+		PRINTL
+	CASE 2
+		;取得メッセージ
+		DRAWLINE
+		PRINTFORML %CALLNAME:キャラ番号%已然彻底沦为勒脖子快感的俘虏…
+		PRINTL 
+		PRINTFORML %CALLNAME:キャラ番号%的性癖特质[勒脖子(喜好)]已进化为[勒脖子(成瘾)]
+		PRINTL
+ENDSELECT
+
+@中毒連れ込み判定_首絞め(キャラ番号)
+#DIM キャラ番号
+
+;中毒じゃないなら戻す
+SIF 性癖素質:キャラ番号:首絞め < 3
+	RETURN 0
+RETURN 1

@@ -1,0 +1,149 @@
+﻿
+@COMNAME350
+#FUNCTIONS
+#DIM 隠密数
+
+隠密数 = 0
+FOR LOCAL, 1, CHARANUM
+	SIF TARGET:LOCAL < 1 || !CFLAG:PLAYER:隠密
+		BREAK
+	SIF CFLAG:(TARGET:LOCAL):隠密
+		隠密数 ++
+NEXT
+
+TSTR:コマンド名受渡 = 推倒
+SIF !BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置)
+	TSTR:コマンド名受渡 = 搂入怀中
+
+IF GET_TARGETNUM() > 1 && !CFLAG:PLAYER:隠密 && フィールド展開:无视嘿咻行为 == 0
+	TSTR:コマンド名受渡 = 一起%TSTR:コマンド名受渡%
+ELSEIF CFLAG:PLAYER:隠密 && 隠密数 > 1
+	TSTR:コマンド名受渡 = 一起%TSTR:コマンド名受渡%
+ENDIF
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_350
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("セクハラ")
+
+@COM_TOOLTIP_350
+LOCALS = <br>■推倒<br>
+LOCALS += "或是搂入怀中。与已达成合意的对象进行性行为的指令。<br>仅在房间内全员已攻略时可用，但隐秘状态或强化暴露领域展开时允许存在未攻略角色。"
+LOCALS += "<br>指令类型：性骚扰<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM350
+;推倒
+IF フィールド展開:无视嘿咻行为
+	CALL うふふ開始キャラ処理(TARGET, "推倒")
+ELSE
+	FOR LOCAL,1,CHARANUM
+		SIF TARGET:LOCAL <= 0
+			BREAK
+		SIF CFLAG:PLAYER:隠密 && !CFLAG:(TARGET:LOCAL):隠密
+			CONTINUE
+		CALL うふふ開始キャラ処理(TARGET:LOCAL, "推倒")
+	NEXT
+ENDIF
+
+CFLAG:PLAYER:うふふ = 1
+
+
+;3Pモード管理フラグを初期化
+FLAG:モード管理 = 0
+
+TIME += 5
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE350
+;推倒実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(350)
+	RETURN RESULT
+;飲み会時はだめ
+SIF TFLAG:調教モード == 3
+	RETURN 0
+;ハーヴィンオナホ中はだめ
+SIF MODE_存在判定_プレイヤー側("ハーヴィンオナホ系", PLAYER)
+	RETURN 0
+;全裸散歩中はだめ
+SIF MODE_存在判定_プレイヤー側("全裸散歩", PLAYER)
+	RETURN 0
+;他人とデート中はダメ
+SIF CFLAG:TARGET:デート && CFLAG:TARGET:デート != PLAYER + 100 && TCVAR:TARGET:デートちょっかい値 < 1
+	RETURN 0
+;馴れ合い強度2
+SIF TCVAR:PLAYER:馴れ合い強度 < 2
+	RETURN 0
+;隠密中は一緒に隠密してるキャラを見る
+IF フィールド展開:无视嘿咻行为 == 0
+	IF CFLAG:PLAYER:隠密
+		FOR LOCAL, 1, CHARANUM
+			SIF TARGET:LOCAL < 1
+				BREAK
+			SIF CFLAG:(TARGET:LOCAL):隠密 && 陥落チェック_性的(TARGET:LOCAL) == 0
+				RETURN 0
+		NEXT
+	ELSE
+		;非隠密時は全員陥落済みでないとだめ
+		FOR LOCAL,1,CHARANUM
+			SIF TARGET:LOCAL < 1
+				BREAK
+			SIF 陥落チェック_性的(TARGET:LOCAL) == 0
+				RETURN 0
+		NEXT
+	ENDIF
+ELSE
+	SIF 陥落チェック_性的(TARGET) == 0
+		RETURN 0
+ENDIF
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+RETURN 1
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM350
+#DIM 隠密数
+
+
+IF CFLAG:TARGET:隠密 && CFLAG:PLAYER:隠密
+	PRINTFORM %CALLNAME:PLAYER%确认阴影处藏匿妥当后
+	隠密数 = 0
+	FOR LOCAL, 1, CHARANUM
+		SIF TARGET:LOCAL < 1
+			BREAK
+		SIF CFLAG:(TARGET:LOCAL):隠密
+			隠密数 ++
+	NEXT
+	IF 隠密数 > 1
+		PRINTFORML 将%CALLNAME:TARGET%们搂入怀中…
+	ELSE
+		PRINTFORML 将%CALLNAME:TARGET%搂入怀中…
+	ENDIF
+ELSEIF GET_TARGETNUM() > 1 && フィールド展開:无视嘿咻行为 == 0
+	PRINTFORM %CALLNAME:PLAYER%
+	IF BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置) == 0
+		PRINT 确认周边无人后
+	ENDIF
+	PRINTFORML 将%CALLNAME:TARGET%们搂入怀中…
+ELSE
+	PRINTFORM %CALLNAME:PLAYER%
+	IF BEDROOM(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置) == 0 && フィールド展開:无视嘿咻行为 == 0
+		PRINT 确认周边无人后
+	ENDIF
+	PRINTFORML 将%CALLNAME:TARGET%搂入怀中…
+ENDIF
+SIF TCVAR:TARGET:初うふふフラグ
+	PRINTFORML %CALLNAME:TARGET%以觉悟的眼神凝视着%CALLNAME:PLAYER%…
+

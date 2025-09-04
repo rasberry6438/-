@@ -1,0 +1,304 @@
+﻿;-------------------------------------------------
+;定住の誘い
+;-------------------------------------------------
+@性処理NAME_乳交服务
+#FUNCTIONS
+TSTR:コマンド名受渡 = 乳交服务
+
+@性処理_TOOLTIP_乳交服务
+LOCALS = <br>■乳交服务<br>
+LOCALS += @"%CALLNAME:PLAYER%的肉棒接受胸部爱抚的性处理。<br>"
+LOCALS += "即使贫乳也可执行，但需更高好感度与金额<br>"
+LOCALS += "<br>指令类型：性处理<br>获取来源：快Ｂ・暴露・接触・侍奉・不洁"
+LOCALS += "<br>专属经验值：乳交经验(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@性処理_乳交服务
+#DIM 行為回数
+
+;射精するまで刺激する
+行為回数 = 0
+DO
+	CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 250)
+	CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 80)
+	行為回数++
+LOOP CUP:PLAYER:快Ｃ + PALAM:PLAYER:快Ｃ < 10000
+TIME += 経過時間算出(行為回数)
+
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 50)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 150)
+CALL SOURCE_CALC_奉仕(TARGET, PLAYER, 400)
+
+CALL SOURCE_CALC_不潔(TARGET, PLAYER, 200)
+
+;奉仕快楽
+RCVAR:TARGET:奉仕コマンドフラグ = 1
+RCVAR:TARGET:汎用喘ぎ_文節低減フラグ = 1
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+EXP:パイズリ経験 ++
+
+;同性愛
+SIF 同性愛性癖判定(PLAYER,TARGET)
+	EXP:PLAYER:同性愛経験 += 7
+SIF 同性愛性癖判定(TARGET,PLAYER)
+	EXP:TARGET:同性愛経験 += 7
+
+;愛情経験
+SIF TALENT:恋慕
+	EXP:愛情経験 ++
+
+;売春経験がない相手に交渉を成立させた場合、あなたの買春カウントが進む
+;これにより「あなたが何人買ったか」の記録とする。
+;最初から売春経験を持ってるキャラに関しては……知らん！！！
+SIF EXP:TARGET:売春経験 == 0
+	EXP:PLAYER:買春経験 += 1
+
+EXP:TARGET:売春経験 += 1
+
+
+RETURN 1
+
+
+@性処理_射精時処理_乳交服务
+;射精時にどこに出すかを呼び出す
+;とはいってもフィニッシュ場所を入れて関数呼ぶだけ
+CALL 射精実処理(PLAYER, TARGET, 3)
+RETURN 1
+
+
+;-------------------------------------------------
+;値段設定
+;-------------------------------------------------
+@CAN_性処理_乳交服务(対象キャラ)
+#DIM 対象キャラ
+#DIM 値段計算
+#DIMS 素質名
+
+PRINTFORML 乳交服务计算(%CALLNAME:TARGET%)
+DRAWLINE
+
+;基礎値段
+値段計算 = 15000
+PRINTFORML %"基本价格", 16, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+
+
+;好感度
+LOCAL = (80 - CFLAG:好感度レベル) * -100
+IF LOCAL < 0
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"好感度修正", 16, LEFT%：＋%NUM_FORMAT(LOCAL * -1), 8%卢比
+	RESETCOLOR
+ELSE
+	PRINTFORML %"好感度修正", 16, LEFT%：－%NUM_FORMAT(LOCAL), 8%卢比
+ENDIF
+値段計算 -= LOCAL
+
+;体力
+IF BASE:TARGET:体力 < MAXBASE:TARGET:体力 / 4
+	値段計算 += 1500
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"体力低下", 16, LEFT%：＋%NUM_FORMAT(1500), 8%卢比
+	RESETCOLOR
+ENDIF
+;酩酊
+IF BASE:酩酊 > MAXBASE:酩酊 / 2
+	値段計算 -= 500
+	PRINTFORML %"酩酊", 16, LEFT%：－%NUM_FORMAT(500), 8%卢比
+ENDIF
+
+;バストサイズ
+IF TALENT:バストサイズ > 0
+	値段計算 -= TALENT:バストサイズ * 300
+	PRINTFORML %GET_TALENTNAME(205, TALENT:バストサイズ,,TARGET), 16, LEFT%：－%NUM_FORMAT(TALENT:バストサイズ * 300), 8%卢比
+ELSEIF TALENT:バストサイズ < 0
+	値段計算 -= TALENT:バストサイズ * 300
+	PRINTFORML %GET_TALENTNAME(205, TALENT:バストサイズ,,TARGET), 16, LEFT%：＋%NUM_FORMAT(ABS(TALENT:バストサイズ) * 300), 8%卢比
+ENDIF
+;淫乱
+IF TALENT:淫乱
+	値段計算 -= 2500
+	PRINTFORML %"淫乱", 16, LEFT%：－%NUM_FORMAT(2500), 8%卢比
+ENDIF
+
+;同性愛
+IF 同性愛性癖判定(TARGET,PLAYER) == 1
+	;性癖素質:同性愛
+	IF TALENT:TARGET:性愛傾向 == 1 ||TALENT:TARGET:性愛傾向 == 2
+		素質名 = 異性愛
+	ELSE
+		素質名 = 同性愛
+	ENDIF
+	SELECTCASE 性癖素質:同性愛
+		CASE 1
+			;補正なし
+		CASE 2
+			値段計算 -= 1000
+			PRINTFORML %@"%素質名%(爱好)", 16, LEFT%：－%NUM_FORMAT(1000), 8%卢比
+		CASE 3
+			値段計算 -= 2500
+			PRINTFORML %@"%素質名%(成瘾)", 16, LEFT%：－%NUM_FORMAT(2500), 8%卢比
+		CASEELSE
+			;好奇心
+			IF TALENT:性的興味 > 0
+				値段計算 -= 500
+				PRINTFORML %@"好奇(%素質名%)", 16, LEFT%：－%NUM_FORMAT(500), 8%卢比
+			ENDIF
+			;保守的
+			IF TALENT:性的興味 < 0
+				値段計算 += 1500
+				SETCOLOR カラーパレット("薄ピンク")
+				PRINTFORML %@"保守(%素質名%)", 16, LEFT%：＋%NUM_FORMAT(1500), 8%卢比
+				RESETCOLOR
+			ENDIF
+	ENDSELECT
+ENDIF
+
+;気丈
+IF TALENT:度胸 > 0
+	値段計算 += 500
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"刚毅", 16, LEFT%：＋%NUM_FORMAT(500), 8%卢比
+	RESETCOLOR
+ENDIF
+;臆病
+IF TALENT:度胸 < 0
+	値段計算 -= 500
+	PRINTFORML %"怯懦", 16, LEFT%：－%NUM_FORMAT(500), 8%卢比
+ENDIF
+;プライド高い
+IF TALENT:プライド > 0
+	値段計算 += 1500
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"高自尊", 16, LEFT%：＋%NUM_FORMAT(1500), 8%卢比
+	RESETCOLOR
+ENDIF
+;プライド低い
+IF TALENT:プライド < 0
+	値段計算 -= 1000
+	PRINTFORML %"低自尊", 16, LEFT%：－%NUM_FORMAT(1000), 8%卢比
+ENDIF
+;弱味
+IF TALENT:弱味
+	値段計算 -= 2000
+	PRINTFORML %"弱点", 16, LEFT%：－%NUM_FORMAT(2000), 8%卢比
+ENDIF
+
+;謎の魅力
+IF TALENT:PLAYER:謎の魅力
+	値段計算 -= 1000
+	PRINTFORML %"迷之魅力", 16, LEFT%：－%NUM_FORMAT(1000), 8%卢比
+ENDIF
+
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	値段計算 -= ABL:奉仕精神 * 200
+	PRINTFORML %"侍奉精神", 16, LEFT%：－%NUM_FORMAT(ABL:奉仕精神 * 200), 8%卢比
+ENDIF
+;汚臭鈍感
+IF TALENT:汚臭耐性 > 0
+	値段計算 -= TALENT:汚臭耐性 * 500
+	PRINTFORML %GET_TALENTNAME(61, TALENT:汚臭耐性,,TARGET), 16, LEFT%：－%NUM_FORMAT(TALENT:汚臭耐性 * 500), 8%卢比
+ENDIF
+;汚臭敏感
+IF TALENT:汚臭耐性 < 0
+	値段計算 -= TALENT:汚臭耐性 * 1000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %GET_TALENTNAME(61, TALENT:汚臭耐性,,TARGET), 16, LEFT%：＋%NUM_FORMAT(ABS(TALENT:汚臭耐性) * 1000), 8%卢比
+	RESETCOLOR
+ENDIF
+;献身的
+IF TALENT:献身的
+	値段計算 -= 500
+	PRINTFORML %"献身", 16, LEFT%：－%NUM_FORMAT(500), 8%卢比
+ENDIF
+;男嫌い
+IF TALENT:性別嗜好 == 1 && TALENT:PLAYER:性別 == 2
+	値段計算 += 2000
+	SETCOLOR カラーパレット("薄ピンク")
+	PRINTFORML %"厌男", 16, LEFT%：＋%NUM_FORMAT(2000), 8%卢比
+	RESETCOLOR
+ENDIF
+DRAWLINE
+値段計算 = MAX(0, 値段計算)
+IF TALENT:対象キャラ:恋慕
+	PRINTFORML %"合计价格", 16, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比　＞　因爱慕状态免费
+	RETURN -1
+ELSEIF 値段計算 > 0
+	PRINTFORML %"合计价格", 16, LEFT%：　%NUM_FORMAT(値段計算), 8%卢比
+ELSE
+	PRINTFORML %"合计价格", 16, LEFT%：　%"免费", 8%
+ENDIF
+
+RETURN 値段計算
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@性処理_ABLE_乳交服务
+#DIM ループ用
+#DIM 許可好感度
+#DIM 補正後好感度
+
+;RETURN 0は非表示
+SIF GETBIT(TALENT:PLAYER:性別, 1) == 0
+	RETURN 0
+SIF TALENT:PLAYER:Ｃ感度 == -2
+	RETURN 0
+SIF TALENT:PLAYER:射精不可
+	RETURN 0
+SIF GETBIT(TALENT:TARGET:性別, 0) == 0
+	RETURN 0
+
+;RETURN -1は表示するが選択出来ない
+許可好感度 = 70
+補正後好感度 = 補正後好感度算出(TARGET)
+補正後好感度 += TALENT:バストサイズ * 4
+TRYCCALLFORM 性処理業務固有補正_可不可_{NO:TARGET}_乳交服务(TARGET, 補正後好感度)
+	補正後好感度 = RESULT
+CATCH
+ENDCATCH
+SIF 許可好感度 > 補正後好感度
+	RETURN -1
+
+RETURN 1
+
+;-------------------------------------------------
+;メッセージ
+;-------------------------------------------------
+
+@MESSAGE_性処理_乳交服务
+
+PRINTFORM %CALLNAME:TARGET%
+IF TALENT:TARGET:恋慕
+	PRINTFORM 用充满爱意的眼神凝视%CALLNAME:PLAYER%
+ELSEIF TALENT:TARGET:羞恥心
+	PRINTFORM 面红耳赤地
+ELSEIF TALENT:TARGET:性的興味
+	PRINTFORM 饶有兴致地
+ELSEIF TALENT:TARGET:セフレ
+	PRINTFORM 欣赏%CALLNAME:PLAYER%的反应
+ELSE
+	PRINT 以公事公办的手法
+ENDIF
+
+PRINTFORM 将%CALLNAME:PLAYER%的肉棒
+
+IF TALENT:バストサイズ <= -1
+	PRINT 用单薄的胸部摩挲
+;巨乳
+ELSEIF TALENT:バストサイズ == 1
+	PRINT 用丰盈的双峰包裹
+;爆乳
+ELSEIF TALENT:バストサイズ == 2
+	PRINT 以惊人的乳量完全吞没
+ELSE
+	PRINT 用深邃的胸沟夹住
+ENDIF
+
+PRINTL 引导至射精。
+PRINTL
+PRINTFORML %NUM_FORMAT(MONEY + RFLAG:コマンド結果受渡し変数２)% - %NUM_FORMAT(RFLAG:コマンド結果受渡し変数２)% = %NUM_FORMAT(MONEY)%卢比
+

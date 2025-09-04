@@ -1,0 +1,110 @@
+﻿@よろず屋異世界裁店処理
+#DIM 値段一時登録
+#DIM 表示アビ番号
+#DIM 関数総数
+#DIM 服値段
+#DIMS 衣装関数登録, 500
+
+LOCALS = 
+DRAWLINE
+PRINTL 正在售卖异世界风格设计的特色服饰
+PRINTL ※也陈列有常规款式服饰
+DRAWLINE
+LOCALS += "<div rect='4469,0,1562,625' border='31' bcolor='#C0C0C0'></div>"
+LOCALS += @"<div rect='4531,62,1562,625'>持有卢比：%NUM_FORMAT(MONEY)%卢比<br>持有ZP　：%ZP所持量全文字列()%</div>"
+LOCALS += "<div rect='62,0,4375,3000' padding='50, 25, 50' border='31' bcolor='#C0C0C0'>"
+;許可があり、かつ入手してない服を並べる
+VARSET RESULTS
+関数総数 = ENUMFUNCBEGINSWITH("CLOTHES_販売説明_")
+ARRAYCOPY "RESULTS", "衣装関数登録"
+FOR LOCAL, 0, 関数総数
+	SIF STRFIND(所持制服文字列, @"汎用/%REPLACE(衣装関数登録:LOCAL, "CLOTHES_販売説明_", "")%_") > -1
+		CONTINUE
+	SIF STRFIND(所持エロ衣装文字列, @"エロ/%REPLACE(衣装関数登録:LOCAL, "CLOTHES_販売説明_", "")%_") > -1
+		CONTINUE
+	VARSET RESULTS
+	販売禁止フラグ = 0
+	CALLFORM %衣装関数登録:LOCAL%()
+	SIF 販売禁止フラグ
+		CONTINUE
+	服値段 = RESULT
+	LOCALS += @"<button value='{LOCAL}'>[{LOCAL, 2}] %RESULTS:2%：购买%REPLACE(衣装関数登録:LOCAL, "CLOTHES_販売説明_", ""), 30, LEFT%</button>　　"
+	LOCALS += @"价格：{服値段}卢比"
+	LOCALS += "<br>"
+NEXT
+
+LOCALS += "</div>"
+
+
+LOCALS += "<div rect='1550,2812,5125,281'>"
+LOCALS += "<button value='998'>[998] 系统说明</button>　　"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "</div>"
+
+HTML_PRINT LOCALS, 1
+FOR LOCAL, 0, 27
+	PRINTL
+NEXT
+
+IF チュートリアルフラグ:異世界裁店 == 0
+	RESULT = 998
+ELSE
+	BINPUT
+ENDIF
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 999
+		RETURN -1
+	CASE 998
+		DRAWLINE
+		PRINTL ［异世界裁缝店教程］
+		DRAWLINE
+		HTML_PRINT "<img src='顔エラ' height='900' width='900'>"
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		CALL 異世界裁店システムチュートリアル
+		DRAWLINE
+		RESTART
+	CASEELSE
+		;詳細表示
+		DRAWLINE
+		VARSET RESULTS
+		CALLFORM %衣装関数登録:LOCAL%()
+		PRINTFORML ■%REPLACE(衣装関数登録:LOCAL, "CLOTHES_販売説明_", "")%
+		HTML_PRINT RESULTS
+		PRINTL
+		PRINTFORML 来源：%RESULTS:1%
+		DRAWLINE
+		PRINTL 是否购买该服饰？
+		PRINTBUTTON "[0] 确定", 0
+		PRINTL
+		PRINTBUTTON "[1] 取消", 1
+		PRINTL
+		BINPUT
+		IF RESULT == 0
+			;購入
+			VARSET RESULTS
+			CALLFORM %衣装関数登録:LOCAL%()
+			IF MONEY < RESULT
+				PRINTW 卢比不足。
+				RESTART
+			ENDIF
+			MONEY -= RESULT
+			PRINTFORMW 已购入%REPLACE(衣装関数登録:LOCAL, "CLOTHES_販売説明_", "")%
+			IF RESULTS:2 == "通常衣装"
+				CALL 制服登録処理(REPLACE(衣装関数登録:LOCAL, "CLOTHES_販売説明_", ""))
+			ELSE
+				CALL エロ衣装登録処理(REPLACE(衣装関数登録:LOCAL, "CLOTHES_販売説明_", ""))
+			ENDIF
+		ENDIF
+		RESTART
+ENDSELECT
+
+
+
+

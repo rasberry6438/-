@@ -1,0 +1,157 @@
+﻿;-------------------------------------------------
+;自慰
+;愛撫系コマンド、レベル3
+;-------------------------------------------------
+@COMNAME9
+#FUNCTIONS
+TSTR:コマンド名受渡 = 自慰
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_9
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("うふふ")
+
+@COM_TOOLTIP_9
+LOCALS = <br>■自慰<br>
+LOCALS += "命令对象进行自慰行为的指令。<br>进入自慰模式后可通过衍生指令进行细节操作。"
+LOCALS += "<br>指令类型：嘿咻<br>获取来源：根据选项变化"
+LOCALS += "<br>专属经验值：自慰经验・调教自慰经验<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM9
+#DIMS CONST 選択先順番制御 = "クリオナ"
+#DIM 選択先保存
+#DIM PLAYER保存
+#DIMS PLAYER自慰選択肢, 100
+#DIMS TARGET自慰選択肢, 100
+;身体に触れる
+
+IF RFLAG:サイドボタン受渡し変数
+	;サイドボタンから来た時は選択処理挟まず直接コマンド実行に飛ぶ
+	選択先保存 = RFLAG:サイドボタン受渡し変数
+ELSE
+	DRAWLINE
+	PRINTL 该怎样自慰？
+	DRAWLINE
+	PRINTFORML ■%CALLNAME:PLAYER%
+	自慰ターゲット保存 = PLAYER
+	FOR LOCAL, 0, VARSIZE("選択先順番制御")
+		CALLFORM 自慰_ABLE_%選択先順番制御:LOCAL%
+		IF RESULT
+			PRINTBUTTON @"[{LOCAL}] %選択先順番制御:LOCAL%", LOCAL
+			PRINTL 
+		ENDIF
+	NEXT
+	VARSET RESULTS
+	ENUMFUNCBEGINSWITH "自慰_ABLE_"
+	ARRAYCOPY "RESULTS", "PLAYER自慰選択肢"
+	FOR LOCAL, 0, RESULT
+		CALLFORM %PLAYER自慰選択肢:LOCAL%
+		IF RESULT
+			LOCALS = %REPLACE(PLAYER自慰選択肢:LOCAL, "自慰_ABLE_", "")%
+			SIF MATCH(選択先順番制御, LOCALS)
+				CONTINUE
+			SELECTCASE LOCAL
+				CASE 0
+					PRINTBUTTON @"[{LOCAL + 100}] 自我手淫", LOCAL + 100
+				CASEELSE	
+					PRINTBUTTON @"[{LOCAL + 100}] %LOCALS%", LOCAL + 100
+			ENDSELECT
+			PRINTL 
+		ENDIF
+	NEXT
+	PRINTL 
+	PRINTFORML ■%CALLNAME:TARGET%
+	自慰ターゲット保存 = TARGET
+	FOR LOCAL, 0, VARSIZE("選択先順番制御")
+		CALLFORM 自慰_ABLE_%選択先順番制御:LOCAL%
+		IF RESULT
+			SELECTCASE LOCAL
+				CASE 0
+					PRINTBUTTON @"[{LOCAL + 200}] 刺激阴蒂", LOCAL + 200
+				CASEELSE	
+					PRINTBUTTON @"[{LOCAL + 200}] %LOCALS%", LOCAL + 200
+			ENDSELECT
+			PRINTL 
+		ENDIF
+	NEXT
+	VARSET RESULTS
+	ENUMFUNCBEGINSWITH "自慰_ABLE_"
+	ARRAYCOPY "RESULTS", "TARGET自慰選択肢"
+	FOR LOCAL, 0, RESULT
+		CALLFORM %TARGET自慰選択肢:LOCAL%
+		IF RESULT
+			LOCALS = %REPLACE(TARGET自慰選択肢:LOCAL, "自慰_ABLE_", "")%
+			SIF MATCH(選択先順番制御, LOCALS)
+				CONTINUE
+			SELECTCASE LOCAL
+				CASE 2
+					PRINTBUTTON @"[{LOCAL + 300}] 阴道自慰", LOCAL + 300
+				CASE 4
+					PRINTBUTTON @"[{LOCAL + 300}] 挑逗乳头", LOCAL + 300
+				CASE 5
+					PRINTBUTTON @"[{LOCAL + 300}] 吸吮自己乳头", LOCAL + 300
+				CASEELSE	
+					PRINTBUTTON @"[{LOCAL + 300}] %LOCALS%", LOCAL + 300
+			ENDSELECT
+			PRINTL 
+		ENDIF
+	NEXT
+	PRINTL 
+	PRINTBUTTON "[999] 返回", 999
+	PRINTL 
+	DRAWLINE
+	BINPUT
+	LOCAL = RESULT
+	SELECTCASE LOCAL
+		CASE 999
+			RETURN -1
+		CASE 0 TO 99
+			自慰ターゲット保存 = PLAYER
+			CALLFORM 自慰_ABLE_%選択先順番制御:LOCAL%
+			選択先保存 = RESULT
+		CASE 100 TO 199
+			自慰ターゲット保存 = PLAYER
+			CALLFORM %PLAYER自慰選択肢:(LOCAL - 100)%
+			選択先保存 = RESULT
+		CASE 200 TO 299
+			自慰ターゲット保存 = TARGET
+			CALLFORM 自慰_ABLE_%選択先順番制御:(LOCAL - 200)%
+			選択先保存 = RESULT
+		CASE 300 TO 399
+			自慰ターゲット保存 = TARGET
+			CALLFORM %TARGET自慰選択肢:(LOCAL - 300)%
+			選択先保存 = RESULT
+	ENDSELECT
+ENDIF
+
+;COM実行処理
+;弱点コマンド処理の都合上、CALL_COMを経由させる
+RSTR:SELECTCOM_S受け渡し = 9_{選択先保存}
+SELECTCOM_S = %RSTR:SELECTCOM_S受け渡し%
+CALL CALL_COM(自慰ターゲット保存)
+RETURN RESULT
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@COM_ABLE9
+;自慰実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(9)
+	RETURN RESULT
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM9
+CALLFORM MESSAGE_COM_S%RSTR:SELECTCOM_S受け渡し%
+
+@MESSAGE_COM9_非口上時
+CALLFORM MESSAGE_COM_S%RSTR:SELECTCOM_S受け渡し%_非口上時

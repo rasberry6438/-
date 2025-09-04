@@ -1,0 +1,1516 @@
+﻿;-------------------------------------------------
+;各種打招呼
+;-------------------------------------------------
+@KOJO_GREETING_K29, ARGS
+#DIM MEMO_LINECOUNT
+;イベント発生中の角色
+#DIM ACTOR
+;イベント発生中の角色の默认のCALLNAME
+#DIMS CALLNAME_ACTOR
+
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE ARGS
+CASE "打招呼"
+	SELECTCASE CSTR:朝袭
+	CASE "朝口交", "朝舐陰", "朝六九式"
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORML 「呜（吞咽声）、早上好……」
+		CASE 1
+			PRINTFORML 「嗯，已经起来了」
+			IF TEXTS("曜日") == "日"
+				PRINTFORMW 「继续？在那之前先吃早饭吧…？」
+			ELSE
+				PRINTFORMW 「差不多该到了上学的时间了、接下来就是在学校里……可以吗？」
+			ENDIF
+		CASEELSE
+			PRINTFORML 「啊、早上好、%CNAME("二人称")%。」
+		ENDSELECT
+	CASE "朝騎乗位"
+		PRINTFORML 「%CNAME("二人称")%、该起床了～？」
+		PRINTFORMW 「下面倒是先起床了呢……。」
+	ENDSELECT
+
+	;何か発言してたらここまで
+	;SIF LINECOUNT > MEMO_LINECOUNT
+	;	RETURN 1
+
+	IF COND("体育")
+		PRINTFORMW 「今天有体育课、要是把体操服忘在家里可就没劲咯」
+	ELSE
+		SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 「……今天、有什么计划吗？」
+			CASE 1
+				PRINTFORMW 「等一下，我去泡绿茶……。」
+			CASEELSE
+				PRINTFORMW 「早上好、睡得还好吗？」
+		ENDSELECT
+	ENDIF
+CASE "一番乗り"
+	SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW 「%CNAME("二人称")%怎么这么早就来了？」
+		CASE 1
+			PRINTFORMW 「第一名~。」
+		CASEELSE
+			PRINTFORMW 「哦、还以为是谁来了呢……」
+	ENDSELECT
+CASE "ただいま"
+		PRINTFORML 「我回来了~」
+		PRINTFORMW 「哦、%CNAME("二人称")%也在啊」
+CASE "既に入室"
+	;家で出迎えてくれる時
+	IF COND("夜")
+		PRINTFORMW 「欢迎回来。已经等了半天了～……」
+	ELSE
+		PRINTFORMW 「欢、欢迎回来……」
+	ENDIF
+
+CASE "入室打招呼"
+	SELECTCASE CSTR:PREV_DAILYCOM
+		CASE "甜言蜜语"
+			PRINTFORMW （打、打扰了…………）
+		CASE "打招呼舐陰", "打招呼口交"
+			PRINTFORMW 「呜、哇。你在干什么……」
+			CALL EMOTION_PLUS, "重置/〇〇/困扰眉/ω"
+		CASEELSE
+			PRINTFORMW 「%TEXTR("失礼了/打扰了")%。」
+	ENDSELECT
+;部屋にいる他の人から打招呼を返される打招呼。WAITの使用は一回が望ましい
+CASE "簡易入室打招呼"
+	;遅れた時のセリフ（既に部員の４分の３が集合済）
+	IF CHARA_NUM("入室打招呼時の室内人数") >= CHARANUM*3/4 && RAND:3 == 0
+		PRINTFORMW 「打扰了。大家差不多都到齐了吧」
+	ELSE
+		SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 「你好…今天要做些什么呢？」
+			CASE 1
+				PRINTFORMW %CALLNAME:TARGET%轻轻地点了点頭。
+			CASEELSE
+				PRINTFORMW 「你好」
+		ENDSELECT
+	ENDIF
+;簡易入室打招呼に対する返し。WAITの使用は一回が望ましい
+;誰が入室してきた人はCOND("入室打招呼中")がONなのでFIND_COND("入室打招呼中")で検索可能
+;また、入ってきた人数はCHARA_NUM("入室打招呼中")で調べられる
+CASE "打招呼返し"
+	;打招呼してきた人の中から一人選ぶ
+	ACTOR = FIND_COND("入室打招呼中")
+	;選ばれた角色の默认のCALLNAME。この角色への呼びかけはCNAME(CALLNAME_ACTOR) で出来る
+	CALLNAME_ACTOR = %CSVCALLNAME(NO:ACTOR)%
+
+	;ここでは括弧に『』を使う
+
+	;打招呼してきた人に老师が混じっている
+	IF FIND_COND("教員", "入室打招呼中")
+		PRINTFORMW 『您好、%CNAME(CALLNAME_ACTOR)%。』
+	;相手が現れるのが遅かった（既に部員の４分の３が集合済）
+	ELSEIF CHARA_NUM("入室打招呼時の室内人数") >= CHARANUM*3/4 && RAND:3 == 0
+		SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 『大半已经到齐了。』
+			CASE 1
+				PRINTFORMW 『%CNAME(CALLNAME_ACTOR)%、你好。』
+			CASEELSE
+				PRINTFORMW 『你好~。』
+		ENDSELECT
+	ELSE
+		SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 『你好~。』
+			CASE 1
+				PRINTFORMW %CALLNAME:TARGET%轻轻地点了点頭。
+			CASEELSE
+				PRINTFORMW 『%CNAME(CALLNAME_ACTOR)%、你好。』
+		ENDSELECT
+	ENDIF
+
+CASE "居間に現れた"
+	;一度居間から別の場所に行って、居間に帰って来た時
+	IF CMOVE("居間")
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "抜け出された"
+		PRINTFORMW 
+CASE "便当"
+	PRINTFORM 「%CNAME("二人称")%、今天用
+	IF !RAND:4
+		;時々、地元特産品弁当
+		PRINTFORMW %TEXTR("明太子便当/高菜便当/梅果羊栖菜便当/迷你饺子便当/干菜便当")%来招待，%TEXTR("来尝尝吧/请慢用")%。」
+		;※かしわめし…鶏肉の炊き込みご飯
+	ELSE
+		PRINTFORMW %TEXTR("海苔便当/鸡蛋烧便当/生姜烧便当/饭团便当/盐烤鲑鱼便当")%来招待，%TEXTR("来尝尝吧/请慢用")%。」
+	ENDIF
+	SELECTCASE RAND:4
+		CASE 0
+			PRINTFORMW 「甜点的%TEXTR("梨子/猕猴桃/橘子/草莓/羊羹")%也请收下」
+		CASE 1
+			PRINTFORMW 「这可是%CNAME("一人称")%的自信作品哦。味道怎么样？」
+		CASE 2
+			PRINTFORMW %CALLNAME:TARGET%把便当的一部分递到了%CALLNAME:MASTER%嘴边。
+			PRINTFORMW 「来%CNAME("二人称")%、啊～唔★」
+		CASEELSE
+			PRINTFORMW 「量好像有点少呢、能够吃饱吗？」
+			PRINTFORMW 虽然这么说、但其实只是以%CALLNAME:TARGET%的标准来说很少、对%CALLNAME:MASTER%是正好的分量。
+	ENDSELECT
+ENDSELECT
+
+;-------------------------------------------------
+;メイン画面での台詞。いわゆる一言イベント強化版
+;ちなみに画面随机属性しても同じセリフを喋ります
+;選択肢に挟まれた場所で出力するのでWAITの使用は禁止
+;-------------------------------------------------
+@KOJO_DAILY_K29, ARGS
+#DIM MEMO_LINECOUNT
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE ARGS
+;初回のセリフ
+CASE "初回台詞"
+	PRINTFORML 「这里是活动室……很宽敞呢」
+CASE "浑身是汗"
+	SELECTCASE TEXTS("季節詳細")
+	CASE "夏"
+		IF !RAND:3
+			PRINTFORML 「真热呢……」
+		ELSEIF !RAND:2
+			PRINTFORML 「好热……」
+		ELSE
+			PRINTFORML 「呜、呜哇……」
+			PRINTFORML 「该不会比%CNAME("一人称")%的老家还要热吧……」
+		ENDIF
+	CASEELSE
+		PRINTFORML 「呜、不擦汗的话……」
+	ENDSELECT
+CASE "刚睡醒"
+	IF !RAND:23
+		PRINTFORML 「……哦」（迷迷糊糊）
+	ELSEIF !RAND:2
+		PRINTFORML 「哦、已经是早上了啊。」
+	ELSE
+		PRINTFORML 「嗯、早上好。」（迷迷糊糊）
+	ENDIF
+CASE "Cosplay中"
+	PRINTFORML 
+;沉眠著
+CASE "睡眠"
+	;梦话
+	CALL KOJO_SLEEP_K29
+	;梦话用の汎用地の文呼出
+	CALL DAILY_MESSAGE, "梦话"
+ENDSELECT
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;前回指令対応台詞
+SELECTCASE CONDS("直前行動")
+CASE "愛の告白"
+	PRINTFORML 
+CASE "约会的约定"
+	PRINTFORML 
+CASE "契約成立"
+	PRINTFORML 
+CASE "摆脱"
+	PRINTFORML 
+CASE "主人公的房間に連れ込まれた"
+	CALL PRINT_STR, @"「%TEXTR(@"这里是充分放松的地方…/%CNAME("二人称")%、想做什么呢?")%」_L"
+CASE "自室に招待"
+	CALL PRINT_STR, @"「%TEXTR(@"呵呵、收拾得不错吧？/欢迎来到%CNAME("一人称")%的房间")%」_L"
+CASE "自室に訪問された"
+	;指导者を伴っている場合
+	IF FIND_COND("現在存在", "助手")
+		PRINTFORML 「……什么事、你们两个怎么了？」
+	ELSE
+		SELECTCASE RAND:3
+			CASE 0
+				PRINTFORML 「有什么事情吗。」
+			CASE 1
+				PRINTFORML 「哦、现在要收拾、等一会呢……」
+			CASEELSE
+				PRINTFORML 「……怎么了、%CNAME("二人称")%？」
+		ENDSELECT
+	ENDIF
+CASE "指导者部屋訪問"
+	PRINTFORML 
+;自宅移動の後に你に連れられて居間に回来了場合など。優先度は低いです
+CASE "帰還"
+	PRINTFORML 
+CASE "オナバレ"
+	PRINTFORML 
+CASE "露脐装超短裙胖次チラ"
+	PRINTFORML 「%TEXTR("啊/哇")%……」
+	PRINTFORML 「真是的、%TEXTR("太短了感觉有点别扭呢/视线还真是毫不掩饰啊")%……」
+CASE "低腰臀圍"
+	PRINTFORML 
+CASE "掀起裙子"
+	PRINTFORML 
+CASE "買東西"
+	;買ってきた道具などで分岐
+	;IF COND("巨大振動棒購入")
+
+	;	CALL SET_DEVENT, "巨大振動棒感想"
+	;ELSE
+		;単純にいっぱい買ったかどうかで分岐
+		SELECTCASE COND("買上品数")
+		CASE IS >= 4
+
+		CASEELSE
+
+		ENDSELECT
+	;ENDIF
+CASE "隐秘摄影失敗"
+	PRINTFORML 
+CASE "变成裸体"
+	;他に人がいる
+	IF CHARA_NUM("室内の邪魔者")
+		PRINTFORML 
+	;まさかの野外
+	ELSEIF PLACE("野外")
+		PRINTFORML 
+	;不在個室
+	ELSEIF PLACE("個室") == 0
+		PRINTFORML 
+	;個室で二人きり
+	ELSE
+		PRINTFORML 
+	ENDIF
+CASE "Ｈ目的で呼び出された"
+	IF PLACE("情人旅館")
+		IF RAND:3 == 0 && TALENT:恋慕
+			PRINTFORML 
+		ELSEIF RAND:2
+			PRINTFORML 「比我想像的要漂亮呢。」
+		ELSE
+			PRINTFORML 「话说、这里学生来没有问题吗……」
+		ENDIF
+	;做爱房
+	ELSEIF TALENT:恋慕
+		PRINTFORML 
+	ELSE
+		PRINTFORML 
+	ENDIF
+ENDSELECT
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;標語の反応。書いたらコメントアウトを外してください
+IF CFLAG:標語実践
+	IF STRCOUNT(SAVESTR:標語, "注意口渴")
+		;IF DEVENT("標語茶") == 0
+		;	PRINTFORML 
+		;	CALL SET_DEVENT, "標語茶"
+		;ENDIF
+	ELSEIF STRCOUNT(SAVESTR:標語, "体操服")
+		SELECTCASE SAVESTR:標語
+		CASE "体操服はやっぱり布鲁马"
+			;IF DEVENT("標語布鲁马") == 0
+			;	PRINTFORML 
+			;	CALL SET_DEVENT, "標語布鲁马"
+			;ENDIF
+		CASE "体操服はやっぱり运动短褲"
+
+		CASE "体操服はやっぱり紧身短褲"
+
+		CASE "体操服はやっぱり运动衫"
+		;各分岐を細かく埋めずに、上の分岐を消して望みの体操服に着替えてやったぞ発言をここに書くのも良いと思います
+		CASEELSE
+
+		ENDSELECT
+	ELSEIF STRCOUNT(SAVESTR:標語, "学生服")
+		SELECTCASE SAVESTR:標語
+		CASE "学生服は露脐装超短裙に限る"
+			;IF DEVENT("標語露脐装超短裙") == 0
+			;	PRINTFORML 
+			;	CALL SET_DEVENT, "標語露脐装超短裙"
+			;ENDIF
+		CASE "学生服は超短迷你に限る"
+		;各分岐を細かく埋めずに、上の分岐を消して望みの学生服に着替えてやったぞ発言をここに書くのも良いと思います
+		CASEELSE
+
+		ENDSELECT
+	ENDIF
+ENDIF
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;イベント台詞。書いたらコメントアウトを外してください
+;CFLAG:日常事件回数が10増えるたびに一つ叫醒ぐらいで良いでしょう
+IF CFLAG:日常事件回数 >= 15 && DEVENT("事件について１") == 0
+	PRINTFORML 「你知道那件事跟魔术有関吗？」
+	PRINTFORML 「%CNAME("一人称")%的母亲很了解魔术、独自进行调查后知道的。」
+	PRINTFORML 「在被认为是失踪的地方有使用魔术的痕迹……」
+	PRINTFORML 「……据说可能是"使用魔术的绑架事件"。」
+	CALL SET_DEVENT, "事件について１"
+ELSEIF CFLAG:日常事件回数 >= 30 && DEVENT("事件について２") == 0
+	IF FINDCHARA(NO, 11) > 0
+		PRINTFORML 「前几天听图书管理员说的。前几天听图书管理员说的。」
+	ELSE
+		PRINTFORML 「最近刚从班上的同学那里听说过、」
+	ENDIF
+	PRINTFORML 「那个事件、好像在这所学校附近也会发生。」
+	PRINTFORML 「生物学的安藤老师对那个事件最生气。」
+	PRINTFORML 「和其他部员也可以说一下、%CNAME("二人称")%也……请小心。。」
+	CALL SET_DEVENT, "事件について２"
+ENDIF
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;他の人といちゃついた後にpartner変更
+IF COND("いちゃいちゃ") == 0 && FIND_COND("Ｈ的いちゃつき中")
+	PRINTFORML 
+ENDIF
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;以下は随机台詞など
+
+;時間帯と場所と関係で変化有些
+IF STATE("酔酒")
+	PRINTFORML 
+ELSE
+	SELECTCASE RAND:4
+		CASE 0
+			PRINTFORML %CALLNAME:TARGET%正在学习%TEXTR("数学/物理/化学/工程/医学/解剖学/生物学/语言学/地理/法律")%。
+		CASE 1
+			PRINTFORML 「……………。」
+			PRINTFORM %CALLNAME:TARGET%将
+			PRINTFORM 『%TEXTR("事到如今听不到的战时国际法/发现东西的方法、隐藏的方法/危急时刻的防身术/诡雷图集/基础战时应急处理/肌肉的锻炼方法与使用方法/达尔马维亚语词典")%』的书
+			PRINTFORML ……
+			;基本的に全部架空の題名。偶然一致してたらごめんね
+		CASE 2
+			PRINTFORML 「%TEXTR("……唔/………。/…………/嗯嗯…/唔、哈…/1、2…")%」
+			PRINTFORM %CALLNAME:TARGET%正在进行%TEXTR("柔软体操/俯卧撑/平板支撑/深蹲/难以形容的种类的肌肉力量训练")%的锻炼
+			PRINTFORML ……
+		CASEELSE
+			PRINTFORML 「%TEXTR("………。/…………/・ω・")%」
+			IF COND("夜")
+				PRINTFORML %CALLNAME:TARGET%正在%TEXTR("组装某些机器/分解某些机器/转动笔，有时像把刀子一样摆好/放松身体/读报纸")%……
+			ELSE
+				PRINTFORML %CALLNAME:TARGET%正在%TEXTR("阅读报纸/绘制地图/用双筒望远镜观察外面")%……
+			ENDIF
+	ENDSELECT
+ENDIF
+
+;-------------------------------------------------
+;梦话。随意むにゃむにゃ言わせてください
+;-------------------------------------------------
+@KOJO_SLEEP_K29
+;上から順に発言頻度が高いようにする(== 0の付け忘れではない)
+IF !RAND:255
+	PRINTFORML 「ﾋﾟｯﾋﾟﾘﾋﾟｰ ﾊｲｼﾞｮｰ ﾎﾝﾊｰ ﾊｲﾎｰﾍﾝﾍｰ」
+ELSEIF RAND:3
+	IF !RAND:23
+		PRINTFORML %CALLNAME:TARGET%很放松的样子。
+	ELSEIF !RAND:3
+		PRINTFORML 「……すー……すー………（鼾声）」
+	ELSEIF !RAND:2
+		PRINTFORML 「…………ｚｚｚ」
+	ELSE
+		PRINTFORML 「…………ほゎ……（鼾声）」
+	ENDIF
+ELSEIF RAND:2
+	IF !RAND:23
+		PRINTFORML 「…有趣吗………ｚｚｚ」
+	ELSEIF !RAND:3
+		PRINTFORML 「………？…………。」
+	ELSEIF !RAND:2
+		PRINTFORML 「……呜喵、%CNAME("二人称")%…？………ｚｚｚ」
+	ELSE
+		PRINTFORML 「……niu……………」
+	ENDIF
+ELSE
+	IF !RAND:23
+		PRINTFORML 「……需要扫描数据吗………ｚｚｚ」
+	ELSEIF !RAND:3
+		PRINTFORML 「ｚｚｚ……这里、是哪里啊…………」
+		PRINTFORML 「不是在%TEXTR("玩飞镖/骑上奇怪的生物/卷入枪战/脚上穿着什么飞行器/水上滑行/成为女仆")%吗……ｚｚｚ」
+	ELSEIF !RAND:2
+		PRINTFORML PRINTFORML 「…%TEXTR("不、不要/不要啦/不知道")%……%TEXTR("格子裙/比基尼铠甲/高跟鞋铠甲/爱知世博会服装/UNIQLO制服装/色情的忍者服装/刀剑乱舞cosplay服 /男性版麒麟套装/男性版迅龙套装")%什么的不想穿……zzz」
+	ELSE
+		PRINTFORML 「……欸、%CNAME("一人称")%…？ｚｚｚ………」
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;メイン画面で選択肢として独立している日常イベントでのセリフ。WAIT使って大丈夫です
+;こっちはあくまで選択肢で選ばれた場合に限るのに注意。
+;-------------------------------------------------
+@KOJO_DAILYCOM_K29, ARGS
+;打招呼
+#DIMS GREETING
+;イベント発生中の角色
+#DIM ACTOR
+#DIM ACTOR2
+
+SELECTCASE ARGS
+CASE "学園での日常"
+	IF CEVENT("小団扇桑：邂逅") == 0
+		PRINTL
+		PRINTFORMW %CALLNAME:TARGET%在教室里被两个男生缠住了。
+		PRINTL 
+		PRINTFORML - Ａ太 -
+		PRINTFORM 『你、
+		IF CEVENT("百合の波動に目覚めた碧") == 1
+			PRINTFORMW 听说你参加了那个社团？』
+			PRINTL 
+			PRINTFORML - %CALLNAME:TARGET% -
+			PRINTFORMW 「那个社团活动……是指那个？」
+			PRINTL 
+			PRINTFORML - Ｂ男 -
+			PRINTFORMW 『辞掉那种社团活动，、【保守主義同好会】怎么样？』
+			PRINTL 
+			PRINTFORML - %CALLNAME:TARGET% -
+			PRINTFORMW 「【保守主義同好会】？为什么啊。」
+			PRINTL 
+			PRINTFORML - Ａ太 -
+			PRINTFORML 『像你这样的美女，竟然成为那可恶的部长的东西……
+			PRINTFORMW 　毫无意义地度过污秽不堪的学校生活，实在是太浪费了
+			PRINTFORMW 　在【保守主義同好会】学习正确的伦理观和常识会更有意义』
+			PRINTL 
+			PRINTFORML - %CALLNAME:TARGET% -
+			PRINTFORMW 「说什么呢，直接跟部长说不就好了。」
+			;PRINTFORMW 「（しかも、%CNAME("一人称")%の視線の先に丁度おるやん…）」
+			PRINTL 
+			PRINTFORML - Ｂ男 -
+			PRINTFORMW 『嘛，不是强制，所以不会勉强。』
+			PRINTL 
+			PRINTFORML - %CALLNAME:TARGET% -
+			PRINTFORMW 「哈啊…」
+			PRINTL 
+			PRINTFORML - Ａ太 -
+			PRINTFORM 『对了，我还有一件事想问你……
+		ENDIF
+		PRINTFORMW 你知道有个叫【片峰 珪】的女人吗』
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「嗯，那又怎么样?」
+		PRINTL 
+		PRINTFORML - Ｂ男 -
+		PRINTFORML 之前那个女人在追求【保守主義同好会】的女生。
+		PRINTFORMW 　差点给那个女生留下一生中最大的污点。
+		PRINTFORMW 　因为是同一个姓，所以可能是亲戚，我觉得可能知道些什么。』
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「不、我不知道。
+		PRINTFORMW 　话说回来、你是从哪里听说的。（实际上不是亲戚，而是亲姐姐。）」
+		PRINTL 
+		PRINTFORML 就在这时。
+		PRINTFORMW 在男生和%CALLNAME:TARGET%之间，一个戴眼镜的女生挤了进来。
+		PRINTFORMW 那个女生的黑发从两肩垂下，从袖标来看，应该是风纪委员。
+		PRINTL 
+		PRINTFORML - 風紀委員 -
+		PRINTFORMW 『喂，那边的两个人!又在搭讪吗！？』
+		PRINTL 
+		PRINTFORML - Ａ太 -
+		PRINTFORMW 『才不是搭讪』
+		PRINTL 
+		PRINTFORML - Ｂ男 -
+		PRINTFORMW 『不不、只是普通聊天啊。』
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「『又』て。也就是说之前也发生过同样的事情？」
+		PRINTL 
+		PRINTFORML - 風紀委員 -
+		PRINTFORMW 『是的。这两个人所属的【保守主義同好会】是从政治部分裂出来的同好会。
+		PRINTFORML 　但不知为何，对社会教师恶言恶语，并在SNS上传播可疑的阴谋论。
+		PRINTFORMW 　男性社员搭讪女性同性恋者等，令人费解的行为最近增加了。』
+		PRINTL 
+		PRINTFORML - Ｂ男 -
+		PRINTFORMW 『说法太恶劣了。我们【保守主義同好会】为了这个国家的未来做了很多事。』
+		PRINTL 
+		PRINTFORMW B男(暂称)不知何时将自动手枪举到风纪委员眼前。
+		PRINTL 
+		PRINTFORML - 風紀委員 -
+		PRINTFORMW 『……っ！？』
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「……！（哇啊、上膛的方法看上去像是真货啊……）」
+		PRINTL 
+		PRINTFORML - Ａ太 -
+		PRINTFORMW 『住手，在这里使用它实在太危险了!』
+		PRINTL 
+		PRINTFORML - Ｂ男 -
+		PRINTFORMW 『我知道了。………唔？谁打来的。』
+		PRINTL 
+		PRINTFORMW B男收起手枪，接起了打来的电话。
+		PRINTL 
+		PRINTFORMW …
+		PRINTL 
+		PRINTFORML - 安藤老师（電話） -
+		PRINTFORMW 『我是安藤。有件事想口頭告诉【保守主義同好会】的所有人。
+		PRINTFORMW 　午休时间或放学后都可以，希望到第二实验室来。』
+		PRINTL 
+		PRINTFORMW 安藤老师只说了这么一句，就立刻関掉了电话线。
+		PRINTL 
+		PRINTFORML - Ｂ男 -
+		PRINTFORMW 『……好，好，遵命。安藤老师叫我们到第二实验室来。走吧。』
+		PRINTL 
+		PRINTFORML - Ａ太 -
+		PRINTFORMW 『哦、是吗……彼此都捡了条命呢』
+		PRINTL 
+		PRINTFORMW 两名男生离開了那里…
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「他们是什么人啊……」
+		PRINTL 
+		PRINTFORML - 小団扇 倖帆 -
+		PRINTFORMW 『啊、重新介绍…我叫【小団扇 倖帆】。
+		PRINTFORML 　好像什么都没做，我就放心了。
+		PRINTFORMW 　最近胡同里出现了好几个离奇死亡的人，集体诱拐事件等奇怪的事件也很多…』
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「谢谢，有什么困难就说出来吧。
+		PRINTFORMW 　……越是可怕的时候，越要在真正困难的时候互相帮助」
+		
+		CALL SET_CEVENT, "小団扇桑：邂逅"
+	ELSEIF CEVENT("組織の正体") == 0 && CEVENT("小団扇桑：完治")
+		PRINTL
+		PRINTFORMW %CALLNAME:TARGET%正在认真地读着标题为家族と電話しているようだ…
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「是、这里是%CALLNAME:TARGET%。爸爸吗？」
+		PRINTL 
+		PRINTFORML - 片峰 灰簾 -
+		PRINTFORMW 「现在接电话的就是那个父亲。」
+		PRINTFORMW 「听说%CALLNAME:TARGET%卷入了什么事件，没有受伤吧？」
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「是的、%CNAME("一人称")%没有受伤。」
+		PRINTFORMW 「话说回来有什么事情、父亲？」
+		PRINTL 
+		PRINTFORML - 片峰 灰簾 -
+		PRINTFORMW 「我要说的不是别的，是関于集体绑架事件的事情。
+		PRINTFORML 　简单地说，这个做出集体绑架事件的组织
+		PRINTFORMW 　是我的公司【片峰保全】不共戴天的敌人。」
+		PRINTFORMW 「那个组织的名字叫做【卡基拉斯】。
+		PRINTFORMW 　是要毁灭世界上所有女同性恋的组织。」
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「也就是说…姐姐很危险啊。」
+		PRINTL 
+		PRINTFORML - 片峰 灰簾 -
+		PRINTFORMW 「啊，那就不用担心了。刚回来。」
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「哦，那就太好了。」
+		PRINTFORMW 「爸爸、那个【カーキラス】的情报是从哪里入手的啊？」
+		PRINTL 
+		PRINTFORML - 片峰 灰簾 -
+		PRINTFORMW 「那个啊、不知道为什么从【法皇庁】那里得到了情报。」
+		PRINTFORMW 「是和我们公司颇有渊源的【小団扇 徳】助祭提供的。」
+		PRINTL 
+		PRINTFORML - %CALLNAME:TARGET% -
+		PRINTFORMW 「」
+		
+		CALL SET_CEVENT, "組織の正体"
+	ELSEIF CFLAG:好感度 >= 300 && CEVENT("エピソード１：どこが怖い？") == 0
+		CALL K29_LONG_EPISODE1
+	ENDIF
+
+
+CASE "归途"
+	;SAVESTR:現在位置 と SAVESTR:归途の行動 を決定する
+	CALL SETFLAG, "遭遇地点"
+
+	;地の文の前の台詞がある場合はここに書く
+	SELECTCASE SAVESTR:現在位置
+	CASE "阵雨"
+		PRINTFORMW 
+	
+	
+	
+	ENDSELECT
+
+	;地の文を出す
+	CALL DAILY_MESSAGE, "归途"
+
+	SELECTCASE SAVESTR:归途の行動
+	CASE "相合傘"
+		PRINTFORMW 
+	CASE "内衣選び", "泳装選び"
+		IF !RAND:10
+			PRINTFORMW 「到底有没有预防的方法呢…」
+			SIF !RAND:10
+				PRINTFORMW 「啊、找到了。这也太贵了！？」
+		ELSEIF !RAND:9
+			PRINTFORMW 「这是…机能美……！」
+		ELSEIF !RAND:2
+			PRINTFORMW 「……嗯，都是尺寸不合适的。」
+		ELSE
+			PRINTFORMW 「……你想要再结实一点的吗？。」
+		ENDIF
+	;特定行動でのセリフ。DAILY_MESSAGE, "归途"の地の文を参考に随意場合分けしてください。
+	CASE "打情骂俏", "買食物", "物色游戏"
+		PRINTFORMW 
+	CASE "站着读书"
+		PRINTFORMW 
+	CASE "检查新刊"
+		PRINTFORMW 
+	CASE "繞道"
+		PRINTFORMW 
+	CASE "直帰"
+		PRINTFORMW 
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+
+;[999]選択後の台詞。TFLAG:床イン = 1とすることで強制的にエロにも行ける
+CASE "休憩"
+	;台詞を書いたらRETURN 0を消してください
+	RETURN 0
+	IF PLACE("自宅")
+		IF COND("夜")
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;ここは実質昼のみ
+	ELSEIF PLACE("部室")
+		PRINTFORMW 
+	;場所移動後
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+;NOWEXを分岐に用いることが出来る。また、TFLAG:地の文スキップで地の文を飛ばせる
+CASE "性処理：前"
+	;避孕套を使う場合
+	IF TEQUIP:PLAYER:避孕套
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "性処理：後"
+	;避孕套を使う場合
+	IF TEQUIP:PLAYER:避孕套
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;ここには特殊な条件での角色独自のイベントを書く。別に無くても構わない
+;発生領帯ミングは日常イベント選択後の好感度を得た直後
+CASE "特殊事件"
+	;眠ってる時でも来るので書くことないならRETURN 0してください
+	SIF CFLAG:睡眠
+		RETURN 0
+;場所を変えた際のセリフ。通常は没有で構いません。SAVESTR:現在位置 や @PLACE(ARGS)で場所を条件分けして使ってください
+CASE "場所を変える"
+;これは昼か夜
+CASE "打招呼"
+	IF COND("夜")
+		GREETING = 晚上好
+	ELSEIF COND("昼")
+		GREETING = 你好
+	ELSE
+		GREETING = 早上好
+	ENDIF
+	;你に先に打招呼をされた
+	IF CFLAG:打招呼した == 0
+		PRINTFORMW 「%GREETING%。」
+	ELSE
+		PRINTFORMW 「%GREETING%。」
+	ENDIF
+CASE "叫醒"
+	IF !RAND:3 && TRUE_SEX(MASTER) == "男性"
+		PRINTFORML 「……！」
+		PRINTFORM %CALLNAME:TARGET%的动作非常快，简直不像是刚睡醒。
+		SELECTCASE RAND:3
+			CASE 0
+				IF TALENT:MASTER:大力士 > TALENT:大力士 || !RAND:4
+					PRINTFORMW 直接撞上了%CALLNAME:MASTER%
+				ELSEIF TALENT:恋慕
+					PRINTFORMW 抱住了%CALLNAME:MASTER%。
+				ELSE
+					PRINTFORMW 把%CALLNAME:MASTER%从背后的肋下锁住了双臂和脖子。
+				ENDIF
+			CASE 1
+				PRINTFORMW %TEXTR("直拳/反手拳/踢击/肘击")%对%CALLNAME:MASTER%的%TEXTR("胸口/脸/下腹部")%に%TEXTR("挥出/直接击中了/想要击中却被避開了/想要击中却犹豫了/浅尝辄止了")%。
+			CASEELSE
+				IF TALENT:恋慕
+					PRINTFORMW 抱住了%CALLNAME:MASTER%。
+				ELSEIF TALENT:MASTER:大力士 > TALENT:大力士 || !RAND:6
+					PRINTFORMW 钻进床底下了。
+				ELSE
+					PRINTFORMW 紧紧地握住%CALLNAME:MASTER%的手臂。
+				ENDIF
+		ENDSELECT
+		IF TALENT:恋慕
+			PRINTFORMW 「啊…%CNAME("二人称")%、对不起。」
+		ELSE
+			PRINTFORMW 「什么啊、%CNAME("二人称")%呀……」
+		ENDIF
+	ELSE
+		PRINTFORMW 「%CNAME("二人称")%、早上好。」
+		PRINTFORMW %CALLNAME:TARGET%有点困地開始进行%TEXTR("準備体操/早上的准备")%…
+	ENDIF
+;酔った際に眠くなって自分的房間に返回際のセリフ
+CASE "眠い"
+	PRINTFORMW 「呜、早点睡吧……」（摇摇晃晃）
+;全裸終了の際のセリフ
+CASE "服を着た"
+	PRINTFORMW 
+;暑かったり躁动难忍してたり酔っぱらってたりで内衣姿变成了際のセリフ
+CASE "薄着变成了"
+	PRINTFORMW 
+CASE "Talk"
+	SELECTCASE STR:日常イベント名
+	CASE "夸奖"
+		PRINTFORMW 「%TEXTR("哦，谢谢。/FUFU……高兴吗?/嗯，这样啊……如果不是讽刺，那是高兴吗?")%」
+	CASE "甜言蜜语"
+		IF TALENT:恋慕 && CALCF("甜言蜜语成功")
+			SELECTCASE RAND:4
+				CASE 0
+					PRINTFORMW 「唔、挺会说话的嘛……」
+				CASE 1
+					PRINTFORMW 「%CNAME("一人称", "どもり")%也喜欢%CNAME("二人称")%啊……。」
+				CASE 2
+					CALL PRINT_STR, @"「………_H_」（发呆…）_L"
+					PRINTFORMW 「…好、好了、都让我有点走神了」（擦口水）
+				CASEELSE
+					CALL PRINT_STR, @"「诶嘿…_／／／_」（笑嘻嘻）_L"
+					PRINTFORMW 「…啊、不行不行」
+			ENDSELECT
+		ELSEIF CALCF("甜言蜜语成功")
+			SELECTCASE RAND:4
+				CASE 0
+					PRINTFORMW 「う、やるやん……。」
+				CASE 1
+					PRINTFORMW 「诶嘿……」（笑嘻嘻）
+					PRINTFORMW 「…啊、不小心脸颊松弛了……」
+				CASE 2
+					PRINTFORMW 「………。」（发呆…）
+				CASEELSE
+					PRINTFORMW 「嗯、谢谢……。」
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:4
+				CASE 0
+					PRINTFORMW 「呜？（不太懂什么意思…。）」
+				CASE 1
+					PRINTFORMW 「呜嗯…」
+				CASE 2
+					PRINTFORML 「……？」
+					PRINTFORMW 好像不太明白意思。
+					CALL EMOTION_PLUS, "重置/〇〇/困扰眉/ω"
+				CASEELSE
+					PRINTFORMW 「……啊，对不起，我没听懂…。」
+			ENDSELECT
+		ENDIF
+	CASEELSE
+		IF !RAND:4
+			PRINTFORMW 「関于%CNAME("一人称")%的姐姐的事情？」
+			PRINTFORML 「嗯、不包庇坏人、在%CNAME("一人称")%看来……」
+			PRINTFORM 「%TEXTR("一到早晨就好像随时都会消失似的/很珍惜相遇的偶然/只说些不是对话的话/很害怕明天/好像只要能为谁而活就什么都不怕的/好像不会依赖温柔的/即使是一个人好像要找回受伤的梦/在冰冷的夜空下悲哀地開玩笑/拥有一个人无法消除的心痛/不想拥有自由/在逃跑之前不幸就会降临/被无数的爱包围着的心独自一人/有时会变得沉默。")%
+			PRINTFORMW %TEXTR("大概是这种的/有这种的/也许有这种的")%。印象深刻」
+			;注釈：碧の地元出身である某漫画家における有名な代表作の动画版主題歌ネタ。
+		ELSEIF !RAND:3
+			SELECTCASE RAND:4
+				CASE 0
+					IF TALENT:MASTER:大力士 >= 1
+						IF TALENT:MASTER:大力士 >= 4
+							PRINTFORMW 「已经超越了%CNAME("一人称")%足足10年努力的程度了…。」
+							PRINTFORMW 「灵魂的力量　竟然这么厉害…。」
+							CALL EMOTION_PLUS, "重置/〇〇/困扰眉/ω"
+						ELSE
+							PRINTFORMW 「说起来%CNAME("二人称")%、锻炼身体的话……？」
+							PRINTFORMW 「………灵魂的交易? !光是这样就够了吗?平常锻炼一下维持下去吧…。」
+							CALL EMOTION_PLUS, "重置/闭眼/困扰眉"
+						ENDIF
+					ELSE
+						PRINTFORMW 「有空的话教%CNAME("二人称")%几个护身术吧？」
+						IF TRUE_SEX(MASTER) == "男性"
+							PRINTFORML %CALLNAME:TARGET%脸上浮现出笑容、已经做好了准备。看起来是认真的…！
+							PRINTFORMW %CALLNAME:MASTER%带着各种各样的理由拒绝了…
+							CALL EMOTION_PLUS, "重置/笑颜"
+						ELSE
+							PRINTFORMW 「没関系、因为是实战形式、所以可能会很辛苦、但绝对会掌握的。」
+							PRINTFORMW 先拒绝了%CALLNAME:MASTER%…
+						ENDIF
+					ENDIF
+				CASE 1
+					PRINTFORMW 「别看%CNAME("一人称")%这样、对视力还是很有自信的」
+					IF (FIND_COND("現在存在", "卡莉斯塔") || FIND_COND("現在存在", "乃々")) && RAND:4 == 0
+						PRINTFORMW 「天使的%TEXTR("翅膀/光環")%也能看到……」
+						PRINTFORMW 「话说、现在都不隐藏起来了吗…有点儿没劲呐」
+						CALL EMOTION_PLUS, "重置/斜眼/困扰眉"
+					ELSEIF FIND_COND("現在存在", "西西莉亚") && RAND:3 == 0
+						PRINTFORMW 「噢、有人在骑着扫帚飞」
+						PRINTFORMW 「一个是初等部5年级的女生、另一个是……%CNAME("西西莉亚")%吗？」
+					ELSEIF RAND:2 == 0
+						PRINTFORMW 「话说回来，果然要真正识破阻碍认识的事实是很难的。」
+					ELSE
+						PRINTFORMW 「……就像肩上沾了垃圾。」
+					ENDIF
+				CASE 2
+					PRINTFORM 「之前
+					IF !RAND:2
+						PRINTFORML 我读过一本叫《世界上隐藏的名画莉娜-沃格尔》的书。
+						PRINTFORMW 　如果藏起来，那还是名画吗?……内容本身非常有趣。」
+					ELSE
+						;动画の标题の一部は実在の作品を大幅にもじってます
+						;                   このアンダーバーは長音記号を表しています→_
+						;English title→AssaultWizards/GlitchGirl SlashStar/AikokuSeihu ZaiGenGar/RuneKleid SigelDrei
+						PRINTFORMW 『%TEXTR("突击Wizers/魔法少女SplashStar/愛国清風再现/呪紋鋼人西泽尔Ⅲ")%』看了动画之后，觉得相当有趣。。」
+						PRINTFORMW 「里面的%TEXTR("段子很入迷/政治讽刺特别好/战斗场面很好地再现了实际的武器/场面播放的曲子特别好")%是优点……」
+					ENDIF
+					CALL EMOTION_PLUS, "重置/笑颜"
+				CASEELSE
+					PRINTFORML 「%TEXTR("……！/ふっ……、はっ…！")%」
+					PRINTFORMW %CALLNAME:TARGET%正在进行%TEXTR("拼命的/努力的")%肌肉锻炼。
+					IF !RAND:3
+						CALL PRINT_STR, @"「……%TEXTR("身体即使锻炼也不会吃亏的/即使这样习惯化了也会很開心的吧？/肌肉一天也是练不成的。")%」_L"
+					ELSEIF !RAND:2
+						SELECTCASE RAND:3
+							CASE 0
+								PRINTFORMW 「……这个？%CNAME("一人称")%的……每天的功课。」
+							CASE 1
+								PRINTFORMW 「不能像%CNAME("二人称")%那样有很多灵魂，训练很重要……」
+							CASEELSE
+								PRINTFORMW 「哦、%CNAME("二人称")%也一起做……？」
+						ENDSELECT
+					ELSE
+						PRINTFORML 「……那么、%CNAME("二人称")%喜欢很多肌肉吗？」
+						PRINTFORMW 「嗯……只是稍微问问而已。」
+					ENDIF
+			ENDSELECT
+		ELSEIF !RAND:2
+			SELECTCASE TEXTS("季節詳細")
+				CASE "冬"
+					IF !RAND:3
+						PRINTFORML 「」（哆哆嗦嗦）
+						PRINTFORMW 冷得根本谈不上话。
+					ELSEIF !RAND:2
+						PRINTFORML 「……哦、下雪了。」
+						PRINTFORMW 「%CNAME("一人称")%的老家也总是下雪、到这里会不会也下很多雪呢……。」
+					ELSE
+						PRINTFORMW 「嗯……冷得浑身无力了快。」
+						SIF FIND_COND("現在存在", "哈娜")
+							PRINTFORMW 「%CNAME("哈娜")%是……到外面了吧。」
+						CALL EMOTION_PLUS, "重置/斜眼/困扰眉"
+					ENDIF
+				CASE "晩秋"
+					IF !RAND:2
+						PRINTFORMW 「冬天……就这么靠近了。%CNAME("一人称")%挺怕冷的……」
+					ELSE
+						PRINTFORMW 「啊……今后会更冷了呢……」（哆哆嗦嗦）
+					ENDIF
+				CASE "秋"
+					IF !RAND:2
+						PRINTFORML 「换季的时候，要为穿什么衣服而烦恼」
+						PRINTFORMW 「早晚的气温和湿度完全不同，天气也很多变……」
+					ELSE
+						PRINTFORML 「话说回来、『○○之秋』真是太多了吧。」
+						PRINTFORMW 「艺术，食欲，体育……。大概有几种呢？」
+					ENDIF
+				;CASE "夏"
+					
+				CASE "春"
+					IF !RAND:2
+						PRINTFORMW 「樱花漂亮吗……。」
+						PRINTFORMW 「%CNAME("一人称")%的老家、叶子已经长出来了吗？」
+					ELSE
+						PRINTFORMW 「天气渐渐暖和起来了呢……。」
+						PRINTFORMW 「一直这样就好了。」
+					ENDIF
+				CASEELSE
+					PRINTFORMW 「怎么了、%CNAME("二人称")%？　……只是试着叫了一下？」
+			ENDSELECT
+		ELSE
+			PRINTFORMW 「関于%CNAME("一人称")%的老家……？」
+			SELECTCASE RAND:3
+				CASE 0
+					PRINTFORMW 「一直听说美女很多……实际上又怎么样呢？」
+					PRINTFORMW 「%CNAME("一人称")%也是美女吗？……嘻嘻嘻。」
+				CASE 1
+					PRINTFORMW 「作为茶叶的产地……其他地方比较有名呢。」
+				CASEELSE
+					PRINTFORMW 「都市和乡下适度混合的适合居住的地方吧……？」
+			ENDSELECT
+		ENDIF
+	ENDSELECT
+
+CASE "拭汗"
+	IF TALENT:恋慕 && RAND:2
+		PRINTFORMW 「%CNAME("二人称")%、%TEXTR("谢谢了/舒服多了")%」
+	ELSE
+		PRINTFORMW %TEXTR("「啊、多管闲事。」/（哇，我闻到汗味了……。）/（真的只是擦汗吗……）")%
+	ENDIF
+
+CASE "淋浴独り言"
+	;PRINTFORMW 
+CASE "淋浴"
+	;実は内衣を漁ったのに気づかれています
+	IF COND("淋浴：内衣漁りバレ")
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "淋浴後换装"
+	;初めて
+	IF DEVENT(STR:日常イベント名) == 0
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+CASE "淋浴後换装失敗"
+	;初めて
+	IF DEVENT(STR:日常イベント名) == 0
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+;睡眠中の悪戯
+CASE "趁睡袭击"
+	;梦话
+	CALL KOJO_SLEEP_K29
+	WAIT
+CASE "互动"
+	SELECTCASE STR:日常イベント名
+	CASE "托一托胸部"
+		PRINTFORMW 
+	CASE "按摩"
+		PRINTFORMW 
+	CASE "接吻"
+		IF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	CASE "膝枕"
+		PRINTFORMW 
+	CASE "泡茶"
+		PRINTFORMW 
+	CASE "勸酒"
+		PRINTFORMW 
+	CASE "一起学习"
+		SELECTCASE BASE:学力
+		CASE IS >= 70
+			IF BASE:MASTER:学力 >= BASE:学力
+				SELECTCASE RAND:2
+				CASE 0
+					PRINTFORMW 「物体在空气中移动的速度可以直接计算出来，行星的公转速度」
+					PRINTFORMW 「在这种情况下，很少有这样的要求。」
+				CASEELSE
+					PRINTFORMW 「这种思想中、○○这个部分可能是错误频频发生的地方吧。」
+					PRINTFORMW 「一步之差、意思就完全相反了……」
+				ENDSELECT
+			ELSE
+				SELECTCASE RAND:2
+				CASE 0
+					PRINTFORMW 「假设秒速840m的物体的水平速度为2000米每秒340米、中间速度约为秒速590m。」
+					PRINTFORML 「（中略）3.39秒内物体落下的距离（无视空气阻力））
+					PRINTFORMW 　是"0.5×9.8×（3.39）＾2＝56.31〔m〕"……。」
+					;PRINTFORMW 弾道学だこれー！？
+				CASEELSE
+					PRINTFORMW 「这道历史题，这个才是正确答案吗……？」
+					PRINTFORMW 「啊、这个年级的话就要学习到那种程度……」
+				ENDSELECT
+			ENDIF
+		CASE IS >= 50
+			IF RAND:2 || BASE:MASTER:学力 >= BASE:学力 + 10
+				SELECTCASE RAND:2
+				CASE 0
+					PRINTFORMW 「……物理、化学都很擅长、地理学却学的特别难啊。」
+					PRINTFORMW 岩石的名字和性质、我都记不住了……」
+				CASE 1
+					PRINTFORM 「%CNAME("二人称")%、这本书里写的内容
+					PRINTFORM 『%TEXTR("brb/coz/Дыьжгъ/E E I S A E D F A E/Naughtzis/sup/ppl/ОппаиЧуукураидакараСуки")%』
+					PRINTFORMW 是什么意思？」
+				CASEELSE
+					PRINTFORMW 「用那个公式就好了之类的。完全不同的解法呢……」
+				ENDSELECT
+			ELSE
+				SELECTCASE RAND:2
+				CASE 0
+					PRINTFORMW 「物理学习比较勉强？%CNAME("一人称")%出一个例题吧。」
+					PRINTFORMW 气压为1013hPa、外部气温为华氏14度时、请以马赫数表示秒速850m》
+				CASEELSE
+					PRINTFORMW 「%CNAME("二人称")%、稍微好点吗？这一点还不能理解呢……」
+					PRINTFORMW 「什么、%CNAME("二人称")%都不知道啊……？　那怎么能行……」
+				ENDSELECT
+			ENDIF
+		CASE IS <= 20
+			PRINTFORMW 「哇、%CNAME("一人称")%变得连这么简单的事情都不知道了……」
+		CASEELSE
+			SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 「好一点吗？完全搞不懂这里……」
+			CASE 1
+				PRINTFORMW 「……哎呀、连语法都弄错了。这个没注意到啊……」
+			CASEELSE
+				PRINTFORMW 「出现在这段历史上的这家伙、我个人很讨厌呢……」
+			ENDSELECT
+		ENDSELECT
+	
+	;当然だが尾巴がある相手のみ
+	CASE "抚摸尾巴"
+		;初めて
+		IF DEVENT(STR:日常イベント名) == 0
+			PRINTFORMW 
+		;連続実行
+		ELSEIF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			PRINTFORMW 
+		;この時間で初実行
+		ELSEIF CHOSE_DEVENT(STR:日常イベント名) == 0 && RAND:2
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+CASE "整理睡姿"
+	;梦话
+	CALL KOJO_SLEEP_K29
+	WAIT
+CASE "卖个破绽"
+	SELECTCASE STR:日常イベント名
+	CASE "邀请一起入浴"
+		PRINTFORMW 
+	CASE "Ｈ的邀请", "展示内褲"
+		PRINTFORMW 
+	CASE "推倒"
+		PRINTFORMW 
+	CASE "清洁口交"
+		PRINTFORMW 
+	CASE "口淫"
+		PRINTFORMW 
+	CASE "亲脸頬", "接吻"
+		PRINTFORMW 
+	CASE "膝枕"
+		PRINTFORMW 
+	CASE "抱住", "把胸部压了上去"
+		CALL PRINT_STR, @"「%TEXTR("唔啾/啾/偶尔也要撒下娇吧？")%」_L"
+		SIF !RAND:5
+			PRINTFORMW %CALLNAME:TARGET%微散发出烟花般的香味…。
+	CASE "摩擦股間"
+		PRINTFORMW 
+	CASE "抚摸", "膝枕"
+		PRINTFORMW 「%TEXTR("你看……偶尔撒撒娇也没関系。/好了好了，好孩子好孩子……")%」
+	CASE "手淫"
+		PRINTFORMW 
+	CASE "沏茶"
+		;CSTR:茶 を指定してある場合には、SAVESTR:茶 で何を用意したかが判定できる
+		;例）PRINTFORMW 「よければ%SAVESTR:茶%どうぞ」
+		IF RAND:5 == 0
+			PRINTFORMW 「%SAVESTR:茶%ﾄﾞｿﾞｰ」
+		ELSE
+			PRINTFORMW 「よければ%SAVESTR:茶%どうぞ。」
+		ENDIF
+	;それ以外
+	CASEELSE
+		IF RAND:2
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDSELECT
+;これは素質に[開朗]ないし[粗野]を持っている角色のみです
+CASE "構って欲しい！"
+	PRINTFORMW （。ω°*三*°ω。）
+CASE "廁所"
+	;廁所で用を済ませた後の台詞
+	IF BASE:尿意 == 0
+		;主人も廁所で済ませてきた
+		IF BASE:MASTER:尿意 == 0
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;廁所に行く際の台詞
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "廁所詮索"
+	PRINTFORMW 
+;これは你と角色が両方男性の際に限り起きます
+CASE "連れション"
+	PRINTFORMW 
+;これは你と角色が両方男性でない際に限り起きます
+CASE "廁所で井戸端会議"
+	PRINTFORMW 
+CASE "检查阴部"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K29
+		WAIT
+	ELSE
+		IF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			;連続実行
+			SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 「%CNAME("二人称")%、适、适可而止吧……」
+			CASE 1
+				PRINTFORMW 「」（咔库咔库布噜布噜）
+			CASEELSE
+				PRINTFORMW 「真是的、没完没了一直……」
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 「为、为什么要碰那里……」
+			CASE 1
+				PRINTFORMW 「你、你想干什么? !」
+			CASEELSE
+				PRINTFORMW 「果、果然还是觉得好丢人啊……」
+			ENDSELECT
+		ENDIF
+	ENDIF
+CASE "检查内褲"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K29
+		WAIT
+	ELSE
+		IF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			;連続実行
+			SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 「呜呜……刚才被你看到了吗？」
+			CASE 1
+				PRINTFORMW 「还想继续吗？」
+			CASEELSE
+				PRINTFORMW 「唔……已经好了吗？」
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 「%CNAME("二人称")%真的喜欢这样呢……」
+			CASE 1
+				PRINTFORMW 「呜、看上去很開心的样子……」
+			CASEELSE
+				PRINTFORMW 「就、就那么想看吗……？」
+			ENDSELECT
+		ENDIF
+	ENDIF
+CASE "撫摸股間"
+	PRINTFORMW 
+CASE "检查布鲁马", "股間観察"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K29
+		WAIT
+	ELSEIF CFLAG:股間確認済 && RAND:2
+		PRINTFORMW 「贴、贴太近了…。」
+	ELSE
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW %CNAME("二人称", "どもり")%、鼻子都和那里贴在一起了……！？
+		CASE 1
+			PRINTFORMW 「嗯，这也不错啊……」
+		CASEELSE
+			PRINTFORMW 「呜呜、还是觉得害羞……」
+		ENDSELECT
+	ENDIF
+
+CASE "掀起裙子"
+	SELECTCASE STR:日常イベント名
+	CASE "撩起裙子"
+		;初めて
+		IF DEVENT(STR:日常イベント名) == 0
+			PRINTFORMW 「你来掀開和我自己卷起来、比较想要哪一种呢……」
+		;胖次チラ直後
+		ELSEIF COND("胖次チラ直後")
+			PRINTFORMW 「…刚才看见了吧？」
+		;胖次沒穿
+		ELSEIF EQUIP:胖次 == 0
+			PRINTFORMW 「不管怎么想都觉得好害羞……」
+		ELSE
+			PRINTFORMW 「欸、那个…、这样可以吗？」
+		ENDIF
+	;掀起裙子
+	CASEELSE
+		;刚睡醒の胡乱な状態を襲う
+		IF CFLAG:刚睡醒
+			SELECTCASE RAND:3
+			CASE 0
+				PRINTFORMW 「ぅ…、%CNAME("二人称")%总是做这种荒唐事……」
+			CASE 1
+				IF TRUE_SEX(MASTER) == "男性"
+					PRINTFORML 「……嗯」（警觉）
+					PRINTFORMW %CALLNAME:TARGET%的%TEXTR("秀腿/拳頭")%直接命中了%CALLNAME:MASTER%的%TEXTR("胸口/面部/小腹")%…。
+				ELSE
+					PRINTFORMW 「……ん？」
+				ENDIF
+			CASEELSE
+				PRINTFORMW 「什、什么、是%CNAME("二人称")%啊……。」
+			ENDSELECT
+		;睡眠中の悪戯
+		ELSEIF CFLAG:睡眠
+			;梦话
+			CALL KOJO_SLEEP_K29
+			WAIT
+		;初めて
+		ELSEIF DEVENT(STR:日常イベント名) == 0
+			PRINTFORMW 「啊、什么呀……？」
+		;胖次チラ直後
+		ELSEIF COND("胖次チラ直後")
+			PRINTFORMW 「哇、能不能再确认一下……」
+		ELSE
+			IF COND("打招呼前")
+				SELECTCASE RAND:3
+				CASE 0
+					PRINTFORMW 「喂、喂！不要擅自这种恶作剧…。」
+				CASE 1
+					PRINTFORMW 「……哈！？」
+				CASEELSE
+					PRINTFORMW 「哎呀、突然说不行……」
+				ENDSELECT
+			ELSEIF EQUIP:胖次 == 0
+				PRINTFORMW 「不、不要啊、再怎么说还是停下吧……！」
+			ELSE
+				PRINTFORMW 「欸、又来……？」
+			ENDIF
+		ENDIF
+	ENDSELECT
+CASE "胖次ドーピング"
+	;初回
+	IF DEVENT(ARGS) == 0
+		;自分の胖次
+		IF COND("胖次ドーピング")
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "裙下撮影"
+	SELECTCASE STR:日常イベント名
+	CASE "撮影失敗"
+		PRINTFORMW 
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+CASE "股間撮影"
+	SELECTCASE STR:日常イベント名
+	CASE "撮影失敗"
+		PRINTFORMW 
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+CASE "内褲摄影"
+	SELECTCASE STR:日常イベント名
+	CASE "撮影失敗"
+		PRINTFORMW 
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+CASE "阴部摄影"
+	SELECTCASE STR:日常イベント名
+	CASE "撮影失敗"
+		PRINTFORMW 
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+ENDSELECT
+
+;-------------------------------------------------
+;约会の際のセリフ
+;システム側の地の文や反応を出力させたくない場合には TFLAG:地の文スキップ = 1 としてください
+;约会回数は EXP:约会経験 が+1ずつされます。初回のセリフは IF EXP:约会経験 == 0 で分岐するのが良いでしょう
+;素質で分岐させる場合にはTALENT:恋慕での分岐がおすすめです
+;-------------------------------------------------
+@KOJO_DATE_K29, ARGS
+
+SELECTCASE ARGS
+;你を週末约会に誘った
+CASE "约会のお誘い"
+	PRINTFORMW 「%CNAME("二人称")%、星期天的安排%TEXTR("空出来了吧/空出来了吧")%……？」
+	IF CEVENT("约会：救出作戦／碧")
+		PRINTFORMW 「就像之前说的那样、救出作戦你会来吧？」
+	ELSEIF CEVENT("組織の正体") && CEVENT("救出作戦：成功") == 0
+		PRINTFORMW 「也就是说、前几天说了"搜索工厂地带附近"的话……不是吗？」
+		PRINTFORM 「不过、
+		IF FINDCHARA(NO, 20) > 0
+			PRINTFORM %NAME:FINDCHARA(NO, 20)%酱
+		ELSEIF FINDCHARA(NO, 1) > 0
+			PRINTFORM %NAME:FINDCHARA(NO, 1)%酱
+		ELSE
+			;現状では実質有些得ない分岐
+			PRINTFORM %CNAME("二人称")%的母亲
+		ENDIF
+		PRINTFORMW 听说发现了绑架组织的据点。」
+		PRINTFORMW 「%CNAME("一人称")%和父亲经营的警卫公司的职员们一起去救出人质」
+		PRINTFORMW 「这个星期天，如果可以的话……能和我一起来吗?」
+		CALL SET_CEVENT, "约会：救出作戦／碧"
+	ELSE
+		PRINTFORMW 「%TEXTR("如果可以的话/有空的话")%一起出門吧。」
+	ENDIF
+CASE "约会のお誘い：結果"
+	;约会決定！
+	IF COND("约会的约定")
+		PRINTFORMW 「……谢谢你、%CNAME("二人称")%。」
+		IF CEVENT("约会：救出作戦／碧")
+			PRINTFORMW 「从学校步行到尽頭的距离、在正門前等着吧。」
+		ELSE
+			PRINTFORMW 「如果可以的话也要决定去哪里。」
+		ENDIF
+	;你に保留されてしまった
+	ELSEIF CEVENT("约会：救出作戦／碧")
+		PRINTFORMW 「嗯……我明白了。」
+		PRINTFORMW 并不是现在马上、只是有预定%TEXTR("确定/无吗？")%时间告诉我吧……」
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;你から週末约会に誘われた
+CASE "约会に誘われた"
+	PRINTFORMW 
+;你から约会当日にいきなり誘われた
+CASE "邀请去约会"
+	;同居していない相手を誘った時
+	IF COND("同居中") == 0
+		PRINTFORMW 『……哎、现在開始啰!?』
+		SIF EXP:约会経験 == 0
+			PRINTFORMW 『这种事情至少应该前一天说吧……』
+		PRINTFORMW 『知道了、准备好了就去，等着我。』
+	ELSE
+		PRINTFORMW 「现、现在去？」
+		PRINTFORMW 那就等着我准备吧。」
+	ENDIF
+
+;地の文はpartnerが遅れて現れる展開になっています
+;地の文が用意されているので、轻轻地１行程度の反応で良いと思います
+CASE "待ち合わせ"
+	IF CEVENT("约会：救出作戦／碧")
+		PRINTFORMW 「哦……比规定的时间来得早。」
+		PRINTFORMW 「那么、我带你去吧。」
+	ELSEIF COND("同居中") == 0
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	;地の文を自己書きたい場合にはコメントアウトを外してください
+	;TFLAG:地の文スキップ = 1
+
+;地の文が用意されているので、轻轻地１行程度の反応で良いと思います
+CASE "约会本番"
+	SELECTCASE SAVESTR:约会
+	CASE "去买泳衣"
+		PRINTFORMW 
+	CASE "散歩"
+		PRINTFORMW 
+	CASE "尋訪美食"
+		PRINTFORMW 
+	CASE "逛街"
+		PRINTFORMW 
+	CASE "去水族馆"
+		PRINTFORMW 
+	CASE "去游乐园"
+		PRINTFORMW 
+	CASE "去图书馆"
+		PRINTFORMW 
+	CASE "赏花"
+		PRINTFORMW 
+	CASE "去游泳"
+		PRINTFORMW 
+	CASE "爬山"
+		PRINTFORMW 
+	CASE "赏红叶"
+		PRINTFORMW 
+	CASE "滑雪"
+		PRINTFORMW 
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+
+	;地の文を自己書きたい場合にはコメントアウトを外してください
+	;TFLAG:地の文スキップ = 1
+
+CASE "手をつなぐ"
+		PRINTFORMW 
+CASE "手をつながない"
+
+;泳装を買いに行った時です
+CASE "泳装選び開始"
+	;Micro比基尼とかもＯＫ
+	IF COND("Ｈ的泳装選択可能") && RAND:2
+		PRINTFORMW 
+	ELSEIF RAND:2
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+;泳池などで泳装姿に着替え、待ち合わせ場所に集合した時です
+CASE "泳装に着替えた"
+	;どの泳装に着替えたか？
+	SELECTCASE SWIM(CSTR:今年の泳装, "種類")
+	CASE "比基尼"
+		PRINTFORMW 
+	CASE "Micro比基尼"
+		PRINTFORMW 
+	CASE "連体泳装"
+		PRINTFORMW 
+	CASE "競泳泳装"
+		PRINTFORMW 
+	;其他はだいたいエロ泳装です
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+
+;草丛口交です。地の文が用意されているので、轻轻地１行程度の反応でも良いと思います
+CASE "到暗处去……"
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	;地の文を自己書きたい場合にはコメントアウトを外してください
+	;TFLAG:地の文スキップ = 1
+
+CASE "接吻"
+
+CASE "摸屁股"
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;你が草丛口交や接吻や性騷擾をしない紳士な場合はここに来ます
+CASE "下次去哪里呢？询问"
+
+;帰り際のセリフです。不动声色地エッチに邀请のもいいでしょう
+CASE "帰り際"
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "约会終了"
+	;エッチをする場合
+	IF TFLAG:床イン
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ELSE
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+ENDSELECT
+

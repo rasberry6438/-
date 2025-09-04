@@ -1,0 +1,431 @@
+﻿
+@同室画面文字色設定(対象キャラ)
+#DIM CONST デフォ色 = 12632256
+#DIM 対象キャラ
+#DIM 変更文字色
+#DIMS DYNAMIC 変更表示名
+#DIM R値
+#DIM G値
+#DIM B値
+
+IF CFLAG:対象キャラ:同室文字色
+	R値 = CFLAG:対象キャラ:同室文字色 / 256 / 256
+	G値 = CFLAG:対象キャラ:同室文字色 / 256 % 256
+	B値 = CFLAG:対象キャラ:同室文字色 % 256
+	変更文字色 = CFLAG:対象キャラ:同室文字色
+ELSE
+	R値 = 192
+	G値 = 192
+	B値 = 192
+	変更文字色 = デフォ色
+ENDIF
+
+変更表示名 '= CSTR:対象キャラ:同室者一覧表示名
+
+$表示LOOP
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+PRINTL
+DRAWLINE
+PRINTL 可以在同室者列表及角色位置显示画面中设置显示名称和文字颜色。
+PRINTL 显示名称的适用场景存在限制。在口上等剧本内容中不会生效，显示包含称号的全名时也不会生效。
+PRINTL 注意：该文字色将优先于恋慕、炮友、发情或怀孕状态显示。
+DRAWLINE
+IF 変更表示名 == ""
+	PRINTFORML ・%NAME表示(対象キャラ)%当前显示名称：%CALLNAME:対象キャラ%（默认）
+	PRINTPLAIN [995] 恢复默认
+	PRINTL
+	PRINTBUTTON "[996] 修改显示名称", 996
+	PRINTL
+ELSE
+	PRINTFORML ・%NAME表示(対象キャラ)%当前显示名称：%変更表示名%
+	PRINTBUTTON @"[995] 恢复默认（%CALLNAME:対象キャラ%）", 995
+	PRINTL
+	PRINTBUTTON "[996] 修改显示名称", 996
+	PRINTL
+ENDIF
+DRAWLINE
+PRINTFORM ・%NAME表示(対象キャラ)%当前设定文字色：
+IF 文字色グループ取得(対象キャラ) > -1
+	SETCOLOR 同室時_グループ文字色:(文字色グループ取得(対象キャラ))
+	PRINTFORML 组别{文字色グループ取得(対象キャラ), 2}：[%CALLNAME:対象キャラ%]
+	RESETCOLOR
+ELSEIF CFLAG:対象キャラ:同室文字色
+	SETCOLOR CFLAG:対象キャラ:同室文字色
+	PRINTFORML 个别文字色：[%CALLNAME:対象キャラ%]
+	RESETCOLOR
+ELSE
+	PRINTL 默认
+ENDIF
+DRAWLINE
+
+PRINT ・变更后文字色：
+IF 文字色グループ取得(対象キャラ) > -1
+	SETCOLOR 同室時_グループ文字色:(文字色グループ取得(対象キャラ))
+	PRINTFORML 组别{文字色グループ取得(対象キャラ), 2}：[%CALLNAME:対象キャラ%]
+	RESETCOLOR
+ELSEIF 変更文字色 == デフォ色
+	PRINTL 默认
+ELSE
+	SETCOLOR 変更文字色
+	PRINTFORML 个别文字色：[%CALLNAME:対象キャラ%]
+	RESETCOLOR
+ENDIF
+PRINTL
+PRINTL ■RGB指定
+PRINT Ｒ　　
+PRINTBUTTON "[-10]", 0
+PRINTBUTTON "[-1]", 1
+PRINTFORM  {R値, 3} 
+PRINTBUTTON "[+1]", 2
+PRINTBUTTON "[+10]", 3
+PRINT 　　
+PRINTBUTTON "[数値指定]", 9
+PRINTL 
+PRINT Ｇ　　
+PRINTBUTTON "[-10]", 10
+PRINTBUTTON "[-1]", 11
+PRINTFORM  {G値, 3} 
+PRINTBUTTON "[+1]", 12
+PRINTBUTTON "[+10]", 13
+PRINT 　　
+PRINTBUTTON "[数値指定]", 19
+PRINTL 
+PRINT Ｂ　　
+PRINTBUTTON "[-10]", 20
+PRINTBUTTON "[-1]", 21
+PRINTFORM  {B値, 3} 
+PRINTBUTTON "[+1]", 22
+PRINTBUTTON "[+10]", 23
+PRINT 　　
+PRINTBUTTON "[数値指定]", 29
+PRINTL 
+
+PRINTL
+PRINTBUTTON "[997] 恢复当前设定色", 997
+PRINT 　　　
+PRINTBUTTON "[998] 重置为默认文字色", 998
+PRINTL
+DRAWLINE
+IF 文字色グループ取得(対象キャラ) > -1
+	SETCOLOR 同室時_グループ文字色:文字色グループ取得(対象キャラ)
+	PRINTBUTTON @"[3000] 退出{文字色グループ取得(対象キャラ), 2}组", 3000
+	RESETCOLOR
+	PRINTL
+ELSE
+	FOR LOCAL, 0, 5
+		IF 同室時_グループ文字色:LOCAL
+			SETCOLOR 同室時_グループ文字色:LOCAL
+			PRINTBUTTONLC @"[{LOCAL + 1000}] 注册到{LOCAL, 2}组", LOCAL + 1000
+			PRINT 　　
+			PRINTBUTTON @"[更改{LOCAL, 2}组文字颜色]", LOCAL + 2000
+			PRINTL 
+		ELSE
+			PRINTFORMLC [----] 组别{LOCAL, 2}：未注册文字色　　
+			PRINTBUTTON @"[更改{LOCAL, 2}组文字颜色]", LOCAL + 2000
+			PRINTL 
+		ENDIF
+		RESETCOLOR
+	NEXT
+ENDIF
+DRAWLINE
+PRINTBUTTONLC "[999] 不修改显示名称・文字颜色并返回", 999
+PRINTL
+PRINTL
+PRINTBUTTONLC "[990] 保存显示名称・文字颜色并返回", 990
+
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 3000
+		CALL 文字色グループ削除(対象キャラ)
+	CASE IS >= 2000
+		CALL 同室時_グループ文字色変更(LOCAL - 2000)
+	CASE IS >= 1000
+		IF 同室時_グループ所属キャラ:(LOCAL - 1000) == ""
+			同室時_グループ所属キャラ:(LOCAL - 1000) = _
+		ENDIF
+		同室時_グループ所属キャラ:(LOCAL - 1000) += @"{対象キャラ}_"
+	CASE 995
+		変更表示名 = 
+	CASE 996
+		DRAWLINE
+		PRINTL 请输入要显示的字符串。
+		PRINTL
+		INPUTS
+		変更表示名 '= RESULTS
+		PRINTFORMW 已将显示名称设置为%変更表示名%。
+	CASE 990
+		IF 変更文字色 == デフォ色
+			CFLAG:対象キャラ:同室文字色 = 0
+		ELSE
+			CFLAG:対象キャラ:同室文字色 = R値 * 256 * 256
+			CFLAG:対象キャラ:同室文字色 += G値 * 256
+			CFLAG:対象キャラ:同室文字色 += B値
+		ENDIF
+		CSTR:対象キャラ:同室者一覧表示名 '= 変更表示名
+		RETURN 1
+	CASE 997
+		IF CFLAG:対象キャラ:同室文字色 == 0
+			R値 = 192
+			G値 = 192
+			B値 = 192
+		ELSE
+			R値 = CFLAG:対象キャラ:同室文字色 / 256 / 256
+			G値 = CFLAG:対象キャラ:同室文字色 / 256 % 256
+			B値 = CFLAG:対象キャラ:同室文字色 % 256
+		ENDIF
+	CASE 998
+		R値 = 192
+		G値 = 192
+		B値 = 192
+	CASE 999
+		RETURN 0
+	CASE 0
+		R値 = MAX(1, R値 - 10)
+	CASE 1
+		R値 = MAX(1, R値 - 1)
+	CASE 2
+		R値 = MIN(255, R値 + 1)
+	CASE 3
+		R値 = MIN(255, R値 + 10)
+	CASE 9
+		PRINTL 请输入R值（1～255）
+		INPUT
+		R値 = LIMIT(RESULT, 1, 255)
+	CASE 10
+		G値 = MAX(1, G値 - 10)
+	CASE 11
+		G値 = MAX(1, G値 - 1)
+	CASE 12
+		G値 = MIN(255, G値 + 1)
+	CASE 13
+		G値 = MIN(255, G値 + 10)
+	CASE 19
+		PRINTL 请输入G值（1～255）
+		INPUT
+		G値 = LIMIT(RESULT, 1, 255)
+	CASE 20
+		B値 = MAX(1, B値 - 10)
+	CASE 21
+		B値 = MAX(1, B値 - 1)
+	CASE 22
+		B値 = MIN(255, B値 + 1)
+	CASE 23
+		B値 = MIN(255, B値 + 10)
+	CASE 29
+		PRINTL 请输入B值（1～255）
+		INPUT
+		B値 = LIMIT(RESULT, 1, 255)
+ENDSELECT
+
+
+変更文字色 = R値 * 256 * 256
+変更文字色 += G値 * 256
+変更文字色 += B値
+GOTO 表示LOOP
+
+
+
+
+@文字色グループ取得(対象キャラ)
+#FUNCTION
+#DIM 対象キャラ
+
+;キャラがどこの文字色グループに所属しているかを見る
+FOR LOCAL, 0, VARSIZE("同室時_グループ文字色")
+	IF STRFIND(同室時_グループ所属キャラ:LOCAL, @"_{対象キャラ}_") > -1
+		RETURNF LOCAL
+	ENDIF
+NEXT
+
+RETURNF -1
+
+@文字色グループ削除(対象キャラ)
+#DIM 対象キャラ
+
+LOCAL = 文字色グループ取得(対象キャラ)
+SIF LOCAL < 0
+	RETURN 0
+
+同室時_グループ所属キャラ:LOCAL = %REPLACE(同室時_グループ所属キャラ:LOCAL, @"_{対象キャラ}_", "_")%
+SIF 同室時_グループ所属キャラ:LOCAL == "_"
+	同室時_グループ所属キャラ:LOCAL = 
+
+RETURN 1
+
+
+@同室時_グループ文字色変更(グループ番号)
+#DIM グループ番号
+#DIM CONST デフォ色 = 12632256
+#DIM 対象キャラ
+#DIM 変更文字色
+#DIM R値
+#DIM G値
+#DIM B値
+
+IF 同室時_グループ文字色:グループ番号
+	R値 =  同室時_グループ文字色:グループ番号 / 256 / 256
+	G値 =  同室時_グループ文字色:グループ番号 / 256 % 256
+	B値 =  同室時_グループ文字色:グループ番号 % 256
+	変更文字色 =  同室時_グループ文字色:グループ番号
+ELSE
+	R値 = 192
+	G値 = 192
+	B値 = 192
+	変更文字色 = デフォ色
+ENDIF
+
+
+$表示LOOP
+DRAWLINE
+PRINTL 可以在同室者列表及角色位置显示画面中设置文字颜色。
+PRINTL 注意：该文字色将优先于恋慕、炮友、发情或怀孕状态显示。
+DRAWLINE
+PRINTFORM ・组别{グループ番号, 2}当前设定文字色：
+IF 同室時_グループ文字色:グループ番号
+	SETCOLOR  同室時_グループ文字色:グループ番号
+	PRINTFORML 示例「组别{グループ番号, 2}」
+	RESETCOLOR
+ELSE
+	PRINTL 未设置
+ENDIF
+DRAWLINE
+
+PRINT ・变更后文字色：
+IF 変更文字色
+	SETCOLOR 変更文字色
+	PRINTFORML 示例「组别{グループ番号, 2}」
+	RESETCOLOR
+ELSEIF 変更文字色 == デフォ色
+	PRINTL 未设置
+ENDIF
+PRINTL
+PRINTL ■RGB指定
+PRINT Ｒ　　
+PRINTBUTTON "[-10]", 0
+PRINTBUTTON "[-1]", 1
+PRINTFORM  {R値, 3} 
+PRINTBUTTON "[+1]", 2
+PRINTBUTTON "[+10]", 3
+PRINT 　　
+PRINTBUTTON "[数値指定]", 9
+PRINTL 
+PRINT Ｇ　　
+PRINTBUTTON "[-10]", 10
+PRINTBUTTON "[-1]", 11
+PRINTFORM  {G値, 3} 
+PRINTBUTTON "[+1]", 12
+PRINTBUTTON "[+10]", 13
+PRINT 　　
+PRINTBUTTON "[数値指定]", 19
+PRINTL 
+PRINT Ｂ　　
+PRINTBUTTON "[-10]", 20
+PRINTBUTTON "[-1]", 21
+PRINTFORM  {B値, 3} 
+PRINTBUTTON "[+1]", 22
+PRINTBUTTON "[+10]", 23
+PRINT 　　
+PRINTBUTTON "[数値指定]", 29
+PRINTL 
+
+PRINTL
+PRINTBUTTON "[997] 恢复当前设定色", 997
+PRINT 　　　
+PRINTBUTTON "[998] 设为未设置", 998
+PRINTL
+DRAWLINE
+PRINTBUTTONLC "[999] 不修改并返回", 999
+PRINTL
+PRINTL
+PRINTBUTTONLC "[990] 保存并返回", 990
+
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 990
+		IF 変更文字色 == デフォ色
+			PRINTL 若将组别文字色设为未设置，该组别下所有注册角色将被解除关联。
+			PRINTL 是否确认执行？
+			PRINTBUTTONLC "[0] 确定", 0
+			PRINTBUTTONLC "[1] 取消", 1
+			IF RESULT == 0
+				同室時_グループ文字色:グループ番号 = 0
+				同室時_グループ所属キャラ:グループ番号 = 
+			ENDIF
+		ELSE
+			同室時_グループ文字色:グループ番号 = R値 * 256 * 256
+			同室時_グループ文字色:グループ番号 += G値 * 256
+			同室時_グループ文字色:グループ番号 += B値
+		ENDIF
+		RETURN 1
+	CASE 997
+		IF 同室時_グループ文字色:グループ番号 == 0
+			R値 = 192
+			G値 = 192
+			B値 = 192
+		ELSE
+			R値 = 同室時_グループ文字色:グループ番号 / 256 / 256
+			G値 = 同室時_グループ文字色:グループ番号 / 256 % 256
+			B値 = 同室時_グループ文字色:グループ番号 % 256
+		ENDIF
+	CASE 998
+		R値 = 192
+		G値 = 192
+		B値 = 192
+	CASE 999
+		RETURN 0
+	CASE 0
+		R値 = MAX(1, R値 - 10)
+	CASE 1
+		R値 = MAX(1, R値 - 1)
+	CASE 2
+		R値 = MIN(255, R値 + 1)
+	CASE 3
+		R値 = MIN(255, R値 + 10)
+	CASE 9
+		PRINTL 请输入R值（1～255）
+		INPUT
+		R値 = LIMIT(RESULT, 1, 255)
+	CASE 10
+		G値 = MAX(1, G値 - 10)
+	CASE 11
+		G値 = MAX(1, G値 - 1)
+	CASE 12
+		G値 = MIN(255, G値 + 1)
+	CASE 13
+		G値 = MIN(255, G値 + 10)
+	CASE 19
+		PRINTL 请输入G值（1～255）
+		INPUT
+		G値 = LIMIT(RESULT, 1, 255)
+	CASE 20
+		B値 = MAX(1, B値 - 10)
+	CASE 21
+		B値 = MAX(1, B値 - 1)
+	CASE 22
+		B値 = MIN(255, B値 + 1)
+	CASE 23
+		B値 = MIN(255, B値 + 10)
+	CASE 29
+		PRINTL 请输入B值（1～255）
+		INPUT
+		B値 = LIMIT(RESULT, 1, 255)
+ENDSELECT
+
+変更文字色 = R値 * 256 * 256
+変更文字色 += G値 * 256
+変更文字色 += B値
+GOTO 表示LOOP
+
+

@@ -1,0 +1,93 @@
+﻿
+@RAPE_COMNAME_S22_3
+#FUNCTIONS
+TSTR:コマンド名受渡 = 抓角肛交
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@RAPE_COMTYPE_S_22_3
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = RAPE_COMTYPE("Ａ系")
+
+
+@RAPE_COM_TOOLTIP_S22_3
+LOCALS = <br>■抓角肛交<br>
+LOCALS += "后入式肛交时抓住角部强力侵犯的指令。<br>仅在Ａ后背位、Ａ站立后入模式中可执行。"
+LOCALS += "<br>强奸指令类型：Ａ系<br>获取来源：快Ａ・接触・痛苦・不洁(特定条件时)"
+LOCALS += "<br>专属经验值：Ａ性交经验(TARGET)・Ｃ肛门经验_Ａ插入(PLAYER)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@RAPE_COM_S22_3
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+CALL SOURCE_CALC_快Ａ(TARGET, PLAYER, 400)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 150)
+
+CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 400)
+
+;苦痛
+LOCAL = 200 * PAIN_CHECK_A(TARGET) / 1000
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, LOCAL)
+
+;貞操観念
+IF !TALENT:恋慕
+	IF TALENT:貞操 == 1
+		CALL SOURCE_CALC_不潔(TARGET, PLAYER, 500)
+	ELSEIF TALENT:貞操 == 0
+		CALL SOURCE_CALC_不潔(TARGET, PLAYER, 250)
+	ENDIF
+ENDIF
+
+CALL SOURCE_CALC_苦痛(TARGET, PLAYER, 200)
+RCVAR:TARGET:苦痛コマンドフラグ = 1
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+EXP:PLAYER:Ｃ性交経験_Ａ挿入 ++
+EXP:Ａ性交経験 ++
+
+;同性愛　レズなら戻り値1ゲイなら戻り値2
+IF HETEROSEX(TARGET,PLAYER)
+	EXP:同性愛経験 += 4
+	EXP:PLAYER:同性愛経験 += 4
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@RAPE_COM_ABLE_S22_3
+;実行判定
+;一括管理
+SIF GLOBAL_RAPE_COMABLE_S("22_3")
+	RETURN RESULT
+;角必須
+SIF !TALENT:TARGET:角あり
+	RETURN 0
+;体格問題
+SIF TALENT:PLAYER:体格 == 体格_ハーヴィン並 && TALENT:TARGET:体格 > 体格_子供
+	RETURN 0
+SIF TALENT:PLAYER:体格 < TALENT:TARGET:体格 - 2
+	RETURN 0
+;後ろから系モードじゃない時はアウト
+SIF MODE_確認_完全一致("Ａ後背位", PLAYER, TARGET) < 0 && MODE_確認_完全一致("Ａ立ちバック", PLAYER, TARGET) < 0
+	RETURN 0
+SIF CFLAG:TARGET:睡眠
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@RAPE_MESSAGE_COM_S22_3
+
+PRINTFORM %CALLNAME:PLAYER%
+PRINTFORML 抓住%CALLNAME:TARGET%的角%TEXTR("如同操纵方向盘般/全力紧握/施加几乎折断的力度")%，%TEXTR("猛烈撞击腰肢/粗暴摆动臀部/遵从欲望贯穿后庭")%
+
+
+

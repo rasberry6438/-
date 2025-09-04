@@ -1,0 +1,138 @@
+﻿@マッサージ来店処理
+#DIM 来店候補者, 1000
+#DIM キャラ番号
+#DIM 候補番号
+#DIM 候補数
+;マッサージ客待ち時、キャラがマッサージを受けに来る処理
+
+;客待ち時に誰か来るのは1/2の確率
+SIF RAND:2
+	RETURN -1
+
+;候補者リスト作成
+候補番号 = 0
+FOR キャラ番号, 1, CHARANUM
+	;もう今日は遊びに来た
+	SIF TCVAR:キャラ番号:マッサージ来店フラグ
+		CONTINUE
+	;島にいる
+	SIF CFLAG:キャラ番号:滞在期間 < 1
+		CONTINUE
+	;寝てる
+	SIF CFLAG:キャラ番号:睡眠
+		CONTINUE
+	;何らかの原因で隠密
+	SIF CFLAG:キャラ番号:隠密
+		CONTINUE
+	;デート中
+	SIF CFLAG:キャラ番号:デート
+		CONTINUE
+	;体力限界
+	SIF CFLAG:キャラ番号:体力限界
+		CONTINUE
+	来店候補者:候補番号 = キャラ番号
+	候補番号 += 1
+	IF TALENT:キャラ番号:恋慕
+		;恋慕は確率３倍
+		来店候補者:候補番号 = キャラ番号
+		候補番号 += 1
+		来店候補者:候補番号 = キャラ番号
+		候補番号 += 1
+	ELSEIF TALENT:キャラ番号:セフレ
+		;セフレは確率２倍
+		来店候補者:候補番号 = キャラ番号
+		候補番号 += 1
+	ENDIF
+NEXT
+
+;一人も候補がいないなら戻る
+;-1を返すことで口上などの処理をスキップ
+SIF 候補番号 == 0
+	RETURN -1
+
+;来店キャラ決定
+AUTOCOM_実行番号保存 = 来店候補者:(RAND:候補番号)
+TCVAR:AUTOCOM_実行番号保存:マッサージ来店フラグ = 1
+
+
+;来店処理
+$来店ラベル
+DRAWLINE
+		PRINTFORML %CALLNAME:PLAYER%正在等待客人时，换上按摩服的%CALLNAME:AUTOCOM_実行番号保存%走进了按摩室。
+		PRINTFORML %CALLNAME:PLAYER%一边将%CALLNAME:AUTOCOM_実行番号保存%引导到按摩床，一边考虑按摩的方案…
+		DRAWLINE
+		PRINTBUTTON "[0] 进行细致按摩", 0
+		PRINTL
+		PRINTBUTTON "[1] 进行常规按摩（简易版）", 1
+		PRINTL
+		PRINTBUTTON "[100] 关于选项说明", 100
+BINPUT
+;口上用に選択肢を記録
+RFLAG:コマンド結果受渡し変数２ = RESULT
+
+SELECTCASE RFLAG:コマンド結果受渡し変数２
+		CASE 0
+			CFLAG:PLAYER:現在マップ種別 = 0
+			CFLAG:AUTOCOM_実行番号保存:現在マップ種別 = 0
+			CFLAG:AUTOCOM_実行番号保存:同室 = 1
+			CFLAG:AUTOCOM_実行番号保存:現在位置 = CFLAG:PLAYER:現在位置
+			PRINTFORML %CALLNAME:PLAYER%开始对%CALLNAME:AUTOCOM_実行番号保存%进行按摩…
+			;処理のためTARGET配列をセット
+			CALL TARGET_SET()
+
+			;マッサージ開始処理(07_711_01マッサージを始める.ERBよりコピー)
+			IF チュートリアルフラグ:マッサージモード == 0
+				CALL マッサージチュートリアル
+			ENDIF
+				
+			;移動しないように同行セット
+			SIF CFLAG:AUTOCOM_実行番号保存:同行 < 1
+				CFLAG:AUTOCOM_実行番号保存:同行 = 1
+			
+			あなた追跡キャラ = 0
+			
+			;ターンエンドまでいかないのでメッセージはここで処理
+			;SELECTCOM = 382
+			CALL KOJO_MESSAGE_COM_通常モード
+			
+			;マッサージモードに移行
+			LOCAL = AUTOCOM_実行番号保存
+			サイド描画表示種類 = 能力表示
+			CALL ゲームフェイズ変更("マッサージモード")
+			CALL 警戒度初期値セット(LOCAL)
+			;服着替え
+			;コスプレと同時に行うことはないのでコスプレ前の服位置を再利用
+			SIF CSTR:LOCAL:コスプレ前の服 == "" && CSTR:LOCAL:表示グラフィックカテゴリ != ""
+				CSTR:LOCAL:コスプレ前の服 '= CSTR:LOCAL:表示グラフィックカテゴリ
+		
+			TRYCALLFORM マッサージ時固有着替え処理_{NO:LOCAL}(LOCAL)
+			IF RSTR:服装名受け渡し != ""
+				CALL CLOTHES_CHANGE(LOCAL, RSTR:服装名受け渡し)
+			ELSE
+				IF フィールド展開:游泳时全裸
+					CALL CLOTHES_CHANGE(LOCAL, "全裸")
+				ELSEIF EXIST画像FILE("resources/" + CSTR:LOCAL:画像フォルダ + "/短冊_マッサージ着")
+					CALL CLOTHES_CHANGE(LOCAL, "マッサージ着")
+				ELSE
+					CALL CLOTHES_CHANGE(LOCAL, "泳装")
+				ENDIF
+			ENDIF
+			RETURN -1
+		CASE 1
+			TIME += 30
+			TARGET = AUTOCOM_実行番号保存
+			PRINTFORML %CALLNAME:PLAYER%对%CALLNAME:AUTOCOM_実行番号保存%实施了常规按摩。
+			PRINTFORMW 心满意足的%CALLNAME:AUTOCOM_実行番号保存%返回度假村了。
+			CALL SOURCE_CALC_歓楽(AUTOCOM_実行番号保存, PLAYER, 500)
+			CALL SOURCE_CALC_好感度要素_友情度UP(AUTOCOM_実行番号保存, PLAYER, 250)
+		CASE 100
+			DRAWLINE
+			PRINTL 进行细致按摩：将进入按摩模式
+			PRINTL 　　　　　　后续行动不受限制。
+			PRINTL
+			PRINT 进行常规按摩（简易版）：
+			PRINTL 将执行简略描写与固定好感度变化。（未调整）
+			PRINTL 
+			WAIT
+			GOTO 来店ラベル
+ENDSELECT

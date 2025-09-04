@@ -1,0 +1,190 @@
+﻿;-------------------------------------------------
+;阴道内淋巴按摩
+;-------------------------------------------------
+@MASSAGE_COMNAME27
+#FUNCTIONS
+TSTR:コマンド名受渡 = 阴道内淋巴按摩
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_27
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("エロマッサージ")
+
+@MASSAGE_COM_TOOLTIP_27
+LOCALS = <br>■阴道内淋巴按摩<br>
+LOCALS += "以按摩阴道内部淋巴节点为名，实则将手指插入阴道口进行体内刺激…"
+LOCALS += "<br>为避免损伤阴道内壁及处女膜，需要施术者具备高超技巧"
+LOCALS += "<br>指令类型：情色按摩<br>获取来源：快Ｖ・快Ｃ・暴露・接触・欢乐・液体・痛苦(对象为处女时)"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@MASSAGE_COM27
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+;基盤ができたあとで理性を削る処理を入れる
+IF !TALENT:処女
+	CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, 170)
+;処女膜を傷つけない浅い範囲(膣口からおよそ2センチ弱まで)なので快Ｖ自体は弱め
+ELSE
+	CALL SOURCE_CALC_快Ｖ(TARGET, PLAYER, 60)
+ENDIF
+;微量の快Ｃ
+CALL SOURCE_CALC_快Ｃ(TARGET, PLAYER, 40)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 120)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 120)
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 100)
+
+;润滑液は別のコマンドになるっぽいので気持ち程度
+CALL SOURCE_CALC_液体(TARGET, PLAYER, 1000)
+
+
+;処女だとどうしてもちょっと痛い。でもマッサージだから指挿し入れよりだいぶマイルド
+SIF TALENT:処女
+	CALL SOURCE_CALC_苦痛(TARGET, PLAYER, 50)
+
+;下半身下着がある場合は脱がす。
+IF TEQUIP:下半身下着あり == 1
+	TEQUIP:下半身下着あり = 0
+	TEQUIP:下半身服あり = 0
+	SIF TEQUIP:上下一体服
+		TEQUIP:上半身服あり = 0
+	RFLAG:コマンド結果受渡し変数 = 1
+ENDIF
+IF BASE:TARGET:理性 <= 1
+;理性がおしまいになってしまった場合、快楽に流されて警戒が下がっていく。
+	BASE:TARGET:性欲 += 150
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -40)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSEIF 知識素質:TARGET:性知識 <= -1
+;性知識がない場合でも「流石にこれはダメなやつなのでは？」と思いはじめる。が、時既に遅し。
+;警戒90で理性が45上がり、そこから理性が200下がるイメージでこの数値。ここにきて未だに警戒90なのが無知シチュの『味』。
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -155)
+	BASE:TARGET:性欲 += 200
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 90)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSEIF BASE:TARGET:理性 <= 1
+;理性がおしまいになってしまった場合、快楽に流されて警戒が下がっていく。
+	BASE:TARGET:性欲 += 200
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -80)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+ELSEIF (BASE:TARGET:理性 + BASE:TARGET:警戒) < 400
+;実行に際し十分な理性・警戒削りがなされている場合。
+;警戒250で理性が125回復するも、煽られる性欲と与えられる刺激で理性が200削られて理性変動は-75。
+;……というのが平常時における挙動だが、ここまで削られていると与えられる快感に警戒心が塗りつぶされてしまう。
+;よって警戒100で理性50回復、そこから理性200低下でこの数字となる。理性と警戒の合計値は少しだけ下がり、そのまま次のコマンドへ。
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -150)
+	BASE:TARGET:性欲 += 200
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 100)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 100)
+
+ELSE
+;実行に際し十分な理性・警戒削りがなされていない場合。
+;性欲は煽れるが、警戒と理性が跳ねる。警戒心がビンっ！ってなるので、煽られる性欲の理性低下を撥ね退けてしまう。
+	BASE:TARGET:理性 +=理性変動値算出(TARGET, 125)
+	BASE:TARGET:性欲 += 150
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 250)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 50)
+ENDIF
+
+BASE:TARGET:ちんイラ = MAX(0, BASE:TARGET:ちんイラ - 200)
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE27
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(27)
+	RETURN RESULT
+
+;Vがない場合駄目
+SIF TALENT:TARGET:Ｖ感度 == -2
+	RETURN 0
+SIF GETBIT(TALENT:TARGET:性別, 0) == 0
+	RETURN 0
+
+;理性警戒の合計が800以下じゃないとダメ
+;実行自体はできるが、この時点だと警戒と理性が跳ねる。されるがままになっちゃうのは合計値400以下くらいを想定。
+SIF (BASE:TARGET:理性 + BASE:TARGET:警戒) > 800
+	RETURN 0
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM27
+
+PRINTFORM %CALLNAME:PLAYER%把
+
+	IF RFLAG:コマンド結果受渡し変数 == 1
+		PRINTFORM %CALLNAME:TARGET%的
+			;Ｖがあり欲情している場合
+			SIF TALENT:TARGET:Ｖ感度 >= -1 && PALAM:欲情  >= PALAMLV:3
+				PRINTFORM 吸饱爱液的
+		PRINTFORM 理疗服褪去后，
+	ENDIF
+	
+PRINTFORM 将沾满精油的指尖缓缓探入%CALLNAME:TARGET%的
+	IF TALENT:TARGET:処女
+		;処女を復活させた場合は齟齬が出るだろうけどそこまで指定してられん
+		IF TALENT:TARGET:恋人持ち == 1
+		;恋人持ち
+			PRINTFORM 尚未%TEXTR("允许恋人进入/被恋人触碰")%
+		ELSEIF TALENT:TARGET:恋人持ち == 2
+		;人妻
+			PRINTFORM 已婚却未让丈夫进入的人妻
+		ELSEIF TALENT:TARGET:恋人持ち == 3
+		;未亡人 初夜を迎える前に夫に先立たれたキャラを想定。だがそんなものはいない。
+			PRINTFORM 未能向亡夫献身的未亡人
+		ELSEIF TALENT:TARGET:恋人持ち == -1
+		;想い人あり
+			PRINTFORM 尚未献给心上人
+		ELSE
+			PRINTFORM 未被任何人进入
+		ENDIF
+		SIF CFLAG:TARGET:発情期フラグ < 0
+			PRINTFORM %TEXTR("发情期/情欲高涨/发情期湿润")%
+		PRINTFORML %TEXTR("未开发蜜穴/处女花径/崭新处女阴道")%，
+		PRINTFORML %TEXTR("温柔按摩避免损伤处女膜/用指尖进行性爱预演/为随时破处做好『事前准备』")%。
+	ELSE
+		IF TALENT:TARGET:恋人持ち == 2 && CFLAG:TARGET:処女相手番号 != CFLAG:PLAYER:人物番号
+		;人妻
+			PRINTFORM 曾向丈夫献身的%TEXTR("成熟阴道/二手蜜穴")%
+		ELSEIF TALENT:TARGET:恋人持ち == 3 && CFLAG:TARGET:処女相手番号 != CFLAG:PLAYER:人物番号
+		;未亡人
+			PRINTFORM 曾向亡夫献身的%TEXTR("寂寞阴道/独身蜜穴")%
+		ELSEIF EXP:TARGET:出産経験 >= 1
+		;出産経験者 素質の子持ちのほう使うか迷った
+			PRINTFORM 经分娩完全松弛的产道
+		ELSE
+			PRINTFORM %TEXTR("阴道/蜜穴")%
+		ENDIF
+		PRINTFORML 深处，
+		PRINTFORML 
+		PRINTFORML %TEXTR("用手指粘腻揉捏阴道软肉/以『淋巴按摩』为名反复按压Ｇ点/伴着水声将精油充分涂抹腔壁")%。
+	ENDIF
+	
+;削りが十分な時は追加のメッセージ
+IF (BASE:TARGET:理性 + BASE:TARGET:警戒) < 400
+	PRINTW 
+	SELECTCASE RAND:2
+	CASE 0
+		PRINTFORM %CALLNAME:TARGET%%TEXTR("双眸迷离地/满脸陶醉地张着樱唇/神情恍惚地")%
+	CASE 1
+		PRINTFORM %CALLNAME:TARGET%从微张的唇间%TEXTR("溢出甜腻呻吟/发出愉悦娇喘/漏出淫靡声响")%
+	ENDSELECT
+	PRINTFORML 主动向%CALLNAME:PLAYER%%TEXTR("的『护理』/的技法/的爱抚")%%TEXTR("献上私密处/敞开身心/放弃抵抗")%…
+ENDIF

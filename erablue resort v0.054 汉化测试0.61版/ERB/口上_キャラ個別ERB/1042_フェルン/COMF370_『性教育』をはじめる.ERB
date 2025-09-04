@@ -1,0 +1,139 @@
+﻿
+@CHARACOMNAME370_1042
+#FUNCTIONS
+TSTR:コマンド名受渡 = 开始『性教育』
+
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_370_1042
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("セクハラ")
+;TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+
+@COM_TOOLTIP_370_1042
+LOCALS = <br>■开始『性教育』<br>
+LOCALS += "这是应芙莉莲的请求，对菲伦进行『性教育』的实践命令。<br>仅当房间内除了菲伦以外的所有人都已攻略时才能使用，但在一起隐密时，即使在同一地点有未攻略的角色也可以使用。"
+LOCALS += "<br>指令类型：性骚扰<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@CHARACOM370_1042
+;だいたいが「押し倒す」そのまま
+IF フィールド展開:无视嘿咻行为
+	CALL うふふ開始キャラ処理(TARGET, "フェルン_性教育")
+ELSE
+	FOR LOCAL,1,CHARANUM
+		SIF TARGET:LOCAL <= 0
+			BREAK
+		SIF CFLAG:PLAYER:隠密 != CFLAG:(TARGET:LOCAL):隠密
+			CONTINUE
+		CALL うふふ開始キャラ処理(TARGET:LOCAL, "フェルン_性教育")
+	NEXT
+ENDIF
+
+TCVAR:TARGET:言いなり = 1
+CFLAG:MASTER:うふふ = 1
+
+
+;3Pモード管理フラグを初期化
+FLAG:モード管理 = 0
+
+TIME += 5
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE370_1042
+;押し倒す実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(370)
+	RETURN RESULT
+;TARGETがフェルン
+LOCAL = GETCHARA(1042)
+SIF TARGET != LOCAL
+	RETURN 0
+;飲み会時はだめ
+SIF TFLAG:調教モード == 3
+	RETURN 0
+;ハーヴィンオナホ中はだめ
+SIF MODE_存在判定_プレイヤー側("ハーヴィンオナホ系", PLAYER)
+	RETURN 0
+;全裸散歩中はだめ
+SIF MODE_存在判定_プレイヤー側("全裸散歩", PLAYER)
+	RETURN 0
+;フリーレンのキャライベを踏んでいないとダメ
+SIF フェルン性教育イベフラグ != 2
+	RETURN 0
+;SIF CSTR:TARGET:固有素質0 == "性の教え子"
+;	RETURN 0
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;隠密中は一緒に隠密してるキャラを見る
+IF フィールド展開:无视嘿咻行为 == 0
+	IF CFLAG:PLAYER:隠密
+		FOR LOCAL, 1, CHARANUM
+			SIF TARGET:LOCAL < 1
+				BREAK
+			SIF CFLAG:(TARGET:LOCAL):隠密 && TARGET:LOCAL == GETCHARA(1042)
+				CONTINUE
+			SIF CFLAG:(TARGET:LOCAL):隠密 && 陥落チェック_性的(TARGET:LOCAL) == 0
+				RETURN 0
+		NEXT
+	ELSE
+		;非隠密時は全員陥落済みでないとだめ
+		FOR LOCAL,1,CHARANUM
+			SIF TARGET:LOCAL < 1
+				BREAK
+			SIF TARGET:LOCAL == GETCHARA(1042)
+				CONTINUE
+			SIF 陥落チェック_性的(TARGET:LOCAL) == 0
+				RETURN 0
+		NEXT
+	ENDIF
+;ELSE
+;	SIF 陥落チェック_性的(TARGET) == 0
+;		RETURN 0
+ENDIF
+
+RETURN 1
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM370_1042
+IF GET_TARGETNUM() > 1
+	PRINTFORM %CALLNAME:PLAYER%
+	IF BEDROOM(CFLAG:MASTER:現在マップ種別, CFLAG:MASTER:現在位置) == 0
+		PRINT 确认周边无人后
+	ENDIF
+	PRINTFORMW 将%CALLNAME:TARGET%们搂入怀中…
+ELSEIF CFLAG:TARGET:隠密 && CFLAG:MASTER:隠密
+	PRINTFORMW %CALLNAME:PLAYER%确认自己成功躲在暗处后，拥抱了%CALLNAME:TARGET%…
+ELSE
+	PRINTFORM %CALLNAME:PLAYER%
+	IF BEDROOM(CFLAG:MASTER:現在マップ種別, CFLAG:MASTER:現在位置) == 0
+		PRINT 确认周边无人后
+	ENDIF
+	IF TALENT:MASTER:性別 == 2
+		PRINTFORMW 拥抱了%CALLNAME:TARGET%，决定在她的身体上，满满地教导她%TEXTR("取悦男人的方法/侍奉男人的喜悦/雌性侍奉雄性的规矩/身为女人的喜悦/关于性爱/让身体变得舒服的方法/被求欢时的规矩")%…
+	ELSE
+		PRINTFORMW 拥抱了%CALLNAME:TARGET%，决定在她的身体上，满满地教导她%TEXTR("色情的事情/关于性爱的事情/让身体变得舒服的方法/被求欢时的规矩")%…
+	ENDIF
+ENDIF
+PRINTL
+SIF TCVAR:TARGET:初うふふフラグ
+	PRINTFORMW %CALLNAME:TARGET%在胸前交叉双手，用一种混合着对未知的不安和对快感的期待的表情凝视着%CALLNAME:PLAYER%…
+
+PRINTL
+PRINTFORM 因为芙莉莲的命令，%CALLNAME:TARGET%对于%CALLNAME:PLAYER%提出的
+SETCOLOR カラーパレット("えっちな色")
+PRINT [任何要求]
+RESETCOLOR
+PRINTFORMW 都会乖乖照办。
+

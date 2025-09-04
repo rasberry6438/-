@@ -1,0 +1,830 @@
+﻿@ZP_SHOP_能力
+#DIM 表示数
+#DIM 実際表示数
+#DIM ページ数
+#DIM 選択中番号
+#DIMS 能力名保存, 50
+#DIM ソート用配列, 50
+VARSET RESULTS
+VARSET 能力名保存
+VARSET ソート用配列
+選択中番号 = -1
+表示数 = ENUMFUNCBEGINSWITH("ZP能力取得_")
+ARRAYCOPY "RESULTS", "能力名保存"
+FOR LOCAL, 0, 表示数
+	CALLFORM %能力名保存:LOCAL%
+	ソート用配列:LOCAL = RESULT
+NEXT
+ARRAYMSORT ソート用配列, 能力名保存
+
+$表示部分
+DRAWLINE
+PRINTL 当前未持有的特殊能力列表如下。
+PRINTL 请选择要获取的能力：
+DRAWLINE
+
+LOCALS = <div rect='81,31,1937,381' border='31' bcolor='#C0C0C0'></div>
+LOCALS:2 = 持有卢比：%NUM_FORMAT(MONEY)%<br>
+LOCALS:2 += @"持有ZP　：%ZP所持量全文字列()%"
+LOCALS += @"<div rect='156,125,1862,312'>%LOCALS:2%</div>"
+
+LOCALS += "<div rect='81,412,1937,2812' border='31' bcolor='#C0C0C0'></div><div rect='2050,412,4000,2812' border='31' bcolor='#C0C0C0'></div>"
+LOCALS += "<div rect='156,540,1937,2812'>"
+実際表示数 = 0
+FOR LOCAL, 0, 表示数
+	詳細文文字列受け渡し変数２ '= ""
+	CALLFORM %能力名保存:LOCAL%
+	SIF RESULT == -1
+		CONTINUE
+	実際表示数 ++
+	SIF (実際表示数 - 1) / 18 != ページ数
+		CONTINUE
+	SIF 詳細文文字列受け渡し変数２ != ""
+		LOCALS += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>"
+	LOCALS += @"<button value='{LOCAL}'>[{LOCAL, 3}] %SUBSTRING(能力名保存:LOCAL, 11), 16, LEFT% - ZP:%NUM_FORMAT(RESULT), 6, RIGHT%</button>"
+	SIF 詳細文文字列受け渡し変数２ != ""
+		LOCALS += @"</font>"
+	LOCALS += "<br>"
+NEXT
+IF 実際表示数 % 18 && (実際表示数 - 1) / 18 == ページ数
+	FOR LOCAL, 0, 18 - 実際表示数 % 18
+		LOCALS += "<br>"
+	NEXT
+ENDIF
+LOCALS += "<br>"
+IF 実際表示数 > 18
+	IF ページ数 > 0
+		LOCALS += "<button value='997'>[＜上一页]</button>"
+	ELSE
+		LOCALS += "　　　　　　"
+	ENDIF
+	LOCALS += @" - {ページ数}/{(実際表示数 - 1) / 18} - "
+	IF (実際表示数 - 1) / 18 > ページ数
+		LOCALS += "<button value='998'>[下一页＞]</button>"
+	ENDIF
+ENDIF
+LOCALS += "<br>"
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+LOCALS += "</div>"
+
+IF 選択中番号 > -1
+	詳細文文字列受け渡し変数２ '= ""
+	LOCALS += "<div rect='2125,540,3875,2812'>"
+	CALLFORM %能力名保存:選択中番号%
+	LOCALS += @"%詳細文文字列受け渡し変数%<br>"
+	IF 詳細文文字列受け渡し変数２ == ""
+		LOCALS += @"支付%NUM_FORMAT(RESULT)%ZP，获取%SUBSTRING(能力名保存:選択中番号, 11)%吗？<br>"
+		LOCALS += @"<button value='100'>[100] 确认获取</button>"
+	ELSE
+		LOCALS += @"<font color='#%カラーパレット_HTML("グレーアウト")%'>%詳細文文字列受け渡し変数２%<br>"
+		LOCALS += @"[---] 确认获取</font>"
+	ENDIF
+	LOCALS += "<br>"
+	LOCALS += "</div>"
+ENDIF
+HTML_PRINT LOCALS
+FOR LOCAL, 0, 28
+	PRINTL
+NEXT
+
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 997
+		選択中番号 = -1
+		ページ数 --
+	CASE 998
+		選択中番号 = -1
+		ページ数 ++
+	CASE 999
+		選択中番号 = -1
+		ページ数 = 0
+		RETURN 0
+	CASE 100
+		SIF 選択中番号 < 0
+			GOTO 表示部分
+		CALLFORM %能力名保存:選択中番号%
+		IF FLAG:ZP所持量 < RESULT
+			PRINTW ZP不足
+		ELSEIF 詳細文文字列受け渡し変数２ != ""
+			PRINTFORMW %詳細文文字列受け渡し変数２%
+		ELSE
+			CALLFORM %能力名保存:選択中番号%("取得時処理")
+			FLAG:ZP所持量 -= RESULT
+			PRINTFORMW %詳細文文字列受け渡し変数%
+		ENDIF
+		選択中番号 = -1
+	CASEELSE
+		選択中番号 = LOCAL
+ENDSELECT
+GOTO 表示部分
+
+
+@ZP能力取得_后宫入门(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:ハーレム
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［后宫入门］
+	あなた特殊能力:ハーレム = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 可同时与多人建立恋爱关系的初始能力。<br>
+	LOCALS += "习得后可同时锁定最多3名攻略目标。<br>"
+	LOCALS += "该能力将随获得爱慕特质的人数增长而强化。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 25
+
+@ZP能力取得_王的觉醒(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:ハーレム != 4 || あなた恋慕人数() < 100
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 能力［后宫之王］已觉醒，进化为［后宫之王・极］！
+	あなた特殊能力:ハーレム = 5
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 借助星晶兽艾拉之力，达到［后宫之王］的极致境界。<br>
+	LOCALS += @"习得后可同时锁定%TOFULL(TOSTR(キャラクタ数上限))%名爱慕对象。<br>"
+	LOCALS += "多人性爱时更易促进爱慕角色间的好感度。<br>"
+	LOCALS += "该能力已达最终形态。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 2500
+
+@あなた恋慕人数()
+#FUNCTION
+#DIM キャラ番号
+#DIM 人数
+
+人数 = 0
+FOR キャラ番号, 1, CHARANUM
+	SIF TALENT:キャラ番号:恋慕 && !TALENT:キャラ番号:分身
+		人数++
+NEXT
+RETURNF 人数
+
+
+@ZP能力取得_欢场新秀(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:遊び人
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［欢场新秀］
+	あなた特殊能力:遊び人 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 可与多个对象建立肉体关系的入门能力。<br>
+	LOCALS += "习得后提出性行为请求时更易获得同意。<br>"
+	LOCALS += "该能力将随获得炮友特质的人数增长而强化。<br>"
+	LOCALS += "注意，即使没有这种能力，也有可以拥有多个炮友。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 25
+
+@ZP能力取得_帝王觉醒(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:遊び人 != 4 || あなたセフレ人数() < 100
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 能力［极乐帝王］已觉醒，进化为［极乐帝王・极］！
+	あなた特殊能力:遊び人 = 5
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 借助星晶兽艾拉之力，达到［极乐帝王］的终极形态。<br>
+	LOCALS += "习得后提出性行为请求时极大概率获得同意。<br>"
+	LOCALS += "此外，使用「搭讪」指令可能使目标进入恍惚状态。<br>"
+	LOCALS += "该能力已达最终形态。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 2500
+
+@あなたセフレ人数()
+#FUNCTION
+#DIM キャラ番号
+#DIM 人数
+
+人数 = 0
+FOR キャラ番号, 1, CHARANUM
+	SIF TALENT:キャラ番号:セフレ && !TALENT:キャラ番号:分身
+		人数++
+NEXT
+RETURNF 人数
+
+
+@ZP能力取得_赌徒风范(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:ギャンブラー
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［赌徒风范］
+	あなた特殊能力:ギャンブラー = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 解锁高风险博弈玩法的特殊能力。<br>
+	LOCALS += "习得后可强制对手参与卡牌、乒乓等赌局。<br>"
+	LOCALS += "仅增加博弈机会而非提升胜率。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 15
+
+
+@ZP能力取得_技巧等级提升(処理モード = "")
+#DIMS 処理モード
+#DIM ZP消費量
+
+SIF ABL:PLAYER:技巧 >= 10
+	RETURN -1
+
+ZP消費量 = ABL:PLAYER:技巧 * ABL:PLAYER:技巧 * 5
+IF 処理モード == "取得時処理"
+	ABL:PLAYER:技巧 += 1
+	LOCALS = 技巧等级提升至Lv{ABL:PLAYER:技巧}
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 增强取悦对手能力的核心属性。<br>
+	LOCALS += "每次升级都会提高后续升级所需消耗。<br>"
+	LOCALS += @"当前技巧等级：Lv{ABL:PLAYER:技巧, 2}<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN ZP消費量
+
+
+@ZP能力取得_危险日感知(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:危険日感知
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［危险日感知］
+	あなた特殊能力:危険日感知 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 可精确掌握角色生理周期的特殊能力。<br>
+	LOCALS += "通过洞悉攻略对象的危险期，可灵活规避或促成受孕事件。<br>"
+	LOCALS += "当前状态常驻显示于角色名旁，详细周期可在能力界面查看。<br>"
+	LOCALS += "此外，发情期与危险期完全同步。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 20
+
+
+@ZP能力取得_触手变形术(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:触手変化術
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［触手变形术］
+	あなた特殊能力:触手変化術 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 将身体部位拟态为触手进行操控的禁忌魔法。<br>
+	LOCALS += "初期可操纵触手类型与快感量有限，随技能等级与技巧提升增强。<br>"
+	LOCALS += "目标未持有性癖［触手play］时无法执行相关指令。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 80
+
+
+@ZP能力取得_位置感知(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:居場所感知
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［位置感知］
+	あなた特殊能力:居場所感知 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 实时感知度假村内角色位置的侦查能力。<br>
+	LOCALS += "包含区域人员列表显示与追踪目标定位双模式。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 1
+
+
+@ZP能力取得_亲和感应(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:フレンドリーセンス
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［亲和感应］
+	あなた特殊能力:フレンドリーセンス = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 量化显示角色好感度、爱慕度数值并解析礼物偏好的辅助能力。<br>
+	LOCALS += "额外解锁「请求性行为」失败时的成功率累积值显示。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 1
+
+
+@ZP能力取得_体力成长加护(処理モード = "")
+#DIMS 処理モード
+#DIM 費用
+
+SIF あなた特殊能力:体力成長の加護 > 3
+	RETURN -1
+
+費用 = POWER(あなた特殊能力:体力成長の加護 + 1, 3) * 4
+IF 処理モード == "取得時処理"
+	あなた特殊能力:体力成長の加護 += 1
+	LOCALS = 已习得能力［体力成长加护 Lv{あなた特殊能力:体力成長の加護}］
+	詳細文文字列受け渡し変数 = %LOCALS%
+	;体力再計算
+	FOR LOCAL,1,CHARANUM
+		CALL 体力変動素質適用処理(LOCAL)
+	NEXT
+ELSE
+	LOCALS = 角色高潮虚脱体力归零时将提升体力上限的成长型能力。<br>
+	LOCALS += "历史虚脱次数将在习得、升级时进行补正计算。<br>"
+	LOCALS += "Lv1：每次虚脱+10　　Lv2：每次虚脱+15<br>"
+	LOCALS += "Lv3：每次虚脱+20　　Lv4：每次虚脱+30<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 費用
+
+
+@ZP能力取得_精力成长加护(処理モード = "")
+#DIMS 処理モード
+#DIM 費用
+
+SIF あなた特殊能力:精力成長の加護 > 3
+	RETURN -1
+
+費用 = POWER(あなた特殊能力:精力成長の加護 + 1, 3) * 10
+IF 処理モード == "取得時処理"
+	あなた特殊能力:精力成長の加護 += 1
+	LOCALS = 已习得能力［精力成长加护 Lv{あなた特殊能力:精力成長の加護}］
+	詳細文文字列受け渡し変数 = %LOCALS%
+	;精力再計算
+	FOR LOCAL, 1, CHARANUM
+		CALL 精力ゲージ_最大値変動処理(LOCAL)
+	NEXT
+ELSE
+	LOCALS = 角色空包射精时将提升精力上限的成长型能力。<br>
+	LOCALS += "历史空包次数将在习得、升级时进行补正计算。<br>"
+	LOCALS += "Lv1：5次空包+1　　Lv2：3次空包+1<br>"
+	LOCALS += "Lv3：2次空包+1　　Lv4：1次空包+1<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 費用
+
+
+@ZP能力取得_迷宫探索PRO(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:ダンジョン探索PRO
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［迷宫探索PRO Lv1］
+	あなた特殊能力:ダンジョン探索PRO = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 可对员工下达［自动探索］指令的管理权限。<br>
+	LOCALS += "配置至少一名员工时，将自动扫荡已通关迷宫。<br>"
+	LOCALS += "探索成果将于每日结算时统一汇报。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 1
+
+
+@ZP能力取得_睡眠诊断(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:睡眠診断
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［睡眠诊断］
+	あなた特殊能力:睡眠診断 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 能力展示界面新增就寝、起床倒计时显示功能。<br>
+	LOCALS += "（清醒时显示预计就寝时间，睡眠时显示预计苏醒时间）<br>"
+	LOCALS += "显示位置位于能力界面顶部信息栏。<br>"
+	LOCALS += "注意：玩家主动就寝会重置时间预测模型。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 1
+
+
+@ZP能力取得_隐性血脉(処理モード = "")
+#DIMS 処理モード
+
+IF 処理モード == "取得時処理"
+	IF あなた特殊能力:潜性の血
+		LOCALS = 已失去能力［隐性血脉］
+		あなた特殊能力:潜性の血 = 0
+	ELSE
+		LOCALS = 已习得能力［隐性血脉］
+		あなた特殊能力:潜性の血 = 1
+	ENDIF
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	IF あなた特殊能力:潜性の血
+		LOCALS = 解除［隐性血脉］效果。<br>
+		LOCALS += "与角色诞育的子嗣将继承你的特征。<br>"
+		LOCALS += "你可以随时重新获得该能力。<br>"
+	ELSE
+		LOCALS = 与角色诞育的子嗣继承你特征的遗传率降低。<br>
+		LOCALS += "即使跨种族结合也能保持形态稳定。<br>"
+		LOCALS += "该效果可随时移除。<br>"
+	ENDIF
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 10
+
+
+@ZP能力取得_特异胎质(処理モード = "")
+#DIMS 処理モード
+
+SIF !あなた特殊能力_発揮条件_特異胎質()
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	IF あなた特殊能力:特異胎質
+		LOCALS = 已失去能力［特异胎质］
+		あなた特殊能力:特異胎質 = 0
+	ELSE
+		LOCALS = 已习得能力［特异胎质］
+		あなた特殊能力:特異胎質 = 1
+	ENDIF
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	IF あなた特殊能力:特異胎質
+		LOCALS = 解除［特异胎质］效果。<br>
+		LOCALS += "※即使解除，仍可能通过其他条件受孕异种族子嗣。<br>"
+		LOCALS += "你可以随时重新获得该能力。<br>"
+	ELSE
+		LOCALS = 获得跨种族受孕适应性。<br>
+		LOCALS += "※即使未激活，仍可能通过其他条件受孕异种族子嗣。<br>"
+		LOCALS += "该效果可随时移除。<br>"
+	ENDIF
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 1
+
+@あなた特殊能力_発揮条件_特異胎質()
+#FUNCTION
+RESULT = (GETBIT(TALENT:MASTER:性別, 0) && TALENT:MASTER:Ｖ感度 != -2)
+RETURNF RESULT
+
+
+@ZP能力取得_弱点洞悉术(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:弱点洞察術
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［弱点洞悉术］
+	あなた特殊能力:弱点洞察術 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 获得洞悉目标弱点的特殊感知。<br>
+	LOCALS += "能力展示界面可查看尚未知晓的弱点指令的线索提示。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 40
+
+
+@ZP能力取得_真・精力超群(処理モード = "")
+#DIMS 処理モード
+#DIM ZP消費量
+
+SIF あなた特殊能力:真・絶倫 >= 5
+	RETURN -1
+SIF !あなた特殊能力_発揮条件_真・絶倫()
+	RETURN -1
+
+ZP消費量 = POWER(あなた特殊能力:真・絶倫 + 5, 3) * 5
+IF 処理モード == "取得時処理"
+	あなた特殊能力:真・絶倫 += 1
+	LOCALS = 已习得能力［真・精力超群 Lv{あなた特殊能力:真・絶倫}］
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 产生更多精液的能力。<br>
+	LOCALS += "增加一次射精的精液量。<br>"
+	LOCALS += "每次升级都会提高后续强化消耗。<br>"
+	LOCALS += @"当前［真・精力超群］等级：Lv{あなた特殊能力:真・絶倫}<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN ZP消費量
+
+@あなた特殊能力_発揮条件_真・絶倫()
+#FUNCTION
+RESULT = 射精可能(MASTER)
+RETURNF RESULT
+
+
+@ZP能力取得_魅魔体质(処理モード = "")
+#DIMS 処理モード
+#DIM ZP消費量
+
+SIF あなた特殊能力:サキュバスボディ >= 3
+	RETURN -1
+SIF !あなた特殊能力_発揮条件_サキュバスボディ()
+	RETURN -1
+
+ZP消費量 = POWER(40, あなた特殊能力:サキュバスボディ + 1)
+IF 処理モード == "取得時処理"
+	あなた特殊能力:サキュバスボディ += 1
+	LOCALS = 已习得能力［魅魔体质 Lv{あなた特殊能力:サキュバスボディ}］
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 获得媲美梦魇魔物的魅惑特质。<br>
+	LOCALS += "肢体接触即可引发目标的快感涟漪。<br>"
+	LOCALS += "每次升级都会提高后续进化消耗。<br>"
+	LOCALS += "※只有当你是女性（不包括扶她）时，此能力才有效。<br>"
+	;男性器が無いハンデを考慮した強さになってるので、ふたなりに適用するのは禁忌
+	LOCALS += @"当前［魅魔体质］等级：Lv{あなた特殊能力:サキュバスボディ}<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN ZP消費量
+
+@あなた特殊能力_発揮条件_サキュバスボディ()
+#FUNCTION
+RESULT = (TALENT:MASTER:性別 == 1)
+RETURNF RESULT
+
+
+@ZP能力取得_同性魅惑(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:同性殺し
+	RETURN -1
+SIF !あなた特殊能力_発揮条件_同性殺し()
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［同性魅惑］
+	あなた特殊能力:同性殺し = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 觉醒超越性别界限的致命吸引力。<br>
+	LOCALS += "持续接触可能瓦解同性的性向壁垒。<br>"
+	LOCALS += "※目标的基础素质影响性向转化难度。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 30
+
+@あなた特殊能力_発揮条件_同性殺し()
+#FUNCTION
+RESULT = (TALENT:MASTER:性別 == 1 || TALENT:MASTER:性別 == 2)
+RETURNF RESULT
+
+
+@ZP能力取得_纵横无界(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:縦横無尽
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［纵横无界］
+	あなた特殊能力:縦横無尽 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 了解度假村内的所有布局并找到最近的道路。<br>
+	LOCALS += "执行单独移动指令或快速传送时，可瞬间抵达目标区域。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 20
+
+
+@ZP能力取得_三头六臂(処理モード = "")
+#DIMS 処理モード
+#DIM ZP消費量
+
+SIF あなた特殊能力:八面六臂 >= 4
+	RETURN -1
+
+ZP消費量 = 100 + POWER(あなた特殊能力:八面六臂, 3) * 20
+IF 処理モード == "取得時処理"
+	あなた特殊能力:八面六臂 += 1
+	LOCALS = 已习得能力［三头六臂 Lv{あなた特殊能力:八面六臂}］
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 提升同时进行亲吻、爱抚和插入的最大人数。<br>
+	LOCALS += "Lv1：最多4人　　Lv2：最多6人<br>"
+	LOCALS += "Lv3：最多12人　　Lv4：最多24人<br>"
+	LOCALS += "每次升级都会提高后续强化消耗。<br>"
+	LOCALS += "同时，可携带同行人数的限制将被解除。<br>"
+	LOCALS += @"当前［三头六臂］等级：Lv{あなた特殊能力:八面六臂}<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN ZP消費量
+
+@ZP能力取得_一骑当千(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:八面六臂 != 4 || FLAG:ZP所持量 < 50000 || (あなた特殊能力:ハーレム < 4 && あなた特殊能力:遊び人 < 4)
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	あなた特殊能力:八面六臂 = 5
+	LOCALS = 已习得能力［一骑当千］
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 进一步增加了可以同时亲吻、爱抚和插入的最大人数。<br>
+	IF あなた特殊能力:ハーレム >= 4
+		LOCALS += "纵使面对千名恋人，亦能展现帝王般的驾驭能力。<br>"
+	ELSE
+		LOCALS += "即便应付千名炮友，仍可维持绝对的统治威严。<br>"
+	ENDIF
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 50000
+
+
+@ZP能力取得_永眠体质(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:無間睡眠
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［永眠体质］
+	あなた特殊能力:無間睡眠 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 突破生物钟限制的随时进入深度睡眠的能力。<br>
+	LOCALS += "可无视昼夜循环随时执行「就寝」指令。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 10
+
+
+@ZP能力取得_精力汲取(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:エナジードレイン
+	RETURN -1
+SIF !あなた特殊能力_発揮条件_エナジードレイン()
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［精力汲取］
+	あなた特殊能力:エナジードレイン = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 将目标体力转化为自身精元的禁忌之术。<br>
+	LOCALS += "当目标精力濒临枯竭时，可将其体力转化为精力。<br>"
+	LOCALS += "※只有当你是女性（包括扶她）时，此能力才有效。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 160
+
+@あなた特殊能力_発揮条件_エナジードレイン()
+#FUNCTION
+RESULT = (GETBIT(TALENT:MASTER:性別, 0) && TALENT:MASTER:Ｖ感度 != -2)
+RETURNF RESULT
+
+
+@ZP能力取得_精关解放(処理モード = "")
+#DIMS 処理モード
+#DIM ZP消費量
+
+SIF あなた特殊能力:筒枯らし >= 3
+	RETURN -1
+SIF !あなた特殊能力_発揮条件_筒枯らし()
+	RETURN -1
+
+ZP消費量 = POWER(あなた特殊能力:筒枯らし + 6, 3) * 5
+IF 処理モード == "取得時処理"
+	あなた特殊能力:筒枯らし += 1
+	LOCALS = 已习得能力［精关解放 Lv{あなた特殊能力:筒枯らし}］
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 掌握诱发对方大量射精的催情秘术。<br>
+	LOCALS += "显著提升对方一次射精产生的精液量。<br>"
+	LOCALS += "※只有当你是女性（不包括扶她）时，此能力才有效。<br>"
+	LOCALS += @"当前［精关解放］等级：Lv{あなた特殊能力:筒枯らし}<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN ZP消費量
+
+@あなた特殊能力_発揮条件_筒枯らし()
+#FUNCTION
+RESULT = (TALENT:MASTER:性別 == 1)
+RETURNF RESULT
+
+
+@ZP能力取得_姓名鉴定师(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:姓名診断士
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［姓名鉴定师］
+	あなた特殊能力:姓名診断士 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 获得为新生子嗣赋予命运之名的神圣权能。<br>
+	LOCALS += "可无视血缘关系，对度假村诞生的所有子嗣行使命名权。<br>"
+	LOCALS += "（角色特殊剧情设定命名规则的情况除外）<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 20
+
+
+@ZP能力取得_自由搬迁术(処理モード = "")
+#DIMS 処理モード
+
+SIF あなた特殊能力:自由搬迁术
+	RETURN -1
+
+SIF ITEM:书籍『快乐搬家术』 == 0
+	RETURN -1
+
+IF 処理モード == "取得時処理"
+	LOCALS = 已习得能力［自由搬迁术］
+	あなた特殊能力:自由搬迁术 = 1
+	詳細文文字列受け渡し変数 = %LOCALS%
+ELSE
+	LOCALS = 掌握说服目标变更居所的交涉技巧。<br>
+	LOCALS += "可在居住区界面自由调整常住居民的房间分配。<br>"
+	LOCALS += "注：安排角色同居需满足基础好感度条件。<br>"
+	詳細文文字列受け渡し変数 = %LOCALS%
+ENDIF
+
+;値段を返す
+RETURN 150
+
+

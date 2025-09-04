@@ -1,0 +1,3544 @@
+﻿;オプション設定処理
+@OPTION
+PRINTL 请选择设置项
+PRINTL [1] - 指令过滤器
+PRINTL [2] - 特定特质切换
+PRINTL [3] - 功能切换
+PRINTL [4] - 起床时间设置
+PRINTL 
+PRINTL [100] - 周回继承BUG修复
+PRINTL [101] - 历史记录冗余修复
+PRINTL [102] - 角色CSV变更刷新
+PRINTL [999]-返回
+
+
+$INPUT_LOOP
+BINPUT
+IF RESULT == 1
+	CALL OPTION_COMMAND_FILTER
+ELSEIF RESULT == 2
+	CALL OPTION_素質切り替え
+ELSEIF RESULT == 3
+	CALL OPTION_機能切り替え
+ELSEIF RESULT == 4
+	IF SAVESTR:ゲームフェイズ管理 != ""
+		PRINTW 起床时间仅可在就寝阶段前设置。
+	ELSE
+		PRINTL 请设置预定起床时间
+		PRINTFORML 当前预定起床时间为%CONVERT_HOURS(CFLAG:MASTER:起床予定時刻)%点
+		IF DAY > 1 && CFLAG:MASTER:就寝時刻 % ((DAY - 1) * 1440) >= CFLAG:MASTER:起床予定時刻
+			;０時よりも前に寝た場合はその日のうちに起きないようにしておく
+			PRINTFORML 不可晚于前日就寝时间%CONVERT_HOURS(CFLAG:MASTER:就寝時刻 % ((DAY - 1) * 1440))%时。
+		ENDIF
+
+		LOCAL:1 = 0
+		FOR LOCAL, 0, 24
+			IF DAY > 1 && CFLAG:MASTER:就寝時刻 % ((DAY - 1) * 1440) >= CFLAG:MASTER:起床予定時刻
+				SIF CFLAG:MASTER:就寝時刻 % ((DAY - 1) * 1440) <= LOCAL * 60
+					CONTINUE
+			ENDIF
+			PRINTFORM [{LOCAL, 2}] 
+			LOCAL:1 ++
+			SIF LOCAL:1 % 10 == 9
+				PRINTL
+		NEXT
+		PRINTL
+		PRINTBUTTON "[保持当前]", 99
+
+		$INPUT_LOOP2
+		INPUT
+		SIF RESULT == 99
+			RESTART
+		SIF RESULT < 0 || RESULT > 23
+			GOTO INPUT_LOOP2
+		CFLAG:MASTER:起床予定時刻 = RESULT * 60
+	ENDIF
+ELSEIF RESULT == 100
+	PRINTL 周回继承导致的角色数据异常修复程序
+	PRINTL 将重置所有角色关系链至初始化状态
+	PRINTL ※紧急避险用系统指令，常规操作请勿使用
+	PRINTL 
+	PRINTL 确定要运行它吗？
+	PRINTL [0] 确认执行
+	PRINTL [1] 取消
+	BINPUT
+	IF RESULT == 0
+		FOR LOCAL, 0, CHARANUM
+			CALL INIT_RELATION(LOCAL)
+		NEXT
+		PRINTW 已完成。
+	ENDIF
+ELSEIF RESULT == 101
+	PRINTL 历史记录重复登记BUG修复工具。
+	PRINTL 将重置所有角色的历史记录至初始状态。
+	PRINTL ※注意：已解锁的成就类记录将无法自动恢复
+	PRINTL 
+	PRINTL 确定要运行它吗？
+	PRINTL [0] 确认执行
+	PRINTL [1] 取消
+	BINPUT
+	IF RESULT == 0
+		DT_CLEAR "履歴データベース"
+		PRINTW 已完成。
+	ENDIF
+ELSEIF RESULT == 102
+	PRINTL CSV数据变更同步工具，当角色CSV文件发生结构性变更时更新存档数据。
+	PRINTL 警告：可能造成部分特质与经验值重置。
+	PRINTL 请谨慎操作并提前备份存档。
+	PRINTL 
+	PRINTL [0] 选择需更新角色
+	PRINTL [1] 批量更新静态数据
+	PRINTL [2] 返回
+	BINPUT
+	IF RESULT == 0
+		CALL CSV更新処理リスト()
+	ELSEIF RESULT == 1
+		PRINTL
+		PRINTL
+		DRAWLINE
+		PRINTL 将对全体角色应用以下非动态数据的CSV变更。
+		PRINTL 注意：部分角色可能存在特殊数据覆盖机制。
+		PRINTL ・更新范围包含
+		PRINTL 　　角色名称、昵称、图像资源目录、作品出处、礼物偏好、战斗类型
+		PRINTL 　　年龄素质、固有素质、通常服装、奥义名设定
+		DRAWLINE
+		PRINTL 确认执行批量更新？
+		PRINTBUTTONLC "[0] 确认执行", 0
+		PRINTBUTTONLC "[1] 取消", 1
+		BINPUT
+		IF RESULT == 0
+			CALL 影響低い部分まとめて適用()
+			PRINTW 数据同步已完成。
+		ENDIF
+	ENDIF
+ELSEIF RESULT == 999
+	RETURN 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+RESTART
+
+
+;文字列変数に保存してみた
+@OPTION_COMMAND_FILTER
+#DIMS フェイズ保存
+#DIM ループ用
+#DIM 改行用
+
+TOOLTIP_CUSTOM 1
+TOOLTIP_SETFONTSIZE 12
+TOOLTIP_SETDURATION 100000
+
+VARSET LOCAL
+FOR COUNT,0,500
+	LOCALS = /{COUNT}/
+	SIF STRCOUNT(SAVESTR:0,LOCALS)
+		LOCAL:COUNT = 1
+NEXT
+SIF SAVESTR:0 == ""
+	SAVESTR:0 = /
+DRAWLINE
+フェイズ保存 = %SAVESTR:ゲームフェイズ管理%
+SAVESTR:ゲームフェイズ管理 = 通常モード
+LOCALS:1 = 
+改行用 = 0
+
+FOR COUNT,0,500
+	SIF COUNT >= 370 && COUNT <= 390
+		CONTINUE
+	LOCALS = /{COUNT}/
+	; SIF STRCOUNT(SAVESTR:0,LOCALS)
+	; 		SETCOLOR 0x666666
+	IF STRLENS(TRAIN_COMNAME(COUNT))
+		TSTR:ツールチップ受渡 = TRAIN_COMNAME(COUNT)
+		IF STRCOUNT(SAVESTR:0,LOCALS)
+			LOCALS:1 += @"<font color='#666666'><button value = '{COUNT}'"
+		ELSE
+			LOCALS:1 += @"<button value = '{COUNT}'"
+		ENDIF
+		TRYCCALLFORM COM_TOOLTIP_{COUNT}
+			IF OPTION変数:ツールチップ切り替え == 0
+				LOCALS:1 += @" title = '%TSTR:ツールチップ受渡%'>"
+			ELSE
+				LOCALS:1 += @">"
+			ENDIF
+		CATCH
+			LOCALS:1 += @">"
+		ENDCATCH
+		LOCALS:1 += @"%TRAIN_COMNAME(COUNT), 22%[{COUNT, 3}]</button>"
+		SIF STRCOUNT(SAVESTR:0,LOCALS)
+			LOCALS:1 += "</font>"
+		;PRINTFORMC %TRAIN_COMNAME(COUNT)%[{COUNT,3}]
+		改行用 += 1
+	ENDIF
+	IF 改行用 >= 4
+		改行用 = 0
+		HTML_PRINT LOCALS:1
+		LOCALS:1 = 
+	ENDIF
+NEXT
+IF LOCALS:1 != ""
+	改行用 = 0
+	HTML_PRINT LOCALS:1
+	LOCALS:1 = 
+ENDIF
+
+PRINTL 
+DRAWLINE
+PRINTL [1000] - 确认设置　　　　　　　　　　[1001] - 重置通用指令过滤器
+PRINTL [1002] - 保存指令过滤器设置　　　　　[1003] - 载入指令过滤器设置
+SETCOLOR 0x666666
+PRINTPLAIN [1010] - SM指令过滤　　　　　　　　　[1011] - Ｖ指令过滤(未实装)
+RESETCOLOR
+PRINTL
+PRINTL [1020] - 进入专属指令过滤器
+PRINTL [1021] - 进入衍生指令过滤器
+BINPUT
+IF RESULT == 1000
+	SAVESTR:ゲームフェイズ管理 = %フェイズ保存%
+	RETURN 0
+ELSEIF RESULT == 1001
+	SAVESTR:0 = 
+	RESTART
+ELSEIF RESULT == 1002
+	$INPUT_LOOP_SAVE
+	LOADGLOBAL
+	FOR ループ用,0,3
+		PRINTFORM [{ループ用}] - 
+		IF STRLENS(GLOBALS:(ループ用 * 2 + 1))
+			PRINTFORML [%GLOBALS:(ループ用 * 2 + 1)%]
+		ELSE
+			PRINTL ----------
+		ENDIF
+	NEXT
+	PRINTL [100] - 返回
+	INPUT
+	LOCAL = RESULT
+	IF RESULT == 100
+		RESTART
+	ELSEIF RESULT < 0 || RESULT > 2
+		GOTO INPUT_LOOP_SAVE
+	ENDIF
+	SIF STRLENS(GLOBALS:(RESULT * 2 + 1))
+		PRINTFORML 【%GLOBALS:(RESULT * 2 + 1)%】 是否覆盖当前数据？
+	PRINTL 请输入通用指令过滤器设置名称
+	INPUTS
+	GLOBALS:(LOCAL * 2 + 1) = %RESULTS%
+	GLOBALS:(LOCAL * 2) = %SAVESTR:0%
+	PRINTFORMW 通用指令过滤器【%GLOBALS:(LOCAL * 2 + 1)%】已成功建档
+	SAVEGLOBAL
+	RESTART
+ELSEIF RESULT == 1003
+	$INPUT_LOOP_LOAD
+	LOADGLOBAL
+	FOR LOCAL,0,3
+		PRINTFORM [{LOCAL}] - 
+		IF STRLENS(GLOBALS:(LOCAL * 2 + 1))
+			PRINTFORML [%GLOBALS:(LOCAL * 2 + 1)%]
+		ELSE
+			PRINTL ----------
+		ENDIF
+	NEXT
+	PRINTL [100] - 返回
+	INPUT
+	IF RESULT == 100
+		RESTART
+	ELSEIF RESULT < 0 || RESULT > 2
+		GOTO INPUT_LOOP_LOAD
+	ENDIF
+	PRINTFORMW 已载入通用指令过滤器【%GLOBALS:(RESULT * 2 + 1)%】
+	SAVESTR:0 = %GLOBALS:(RESULT * 2)%
+	RESTART
+;各種フィルタ
+;ELSEIF RESULT == 1010 || RESULT == 1011
+;	FOR COUNT,0,500
+;		;SM
+;;		IF RESULT == 1010
+;			SIF (COUNT >= 100 && COUNT < 120) || (COUNT >= 140 && COUNT < 160)
+;				LOCAL:COUNT = 1
+;		;V
+;		ELSEIF RESULT == 1011
+;			SIF COUNT == 3 || COUNT == 44 || COUNT == 60 || COUNT == 61 || COUNT == 65 || COUNT == 67 || COUNT == 68 || COUNT == 71 || COUNT == 122|| COUNT == 141 || COUNT == 143 || COUNT == 185
+;				LOCAL:COUNT = 1
+;		ENDIF
+;	NEXT
+ELSEIF RESULT == 1020
+	$固有
+	CALL OPTION_固有COMMAND_FILTER(フェイズ保存)
+	SIF RESULT == 999
+		GOTO 派生
+ELSEIF RESULT == 1021
+	$派生
+	CALL OPTION_派生COMMAND_FILTER(フェイズ保存)
+	SIF RESULT == 999
+		GOTO 固有
+ELSEIF STRLENS(TRAIN_COMNAME(RESULT))
+	LOCAL:RESULT = !LOCAL:RESULT
+ELSE
+	RESTART
+ENDIF
+SAVESTR:0 = /
+FOR COUNT,0,500
+	SIF !LOCAL:COUNT
+		CONTINUE
+	LOCALS = /{COUNT}/
+	SIF STRFIND(SAVESTR:0, LOCALS) < 0
+		SAVESTR:0 = %SAVESTR:0%{COUNT}/
+NEXT
+RESTART
+
+
+@OPTION_固有COMMAND_FILTER(フェイズ保存)
+#DIM COM番号
+#DIMS フェイズ保存
+#DIM ターゲット保存
+#DIM ターゲット保存２
+#DIM フィルタ配列, 20, 500
+#DIM 場所フィルタ配列, 10, 20, マップ部屋番号上限
+#DIMS RESULTS分割, 10
+#DIM 改行用
+#DIM 派生番号
+
+VARSET LOCAL
+VARSET フィルタ配列
+FOR COM番号, 370, 375
+	VARSET RESULTS
+	ENUMFUNCBEGINSWITH @"CHARACOMNAME{COM番号}_"
+	FOR 派生番号, 0, RESULT
+		LOCALS = /%REPLACE(RESULTS:派生番号, "CHARACOMNAME", "")%/
+		IF STRCOUNT(SAVESTR:1, LOCALS)
+			VARSET RESULTS分割
+			SPLIT RESULTS:派生番号, "_", RESULTS分割
+			フィルタ配列:(COM番号 - 370):(TOINT(RESULTS分割:1)) = 1
+		ENDIF
+	NEXT
+NEXT
+FOR COM番号, 380, 385
+	VARSET RESULTS
+	ENUMFUNCBEGINSWITH @"COMNAME_PLACE_{COM番号}_"
+	FOR 派生番号, 0, RESULT
+		LOCALS = /%REPLACE(RESULTS:派生番号, "COMNAME_PLACE_", "")%/
+		IF STRCOUNT(SAVESTR:1, LOCALS)
+			VARSET RESULTS分割
+			SPLIT RESULTS:派生番号, "_", RESULTS分割
+			場所フィルタ配列:(COM番号 - 380):(TOINT(RESULTS分割:3)):(TOINT(RESULTS分割:4)) = 1
+		ENDIF
+	NEXT
+NEXT
+;お祭りコマンドはフィルタ不可
+SIF SAVESTR:1 == ""
+	SAVESTR:1 = /
+DRAWLINE
+SAVESTR:ゲームフェイズ管理 = 通常モード
+
+
+改行用 = 0
+ターゲット保存 = TARGET
+FOR COM番号, 370, 375
+	VARSET RESULTS
+	ENUMFUNCBEGINSWITH @"CHARACOMNAME{COM番号}_"
+	FOR 派生番号, 0, RESULT
+		LOCALS = /%REPLACE(RESULTS:派生番号, "CHARACOMNAME", "")%/
+		VARSET RESULTS分割
+		SPLIT RESULTS:派生番号, "_", RESULTS分割
+		TARGET = GETCHARA(TOINT(RESULTS分割:1))
+		;固有コマンドのABLEがあれば当然COMNAMEもあるはずなのでTRYCCALLで判定
+		TRYCCALLFORM COM_ABLE{COM番号}_{NO:TARGET}
+			TSTR:ツールチップ受渡 = TRAIN_COMNAME(COM番号)
+			IF STRCOUNT(SAVESTR:1,LOCALS)
+				LOCALS:1 += @"<font color='#666666'><button value = '{COM番号}_{NO:TARGET}'"
+			ELSE
+				LOCALS:1 += @"<button value = '{COM番号}_{NO:TARGET}'"
+			ENDIF
+			TRYCCALLFORM COM_TOOLTIP_{COM番号}_{NO:TARGET}
+				IF OPTION変数:ツールチップ切り替え == 0
+					LOCALS:1 += @" title = '%TSTR:ツールチップ受渡%'>"
+				ELSE
+					LOCALS:1 += @">"
+				ENDIF
+			CATCH
+				LOCALS:1 += @">"
+			ENDCATCH
+			LOCALS:1 += @"%CALLNAME:TARGET,20,RIGHT% - %TRAIN_COMNAME(COM番号), 22%[{COM番号}_{NO:TARGET,3}]</button>"
+			SIF STRCOUNT(SAVESTR:1,LOCALS)
+				LOCALS:1 += "</font>"
+			改行用 += 1
+		CATCH
+		ENDCATCH
+		IF 改行用 >= 2
+			改行用 = 0
+			HTML_PRINT LOCALS:1
+			LOCALS:1 = 
+		ENDIF
+	NEXT
+NEXT
+IF LOCALS:1 != ""
+	改行用 = 0
+	HTML_PRINT LOCALS:1
+	LOCALS:1 = 
+ENDIF
+TARGET = ターゲット保存
+PRINTL
+DRAWLINE
+ターゲット保存 = CFLAG:MASTER:現在位置
+ターゲット保存２ = CFLAG:MASTER:現在マップ種別
+FOR COM番号, 380, 385
+	VARSET RESULTS
+	ENUMFUNCBEGINSWITH @"COMNAME_PLACE_{COM番号}_"
+	FOR 派生番号, 0, RESULT
+		LOCALS = /%REPLACE(RESULTS:派生番号, "COMNAME_PLACE_", "")%/
+		VARSET RESULTS分割
+		SPLIT RESULTS:派生番号, "_", RESULTS分割
+		CFLAG:MASTER:現在マップ種別 = TOINT(RESULTS分割:3)
+		CFLAG:MASTER:現在位置 = TOINT(RESULTS分割:4)
+		;マップ種別とりあえず入れておくだけ
+		;固有コマンドのABLEがあれば当然COMNAMEもあるはずなのでTRYCCALLで判定
+		TRYCCALLFORM COM_ABLE{COM番号}
+			IF TRAIN_COMNAME(COM番号) != ""
+				TSTR:ツールチップ受渡 = TRAIN_COMNAME(COM番号)
+				IF STRCOUNT(SAVESTR:1,LOCALS)
+					LOCALS:1 += @"<font color='#666666'><button value = '{COM番号}_{CFLAG:MASTER:現在マップ種別}_{CFLAG:MASTER:現在位置}'"
+				ELSE
+					LOCALS:1 += @"<button value = '{COM番号}_{CFLAG:MASTER:現在マップ種別}_{CFLAG:MASTER:現在位置}'"
+				ENDIF
+				TRYCCALLFORM COM_TOOLTIP_{COM番号}_{CFLAG:MASTER:現在マップ種別}_{CFLAG:MASTER:現在位置}
+					IF OPTION変数:ツールチップ切り替え == 0
+						LOCALS:1 += @" title = '%TSTR:ツールチップ受渡%'>"
+					ELSE
+						LOCALS:1 += @">"
+					ENDIF
+				CATCH
+					LOCALS:1 += @">"
+				ENDCATCH
+				LOCALS:1 += @"%GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:MASTER:現在位置),20,RIGHT% - %TRAIN_COMNAME(COM番号),18,RIGHT%[{COM番号}_{CFLAG:MASTER:現在マップ種別}_{CFLAG:MASTER:現在位置}]</button>"
+				SIF STRCOUNT(SAVESTR:1,LOCALS)
+					LOCALS:1 += "</font>"
+				改行用 += 1
+			ENDIF
+		CATCH
+		ENDCATCH
+		IF 改行用 >= 2
+			改行用 = 0
+			HTML_PRINT LOCALS:1
+			LOCALS:1 = 
+		ENDIF
+	NEXT
+NEXT
+IF LOCALS:1 != ""
+	改行用 = 0
+	HTML_PRINT LOCALS:1
+	LOCALS:1 = 
+ENDIF
+CFLAG:MASTER:現在位置 = ターゲット保存
+CFLAG:MASTER:現在マップ種別 = ターゲット保存２
+
+PRINTL 
+DRAWLINE
+
+PRINTBUTTON "[1000] - 通用指令过滤器设置", TOSTR(1000)
+PRINTBUTTON "[1001] - 衍生指令过滤器设置", TOSTR(1001)
+PRINTL
+PRINTBUTTON "[1002] - 重置专属指令过滤器", TOSTR(1002)
+PRINTL
+PRINTBUTTON "[1003] - 保存专属指令过滤器设置", TOSTR(1003)
+PRINTBUTTON "[1004] - 载入专属指令过滤器设置", TOSTR(1004)
+PRINTL
+
+BINPUTS
+
+SELECTCASE RESULTS
+	CASE "1000"
+		SAVESTR:ゲームフェイズ管理 = %フェイズ保存%
+		RETURN 0
+	CASE "1001"
+		RETURN 999
+	CASE "1002"
+		SAVESTR:1 = 
+		RESTART
+	CASE "1003"
+		$INPUT_LOOP_SAVE
+		LOADGLOBAL
+		FOR LOCAL, 3, 6
+			PRINTFORM [{LOCAL}] - 
+			IF STRLENS(GLOBALS:(LOCAL * 2 + 1))
+				PRINTFORML [%GLOBALS:(LOCAL * 2 + 1)%]
+			ELSE
+				PRINTL ----------
+			ENDIF
+		NEXT
+		PRINTL [100] - 返回
+		INPUT
+		LOCAL = RESULT
+		IF LOCAL == 100
+			RESTART
+		ELSEIF LOCAL < 3 || LOCAL > 5
+			GOTO INPUT_LOOP_SAVE
+		ENDIF
+		SIF STRLENS(GLOBALS:(RESULT * 2 + 1))
+			PRINTFORML 【%GLOBALS:(LOCAL * 2 + 1)%】覆盖当前设置
+		PRINTL 请输入专属指令过滤器设置名称
+		INPUTS
+		GLOBALS:(LOCAL * 2 + 1) = %RESULTS%
+		GLOBALS:(LOCAL * 2) = %SAVESTR:1%
+		PRINTFORMW 专属指令过滤器【%GLOBALS:(LOCAL * 2 + 1)%】已成功建档
+		SAVEGLOBAL
+		RESTART
+	CASE "1004"
+		$INPUT_LOOP_LOAD
+		LOADGLOBAL
+		FOR LOCAL, 3, 6
+			PRINTFORM [{LOCAL}] - 
+			IF STRLENS(GLOBALS:(LOCAL * 2 + 1))
+				PRINTFORML [%GLOBALS:(LOCAL * 2 + 1)%]
+			ELSE
+				PRINTL ----------
+			ENDIF
+		NEXT
+		PRINTL [100] - 返回
+		INPUT
+		IF RESULT == 100
+			RESTART
+		ELSEIF RESULT < 3 || RESULT > 5
+			GOTO INPUT_LOOP_LOAD
+		ENDIF
+		PRINTFORMW 已载入专属指令过滤器【%GLOBALS:(RESULT * 2 + 1)%】
+		SAVESTR:1 = %GLOBALS:(RESULT * 2)%
+		RESTART
+	CASEELSE
+		LOCALS = /%RESULTS%/
+		IF !STRCOUNT(SAVESTR:1,LOCALS)
+			SAVESTR:1 = %SAVESTR:1%%RESULTS%/
+		ELSE
+			SAVESTR:1 = %REPLACE(SAVESTR:1, LOCALS, "/")%
+		ENDIF
+ENDSELECT
+
+RESTART
+
+$処理部分ラベル
+
+
+@OPTION_派生COMMAND_FILTER(フェイズ保存)
+#DIM COM番号
+#DIM ターゲット保存
+#DIMS フェイズ保存
+#DIM フィルタ配列, 500, 50
+#DIMS RESULTS分割, 10
+#DIM 改行用
+#DIM 派生番号
+
+VARSET LOCAL
+VARSET フィルタ配列
+VARSET RESULTS
+ENUMFUNCBEGINSWITH @"COMNAME_S"
+FOR 派生番号, 0, RESULT
+	LOCALS = /%REPLACE(RESULTS:派生番号, "COMNAME_S", "")%/
+	IF STRCOUNT(SAVESTR:2, LOCALS)
+		VARSET RESULTS分割
+		SPLIT RESULTS:派生番号, "_", RESULTS分割
+		フィルタ配列:(TOINT(SUBSTRING(RESULTS分割:1, 1, -1))):(TOINT(RESULTS分割:2)) = 1
+	ENDIF
+NEXT
+SIF SAVESTR:2 == ""
+	SAVESTR:2 = /
+DRAWLINE
+SAVESTR:ゲームフェイズ管理 = 通常モード
+
+改行用 = 0
+VARSET RESULTS
+ENUMFUNCBEGINSWITH @"COMNAME_S"
+FOR 派生番号, 0, RESULT
+	LOCALS = /%REPLACE(RESULTS:派生番号, "COMNAME_S", "")%/
+	VARSET RESULTS分割
+	SPLIT RESULTS:派生番号, "_", RESULTS分割
+	COM番号 = TOINT(SUBSTRING(RESULTS分割:1, 1, -1))
+	LOCALS:1 = {COM番号}_%RESULTS分割:2%
+	;派生コマンドのABLEがあれば当然COMNAMEもあるはずなのでTRYCCALLで判定
+	TRYCCALLFORM COM_ABLE_S%LOCALS:1%
+		IF TRAIN_COMNAME_S(LOCALS:1) != ""
+			TSTR:ツールチップ受渡 = TRAIN_COMNAME_S(LOCALS:1)
+			IF STRCOUNT(SAVESTR:2,LOCALS)
+				LOCALS:2 += @"<font color='#666666'><button value = '%LOCALS:1%'"
+			ELSE
+				LOCALS:2 += @"<button value = '%LOCALS:1%'"
+			ENDIF
+			TRYCCALLFORM COM_TOOLTIP_S{COM番号}_{派生番号}
+				IF OPTION変数:ツールチップ切り替え == 0
+					LOCALS:2 += @" title = '%TSTR:ツールチップ受渡%'>"
+				ELSE
+					LOCALS:2 += @">"
+				ENDIF
+			CATCH
+				LOCALS:2 += @">"
+			ENDCATCH
+			LOCALS:2 += @"%TRAIN_COMNAME(COM番号), 20, RIGHT%派生 - %TRAIN_COMNAME_S(LOCALS:1), 20, LEFT%[{COM番号}_{派生番号,2}]</button>"
+			SIF STRCOUNT(SAVESTR:2,LOCALS)
+				LOCALS:2 += "</font>"
+			改行用 += 1
+			;PRINTBUTTON @"%TRAIN_COMNAME(COM番号), 20, RIGHT%派生 - %TRAIN_COMNAME_S(LOCALS:1), 20, LEFT%[{COM番号}_{派生番号,2}]", @"%LOCALS:1%"
+		ENDIF
+	CATCH
+	ENDCATCH
+	IF 改行用 >= 2
+		改行用 = 0
+		HTML_PRINT LOCALS:2
+		LOCALS:2 = 
+	ENDIF
+NEXT
+IF LOCALS:2 != ""
+	改行用 = 0
+	HTML_PRINT LOCALS:2
+	LOCALS:2 = 
+ENDIF
+
+PRINTL 
+DRAWLINE
+
+PRINTBUTTON "[1000] - 通用指令过滤器设置", TOSTR(1000)
+PRINTBUTTON "[1001] - 专属指令过滤设置", TOSTR(1001)
+PRINTL
+PRINTBUTTON "[1002] - 重置衍生指令过滤", TOSTR(1002)
+PRINTL
+PRINTBUTTON "[1003] - 保存衍生指令设置", TOSTR(1003)
+PRINTBUTTON "[1004] - 载入衍生指令设置", TOSTR(1004)
+PRINTL
+
+INPUTS
+
+SELECTCASE RESULTS
+	CASE "1000"
+		SAVESTR:ゲームフェイズ管理 = %フェイズ保存%
+		RETURN 0
+	CASE "1001"
+		RETURN 999
+	CASE "1002"
+		SAVESTR:2 = 
+		RESTART
+	CASE "1003"
+		$INPUT_LOOP_SAVE
+		LOADGLOBAL
+		FOR LOCAL, 6, 9
+			PRINTFORM [{LOCAL}] - 
+			IF STRLENS(GLOBALS:(LOCAL * 2 + 1))
+				PRINTFORML [%GLOBALS:(LOCAL * 2 + 1)%]
+			ELSE
+				PRINTL ----------
+			ENDIF
+		NEXT
+		PRINTL [100] - 返回
+		INPUT
+		LOCAL = RESULT
+		IF LOCAL == 100
+			RESTART
+		ELSEIF LOCAL < 6 || LOCAL > 8
+			GOTO INPUT_LOOP_SAVE
+		ENDIF
+		SIF STRLENS(GLOBALS:(LOCAL * 2 + 1))
+			PRINTFORML 【%GLOBALS:(LOCAL * 2 + 1)%】覆盖当前设置
+		PRINTL 请输入衍生指令过滤器设置名称
+		INPUTS
+		GLOBALS:(LOCAL * 2 + 1) = %RESULTS%
+		GLOBALS:(LOCAL * 2) = %SAVESTR:2%
+		PRINTFORMW 衍生指令设置【%GLOBALS:(LOCAL * 2 + 1)%】已成功建档
+		SAVEGLOBAL
+		RESTART
+	CASE "1004"
+		$INPUT_LOOP_LOAD
+		LOADGLOBAL
+		FOR LOCAL, 6, 9
+			PRINTFORM [{LOCAL}] - 
+			IF STRLENS(GLOBALS:(LOCAL * 2 + 1))
+				PRINTFORML [%GLOBALS:(LOCAL * 2 + 1)%]
+			ELSE
+				PRINTL ----------
+			ENDIF
+		NEXT
+		PRINTL [100] - 返回
+		INPUT
+		IF RESULT == 100
+			RESTART
+		ELSEIF RESULT < 6 || RESULT > 8
+			GOTO INPUT_LOOP_LOAD
+		ENDIF
+		PRINTFORMW 已载入衍生指令设置【%GLOBALS:(RESULT * 2 + 1)%】
+		SAVESTR:2 = %GLOBALS:(RESULT * 2)%
+		RESTART
+	CASEELSE
+		SPLIT RESULTS, "_", RESULTS分割
+		IF RESULT == 2
+			フィルタ配列:(TOINT(RESULTS分割:0)):(TOINT(RESULTS分割:1)) = !フィルタ配列:(TOINT(RESULTS分割:0)):(TOINT(RESULTS分割:1))
+		ELSE
+			RESTART
+		ENDIF
+ENDSELECT
+
+SAVESTR:2 = /
+FOR COM番号, 0, 500
+	FOR COUNT, 1, 50
+		SIF !フィルタ配列:COM番号:COUNT
+			CONTINUE
+		PRINTFORML {フィルタ配列:COM番号:COUNT}
+		LOCALS = /{COM番号}_{COUNT}/
+		SIF !STRCOUNT(SAVESTR:2,LOCALS)
+			SAVESTR:2 = %SAVESTR:2%{COM番号}_{COUNT}/
+	NEXT
+NEXT
+
+RESTART
+
+$処理部分ラベル
+
+
+@OPTION_素質切り替え
+DRAWLINE
+PRINTL 将对全体角色的特定特质进行永久性替换。
+PRINTL （※该操作不可逆，请谨慎执行）
+DRAWLINE
+IF 素質切り替えOPTION記憶:ふたなり_女性
+	PRINTBUTTON "[0][扶她]替换为[女性]（已应用）", 0
+ELSE
+	PRINTBUTTON "[0][扶她]替换为[女性]", 0
+ENDIF
+PRINTL
+IF 素質切り替えOPTION記憶:陥没乳首_なし
+	PRINTBUTTON "[1][乳头内陷]替换为[无]（已应用）", 1
+ELSE
+	PRINTBUTTON "[1][乳头内陷]替换为[无]", 1
+ENDIF
+PRINTL
+IF 素質切り替えOPTION記憶:母乳体質_なし && 素質切り替えOPTION記憶:母乳体質_発情期_なし
+	PRINTBUTTON "[2][泌乳体质]替换为[无]（已应用）", 2
+ELSE
+	PRINTBUTTON "[2][泌乳体质]替换为[无]", 2
+ENDIF
+PRINTL
+PRINTBUTTON "[999] 決定", 999
+PRINTL
+
+$INPUT_LOOP
+BINPUT
+
+SELECTCASE RESULT
+	CASE 0
+		IF 素質切り替えOPTION記憶:ふたなり_女性
+			REUSELASTLINE 
+			GOTO INPUT_LOOP
+		ENDIF
+		PRINTL [扶她]特质将永久替换为[女性]特质。该操作不可逆转。
+		PRINTL 是否确认执行？
+		PRINTBUTTON "[0]全局应用（含未来新增角色）", 0
+		PRINTL
+		PRINTBUTTON "[1]仅修改现有角色", 1
+		PRINTL
+		PRINTBUTTON "[2]清除相关经验数据（射精经验）", 2
+		PRINTL
+		PRINTBUTTON "[10]保持当前", 10
+		PRINTL
+		$INPUT_LOOP2
+		INPUT
+		SELECTCASE RESULT
+			CASE 0
+				FOR LOCAL, 1, CHARANUM
+					IF TALENT:LOCAL:性別 == 3
+						TALENT:LOCAL:性別 = 1
+					ENDIF
+				NEXT
+				素質切り替えOPTION記憶:ふたなり_女性 = 1
+				PRINTW 变更已完成。
+				RESTART
+			CASE 1
+				FOR LOCAL, 1, CHARANUM
+					IF TALENT:LOCAL:性別 == 3
+						TALENT:LOCAL:性別 = 1
+					ENDIF
+				NEXT
+				PRINTW 变更已完成。
+				RESTART
+			CASE 2
+				FOR LOCAL, 1, CHARANUM
+					IF EXP:LOCAL:射精経験
+						EXP:LOCAL:射精経験 = 0
+					ENDIF
+				NEXT
+				PRINTW 清除已完成。
+				RESTART
+			CASE 10
+				RESTART
+			CASEELSE
+				REUSELASTLINE 
+				GOTO INPUT_LOOP2
+		ENDSELECT
+	CASE 1
+		IF 素質切り替えOPTION記憶:陥没乳首_なし
+			REUSELASTLINE 
+			GOTO INPUT_LOOP
+		ENDIF
+		PRINTL [乳头内陷]特质将永久移除。该操作不可逆转。
+		PRINTL 是否确认执行？
+		PRINTBUTTON "[0]全局应用（含未来新增角色）", 0
+		PRINTL
+		PRINTBUTTON "[1]仅修改现有角色", 1
+		PRINTL
+		PRINTBUTTON "[10]保持当前", 10
+		PRINTL
+		$INPUT_LOOP3
+		INPUT
+		SELECTCASE RESULT
+			CASE 0
+				FOR LOCAL, 1, CHARANUM
+					IF TALENT:LOCAL:陥没乳首
+						TALENT:LOCAL:陥没乳首 = 0
+					ENDIF
+				NEXT
+				素質切り替えOPTION記憶:陥没乳首_なし = 1
+				PRINTW 变更已完成。
+				RESTART
+			CASE 1
+				FOR LOCAL, 1, CHARANUM
+					IF TALENT:LOCAL:陥没乳首
+						TALENT:LOCAL:陥没乳首 = 0
+					ENDIF
+				NEXT
+				PRINTW 变更已完成。
+				RESTART
+			CASE 10
+				RESTART
+			CASEELSE
+				REUSELASTLINE 
+				GOTO INPUT_LOOP3
+		ENDSELECT
+	CASE 2
+		IF 素質切り替えOPTION記憶:母乳体質_なし && 素質切り替えOPTION記憶:母乳体質_発情期_なし
+			REUSELASTLINE 
+			GOTO INPUT_LOOP
+		ENDIF
+		PRINTL [泌乳体质]特质将永久移除。该操作不可逆转。
+		PRINTL 是否确认执行？
+		IF 素質切り替えOPTION記憶:母乳体質_なし
+			SETCOLOR 0x666666
+			PRINTPLAIN [0]全局应用（含未来新增角色）（已生效）
+			PRINTL
+			PRINTPLAIN [1]仅修改现有角色（已生效）
+			PRINTL
+			RESETCOLOR
+		ELSE
+			PRINTBUTTON "[0]全局应用（含未来新增角色）", 0
+			PRINTL
+			PRINTBUTTON "[1]仅修改现有角色", 1
+			PRINTL
+		ENDIF
+		IF 素質切り替えOPTION記憶:母乳体質_発情期_なし
+			SETCOLOR 0x666666
+			PRINTPLAIN [2]清除多拉夫族[泌乳体质(发情期)]特质（已生效）
+			PRINTL
+			RESETCOLOR
+		ELSE
+			PRINTBUTTON "[2]清除多拉夫族[泌乳体质(发情期)]特质", 2
+			PRINTL
+		ENDIF
+		PRINTBUTTON "[3]清除相关经验数据（喷乳经验）", 3
+		PRINTL
+		PRINTBUTTON "[10]保持当前", 10
+		PRINTL
+		$INPUT_LOOP4
+		INPUT
+		SELECTCASE RESULT
+			CASE 0
+				IF 素質切り替えOPTION記憶:母乳体質_なし
+					REUSELASTLINE 
+					GOTO INPUT_LOOP4
+				ENDIF
+				FOR LOCAL, 1, CHARANUM
+					IF TALENT:LOCAL:母乳体質 == 1
+						TALENT:LOCAL:母乳体質 = 0
+					ENDIF
+				NEXT
+				素質切り替えOPTION記憶:母乳体質_なし = 1
+				PRINTW 变更已完成。
+				RESTART
+			CASE 1
+				IF 素質切り替えOPTION記憶:母乳体質_なし
+					REUSELASTLINE 
+					GOTO INPUT_LOOP4
+				ENDIF
+				FOR LOCAL, 1, CHARANUM
+					IF TALENT:LOCAL:母乳体質
+						TALENT:LOCAL:母乳体質 = 0
+					ENDIF
+				NEXT
+				PRINTW 变更已完成。
+				RESTART
+			CASE 2
+				IF 素質切り替えOPTION記憶:母乳体質_発情期_なし
+					REUSELASTLINE 
+					GOTO INPUT_LOOP4
+				ENDIF
+				FOR LOCAL, 1, CHARANUM
+					IF TALENT:LOCAL:母乳体質 == 2
+						TALENT:LOCAL:母乳体質 = 0
+					ENDIF
+				NEXT
+				素質切り替えOPTION記憶:母乳体質_発情期_なし = 1
+				PRINTW 变更已完成。
+				RESTART
+			CASE 3
+				FOR LOCAL, 1, CHARANUM
+					IF EXP:LOCAL:噴乳経験
+						EXP:LOCAL:噴乳経験 = 0
+					ENDIF
+				NEXT
+				PRINTW 清除已完成。
+				RESTART
+			CASE 10
+				RESTART
+			CASEELSE
+				REUSELASTLINE 
+				GOTO INPUT_LOOP4
+		ENDSELECT
+	CASE 999
+		RETURN
+ENDSELECT
+
+
+
+@OPTION_機能切り替え(初期表示 = 0)
+#DIM カテゴリ切り替え変数
+#DIM 画面表示用変数
+#DIM 対象キャラ
+#DIM 初期表示
+
+IF 初期表示
+	画面表示用変数 = 初期表示 % 10000
+	カテゴリ切り替え変数 = 初期表示 / 10000
+	初期表示 = 0
+ENDIF
+
+DRAWLINE
+PRINTL 功能选项调试界面
+PRINTL ※功能开发中，可能存在异常情况。
+DRAWLINE
+LOCALS = <div rect='81,50,5969,250' padding='50,25,50' border='31' bcolor='#C0C0C0'>
+IF カテゴリ切り替え変数 == 0
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[0] 系统</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='0'>[0] 系统</button>"
+ENDIF
+LOCALS += "　/　"
+IF カテゴリ切り替え変数 == 1
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1] 嘿咻</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1'>[1] 嘿咻</button>"
+ENDIF
+LOCALS += "　/　"
+IF カテゴリ切り替え変数 == 2
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[2] 图像资源</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='2'>[2] 图像资源</button>"
+ENDIF
+LOCALS += "　/　"
+IF カテゴリ切り替え変数 == 3
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[3] 探索・战斗</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='3'>[3] 探索・战斗</button>"
+ENDIF
+LOCALS += "</div>"
+LOCALS += "<div rect='81,331,1937,3312' border='31' bcolor='#C0C0C0'></div><div rect='2050,331,4000,3312' border='31' bcolor='#C0C0C0'></div>"
+LOCALS += "<div rect='156,456,1937,3312'>"
+
+VARSET RESULTS
+CALLFORM 機能オプション左枠_{カテゴリ切り替え変数}(画面表示用変数)
+LOCALS += RESULTS
+LOCALS += "</div>"
+
+LOCALS += "<div rect='2125,456,3875,3312'>"
+CALLFORM 機能オプション右枠_{カテゴリ切り替え変数}(画面表示用変数)
+LOCALS += RESULTS
+LOCALS += "</div>"
+
+HTML_PRINT LOCALS
+FOR LOCAL, 0, 33
+	PRINTL
+NEXT
+DRAWLINE
+
+BINPUT
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE 0 TO 3
+		カテゴリ切り替え変数 = LOCAL
+		画面表示用変数 = 100
+	CASE 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400
+		画面表示用変数 = LOCAL
+	CASE 999
+		画面表示用変数 = 0
+		カテゴリ切り替え変数 = 0
+		RETURN 0
+	CASEELSE
+		CALLFORM 機能オプション実行処理_{カテゴリ切り替え変数}(LOCAL)
+ENDSELECT
+
+RESTART
+
+@機能オプション左枠_0(画面表示用変数)
+#DIM 画面表示用変数
+;システム全般機能
+LOCALS = 
+IF 画面表示用変数 == 100
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[100] 台词文本设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='100'>[100] 台词文本设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 200
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[200] 身体参数显示切换</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='200'>[200] 身体参数显示切换</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 300
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[300] 角色邀请设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='300'>[300] 角色邀请设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 400
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[400] 自动指令切换</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='400'>[400] 自动指令切换</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 500
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[500] 工具提示切换</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='500'>[500] 工具提示切换</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 600
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[600] 侧边信息面板切换</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='600'>[600] 侧边信息面板切换</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 700
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[700] 结缘：同性恋、贞洁</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='700'>[700] 结缘：同性恋、贞洁</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 800
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[800] 角色迁移设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='800'>[800] 角色迁移设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 900
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[900] 自动结缘设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='900'>[900] 自动结缘设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 1000
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1000] 性知识成长相关</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1000'>[1000] 性知识成长相关</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 1100
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1100] 夜袭对象控制</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1100'>[1100] 夜袭对象控制</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 1200
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1200] 角色告白设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1200'>[1200] 角色告白设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 1300
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1300] 命名规则设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1300'>[1300] 命名规则设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 1400
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1400] 角色列表排序</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1400'>[1400] 角色列表排序</button>"
+ENDIF
+LOCALS += "<br>"
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+
+RESULTS '= LOCALS
+
+@機能オプション右枠_0(画面表示用変数)
+#DIM 画面表示用変数
+#DIMS CONST 並び替えリスト = "好感度等级", "爱慕度等级", "指令使用次数", "胸围尺寸", "性欲"
+;システム全般機能
+
+LOCALS = 
+SELECTCASE 画面表示用変数
+	CASE 100
+		LOCALS += "・台词文本设置<br>"
+		LOCALS += "切换指令执行时的文本显示模式。<br>"
+		LOCALS += "<br>"
+		LOCALS += "当前设置："
+		IF FLAG:汎用文章表示切り替えオプション == 1 && FLAG:口上表示切り替えオプション == 2
+			LOCALS += "【固定台词（始终显示）＋情景文本】<br>"
+			LOCALS += "<br>"
+			LOCALS += "<button value='102'>[102] 切换为【仅情景文本】</button><br>"
+			LOCALS += "<button value='103'>[103] 切换为【不显示任何文本】</button><br>"
+		ELSEIF FLAG:汎用文章表示切り替えオプション == 1 && FLAG:口上表示切り替えオプション == -1
+			LOCALS += "【仅情景文本】<br>"
+			LOCALS += "<br>"
+			LOCALS += "<button value='101'>[101] 切换为【固定台词＋情景文本】</button><br>"
+			LOCALS += "<button value='103'>[103] 切换为【不显示任何文本】</button><br>"
+		ELSEIF FLAG:汎用文章表示切り替えオプション == 0 && FLAG:口上表示切り替えオプション == -1
+			LOCALS += "【不显示任何文本】<br>"
+			LOCALS += "<br>"
+			LOCALS += "<button value='101'>[101] 切换为【固定台词＋情景文本】</button><br>"
+			LOCALS += "<button value='102'>[102] 切换为【仅情景文本】</button><br>"
+		ENDIF
+	CASE 200
+		LOCALS += "・身体参数显示切换<br>"
+		LOCALS += "切换身高・胸围・体型等数值的显示方式。<br>"
+		LOCALS += "<br>"
+		LOCALS += @"　年龄数值　　（当前：\@ GETBIT(OPTION変数:身体項目表示切り替え, 5)? 显示数值　# 抽象描述\@ / <font color='#666666'><button value='206'>[206] \@ GETBIT(OPTION変数:身体項目表示切り替え, 5)? 抽象描述# 显示数值　\@</button></font>）<br>"
+		LOCALS += @"　身高数值　　（当前：\@ GETBIT(OPTION変数:身体項目表示切り替え, 0)? 显示数值　# 抽象描述\@ / <font color='#666666'><button value='201'>[201] \@ GETBIT(OPTION変数:身体項目表示切り替え, 0)? 抽象描述# 显示数值　\@</button></font>）<br>"
+		LOCALS += @"　胸围数值　　（当前：\@ GETBIT(OPTION変数:身体項目表示切り替え, 1)? 显示数值　# 抽象描述\@ / <font color='#666666'><button value='202'>[202] \@ GETBIT(OPTION変数:身体項目表示切り替え, 1)? 抽象描述# 显示数值　\@</button></font>）<br>"
+		LOCALS += @"　腰围数值　　（当前：\@ GETBIT(OPTION変数:身体項目表示切り替え, 2)? 显示数值　# 抽象描述\@ / <font color='#666666'><button value='203'>[203] \@ GETBIT(OPTION変数:身体項目表示切り替え, 2)? 抽象描述# 显示数值　\@</button></font>）<br>"
+		LOCALS += @"　臀围数值　　（当前：\@ GETBIT(OPTION変数:身体項目表示切り替え, 3)? 显示数值　# 抽象描述\@ / <font color='#666666'><button value='204'>[204] \@ GETBIT(OPTION変数:身体項目表示切り替え, 3)? 抽象描述# 显示数值　\@</button></font>）<br>"
+		LOCALS += @"　男性数值　　（当前：\@ GETBIT(OPTION変数:身体項目表示切り替え, 4)? 显示数值　# 隐藏\@ / <font color='#666666'><button value='205'>[205] \@ GETBIT(OPTION変数:身体項目表示切り替え, 4)? 隐藏# 显示数值　\@</button></font>）<br>"
+	CASE 300
+		LOCALS += "・角色邀请设置<br>"
+		LOCALS += "管理可访问度假区的角色生成规则。<br>"
+		LOCALS += "※影响广告邀请・常客特质触发的访问<br>"
+		LOCALS += "　通过ZP商店解锁・剧情触发的访问不受此限制。<br>"
+		LOCALS += "<br>"
+		LOCALS += "・性别限制设置<br>"
+		LOCALS += "女性："
+		IF GETBIT(OPTION変数:性別招待制御, 0)
+			LOCALS += @"<button value='301'>[301] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问度假区</font> / 禁止访问度假区</button>"
+		ELSE
+			LOCALS += @"<button value='301'>[301] 允许访问度假区 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问度假区</font></button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "男性："
+		IF GETBIT(OPTION変数:性別招待制御, 1)
+			LOCALS += @"<button value='302'>[302] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问度假区</font> / 禁止访问度假区</button>"
+		ELSE
+			LOCALS += @"<button value='302'>[302] 允许访问度假区 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问度假区</font></button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "扶她："
+		IF GETBIT(OPTION変数:性別招待制御, 2)
+			LOCALS += @"<button value='303'>[303] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问度假区</font> / 禁止访问度假区</button>"
+		ELSE
+			LOCALS += @"<button value='303'>[303] 允许访问度假区 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问度假区</font></button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "其他："
+		IF GETBIT(OPTION変数:性別招待制御, 3)
+			LOCALS += @"<button value='304'>[304] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问度假区</font> / 禁止访问度假区</button>"
+		ELSE
+			LOCALS += @"<button value='304'>[304] 允许访问度假区 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问度假区</font></button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+		LOCALS += "・基于专用处理文件夹・图像文件夹的设置<br>"
+		LOCALS += "　※本设置仅检测口上文件・图像文件的存在性，不保证内容完整度。<br>"
+		LOCALS += "　　※随机生成角色及儿童角色不受此功能影响。<br>"
+		LOCALS += "有台词："
+		IF GETBIT(OPTION変数:口上招待制御, 0)
+			LOCALS += @"<button value='310'>[310] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问度假区</font> / 禁止访问度假区</button>"
+		ELSE
+			LOCALS += @"<button value='310'>[310] 允许访问度假区 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问度假区</font></button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "无台词："
+		IF GETBIT(OPTION変数:口上招待制御, 1)
+			LOCALS += @"<button value='311'>[311] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问度假区</font> / 禁止访问度假区</button>"
+		ELSE
+			LOCALS += @"<button value='311'>[311] 允许访问度假区 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问度假区</font></button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "　　有图像："
+		IF GETBIT(OPTION変数:口上招待制御, 2)
+			LOCALS += @"<button value='312'>[312] <font color='#%カラーパレット_HTML("グレーアウト")%'>访问度假村</font> / 不访问度假村</button>"
+		ELSE
+			LOCALS += @"<button value='312'>[312] 访问度假村 / <font color='#%カラーパレット_HTML("グレーアウト")%'>不访问度假村</font></button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "　　无图像："
+		IF GETBIT(OPTION変数:口上招待制御, 3)
+			LOCALS += @"<button value='313'>[313] <font color='#%カラーパレット_HTML("グレーアウト")%'>访问度假村</font> / 不访问度假村</button>"
+		ELSE
+			LOCALS += @"<button value='313'>[313] 访问度假村 / <font color='#%カラーパレット_HTML("グレーアウト")%'>不访问度假村</font></button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+		LOCALS += "・例外角色设置<br>"
+		LOCALS += "　可设置无视上述规则的特殊访问权限。<br>"
+		LOCALS += "　<button value='320'>[320] 开始设置例外角色</button><br>"
+		IF OPTION変数:ZPキャラ自動例外追加
+			LOCALS += @"　　└<button value='321'>[321] 自动将ZP商店解锁角色设为例外　　<font color='#%カラーパレット_HTML("グレーアウト")%'>启用</font> / 停用</button><br>"
+		ELSE
+			LOCALS += @"　　└<button value='321'>[321] 自动将ZP商店解锁角色设为例外　　启用 / <font color='#%カラーパレット_HTML("グレーアウト")%'>停用</font></button><br>"
+		ENDIF
+	CASE 400
+		LOCALS += "・自动指令开关设置<br>"
+		LOCALS += "控制角色自动执行指令的功能开关。<br>"
+		LOCALS += "※许可类指令指需要玩家确认（如手交、插入等）<br>"
+		LOCALS += "<br>"
+		IF GETBIT(FLAG:オートコマンド切り替えオプション, 0)
+			LOCALS += "<button value='401'>[401] 允许专用自动指令（当前：禁止）</button>"
+		ELSE
+			LOCALS += "<button value='401'>[401] 禁止专用自动指令（当前：允许）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		IF GETBIT(FLAG:オートコマンド切り替えオプション, 1)
+			LOCALS += "<button value='402'>[402] 允许常规指令自动执行（当前：禁止）</button>"
+		ELSE
+			LOCALS += "<button value='402'>[402] 禁止常规指令自动执行（当前：允许）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		IF GETBIT(FLAG:オートコマンド切り替えオプション, 2)
+			LOCALS += "<button value='403'>[403] 允许自慰类指令自动执行（当前：禁止）</button>"
+		ELSE
+			LOCALS += "<button value='403'>[403] 禁止自慰类指令自动执行（当前：允许）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		IF GETBIT(FLAG:オートコマンド切り替えオプション, 3)
+			LOCALS += "<button value='404'>[404] 允许许可类指令自动执行（当前：禁止）</button>"
+		ELSE
+			LOCALS += "<button value='404'>[404] 禁止许可类指令自动执行（当前：允许）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		IF OPTION変数:キャラ同士オートコマンド禁止
+			LOCALS += "<button value='405'>[405] 允许角色间自动互动（当前：禁止）</button>"
+		ELSE
+			LOCALS += "<button value='405'>[405] 禁止角色间自动互动（当前：允许）</button>"
+		ENDIF
+		LOCALS += "<br>"
+	CASE 500
+		LOCALS += "・工具提示切换设置<br>"
+		LOCALS += "设置鼠标悬停时的信息提示显示功能。<br>"
+		LOCALS += "（※关闭可能导致无法获取必要信息，强烈建议保持开启）<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:ツールチップ切り替え == 0
+			LOCALS += "　<button value='501'>[501] 关闭工具提示（当前：开启）</button>"
+		ELSEIF OPTION変数:ツールチップ切り替え
+			LOCALS += "　<button value='501'>[501] 开启工具提示（当前：关闭）</button>"
+		ENDIF
+	CASE 600
+		LOCALS += "・侧边栏显示切换设置<br>"
+		LOCALS += "切换游戏界面右侧信息面板的可见性。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:サイド領域非表示 == 0
+			LOCALS += "　<button value='601'>[601] 隐藏侧边栏（当前：显示）</button>"
+		ELSEIF OPTION変数:サイド領域非表示
+			LOCALS += "　<button value='601'>[601] 显示侧边栏（当前：隐藏）</button>"
+		ENDIF
+	CASE 700
+		LOCALS += "・选项变量：同性恋结缘<br>"
+		LOCALS += "这将设置结缘时，与非浪漫兴趣的性别配对是否需要【同性恋】（异性恋）特质。<br>"
+		LOCALS += "默认规则：若角色没有【同性恋】（异性恋）设定，则无法选择对应性别。<br>"
+		LOCALS += "　　　　　　若目标角色不具有【同性恋】（异性恋）则进度不会增加。<br>"
+		LOCALS += "　自动获取：允许无视【同性恋】（异性恋）特质限制建立关系。<br>"
+		LOCALS += "　　　　　　当亲密度达到阈值时，设定角色与目标角色自动获得[同性恋(异性恋)：兴趣]特质。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:縁結び同性愛 == 0
+			LOCALS += "　<button value='701'>[701] 切换为自动获取模式（当前：默认规则）</button>"
+		ELSEIF OPTION変数:縁結び同性愛
+			LOCALS += "　<button value='701'>[701] 恢复默认规则（当前：自动获取模式）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "----------------------------------------------------------------------------<br>"
+		LOCALS += "・贞洁选项设置<br>"
+		LOCALS += "管理角色间夜袭及嘿咻时是否失去贞洁状态。<br>"
+		LOCALS += "默认规则：满足条件时失去贞洁状态。<br>"
+		LOCALS += "　纯洁设置：保有贞洁时不进行性处理，仅进行爱抚行为。<br>"
+		LOCALS += "<br>"
+		LOCALS += "・涉及男女情侣・扶她时<br>"
+		IF OPTION変数:夜這い処女・童貞 == 0
+			LOCALS += "　<button value='702'>[702] 启用纯洁模式（当前：默认规则）</button>"
+		ELSEIF OPTION変数:夜這い処女・童貞
+			LOCALS += "　<button value='702'>[702] 恢复默认规则（当前：纯洁模式）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+		LOCALS += "・同性组合时<br>"
+		IF OPTION変数:同性愛処女・童貞 == 0
+			LOCALS += "　<button value='703'>[703] 启用纯洁模式（当前：默认规则）</button>"
+		ELSEIF OPTION変数:同性愛処女・童貞
+			LOCALS += "　<button value='703'>[703] 恢复默认规则（当前：纯洁模式）</button>"
+		ENDIF
+		LOCALS += "<br>"
+	CASE 800
+		LOCALS += "・角色迁移设置<br>"
+		LOCALS += "设置每日清晨角色主动发起迁移请求的功能开关<br>"
+		LOCALS += "<br>"
+		FOR LOCAL, 0, 5
+			IF OPTION変数:キャラ自動移住 == LOCAL
+				LOCALS += @"<font color='#%カラーパレット_HTML("黄")%'>"
+			ELSE
+				LOCALS += @"<button value='{LOCAL + 801}'>"
+			ENDIF
+			SELECTCASE LOCAL
+				CASE 0
+					LOCALS += "[801] 全员主动申请迁移"
+				CASE 1
+					LOCALS += "[802] 仅已攻略角色可申请"
+				CASE 2
+					LOCALS += "[803] 禁止所有迁移申请"
+				CASE 3
+					LOCALS += "[804] 自动批准空位迁移（跳过申请流程）"
+			ENDSELECT
+			IF OPTION変数:キャラ自動移住 == LOCAL
+				LOCALS += @"</font><br>"
+			ELSE
+				LOCALS += @"</button><br>"
+			ENDIF
+		NEXT
+	CASE 900
+		LOCALS += "・自动结缘设置<br>"
+		LOCALS += "设置每日结束时自动结缘的功能。<br>"
+		LOCALS += "若同时禁止恋爱与炮友关系，即使开启功能也不会生效。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:オート縁結び == 0
+			LOCALS += @"　<button value='901'>[901] 自动结缘　<font color='#%カラーパレット_HTML("グレーアウト")%'>启用</font> / 停用</button><br>"
+		ELSE
+			LOCALS += @"　<button value='901'>[901] 自动结缘　启用 / <font color='#%カラーパレット_HTML("グレーアウト")%'>停用</font></button><br>"
+			IF GETBIT(OPTION変数:オート縁結び詳細, 0) == 0
+				LOCALS += @"　├<button value='902'>[902] 恋爱关系　　<font color='#%カラーパレット_HTML("グレーアウト")%'>允许</font> / 禁止</button><br>"
+			ELSE
+				LOCALS += @"　├<button value='902'>[902] 恋爱关系　　允许 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止</font></button><br>"
+			ENDIF
+			IF GETBIT(OPTION変数:オート縁結び詳細, 1) == 0
+				LOCALS += @"　├<button value='903'>[903] 炮友关系　　<font color='#%カラーパレット_HTML("グレーアウト")%'>允许</font> / 禁止</button><br>"
+			ELSE
+				LOCALS += @"　├<button value='903'>[903] 炮友关系　　允许/ <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止</font></button><br>"
+			ENDIF
+			IF GETBIT(OPTION変数:オート縁結び詳細, 2) == 0
+				LOCALS += @"　└<button value='904'>[904] 跨作品角色　<font color='#%カラーパレット_HTML("グレーアウト")%'>允许</font> / 禁止</button><br>"
+			ELSE
+				LOCALS += @"　└<button value='904'>[904] 跨作品角色　允许/ <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止</font></button><br>"
+			ENDIF
+			LOCALS += "　　　　※「禁止」时仅允许同作品角色缔结关系。<br>"
+		ENDIF
+	CASE 1000
+		LOCALS += "・性知识成长设置<br>"
+		LOCALS += "管理角色性知识增长的机制。<br>"
+		LOCALS += "限制成长可能导致部分指令无法解锁。<br>"
+		LOCALS += "角色个人剧情带来的变化不受此设置影响。<br>"
+		LOCALS += "<br>"
+		IF GETBIT(OPTION変数:性知識成長制御, 0) == 0
+			LOCALS += @"　<button value='1001'>[1001] 基于指令执行数自动成长 启用 / <font color='#%カラーパレット_HTML("グレーアウト")%'>停用</font></button>"
+		ELSEIF GETBIT(OPTION変数:性知識成長制御, 0)
+			LOCALS += @"　<button value='1001'>[1001] 基于指令执行数自动成长 <font color='#%カラーパレット_HTML("グレーアウト")%'>启用</font> / 停用</button>"
+		ENDIF
+		LOCALS += "<br>"
+		IF GETBIT(OPTION変数:性知識成長制御, 1) == 0
+			LOCALS += @"　<button value='1002'>[1002] 由于怀孕而自动成长 启用 / <font color='#%カラーパレット_HTML("グレーアウト")%'>停用</font></button>"
+		ELSEIF GETBIT(OPTION変数:性知識成長制御, 1)
+			LOCALS += @"　<button value='1002'>[1002] 由于怀孕而自动成长 <font color='#%カラーパレット_HTML("グレーアウト")%'>启用</font> / 停用</button>"
+		ENDIF
+		LOCALS += "<br>"
+	CASE 1100
+		LOCALS += "・夜袭对象管控<br>"
+		LOCALS += "设置可进行夜袭的角色条件。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:夜這い全部禁止
+			LOCALS += @"　<button value='1101'>[1101] 全局夜袭互动　<font color='#%カラーパレット_HTML("グレーアウト")%'>允许</font> / 禁止</button><br>"
+		ELSE
+			LOCALS += @"　<button value='1101'>[1101] 全局夜袭互动　允许 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止</font></button><br>"
+		ENDIF
+		LOCALS += "<br>"
+		IF OPTION変数:恋慕時セフレ夜這い禁止
+			LOCALS += @"　<button value='1102'>[1102] 已建立恋爱关系时　<font color='#%カラーパレット_HTML("グレーアウト")%'>允许</font> / 禁止</button><br>"
+		ELSE
+			LOCALS += @"　<button value='1102'>[1102] 已建立恋爱关系时　允许 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止</font></button><br>"
+		ENDIF
+		LOCALS += "<br>"
+	CASE 1200
+		LOCALS += "・来自角色的告白设置<br>"
+		LOCALS += "管理角色达到条件时主动告白功能的开关。<br>"
+		LOCALS += "<br>"
+		LOCALS += "　・起床告白事件<br>"
+		IF OPTION変数:起床時告白禁止 == 0
+			LOCALS += "　　<button value='1201'>[1201] 关闭起床告白（当前：开启）</button>"
+		ELSEIF OPTION変数:起床時告白禁止
+			LOCALS += "　　<button value='1201'>[1201] 开启起床告白（当前：关闭）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+		LOCALS += "　・约会后告白事件<br>"
+		IF OPTION変数:デート後告白禁止 == 0
+			LOCALS += "　　<button value='1202'>[1202] 关闭约会告白（当前：开启）</button>"
+		ELSEIF OPTION変数:デート後告白禁止
+			LOCALS += "　　<button value='1202'>[1202] 开启约会告白（当前：关闭）</button>"
+		ENDIF
+	CASE 1300
+		LOCALS += "・命名规则设置<br>"
+		LOCALS += "设置孩子命名时的自动处理规则。<br>"
+		LOCALS += "<br>"
+		LOCALS += "　・自动选择模式<br>"
+		IF OPTION変数:オート名付け関連 != 0
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("グレーアウト")%'><button value='1301'>[1301] 禁用自动命名</button></font><br>"
+		ELSE
+			LOCALS += "　　<nonbutton>[1301] 禁用自动命名</nonbutton><br>"
+		ENDIF
+		IF OPTION変数:オート名付け関連 != 1
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("グレーアウト")%'><button value='1302'>[1302] 强制手动命名（条件允许时）</button></font><br>"
+		ELSE
+			LOCALS += "　　<nonbutton>[1302] 强制手动命名（条件允许时）</nonbutton><br>"
+		ENDIF
+		IF OPTION変数:オート名付け関連 != 2
+			LOCALS += @"　　<font color='#%カラーパレット_HTML("グレーアウト")%'><button value='1303'>[1303] 角色自动命名</button></font><br>"
+		ELSE
+			LOCALS += "　　<nonbutton>[1303] 角色自动命名</nonbutton><br>"
+		ENDIF
+	CASE 1400
+		LOCALS += "・角色列表排序<br>"
+		LOCALS += "在同房间角色中未成为目标的角色列表显示时<br>"
+		LOCALS += "设定以何种数值为基准进行排序。<br>"
+		LOCALS += "<br>　　"
+		FOR LOCAL, 0, 5
+			SIF 並び替えリスト:LOCAL == ""
+				BREAK
+			IF OPTION変数:キャラリスト並び替え == LOCAL
+				LOCALS += @"<font color='#%カラーパレット_HTML("黄")%'>[%並び替えリスト:LOCAL%]</font>"
+			ELSE
+				LOCALS += @"<button value='{1401 + LOCAL}'>[%並び替えリスト:LOCAL%]</button>"
+			ENDIF
+			IF (LOCAL + 1) % 4 == 0
+				LOCALS += "<br>　　"
+			ELSE
+				LOCALS += " / "
+			ENDIF
+		NEXT
+ENDSELECT
+
+RESULTS '= LOCALS
+
+@機能オプション実行処理_0(入力値)
+#DIM 入力値
+;システム全般機能
+
+SELECTCASE 入力値
+	CASE 101
+		FLAG:汎用文章表示切り替えオプション = 1
+		FLAG:口上表示切り替えオプション = 2
+	CASE 102
+		FLAG:汎用文章表示切り替えオプション = 1
+		FLAG:口上表示切り替えオプション = -1
+	CASE 103
+		FLAG:汎用文章表示切り替えオプション = 0
+		FLAG:口上表示切り替えオプション = -1
+	CASE 201 TO 206
+		INVERTBIT OPTION変数:身体項目表示切り替え, (入力値 - 201)
+	CASE 301 TO 304
+		INVERTBIT OPTION変数:性別招待制御, (入力値 - 301)
+	CASE 310 TO 313
+		INVERTBIT OPTION変数:口上招待制御, (入力値 - 310)
+	CASE 320
+		CALL OPTION_招待制御例外規定()
+	CASE 321
+		INVERTBIT OPTION変数:ZPキャラ自動例外追加, 0
+	CASE 401 TO 404
+		INVERTBIT FLAG:オートコマンド切り替えオプション, 入力値 - 401
+	CASE 405
+		INVERTBIT OPTION変数:キャラ同士オートコマンド禁止, 0
+	CASE 501
+		INVERTBIT OPTION変数:ツールチップ切り替え, 0
+	CASE 601
+		INVERTBIT OPTION変数:サイド領域非表示, 0
+	CASE 701
+		INVERTBIT OPTION変数:縁結び同性愛, 0
+	CASE 702
+		INVERTBIT OPTION変数:夜這い処女・童貞, 0
+	CASE 703
+		INVERTBIT OPTION変数:同性愛処女・童貞, 0
+	CASE 801 TO 804
+		OPTION変数:キャラ自動移住 = 入力値 - 801
+	CASE 901
+		INVERTBIT OPTION変数:オート縁結び, 0
+	CASE 902 TO 904
+		INVERTBIT OPTION変数:オート縁結び詳細, 入力値 - 902
+	CASE 1001 TO 1002
+		INVERTBIT OPTION変数:性知識成長制御, 入力値 - 1001
+	CASE 1101
+		INVERTBIT OPTION変数:夜這い全部禁止, 0
+	CASE 1102
+		INVERTBIT OPTION変数:恋慕時セフレ夜這い禁止, 0
+	CASE 1201
+		INVERTBIT OPTION変数:起床時告白禁止, 0
+	CASE 1202
+		INVERTBIT OPTION変数:デート後告白禁止, 0
+	CASE 1301 TO 1303
+		OPTION変数:オート名付け関連 = 入力値 - 1301
+	CASE 1401 TO 1411
+		OPTION変数:キャラリスト並び替え = 入力値 - 1401
+ENDSELECT
+
+
+@機能オプション左枠_1(画面表示用変数)
+#DIM 画面表示用変数
+;うふふ機能
+LOCALS = 
+IF 画面表示用変数 == 100
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[100] 发情期管理</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='100'>[100] 发情期管理</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 200
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[200] 怀孕功能设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='200'>[200] 怀孕功能设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 300
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[900] 通用喘息设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='300'>[300] 通用喘息设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 400
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[400] 每日结算自慰设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='400'>[400] 每日结算自慰设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 500
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[500] 自动射精设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='500'>[500] 自动射精设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 600
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[600] 子宫口相关设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='600'>[600] 子宫口相关设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 700
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[700] 隐蔽场所限制</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='700'>[700] 隐蔽场所限制</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 800
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[800] 玩家高潮忍耐设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='800'>[800] 玩家高潮忍耐设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 900
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[900] 情欲领域设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='900'>[900] 情欲领域设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 1000
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1000] 性玩具参数设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1000'>[1000] 性玩具参数设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 素質切り替えOPTION記憶:ふたなり_女性 == 0
+	IF 画面表示用変数 == 1100
+		LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1100] 扶她睾丸设置</font></nonbutton>"
+	ELSE
+		LOCALS += "<button value='1100'>[1100] 扶她睾丸设置</button>"
+	ENDIF
+	LOCALS += "<br>"
+ENDIF
+IF 画面表示用変数 == 1200
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1200] 男性角色互动限制</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1200'>[1200] 男性角色互动限制</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 1300
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[1300] 玩具类指令限制</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='1300'>[1300] 玩具类指令限制</button>"
+ENDIF
+
+
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+
+RESULTS '= LOCALS
+
+@機能オプション右枠_1(画面表示用変数)
+#DIM 画面表示用変数
+;うふふ機能
+
+LOCALS = 
+SELECTCASE 画面表示用変数
+	CASE 100
+		LOCALS += "・管理发情期的开关<br>"
+		LOCALS += "设置艾伦族、多拉夫族及特定角色发情期的开关。<br>"
+		LOCALS += "<br>"
+		;OPTION変数:発情期切り替え BIT管理 0:エルーン女性 1:エルーン男性 2:ドラフ女性 3:ドラフ男性 4:発情あり女性 5:発情あり男性
+		LOCALS += "　<button value='101'>[101] 全体角色的发情期（启用）</button><br>"
+		LOCALS += "　<button value='102'>[102] 全体角色的发情期（停用）</button><br><br>"
+		LOCALS += "　<button value='103'>[103] 艾伦族女性（扶她）发情期设置。当前为"
+		IF GETBIT(OPTION変数:発情期切り替え, 0) == 0
+			LOCALS += "ON</button><br>"
+		ELSE
+			LOCALS += "OFF</button><br>"
+		ENDIF
+		LOCALS += "　<button value='104'>[104] 艾伦族男性发情期设置。当前为"
+		IF GETBIT(OPTION変数:発情期切り替え, 1) == 0
+			LOCALS += "ON</button><br>"
+		ELSE
+			LOCALS += "OFF</button><br>"
+		ENDIF
+		LOCALS += "　<button value='105'>[105] 多拉夫族女性（扶她）发情期设置。当前为"
+		IF GETBIT(OPTION変数:発情期切り替え, 2) == 0
+			LOCALS += "ON</button><br>"
+		ELSE
+			LOCALS += "OFF</button><br>"
+		ENDIF
+		LOCALS += "　<button value='106'>[106] 多拉夫族男性发情期设置。当前为"
+		IF GETBIT(OPTION変数:発情期切り替え, 3) == 0
+			LOCALS += "ON</button><br>"
+		ELSE
+			LOCALS += "OFF</button><br>"
+		ENDIF
+		LOCALS += "　<button value='107'>[107] 具备发情期特质的女性（扶她）发情期设置。当前为"
+		IF GETBIT(OPTION変数:発情期切り替え, 4) == 0
+			LOCALS += "ON</button><br>"
+		ELSE
+			LOCALS += "OFF</button><br>"
+		ENDIF
+		LOCALS += "　<button value='108'>[108] 具备发情期特质的男性发情期设置。当前为"
+		IF GETBIT(OPTION変数:発情期切り替え, 5) == 0
+			LOCALS += "ON</button><br>"
+		ELSE
+			LOCALS += "OFF</button><br>"
+		ENDIF
+		LOCALS += "----------------------------------------------------------------------------<br>"
+		LOCALS += "・多拉夫族男性特殊设置<br>"
+		LOCALS += "设置多拉夫族男性发情期时是否激活泌乳体质。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:男ドラフ母乳
+			LOCALS += "　<button value='110'>[110] 泌乳体质：停用 / <font color='#666666'>启用</font></button><br>"
+		ELSE
+			LOCALS += "　<button value='110'>[110] 泌乳体质：<font color='#666666'>停用</font> / 启用</button><br>"
+		ENDIF
+	CASE 200
+		LOCALS += "・怀孕功能设置<br>"
+		LOCALS += "管理性行为后触发受孕机制的功能开关。<br>"
+		LOCALS += "特定角色的独立设置需在能力展示界面调整。<br>"
+		LOCALS += "<br>"
+		LOCALS += "・全局设置（覆盖下方所有设置）<br>"
+		IF OPTION変数:妊娠切り替え == 0
+			LOCALS += "　<button value='201'>[201] 停用怀孕功能（当前状态：启用）</button>"
+		ELSEIF OPTION変数:妊娠切り替え
+			LOCALS += "　<button value='201'>[201] 启用怀孕功能（当前状态：停用）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+		LOCALS += "・非玩家参与的受孕事件<br>"
+		IF OPTION変数:他人妊娠 == 0
+			LOCALS += "　<button value='202'>[202] 禁止NPC自主受孕（当前：允许）</button>"
+		ELSEIF OPTION変数:他人妊娠
+			LOCALS += "　<button value='202'>[202] 允许NPC自主受孕（当前：禁止）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+		LOCALS += "・夜袭时的受孕可能性<br>"
+		IF OPTION変数:夜這い時妊娠 == 0
+			LOCALS += "　<button value='203'>[203] 禁止夜袭受孕（当前：允许）</button>"
+		ELSEIF OPTION変数:夜這い時妊娠
+			LOCALS += "　<button value='203'>[203] 允许夜袭受孕（当前：禁止）</button>"
+		ENDIF
+	CASE 300
+		LOCALS += "・通用喘息设置<br>"
+		LOCALS += "调整角色获得快感时的默认台词播放规则。<br>"
+		LOCALS += "该台词会在指令描述后、专属台词前触发。<br>"
+		LOCALS += "<br>"
+		LOCALS += "※角色独立设置优先于本全局设置。<br>"
+		LOCALS += "<br>"
+		LOCALS += "・女性（扶她・其他）角色通用喘息（当前："
+		SELECTCASE OPTION変数:汎用喘ぎ使用
+			CASE 0
+				LOCALS += "停用）<br>"
+				LOCALS += "　　　[停用] / <font color='#666666'><button value='302'>[无台词角色启用]</button></font> / <font color='#666666'><button value='303'>[全员启用]</button></font><br>"
+			CASE 1
+				LOCALS += "限无台词角色）<br>"
+				LOCALS += "　　　<font color='#666666'><button value='301'>[停用]</button></font> / [限无台词角色] / <font color='#666666'><button value='303'>[全员启用]</button></font><br>"
+			CASE 3
+				LOCALS += "全员启用）<br>"
+				LOCALS += "　　　<font color='#666666'><button value='301'>[停用]</button></font> / <font color='#666666'><button value='302'>[限无台词角色]</button></font> / [全员启用]<br>"
+		ENDSELECT
+		LOCALS += "<br>"
+		LOCALS += "・男性通用喘息（当前："
+		SELECTCASE OPTION変数:汎用喘ぎ使用_男
+			CASE 0
+				LOCALS += "停用）<br>"
+				LOCALS += "　　　[停用] / <font color='#666666'><button value='305'>[无台词角色启用]</button></font> / <font color='#666666'><button value='306'>[全员启用]</button></font><br>"
+			CASE 1
+				LOCALS += "限无台词角色）<br>"
+				LOCALS += "　　　<font color='#666666'><button value='304'>[停用]</button></font> / [无台词角色启用] / <font color='#666666'><button value='306'>[全员启用]</button></font><br>"
+			CASE 3
+				LOCALS += "全员启用）<br>"
+				LOCALS += "　　　<font color='#666666'><button value='304'>[停用]</button></font> / <font color='#666666'><button value='305'>[无台词角色启用]</button></font> / [全员启用]<br>"
+		ENDSELECT
+	CASE 400
+		LOCALS += "・每日结算自慰设置<br>"
+		LOCALS += "按性别设置每日结束时自动触发的自慰机制。<br>"
+		LOCALS += "禁止后仍会消耗性欲但不会获得快感与经验值。<br>"
+		LOCALS += "<br>"
+		SELECTCASE 一日終了時オナニーOPTION:1
+			CASE 0
+				LOCALS += "女性：[标准处理] / <font color='#666666'><button value='412'>[执行但不记录]</button></font> / <font color='#666666'><button value='413'>[禁止执行]</button></font><br>"
+			CASE 1
+				LOCALS += "女性：<font color='#666666'><button value='411'>[标准处理]</button></font> / [执行但不记录] / <font color='#666666'><button value='413'>[禁止执行]</button></font><br>"
+			CASE 2
+				LOCALS += "女性：<font color='#666666'><button value='411'>[标准处理]</button></font> / <font color='#666666'><button value='412'>[执行但不记录]</button></font> / [禁止执行]<br>"
+		ENDSELECT
+		SELECTCASE 一日終了時オナニーOPTION:2
+			CASE 0
+				LOCALS += "男性：[标准处理] / <font color='#666666'><button value='422'>[执行但不记录]</button></font> / <font color='#666666'><button value='423'>[禁止执行]</button></font><br>"
+			CASE 1
+				LOCALS += "男性：<font color='#666666'><button value='421'>[标准处理]</button></font> / [执行但不记录] / <font color='#666666'><button value='423'>[禁止执行]</button></font><br>"
+			CASE 2
+				LOCALS += "男性：<font color='#666666'><button value='421'>[标准处理]</button></font> / <font color='#666666'><button value='422'>[执行但不记录]</button></font> / [禁止执行]<br>"
+		ENDSELECT
+		SELECTCASE 一日終了時オナニーOPTION:3
+			CASE 0
+				LOCALS += "扶她：[标准处理] / <font color='#666666'><button value='432'>[执行但不记录]</button></font> / <font color='#666666'><button value='433'>[禁止执行]</button></font><br>"
+			CASE 1
+				LOCALS += "扶她：<font color='#666666'><button value='431'>[标准处理]</button></font> / [执行但不记录] / <font color='#666666'><button value='433'>[禁止执行]</button></font><br>"
+			CASE 2
+				LOCALS += "扶她：<font color='#666666'><button value='431'>[标准处理]</button></font> / <font color='#666666'><button value='432'>[执行但不记录]</button></font> / [禁止执行]<br>"
+		ENDSELECT
+		SELECTCASE 一日終了時オナニーOPTION:0
+			CASE 0
+				LOCALS += "无性：[标准处理] / <font color='#666666'><button value='402'>[执行但不记录]</button></font> / <font color='#666666'><button value='403'>[禁止执行]</button></font><br>"
+			CASE 1
+				LOCALS += "无性：<font color='#666666'><button value='401'>[标准处理]</button></font> / [执行但不记录] / <font color='#666666'><button value='403'>[禁止执行]</button></font><br>"
+			CASE 2
+				LOCALS += "无性：<font color='#666666'><button value='401'>[标准处理]</button></font> / <font color='#666666'><button value='402'>[执行但不记录]</button></font> / [禁止执行]<br>"
+		ENDSELECT
+	CASE 500
+		LOCALS += "・自动射精设置<br>"
+		LOCALS += "设置射精时自动分配目标的规则。<br>"
+		LOCALS += "<br>"
+		LOCALS += "　<button value='501'>[501] 进入射精目标分配界面</button>"
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+	CASE 600
+		LOCALS += "・子宫口插入设置<br>"
+		LOCALS += "设置子宫口相关指令的可用性及解锁事件触发。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:子宮口挿入_封印 == 0
+			LOCALS += "　<button value='601'>[601] 禁用子宫口指令（当前：启用）</button>"
+		ELSEIF OPTION変数:子宮口挿入_封印
+			LOCALS += "　<button value='601'>[601] 启用子宫口指令（当前：禁用）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+	CASE 700
+		LOCALS += "・隐蔽场所限制<br>"
+		LOCALS += "管理NPC自主将玩家带入隐蔽区域的机制。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:連れ込み制御 == 0
+			LOCALS += "　<button value='701'>[701] 禁止NPC自主带入（当前：允许）</button>"
+		ELSEIF OPTION変数:連れ込み制御
+			LOCALS += "　<button value='701'>[701] 允许NPC自主带入（当前：禁止）</button>"
+		ENDIF
+	CASE 800
+		LOCALS += "・玩家高潮忍耐设置<br>"
+		LOCALS += "强制抑制玩家角色高潮并将快感值锁定为9999。<br>"
+		LOCALS += "每日清晨可重新调整此设置。<br>"
+		LOCALS += "该设置不会保存，退出游戏后自动重置。<br>"
+		LOCALS += "<br>"
+		IF あなた射精我慢フラグ == 0
+			LOCALS += "　<button value='801'>[801] 禁止玩家高潮（当前：允许）</button>"
+		ELSEIF あなた射精我慢フラグ
+			LOCALS += "　<button value='801'>[801] 允许玩家高潮（当前：禁止）</button>"
+		ENDIF
+	CASE 900
+		LOCALS += "・情欲领域设置<br>"
+		LOCALS += "调整情欲领域展开时的特殊事件触发规则。<br>"
+		LOCALS += "<br>"
+		LOCALS += "・『RAPE ME!!』設定<br>"
+		LOCALS += "在情欲领域内增加强奸事件发生概率。<br>"
+		LOCALS += "A经验低于50时不会被A强奸。<br>"
+		LOCALS += "无符合条件的角色时自动跳过。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:RAPE制御
+			LOCALS += "　<button value='901'>[901] 禁用『RAPE ME!!』（当前：启用）</button>"
+		ELSEIF OPTION変数:RAPE制御 == 0
+			LOCALS += "　<button value='901'>[901] 启用『RAPE ME!!』（当前：禁用）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		IF OPTION変数:RAPE制御
+			LOCALS += "・『RAPE ME!!』贞洁状态设置<br>"
+			LOCALS += "设置强奸事件是否导致角色丧失贞洁。<br>"
+			LOCALS += "<br>"
+			IF OPTION変数:処女童貞RAPE制御
+				LOCALS += "　<button value='902'>[902] 禁止丧失贞洁（当前：允许）</button>"
+			ELSEIF OPTION変数:処女童貞RAPE制御 == 0
+				LOCALS += "　<button value='902'>[902] 允许丧失贞洁（当前：禁止）</button>"
+			ENDIF
+		ENDIF
+	CASE 1000
+		LOCALS += "・性玩具默认参数设置<br>"
+		LOCALS += "管理各类性玩具的初始强度与速度默认值。<br>"
+		LOCALS += "V/A插入类指令需在体位选择时单独设置<br>"
+		LOCALS += "<br>"
+		LOCALS += "・阴蒂夹："
+		IF OPTION変数:クリキャップ強さ初期値 == -1
+			LOCALS += "每次使用时指定"
+			LOCALS += "<button value='1009'>[1009] 设置默认强度</button>"
+		ELSE
+			FOR LOCAL, 0, 6
+				IF OPTION変数:クリキャップ強さ初期値 >= LOCAL
+					LOCALS += @"<button value='{LOCAL + 1010}'>■</button>"
+				ELSE
+					LOCALS += @"<button value='{LOCAL + 1010}'>□</button>"
+				ENDIF
+			NEXT
+			LOCALS += "　　　<button value='1009'>[1009] 切换为动态指定</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "・飞机杯："
+		IF OPTION変数:オナホール強さ初期値 == -1
+			LOCALS += "每次使用时指定"
+			LOCALS += "<button value='1019'>[1019] 设置默认强度</button>"
+		ELSE
+			FOR LOCAL, 0, 6
+				IF OPTION変数:オナホール強さ初期値 >= LOCAL
+					LOCALS += @"<button value='{LOCAL + 1020}'>■</button>"
+				ELSE
+					LOCALS += @"<button value='{LOCAL + 1020}'>□</button>"
+				ENDIF
+			NEXT
+			LOCALS += "　　　<button value='1019'>[1019] 切换为动态指定</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "・振动棒："
+		IF OPTION変数:振动棒強さ初期値 == -1
+			LOCALS += "每次使用时指定"
+			LOCALS += "<button value='1029'>[1029] 设置默认强度</button>"
+		ELSE
+			FOR LOCAL, 0, 6
+				IF OPTION変数:振动棒強さ初期値 >= LOCAL
+					LOCALS += @"<button value='{LOCAL + 1030}'>■</button>"
+				ELSE
+					LOCALS += @"<button value='{LOCAL + 1030}'>□</button>"
+				ENDIF
+			NEXT
+			LOCALS += "　　　<button value='1029'>[1029] 切换为动态指定</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "・肛门振动棒："
+		IF OPTION変数:肛门振动棒強さ初期値 == -1
+			LOCALS += "每次使用时指定"
+			LOCALS += "<button value='1039'>[1039] 设置默认强度</button>"
+		ELSE
+			FOR LOCAL, 0, 6
+				IF OPTION変数:肛门振动棒強さ初期値 >= LOCAL
+					LOCALS += @"<button value='{LOCAL + 1040}'>■</button>"
+				ELSE
+					LOCALS += @"<button value='{LOCAL + 1040}'>□</button>"
+				ENDIF
+			NEXT
+			LOCALS += "　　　<button value='1039'>[1039] 切换为动态指定</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "・乳头夹："
+		IF OPTION変数:乳头夹強さ初期値 == -1
+			LOCALS += "每次使用时指定"
+			LOCALS += "<button value='1049'>[1049] 设置默认强度</button>"
+		ELSE
+			FOR LOCAL, 0, 6
+				IF OPTION変数:乳头夹強さ初期値 >= LOCAL
+					LOCALS += @"<button value='{LOCAL + 1050}'>■</button>"
+				ELSE
+					LOCALS += @"<button value='{LOCAL + 1050}'>□</button>"
+				ENDIF
+			NEXT
+			LOCALS += "　　　<button value='1049'>[1049] 切换为动态指定</button>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "・挤奶机："
+		IF OPTION変数:搾乳機強さ初期値 == -1
+			LOCALS += "每次使用时指定"
+			LOCALS += "<button value='1059'>[1059] 设置默认强度</button>"
+		ELSE
+			FOR LOCAL, 0, 6
+				IF OPTION変数:搾乳機強さ初期値 >= LOCAL
+					LOCALS += @"<button value='{LOCAL + 1060}'>■</button>"
+				ELSE
+					LOCALS += @"<button value='{LOCAL + 1060}'>□</button>"
+				ENDIF
+			NEXT
+			LOCALS += "　　　<button value='1059'>[1059] 切换为动态指定</button>"
+		ENDIF
+	CASE 1100
+		LOCALS += "・扶她睾丸设置<br>"
+		LOCALS += "设置扶她角色是否具备睾丸。<br>"
+		LOCALS += "部分指令的可用性会受此设置影响。<br>"
+		LOCALS += "选择「依据装饰性特质设置」且未在装饰性特质中设置时，默认视为无睾丸。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:ふたなり玉設定 == 0
+			LOCALS += @"　<font color='#%カラーパレット_HTML("黄")%'>[1110] 依据装饰性特质设置</font><br>　<button value='1111'>[1111] 全体无睾丸模式</button><br>　<button value='1112'>[1112] 全体有睾丸模式</button>"
+		ELSEIF OPTION変数:ふたなり玉設定 == 1
+			LOCALS += @"　<button value='1110'>[1110] 依据装饰性特质设置</button><br>　<font color='#%カラーパレット_HTML("黄")%'>[1111] 全体无睾丸模式</font><br>　<button value='1112'>[1112] 全体有睾丸模式</button>"
+		ELSEIF OPTION変数:ふたなり玉設定 == 2
+			LOCALS += @"　<button value='1110'>[1110] 依据装饰性特质设置</button><br>　<button value='1111'>[1111] 全体无睾丸模式</button><br>　<font color='#%カラーパレット_HTML("黄")%'>[1112] 全体有睾丸模式</font>"
+		ENDIF
+	CASE 1200
+		LOCALS += "・男性角色互动限制<br>"
+		LOCALS += "设置男性角色相关敏感度与互动规则。<br>"
+		LOCALS += "包含自动指令系统及NPC间嘿咻时的敏感度调整。<br>"
+		LOCALS += "可通过下方按钮批量重置男性敏感度参数<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:男性への愛撫禁止
+			LOCALS += "　<button value='1201'>[1201] 允许对男性角色爱抚（当前：禁止）</button>"
+		ELSEIF OPTION変数:男性への愛撫禁止 == 0
+			LOCALS += "　<button value='1201'>[1201] 禁止对男性角色爱抚（当前：允许）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		IF OPTION変数:男性感度上昇低下
+			LOCALS += "　<button value='1202'>[1202] 解除男性敏感度增长抑制（当前：生效）</button>"
+		ELSEIF OPTION変数:男性感度上昇低下 == 0
+			LOCALS += "　<button value='1202'>[1202] 降低男性敏感度增长率（当前：未生效）</button>"
+		ENDIF
+		LOCALS += "<br>"
+		IF OPTION変数:男性感度上昇低下
+			LOCALS += "<br>"
+			LOCALS += "　<button value='1203'>[1203] 批量重置（保留C部位敏感度）</button>"
+			LOCALS += "<br>"
+			LOCALS += "　<button value='1204'>[1204] 批量重置（保留C/S部位敏感度）</button>"
+			LOCALS += "<br>"
+			LOCALS += "　<button value='1205'>[1205] 将男性C的敏感度设为1/2，S的敏感度设为1/4，其余设为0（批量设置）</button>"
+			LOCALS += "<br>"
+			LOCALS += "　<button value='1206'>[1206] 全敏感度归零（强制重置）</button>"
+		ENDIF
+	CASE 1300
+		LOCALS += "・性玩具类指令限制<br>"
+		LOCALS += "管理涉及性玩具的自动指令触发规则。<br>"
+		LOCALS += "包含NPC间嘿咻时的性玩具使用行为设置。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:玩具プレイ禁止
+			LOCALS += "　<button value='1301'>[1301] 允许使用性玩具（当前：禁止）</button>"
+		ELSEIF OPTION変数:玩具プレイ禁止 == 0
+			LOCALS += "　<button value='1301'>[1301] 禁止使用性玩具（当前：允许）</button>"
+		ENDIF
+ENDSELECT
+
+RESULTS '= LOCALS
+
+@機能オプション実行処理_1(入力値)
+#DIM 入力値
+;システム全般機能
+
+SELECTCASE 入力値
+	CASE 101
+		OPTION変数:発情期切り替え = 0
+	CASE 102
+		SETBIT OPTION変数:発情期切り替え, 0
+		SETBIT OPTION変数:発情期切り替え, 1
+		SETBIT OPTION変数:発情期切り替え, 2
+		SETBIT OPTION変数:発情期切り替え, 3
+		SETBIT OPTION変数:発情期切り替え, 4
+		SETBIT OPTION変数:発情期切り替え, 5
+	CASE 103 TO 108
+		INVERTBIT OPTION変数:発情期切り替え, 入力値 - 103
+	CASE 110
+		INVERTBIT OPTION変数:男ドラフ母乳, 0
+	CASE 201
+		INVERTBIT OPTION変数:妊娠切り替え, 0
+	CASE 202
+		INVERTBIT OPTION変数:他人妊娠, 0
+	CASE 203
+		INVERTBIT OPTION変数:夜這い時妊娠, 0
+	CASE 301
+		OPTION変数:汎用喘ぎ使用 = 0
+	CASE 302
+		OPTION変数:汎用喘ぎ使用 = 1
+	CASE 303
+		OPTION変数:汎用喘ぎ使用 = 3
+	CASE 304
+		OPTION変数:汎用喘ぎ使用_男 = 0
+	CASE 305
+		OPTION変数:汎用喘ぎ使用_男 = 1
+	CASE 306
+		OPTION変数:汎用喘ぎ使用_男 = 3
+	CASE 401 TO 440
+		一日終了時オナニーOPTION:((入力値 - 400) / 10) = (入力値 % 10) - 1
+	CASE 501
+		CALL オート射精先設定
+	CASE 601
+		INVERTBIT OPTION変数:子宮口挿入_封印, 0
+	CASE 701
+		INVERTBIT OPTION変数:連れ込み制御, 0
+	CASE 801
+		INVERTBIT あなた射精我慢フラグ, 0
+	CASE 901
+		INVERTBIT OPTION変数:RAPE制御, 0
+	CASE 902
+		INVERTBIT OPTION変数:処女童貞RAPE制御, 0
+	CASE 1009
+		IF OPTION変数:クリキャップ強さ初期値 == -1
+			OPTION変数:クリキャップ強さ初期値 = 0
+		ELSE
+			OPTION変数:クリキャップ強さ初期値 = -1
+		ENDIF
+	CASE 1010 TO 1015
+		OPTION変数:クリキャップ強さ初期値 = 入力値 - 1010
+	CASE 1019
+		IF OPTION変数:オナホール強さ初期値 == -1
+			OPTION変数:オナホール強さ初期値 = 0
+		ELSE
+			OPTION変数:オナホール強さ初期値 = -1
+		ENDIF
+	CASE 1020 TO 1025
+		OPTION変数:オナホール強さ初期値 = 入力値 - 1020
+	CASE 1029
+		IF OPTION変数:振动棒強さ初期値 == -1
+			OPTION変数:振动棒強さ初期値 = 0
+		ELSE
+			OPTION変数:振动棒強さ初期値 = -1
+		ENDIF
+	CASE 1030 TO 1035
+		OPTION変数:振动棒強さ初期値 = 入力値 - 1030
+	CASE 1039
+		IF OPTION変数:肛门振动棒強さ初期値 == -1
+			OPTION変数:肛门振动棒強さ初期値 = 0
+		ELSE
+			OPTION変数:肛门振动棒強さ初期値 = -1
+		ENDIF
+	CASE 1040 TO 1045
+		OPTION変数:肛门振动棒強さ初期値 = 入力値 - 1040
+	CASE 1049
+		IF OPTION変数:乳头夹強さ初期値 == -1
+			OPTION変数:乳头夹強さ初期値 = 0
+		ELSE
+			OPTION変数:乳头夹強さ初期値 = -1
+		ENDIF
+	CASE 1050 TO 1055
+		OPTION変数:乳头夹強さ初期値 = 入力値 - 1050
+	CASE 1059
+		IF OPTION変数:搾乳機強さ初期値 == -1
+			OPTION変数:搾乳機強さ初期値 = 0
+		ELSE
+			OPTION変数:搾乳機強さ初期値 = -1
+		ENDIF
+	CASE 1060 TO 1065
+		OPTION変数:搾乳機強さ初期値 = 入力値 - 1060
+	CASE 1110 TO 1112
+		OPTION変数:ふたなり玉設定 = 入力値 - 1110
+	CASE 1201
+		INVERTBIT OPTION変数:男性への愛撫禁止, 0
+	CASE 1202
+		INVERTBIT OPTION変数:男性感度上昇低下, 0
+	CASE 1203
+		FOR LOCAL, 0, CHARANUM
+			IF TALENT:LOCAL:性別 == 2 
+				ABL:LOCAL:Ｂ感覚 = 0
+				ABL:LOCAL:Ｓ感覚 = 0
+				ABL:LOCAL:露出癖 = 0
+				EXP:LOCAL:Ｂ経験 = 0
+				EXP:LOCAL:Ｂ絶頂経験 = 0
+				EXP:LOCAL:Ｓ絶頂経験 = 0
+				EXP:LOCAL:露出絶頂経験 = 0
+				EXP:LOCAL:露出快楽経験 = 0
+				EXP:LOCAL:乳首開発 = 0
+				JUEL:LOCAL:快Ｂ = 0
+				JUEL:LOCAL:快Ｓ = 0
+				JUEL:LOCAL:恥情 = 0
+				JUEL:LOCAL:屈服 = 0
+				JUEL:LOCAL:苦痛 = 0
+			ENDIF
+		NEXT
+	CASE 1204
+		FOR LOCAL, 0, CHARANUM
+			IF TALENT:LOCAL:性別 == 2 
+				ABL:LOCAL:Ｂ感覚 = 0
+				ABL:LOCAL:露出癖 = 0
+				EXP:LOCAL:Ｂ経験 = 0
+				EXP:LOCAL:Ｂ絶頂経験 = 0
+				EXP:LOCAL:露出絶頂経験 = 0
+				EXP:LOCAL:露出快楽経験 = 0
+				EXP:LOCAL:乳首開発 = 0
+				JUEL:LOCAL:快Ｂ = 0
+				JUEL:LOCAL:恥情 = 0
+				JUEL:LOCAL:屈服 = 0
+				JUEL:LOCAL:苦痛 = 0
+			ENDIF
+		NEXT
+	CASE 1205
+		FOR LOCAL, 0, CHARANUM
+			IF TALENT:LOCAL:性別 == 2 
+				ABL:LOCAL:Ｂ感覚 = 0
+				ABL:LOCAL:Ｓ感覚 = ABL:LOCAL:Ｓ感覚/2
+				ABL:LOCAL:Ｃ感覚 = ABL:LOCAL:Ｃ感覚/2
+				ABL:LOCAL:露出癖 = 0
+				EXP:LOCAL:Ｂ経験 = 0
+				EXP:LOCAL:Ｂ絶頂経験 = 0
+				EXP:LOCAL:Ｓ絶頂経験 = 0
+				EXP:LOCAL:露出絶頂経験 = 0
+				EXP:LOCAL:露出快楽経験 = 0
+				EXP:LOCAL:乳首開発 = 0
+				JUEL:LOCAL:快Ｃ = 0
+				JUEL:LOCAL:快Ｂ = 0
+				JUEL:LOCAL:快Ｓ = 0
+				JUEL:LOCAL:恥情 = 0
+				JUEL:LOCAL:屈服 = 0
+				JUEL:LOCAL:苦痛 = 0
+			ENDIF
+		NEXT
+	CASE 1206
+		FOR LOCAL, 0, CHARANUM
+			IF TALENT:LOCAL:性別 == 2 
+				ABL:LOCAL:Ｂ感覚 = 0
+				ABL:LOCAL:Ｓ感覚 = 0
+				ABL:LOCAL:Ｃ感覚 = 0
+				ABL:LOCAL:露出癖 = 0
+				EXP:LOCAL:Ｂ経験 = 0
+				EXP:LOCAL:Ｂ絶頂経験 = 0
+				EXP:LOCAL:Ｓ絶頂経験 = 0
+				EXP:LOCAL:露出絶頂経験 = 0
+				EXP:LOCAL:露出快楽経験 = 0
+				EXP:LOCAL:乳首開発 = 0
+				JUEL:LOCAL:快Ｃ = 0
+				JUEL:LOCAL:快Ｂ = 0
+				JUEL:LOCAL:快Ｓ = 0
+				JUEL:LOCAL:恥情 = 0
+				JUEL:LOCAL:屈服 = 0
+				JUEL:LOCAL:苦痛 = 0
+			ENDIF
+		NEXT	
+	CASE 1301
+		INVERTBIT OPTION変数:玩具プレイ禁止, 0
+ENDSELECT
+
+@機能オプション左枠_2(画面表示用変数)
+#DIM 画面表示用変数
+;画像関連機能
+LOCALS = 
+IF 画面表示用変数 == 100
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[100] 图像尺寸切换</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='100'>[100] 图像尺寸切换</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 200
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[200] 处理比例不适配图像</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='200'>[200] 处理比例不适配图像</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 300
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[300] 性行为插画/动画</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='300'>[300] 性行为插画/动画</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 400
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[400] 随机角色立绘设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='400'>[400] 随机角色立绘设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 500
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[500] 覆盖层设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='500'>[500] 覆盖层设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 600
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[600] 射精后立绘设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='600'>[600] 射精后立绘设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 700
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[700] 玩家角色立绘设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='700'>[700] 玩家角色立绘设置</button>"
+ENDIF
+
+
+LOCALS += "<br>"
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+
+RESULTS '= LOCALS
+
+@機能オプション右枠_2(画面表示用変数)
+#DIM 画面表示用変数
+;画像機能
+
+LOCALS = 
+SELECTCASE 画面表示用変数
+	CASE 100
+		LOCALS += "・图像尺寸切换<br>"
+		LOCALS += "调整各界面角色立绘的显示比例模式。<br>"
+		LOCALS += "可独立设置不同界面的正方形/竖幅(2:1)显示方案。<br>"
+		LOCALS += "<br>"
+;		LOCALS += "　コマンドリスト画面（現在："
+;		IF GETBIT(画像サイズ切り替えOPTION記憶, 0)
+;			LOCALS += "短冊）<br>"
+;			LOCALS += "　　　[短冊にする] / <font color='#666666'><button value='102'>[正方形（3P時縦）にする]</button></font> / <font color='#666666'><button value='103'>[正方形にする]</button></font><br>"
+;		ELSEIF GETBIT(画像サイズ切り替えOPTION記憶, 4)
+;			LOCALS += "正方形（3P時に縦に並べる））<br>"
+;			LOCALS += "　　　<font color='#666666'><button value='101'>[短冊にする]</button></font> / [正方形（3P時縦）にする] / <font color='#666666'><button value='103'>[正方形にする]</button></font><br>"
+;		ELSE
+;			LOCALS += "正方形）<br>"
+;			LOCALS += "　　　<font color='#666666'><button value='101'>[短冊にする]</button></font> / <font color='#666666'><button value='102'>[正方形（3P時縦）にする]</button></font> / [正方形にする]<br>"
+;		ENDIF
+		LOCALS += @"　<button value='103'>[103] 指令界面（当前：\@ GETBIT(画像サイズ切り替えOPTION記憶, 0)? 竖幅模式　# 正方形模式\@）</button><br>"
+		LOCALS += @"　<button value='104'>[104] 基础能力展示（当前：\@ GETBIT(画像サイズ切り替えOPTION記憶, 1)? 竖幅模式　# 正方形模式\@）</button><br>"
+		LOCALS += @"　<button value='105'>[105] 性能力展示（当前：\@ GETBIT(画像サイズ切り替えOPTION記憶, 2)? 竖幅模式　# 正方形模式\@）</button><br>"
+		LOCALS += @"　<button value='106'>[106] 战斗能力展示（当前：\@ GETBIT(画像サイズ切り替えOPTION記憶, 3)? 竖幅模式　# 正方形模式\@）</button><br>"
+		LOCALS += @"　<button value='107'>[107] 一键同步所有界面设置</button><br>"
+	CASE 200
+		LOCALS += "・比例异常图像处理方案<br>"
+		LOCALS += "设置非标准比例图像的显示适配规则。<br>"
+		LOCALS += "标准比例：正方形1:1 ，竖幅2:1。<br>"
+		LOCALS += "<br>"
+		IF 画像サイズ切り替えOPTION記憶:1 == 0
+			LOCALS += "　<button value='201'>[201]  切换为智能缩放适配（当前：裁剪适配模式）</button><br>"
+		ELSE
+			LOCALS += "　<button value='201'>[201]  切换为智能裁剪适配（当前：缩放适配模式）</button><br>"
+		ENDIF
+	CASE 300
+		LOCALS += "・性行为插画/动画设置<br>"
+		LOCALS += "管理性行为过程中显示的插图和动画的设置。<br>"
+		LOCALS += "<br>"
+		LOCALS += @"　<button value='301'>[301] 显示性行为插画（当前：\@ FLAG_挿絵表示 ? 启用 # 停用 \@）</button><br>"
+		IF FLAG_挿絵表示
+			LOCALS += "---------------------------------------------------------------------<br>"
+			LOCALS += "　射精图像的种类（当前："
+			SELECTCASE FLAG_射精画像種類
+				CASE 0
+					LOCALS += "[剖面图示+音效]）<br>"
+					LOCALS += "　　　[剖面图示+音效] / <font color='#666666'><button value='303'>[仅剖面图示]</button></font> / <font color='#666666'><button value='304'>[仅音效]</button></font><br>"
+				CASE 1
+					LOCALS += "[仅剖面图示]）<br>"
+					LOCALS += "　　　<font color='#666666'><button value='302'>[剖面图示+音效]</button></font> / [仅剖面图示] / <font color='#666666'><button value='304'>[仅音效]</button></font><br>"
+				CASE 2
+					LOCALS += "[仅音效]）<br>"
+					LOCALS += "　　　<font color='#666666'><button value='302'>[剖面图示+音效]</button></font> / <font color='#666666'><button value='303'>[仅剖面图示]</button></font> / [仅音效]<br>"
+			ENDSELECT
+			LOCALS += "<br>"
+			LOCALS += @"　动画循环设置<br> （当前：\@ FLAG_アニメーション > 0 ? 循环 {FLAG_アニメーション}次 # 动画关闭 \@）<br>"
+			SELECTCASE FLAG_アニメーション
+				CASE 0
+					LOCALS += "　　　[关闭动画]"
+					FOR LOCAL, 1, 6
+						LOCALS += @" / <font color='#666666'><button value='{305 + LOCAL}'>[{LOCAL}次]</button></font>"
+					NEXT
+					LOCALS += "<br>"
+				CASE 1 TO 5
+					LOCALS += "　　　<font color='#666666'><button value='305'>[关闭动画]</button></font>"
+					FOR LOCAL, 1, 6
+						IF FLAG_アニメーション == LOCAL
+							LOCALS += @" / [{LOCAL}回]"
+						ELSE
+							LOCALS += @" / <font color='#666666'><button value='{305 + LOCAL}'>[{LOCAL}次]</button></font>"
+						ENDIF
+					NEXT
+					LOCALS += "<br>"
+			ENDSELECT
+			IF FLAG_アニメーション
+				LOCALS += "<br>"
+				LOCALS += @"　　　<button value='311'>[311] 插入时每回合播放动画 （当前：\@FLAG_挿入アニメフィルタ ? 停用# 启用\@）</button>"
+			ENDIF
+		ENDIF
+	CASE 400
+		LOCALS += "・随机角色立绘设置<br>"
+		LOCALS += "设置随机生成角色是否显示立绘。<br>"
+		LOCALS += "关闭后随机角色将显示默认无图像标识。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:汎用立ち絵制御 == 1
+			LOCALS += "　<button value='401'>[401]  启用随机角色立绘（当前：停用）</button><br>"
+			LOCALS += "<br>"
+			LOCALS += "・特殊种族：狼人立绘风格<br>"
+			LOCALS += "设置狼人种族角色的立绘显示倾向。<br>"
+			LOCALS += @"　<button value='402'>[402]  狼人立绘倾向「\@ OPTION変数:ワーウルフ画像ケモ度? 兽耳人类# 兽人\@」（当前：\@ !OPTION変数:ワーウルフ画像ケモ度? 兽耳人类# 兽人\@）</button><br>"
+		ELSE
+			LOCALS += "　<button value='401'>[401]  停用随机角色立绘（当前：启用）</button><br>"
+		ENDIF
+	CASE 500
+		LOCALS += "・怀孕立绘叠加效果<br>"
+		LOCALS += "为无专属怀孕立绘的角色设置可视化标识方案。<br>该效果将叠加在原有立绘之上显示。<br>"
+		LOCALS += "<br>"
+		LOCALS += "　怀孕覆盖类型（目前："
+		SELECTCASE FLAG_妊娠エフェクトフィルタ
+			CASE 0
+				LOCALS += "[停用]）<br>"
+				LOCALS += "　　　[停用] / <font color='#666666'><button value='502'>[孕妇标记]</button></font><font color='#666666'><button value='503'>[「婴儿」]</button></font> / <font color='#666666'><button value='504'>[剖面图示]</button></font><br>"
+			CASE 1
+				LOCALS += "[孕妇标记]）<br>"
+				LOCALS += "　　　<font color='#666666'><button value='501'>[停用]</button></font> / [孕妇标记]<font color='#666666'><button value='503'>[「婴儿」]</button></font> / <font color='#666666'><button value='504'>[剖面图示]</button></font><br>"
+				LOCALS += "<br>　预览效果<br><img src='エフェクト_顔_妊娠1' height='1000' ypos='-600'><br>"
+			CASE 2
+				LOCALS += "[「里面有一个婴儿」]）<br>"
+				LOCALS += "　　　<font color='#666666'><button value='501'>[停用]</button></font> / <font color='#666666'><button value='502'>[孕妇标记]</button></font>[「婴儿」] / <font color='#666666'><button value='504'>[剖面图示]</button></font><br>"
+				LOCALS += "<br>　预览效果<br><img src='エフェクト_顔_妊娠2' height='1000' ypos='-600'><br>"
+			CASE 3
+				LOCALS += "[剖面图示]）<br>"
+				LOCALS += "　　　<font color='#666666'><button value='501'>[停用]</button></font> / <font color='#666666'><button value='502'>[孕妇标记]</button></font><font color='#666666'><button value='503'>[「婴儿」]</button></font> / [剖面图示]<br>"
+				LOCALS += "<br>　预览效果<br><img src='エフェクト_顔_妊娠3_5' height='1000' ypos='-600'><br>"
+		ENDSELECT
+		LOCALS += "----------------------------------------------------------------------------<br>"
+		LOCALS += "・特定情境下显示情欲与高潮特效<br>"
+		LOCALS += "选择在情欲或高潮状态下，即使已显示对应指令的图片时<br>是否叠加显示情欲、高潮特效。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:欲情絶頂エフェクト制御
+			LOCALS += "　<button value='505'>[505]  开启情欲与高潮特效显示（当前为关闭）</button><br>"
+		ELSE
+			LOCALS += "　<button value='505'>[505]  关闭情欲与高潮特效显示（当前为开启）</button><br>"
+		ENDIF
+	CASE 600
+		LOCALS += "・射精后立绘设置<br>"
+		LOCALS += "选择射精后固定显示「◯内射精」专用立绘，<br>"
+		LOCALS += "还是随机切换「◯内射精」与常规场景立绘。<br>"
+		LOCALS += "（后期游戏将提升射精频率，降低插入系立绘显示概率）<br>"
+		LOCALS += "<br>"
+		LOCALS += "　・插入场景立绘显示<br>"
+		IF OPTION変数:射精後の挿入系立ち絵制御 == 0
+			LOCALS += "　<button value='601'>[601]  启用随机显示（当前：停用）</button><br>"
+		ELSE
+			LOCALS += "　<button value='601'>[601]  停用随机显示（当前：启用）</button><br>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "　・其他模式立绘显示<br>"
+		IF OPTION変数:射精後のモード時立ち絵制御 == 0
+			LOCALS += "　<button value='602'>[602]  启用随机显示（当前：停用）</button><br>"
+		ELSE
+			LOCALS += "　<button value='602'>[602]  停用随机显示（当前：启用）</button><br>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "　・特定情境下显示射精特效<br>"
+		IF OPTION変数:射精エフェクト制御
+			LOCALS += "　<button value='603'>[603]  开启射精特效显示（当前为关闭）</button><br>"
+		ELSE
+			LOCALS += "　<button value='603'>[603]  关闭射精特效显示（当前为开启）</button><br>"
+		ENDIF
+	CASE 700
+		LOCALS += "・玩家角色立绘设置<br>"
+		LOCALS += "设置是否显示玩家控制角色（包含您）的立绘。<br>"
+		LOCALS += "无对应立绘资源时将自动隐藏而非显示默认图像。<br>"
+		LOCALS += "<br>"
+		IF OPTION変数:PLAYER画像オフ
+			LOCALS += "　<button value='701'>[701]  启用玩家立绘（当前：停用）</button><br>"
+		ELSE
+			LOCALS += "　<button value='701'>[701]  停用玩家立绘（当前：启用）</button><br>"
+		ENDIF
+ENDSELECT
+
+RESULTS '= LOCALS
+
+@機能オプション実行処理_2(入力値)
+#DIM 入力値
+;画像機能
+
+SELECTCASE 入力値
+;	CASE 101
+;		SETBIT 画像サイズ切り替えOPTION記憶, 0
+;		CLEARBIT 画像サイズ切り替えOPTION記憶, 4
+;	CASE 102
+;		SETBIT 画像サイズ切り替えOPTION記憶, 4
+;		CLEARBIT 画像サイズ切り替えOPTION記憶, 0
+;	CASE 103
+;		CLEARBIT 画像サイズ切り替えOPTION記憶, 0
+;		CLEARBIT 画像サイズ切り替えOPTION記憶, 4
+	CASE 103 TO 106
+		INVERTBIT 画像サイズ切り替えOPTION記憶, (入力値 - 103)
+	CASE 107
+		INVERTBIT 画像サイズ切り替えOPTION記憶, 5
+		IF GETBIT(画像サイズ切り替えOPTION記憶, 5)
+			SETBIT 画像サイズ切り替えOPTION記憶, 0
+			SETBIT 画像サイズ切り替えOPTION記憶, 1
+			SETBIT 画像サイズ切り替えOPTION記憶, 2
+			SETBIT 画像サイズ切り替えOPTION記憶, 3
+			CLEARBIT 画像サイズ切り替えOPTION記憶, 4
+		ELSE
+			画像サイズ切り替えOPTION記憶 = 0
+		ENDIF
+	CASE 201
+		INVERTBIT 画像サイズ切り替えOPTION記憶:1, 0
+	CASE 301
+		INVERTBIT FLAG_挿絵表示, 0
+	CASE 302 TO 304
+		FLAG_射精画像種類 = 入力値 - 302
+	CASE 305 TO 310
+		FLAG_アニメーション = 入力値 - 305
+	CASE 311
+		INVERTBIT FLAG_挿入アニメフィルタ, 0
+	CASE 401
+		INVERTBIT OPTION変数:汎用立ち絵制御, 0
+	CASE 402
+		INVERTBIT OPTION変数:ワーウルフ画像ケモ度, 0
+	CASE 501 TO 504
+		FLAG_妊娠エフェクトフィルタ = 入力値 - 501
+	CASE 505
+		INVERTBIT OPTION変数:欲情絶頂エフェクト制御, 0
+	CASE 601
+		INVERTBIT OPTION変数:射精後の挿入系立ち絵制御, 0
+	CASE 602
+		INVERTBIT OPTION変数:射精後のモード時立ち絵制御, 0
+	CASE 603
+		INVERTBIT OPTION変数:射精エフェクト制御, 0
+	CASE 701
+		INVERTBIT OPTION変数:PLAYER画像オフ, 0
+ENDSELECT
+
+@機能オプション左枠_3(画面表示用変数)
+#DIM 画面表示用変数
+;探索・戦闘関連機能
+LOCALS = 
+IF 画面表示用変数 == 100
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[100] 特写显示设置</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='100'>[100] 特写显示设置</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 200
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[200] 战斗辅助功能</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='200'>[200] 战斗辅助功能</button>"
+ENDIF
+LOCALS += "<br>"
+IF 画面表示用変数 == 300
+	LOCALS += @"<nonbutton><font color='#%カラーパレット_HTML("黄")%'>[300] 迷宫探索特效</font></nonbutton>"
+ELSE
+	LOCALS += "<button value='300'>[300] 迷宫探索特效</button>"
+ENDIF
+LOCALS += "<br>"
+LOCALS += "<br>"
+LOCALS += "<button value='999'>[999] 返回</button>"
+LOCALS += "<br>"
+
+RESULTS '= LOCALS
+
+@機能オプション右枠_3(画面表示用変数)
+#DIM 画面表示用変数
+;探索・戦闘機能
+
+LOCALS = 
+SELECTCASE 画面表示用変数
+	CASE 100
+		LOCALS += "・特写显示设置<br>"
+		LOCALS += "设置战斗特写的显示规则与优先级。<br>"
+		LOCALS += "可批量调整奥义特写的素材显示优先级。<br>"
+		LOCALS += "<br>"
+		LOCALS += "全局显示规则："
+		SELECTCASE カットイン演出一括表示フラグ
+			CASE 0
+				LOCALS += "　[显示] / <font color='#666666'><button value='102'>[隐藏]</button></font> / <font color='#666666'><button value='103'>[每日一次]</button></font><br>"
+			CASE 1
+				LOCALS += "　<font color='#666666'><button value='101'>[显示]</button></font> / [隐藏] / <font color='#666666'><button value='103'>[每日一次]</button></font><br>"
+			CASE 2
+				LOCALS += "　<font color='#666666'><button value='101'>[显示]</button></font> / <font color='#666666'><button value='102'>[隐藏]</button></font> / [每日一次]<br>"
+		ENDSELECT
+		LOCALS += "素材优先级规则："
+		SELECTCASE カットイン画像一括表示フラグ
+			CASE 0
+				LOCALS += "　[纵向特写优先] / <font color='#666666'><button value='105'>[横向特写优先]</button></font><br>　　　　　　　　　　　<font color='#666666'><button value='106'>[默认立绘优先]</button></font> / <font color='#666666'><button value='107'>[纵横随机]</button></font><br>"
+			CASE 1
+				LOCALS += "　<font color='#666666'><button value='104'>[纵向特写优先]</button></font> / [横向特写优先]<br>　　　　　　　　　　　<font color='#666666'><button value='106'>[默认立绘优先]</button></font> / <font color='#666666'><button value='107'>[纵横随机]</button></font><br>"
+			CASE 2
+				LOCALS += "　<font color='#666666'><button value='104'>[纵向特写优先]</button></font> / <font color='#666666'><button value='105'>[横向特写优先]</button></font><br>　　　　　　　　　　　[默认立绘优先] / <font color='#666666'><button value='107'>[纵横随机]</button></font><br>"
+			CASE 3
+				LOCALS += "　<font color='#666666'><button value='104'>[纵向特写优先]</button></font> / <font color='#666666'><button value='105'>[横向特写优先]</button></font><br>　　　　　　　　　　　<font color='#666666'><button value='106'>[默认立绘优先]</button></font> / [纵横随机]<br>"
+		ENDSELECT
+		LOCALS += "----------------------------------------------------------------------------<br>"
+		LOCALS += "・奥义特写批量设置<br>"
+		LOCALS += "可在［能力展示］界面单独设置每个角色的奥义特写。<br>"
+		LOCALS += "本界面提供全体角色的特写批量设置功能。<br>"
+		LOCALS += "<br>"
+		LOCALS += "・显示规则批量设置（覆盖全局设置）<br>"
+		LOCALS += "　　<button value='110'>全员遵循全局规则</button> / <button value='111'>全员隐藏特写</button> / <button value='112'>全员显示特写</button><br>　　<button value='113'>全员每日仅触发一次</button>"
+		LOCALS += "<br>"
+		LOCALS += "・特写规则批量设置（覆盖全局设置）<br>"
+		LOCALS += "　　<button value='114'>全员遵循全局规则</button> / <button value='115'>全员纵向特写优先</button><br>　　<button value='116'>全员横向特写优先</button> / <button value='117'>全员默认立绘优先</button><br>　　<button value='118'>全员随机纵横比例</button>"
+	CASE 200
+		LOCALS += "・战斗辅助功能设置<br>"
+		LOCALS += "设置战斗中的快捷操作与信息简化方案。<br>"
+		LOCALS += "<br>"
+		LOCALS += "・快速普通攻击设置<br>"
+		LOCALS += "点击敌方单位即可直接触发普通攻击。<br>"
+		LOCALS += "启用后将无法查看敌方的增益・减益状态详情。<br>"
+		IF クイック行動フラグ == 0
+			LOCALS += "　<button value='201'>[201] <font color='#666666'>启用</font> / 停用</button><br>"
+		ELSE
+			LOCALS += "　<button value='201'>[201] 启用 / <font color='#666666'>停用</font></button><br>"
+		ENDIF
+		LOCALS += "----------------------------------------------------------------------------<br>"
+		LOCALS += "・技能使用确认跳过<br>"
+		LOCALS += "自动跳过技能使用前的二次确认环节。<br>"
+		LOCALS += "启用后将无法查看技能详细说明。<br>"
+		IF アビ使用確認スキップフラグ == 0
+			LOCALS += "　<button value='202'>[202] <font color='#666666'>启用</font> / 停用</button><br>"
+		ELSE
+			LOCALS += "　<button value='202'>[202] 启用 / <font color='#666666'>停用</font></button><br>"
+		ENDIF
+		LOCALS += "----------------------------------------------------------------------------<br>"
+		LOCALS += "・奥义确认跳过<br>"
+		LOCALS += "自动跳过奥义使用前的二次确认环节。<br>"
+		LOCALS += "启用后将无法查看奥义详细说明。<br>"
+		IF 奥義使用確認スキップフラグ == 0
+			LOCALS += "　<button value='203'>[203] <font color='#666666'>启用</font> / 停用</button><br>"
+		ELSE
+			LOCALS += "　<button value='203'>[203] 启用 / <font color='#666666'>停用</font></button><br>"
+		ENDIF
+		LOCALS += "----------------------------------------------------------------------------<br>"
+		LOCALS += "・敌方探索确认跳过<br>"
+		LOCALS += "已探索区域的重复探索自动确认。<br>"
+		IF OPTION変数:敵探索SKIP == 0
+			LOCALS += "　<button value='204'>[204] <font color='#666666'>启用</font> / 停用</button><br>"
+		ELSE
+			LOCALS += "　<button value='204'>[204] 启用 / <font color='#666666'>停用</font></button><br>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "<br>"
+	CASE 300
+		LOCALS += "・迷宫探索特效设置<br>"
+		LOCALS += "设置迷宫探索过程中的动态视觉效果。<br>"
+		LOCALS += "<br>"
+		LOCALS += "・进入迷宫动画<br>"
+		LOCALS += "设置开始探索迷宫时的入场动画<br>"
+		IF 突入時アニメーション封印フラグ
+			LOCALS += "　<button value='301'>[301] <font color='#666666'>显示动画</font> / 隐藏动画</button><br>"
+		ELSE
+			LOCALS += "　<button value='301'>[301] 显示动画 / <font color='#666666'>隐藏动画</font></button><br>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "・离开迷宫动画<br>"
+		LOCALS += "设置结束迷宫探索时的退场动画<br>"
+		IF 帰還時アニメーション封印フラグ
+			LOCALS += "　<button value='302'>[302] <font color='#666666'>显示动画</font> / 隐藏动画</button><br>"
+		ELSE
+			LOCALS += "　<button value='302'>[302] 显示动画 / <font color='#666666'>隐藏动画</font></button><br>"
+		ENDIF
+		LOCALS += "<br>"
+		LOCALS += "・伤害数值动画<br>"
+		LOCALS += "设置受击/治疗时的浮动数字特效<br>"
+		IF ダメージアニメーション封印フラグ
+			LOCALS += "　<button value='303'>[303] <font color='#666666'>显示特效</font> / 隐藏特效</button><br>"
+		ELSE
+			LOCALS += "　<button value='303'>[303] 显示特效 / <font color='#666666'>隐藏特效</font></button><br>"
+		ENDIF
+ENDSELECT
+
+RESULTS '= LOCALS
+
+@機能オプション実行処理_3(入力値)
+#DIM 入力値
+#DIM 対象キャラ
+;探索・戦闘機能
+
+SELECTCASE 入力値
+	CASE 101 TO 103
+		カットイン演出一括表示フラグ = 入力値 - 101
+	CASE 104 TO 107
+		カットイン画像一括表示フラグ = 入力値 - 104
+	CASE 110
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン個別選択オプション = 
+		NEXT
+		PRINTW 已将所有角色的动画显示规则设为[遵循全局设置]。
+	CASE 111
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン個別選択オプション = 非表示
+		NEXT
+		PRINTW 已将所有角色的动画显示规则设为[隐藏]。
+	CASE 112
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン個別選択オプション = 表示
+		NEXT
+		PRINTW 已将所有角色的动画显示规则设为[显示]。
+	CASE 113
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン個別選択オプション = 一日一回のみ
+		NEXT
+		PRINTW 已将所有角色的动画显示规则设为[每日仅触发一次]。
+	CASE 114
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン画像選択オプション = 
+		NEXT
+		PRINTW 已将所有角色的动画显示规则设为[遵循全局设置]。
+	CASE 115
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン画像選択オプション = 縦カットイン
+		NEXT
+		PRINTW 已将所有角色的动画特写规则设为[纵向动画优先]。
+	CASE 116
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン画像選択オプション = 横カットイン
+		NEXT
+		PRINTW 已将所有角色的动画特写规则设为[横向动画优先]。
+	CASE 117
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン画像選択オプション = デフォルト
+		NEXT
+		PRINTW 已将所有角色的动画特写规则设为[默认立绘优先]。
+	CASE 118
+		FOR 対象キャラ, 0, CHARANUM
+			CSTR:対象キャラ:カットイン画像選択オプション = 縦横ランダム
+		NEXT
+		PRINTW 已将所有角色的动画素材规则设为[随机纵横比例]。
+	CASE 201
+		INVERTBIT クイック行動フラグ, 0
+	CASE 202
+		INVERTBIT アビ使用確認スキップフラグ, 0
+	CASE 203
+		INVERTBIT 奥義使用確認スキップフラグ, 0
+	CASE 204
+		INVERTBIT OPTION変数:敵探索SKIP, 0
+	CASE 301
+		INVERTBIT 突入時アニメーション封印フラグ, 0
+	CASE 302
+		INVERTBIT 帰還時アニメーション封印フラグ, 0
+	CASE 303
+		INVERTBIT ダメージアニメーション封印フラグ, 0
+ENDSELECT
+
+@汎用喘ぎ個別設定(対象キャラ)
+#DIM 対象キャラ
+
+DRAWLINE
+PRINTL 可单独设置该角色的通用喘息使用规则。
+PRINTL
+PRINTL ・当前全局设置
+PRINT ・女性（扶她・其他）角色：
+SELECTCASE OPTION変数:汎用喘ぎ使用
+	CASE 0
+		PRINTL 全局停用
+	CASE 1
+		PRINTL 仅无专属台词角色启用
+	CASE 3
+		PRINTL 强制全体启用
+ENDSELECT
+PRINT ・男性角色：
+SELECTCASE OPTION変数:汎用喘ぎ使用_男
+	CASE 0
+		PRINTL 全局停用
+	CASE 1
+		PRINTL 仅无专属台词角色启用
+	CASE 3
+		PRINTL 强制全体启用
+ENDSELECT
+
+PRINTFORM 当前%NAME表示(対象キャラ)%个别设置：
+IF CFLAG:対象キャラ:汎用喘ぎ禁止フラグ == 1
+	PRINTL 强制停用（覆盖全局）
+ELSEIF CFLAG:対象キャラ:汎用喘ぎ禁止フラグ == 0
+	PRINTL 遵循全局设置
+ELSEIF CFLAG:対象キャラ:汎用喘ぎ禁止フラグ == -1
+	PRINTL 强制启用（覆盖全局）
+ENDIF
+DRAWLINE
+
+PRINTBUTTON "[0] 恢复全局设置", 0
+PRINTL
+PRINTBUTTON "[1] 强制停用", 1
+PRINTL
+PRINTBUTTON "[-1] 强制启用", -1
+PRINTL
+PRINTL
+PRINTBUTTON "[999] 返回", 999
+PRINTL
+
+BINPUT
+SELECTCASE RESULT
+	CASE 999
+		RETURN 0
+	CASEELSE
+		CFLAG:対象キャラ:汎用喘ぎ禁止フラグ = RESULT
+		RESTART
+ENDSELECT
+
+
+@妊娠個別設定(対象キャラ)
+#DIM 対象キャラ
+
+DRAWLINE
+PRINTL 可单独设置该角色的怀孕许可规则。
+PRINTL
+PRINTL ・当前全局设置
+IF OPTION変数:妊娠切り替え == 0
+	PRINTL 允许受孕
+	IF OPTION変数:他人妊娠
+		PRINTL （禁止无玩家参与受孕）
+	ENDIF
+	IF OPTION変数:夜這い時妊娠
+		PRINTL （禁止夜袭事件受孕）
+	ENDIF
+ELSEIF OPTION変数:妊娠切り替え
+	PRINTL 禁止受孕
+ENDIF
+DRAWLINE
+PRINTFORML ・当前%NAME表示(対象キャラ)%个别设置：
+IF GETBIT(CFLAG:対象キャラ:妊娠個別設定フラグ, 0) == 0
+	PRINTL 遵循全局设置
+	DRAWLINE
+
+	PRINTL
+	PRINTBUTTON "[0] 进入个别设置", 0
+	PRINTL
+ELSE
+	IF GETBIT(CFLAG:対象キャラ:妊娠個別設定フラグ, 1)
+		PRINTL 禁止受孕
+	ELSE
+		PRINTL 允许受孕
+		IF GETBIT(CFLAG:対象キャラ:妊娠個別設定フラグ, 2)
+			PRINTL （禁止无玩家参与受孕）
+		ELSE
+			PRINTL （允许无玩家参与受孕）
+		ENDIF
+		IF GETBIT(CFLAG:対象キャラ:妊娠個別設定フラグ, 3)
+			PRINTL （禁止夜袭事件受孕）
+		ELSE
+			PRINTL （允许夜袭事件怀孕）
+		ENDIF
+	ENDIF
+	DRAWLINE
+	PRINTL
+	PRINTBUTTON "[0] 恢复全局设置", 0
+	PRINTL
+	IF GETBIT(CFLAG:対象キャラ:妊娠個別設定フラグ, 1)
+		PRINTBUTTON "[1] 强制允许受孕", 1
+		PRINTL
+	ELSE
+		PRINTBUTTON "[1] 强制禁止受孕", 1
+		PRINTL
+		IF GETBIT(CFLAG:対象キャラ:妊娠個別設定フラグ, 2)
+			PRINTBUTTON "[2] 允许无玩家参与受孕", 2
+			PRINTL
+		ELSE
+			PRINTBUTTON "[2] 禁止无玩家参与受孕", 2
+			PRINTL
+		ENDIF
+		IF GETBIT(CFLAG:対象キャラ:妊娠個別設定フラグ, 3)
+			PRINTBUTTON "[3] 允许夜袭事件怀孕", 3
+			PRINTL
+		ELSE
+			PRINTBUTTON "[3] 禁止夜袭事件怀孕", 3
+			PRINTL
+		ENDIF
+	ENDIF
+ENDIF
+PRINTL
+PRINTBUTTON "[999] 返回", 999
+PRINTL
+
+BINPUT
+SELECTCASE RESULT
+	CASE 999
+		RETURN 0
+	CASEELSE
+		INVERTBIT CFLAG:対象キャラ:妊娠個別設定フラグ, RESULT
+		SIF GETBIT(CFLAG:対象キャラ:妊娠個別設定フラグ, 0) == 0
+			CFLAG:対象キャラ:妊娠個別設定フラグ = 0
+		RESTART
+ENDSELECT
+
+@OPTION_招待切り替え
+
+DRAWLINE
+PRINTL 设置可访问度假村的角色性别规则。
+PRINTL ※影响广告邀请与常客访问机制
+PRINTL 　通过商店解锁或事件触发的访问不受此设置限制。
+DRAWLINE
+PRINTL
+PRINTL ・当前设置
+PRINT 　　女性：
+IF GETBIT(OPTION変数:性別招待制御, 0)
+	HTML_PRINT @"<button value='0'>[0] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问</font> / 禁止访问</button>"
+	PRINTL
+ELSE
+	HTML_PRINT @"<button value='0'>[0] 允许访问 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问</font></button>"
+	PRINTL
+ENDIF
+PRINT 　　男性：
+IF GETBIT(OPTION変数:性別招待制御, 1)
+	HTML_PRINT @"<button value='1'>[1] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问</font> / 禁止访问</button>"
+	PRINTL
+ELSE
+	HTML_PRINT @"<button value='1'>[1] 允许访问 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问</font></button>"
+	PRINTL
+ENDIF
+PRINT 　　扶她：
+IF GETBIT(OPTION変数:性別招待制御, 2)
+	HTML_PRINT @"<button value='2'>[2] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问</font> / 禁止访问</button>"
+	PRINTL
+ELSE
+	HTML_PRINT @"<button value='2'>[2] 允许访问/ <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问</font></button>"
+	PRINTL
+ENDIF
+PRINT 　　其他：
+IF GETBIT(OPTION変数:性別招待制御, 3)
+	HTML_PRINT @"<button value='3'>[3] <font color='#%カラーパレット_HTML("グレーアウト")%'>允许访问</font> / 禁止访问</button>"
+	PRINTL
+ELSE
+	HTML_PRINT @"<button value='3'>[3] 允许访问 / <font color='#%カラーパレット_HTML("グレーアウト")%'>禁止访问</font></button>"
+	PRINTL
+ENDIF
+
+PRINTL
+PRINTL
+PRINTBUTTON "[999] 決定", 999
+PRINTL
+
+BINPUT
+SELECTCASE RESULT
+	CASE 999
+		RETURN 0
+	CASEELSE
+		INVERTBIT OPTION変数:性別招待制御, RESULT
+		RESTART
+ENDSELECT
+
+@OPTION_キャラ制限初期切り替え
+
+DRAWLINE
+PRINTL 受限角色的初始登场规则设置。
+PRINTL ※本设置仅在游戏开始时可设置。
+PRINTL ※完全解锁可能导致与事件剧情的逻辑冲突。
+PRINTL ※包含男性角色，若需调整请前往度假村访问设置界面。
+DRAWLINE
+PRINTL
+PRINTL ・当前设置
+
+PRINT 星晶商店解锁角色：
+IF GETBIT(OPTION変数:キャラ制限初期, 0)
+	PRINT 完全解锁　　　　　
+	PRINTBUTTON "[0] 切换状态", 0
+	PRINTL
+	PRINTL 　（游戏初始即可访问度假村）
+	PRINTL
+ELSE
+	PRINT 默认　　　
+	PRINTBUTTON "[0] 切换状态", 0
+	PRINTL
+	PRINTL 　（需完成迷宫攻略・观看事件）
+	PRINTL 　（需花费ZP解锁）
+ENDIF
+PRINTL
+PRINT 事件加入角色：
+IF GETBIT(OPTION変数:キャラ制限初期, 1)
+	PRINT 完全解锁　　　　　　
+	PRINTBUTTON "[1] 切换状态", 1
+	PRINTL
+	PRINTL 　（游戏初始即可访问度假村）
+ELSE
+	PRINT 默认　　　　
+	PRINTBUTTON "[1] 切换状态", 1
+	PRINTL
+	PRINTL 　（需达成角色专属解锁条件）
+ENDIF
+PRINTL
+PRINTL
+PRINTBUTTON "[999] 确认设置完成", 999
+PRINTL
+
+BINPUT
+SELECTCASE RESULT
+	CASE 999
+		;解放処理
+		FOR LOCAL, 1, CHARANUM
+			IF (CFLAG:LOCAL:招待不可フラグ == 1 || CFLAG:LOCAL:招待不可フラグ == 3) && GETBIT(OPTION変数:キャラ制限初期, 0)
+				CFLAG:LOCAL:招待不可フラグ = 0
+			ENDIF
+			IF CFLAG:LOCAL:招待不可フラグ == 2 && GETBIT(OPTION変数:キャラ制限初期, 1)
+				CFLAG:LOCAL:招待不可フラグ = 0
+			ENDIF
+		NEXT
+		RETURN 0
+	CASEELSE
+		INVERTBIT OPTION変数:キャラ制限初期, RESULT
+		RESTART
+ENDSELECT
+
+@OPTION_命のリンク初期切り替え
+#DIM 命のリンクOPTION
+DRAWLINE
+PRINTL 设置露莉亚初始缔结生命链接的角色。
+PRINTL ※本设置仅在游戏开始时可设置。
+DRAWLINE
+PRINTL
+
+PRINTL 当前缔结生命链接的对象
+IF 命のリンクOPTION == 0
+	SETCOLOR カラーパレット("黄")
+	PRINT [姬塔]
+	RESETCOLOR
+ELSE
+	PRINTBUTTON "[姬塔]", 0
+ENDIF
+PRINT  / 
+IF 命のリンクOPTION == 1
+	SETCOLOR カラーパレット("黄")
+	PRINT [古兰]
+	RESETCOLOR
+ELSE
+	PRINTBUTTON "[古兰]", 1
+ENDIF
+PRINT  / 
+IF 命のリンクOPTION == 2
+	SETCOLOR カラーパレット("黄")
+	PRINT [姬塔和古兰]
+	RESETCOLOR
+ELSE
+	PRINTBUTTON "[姬塔和古兰]", 2
+ENDIF
+PRINTL
+PRINTL
+PRINTBUTTON "[999] 确认设置完成", 999
+PRINTL
+
+BINPUT
+SELECTCASE RESULT
+	CASE 999
+		LOCAL = キャラ検索("[碧蓝丽影的十天辉星]姬塔")
+		LOCAL:1 = キャラ検索("[逐梦者]古兰")
+		SELECTCASE 命のリンクOPTION
+			CASE 0
+				TALENT:LOCAL:命のリンク = 1
+				TALENT:(LOCAL:1):命のリンク = 0
+			CASE 1
+				TALENT:LOCAL:命のリンク = 0
+				TALENT:(LOCAL:1):命のリンク = 1
+			CASE 2
+				TALENT:LOCAL:命のリンク = 1
+				TALENT:(LOCAL:1):命のリンク = 1
+		ENDSELECT
+	CASEELSE
+		命のリンクOPTION = RESULT
+		RESTART
+ENDSELECT
+
+
+
+@OPTION_招待制御例外規定()
+#DIM 表示候補, キャラクタ数上限
+#DIM 表示数
+#DIM キャラカウント
+#DIM 対象キャラ
+#DIM 現在ページ
+#DIM フラグ保存
+#DIMS ソート情報
+#DIM 入力値
+
+VARSET 表示候補, -1
+現在ページ = 0
+
+;表示キャラを登録
+表示数 = 0
+FOR 対象キャラ, 1, CHARANUM
+	;招待不可キャラは排除
+	SIF CFLAG:対象キャラ:招待不可フラグ
+		CONTINUE
+
+	;オプションでオフになってるキャラのみ
+	SWAP CFLAG:対象キャラ:例外招待, フラグ保存
+	CFLAG:対象キャラ:例外招待 = 0
+	SIF 性別招待制御_実処理(対象キャラ) == 0
+		CONTINUE
+	SWAP CFLAG:対象キャラ:例外招待, フラグ保存
+
+	表示候補:表示数 = 対象キャラ
+	表示数 += 1
+NEXT
+CALL キャラ配列フィルタ処理(表示候補, -1)
+
+$表示_LOOP
+;広告対象の表示
+DRAWLINE
+PRINTL 可在此选择需要设为访问例外的特殊角色。
+PRINTL 当前OPTION设置中仅显示被设为禁止邀请对象的角色。
+PRINTL 本OPTION仅作用于邀请时的控制，不影响已存在于度假村的角色。
+DRAWLINE
+LOCAL:1 = 0
+;キャラの表示（15人まで）
+FOR LOCAL, (現在ページ * 30), ((現在ページ * 30) + 30)
+	;登録が終わったら表示終了
+	IF 表示候補:LOCAL == -1
+		BREAK
+	ENDIF
+	IF 文字色グループ取得(表示候補:LOCAL) >= 0
+		SETCOLOR 同室時_グループ文字色:(文字色グループ取得(表示候補:LOCAL))
+	ELSEIF CFLAG:(表示候補:LOCAL):同室文字色
+		SETCOLOR CFLAG:(表示候補:LOCAL):同室文字色
+	ENDIF
+	IF CFLAG:(表示候補:LOCAL):例外招待
+		SETCOLOR カラーパレット("黄")
+		PRINTBUTTON @"[{LOCAL,3,RIGHT}]%GET_NAME(表示候補:LOCAL, 1)%", LOCAL
+		ソート情報 '= ソート情報表示(表示候補:LOCAL, 1)
+		SIF ソート情報 != ""
+			PRINTFORM 　%ソート情報%
+		PRINT 　已完成例外设置　
+		RESETCOLOR
+	ELSE
+		PRINTBUTTON @"[{LOCAL,3,RIGHT}]%GET_NAME(表示候補:LOCAL, 1)%", LOCAL
+		ソート情報 '= ソート情報表示(表示候補:LOCAL, 1)
+		SIF ソート情報 != ""
+			PRINTFORM 　%ソート情報%
+		PRINT 　　　　　　　
+	ENDIF
+	RESETCOLOR
+	SIF LOCAL % 2 != 0 && LOCAL
+		PRINTL 
+NEXT
+
+PRINTL 
+DRAWLINE
+
+;ページめくり表示
+IF 現在ページ > 0
+	PRINTBUTTONLC "[9000]上一页", 9000
+ELSE
+	PRINTLC 　
+ENDIF
+PRINTFORM - {現在ページ + 1} -
+IF 表示候補:((現在ページ * 30) + 30) > 0
+	PRINTBUTTONC "[9001]下一页", 9001
+ENDIF
+PRINTL
+DRAWLINE
+CALL フィルタソートボタンセット表示(9020, 9030, 9031, 9040)
+DRAWLINE
+PRINTBUTTON "[9990] 将显示角色全部设为例外", 9990
+PRINT 　　　　　
+PRINTBUTTON "[9991] 解除显示角色的所有例外设置", 9991
+PRINTL 
+PRINTBUTTON "[9992] 将未显示角色全部设为例外", 9992
+PRINT 　　
+PRINTBUTTON "[9993] 解除未显示角色的所有例外设置", 9993
+PRINTL 
+PRINTL ※配合筛选功能可实现精细设置
+PRINTL ※「未显示角色」指被设为禁止邀请对象且经筛选隐藏的角色
+DRAWLINE
+PRINTBUTTONLC "[9999] 返回", 9999
+PRINTBUTTONLC "[9998] 按作品设置例外", 9998
+PRINT 　　
+PRINTBUTTONLC "[9997] 保存/加载例外设置", 9997
+
+$INPUT_LOOP
+BINPUT
+
+;広告対象のINPUT
+入力値 = RESULT
+SELECTCASE 入力値
+	CASE 9020, 9030, 9031, 9040
+		CALL フィルタソートボタンセット実行部(入力値, 9020, 9030, 9031, 9040)
+		現在ページ = 0
+		RESTART
+	CASE 9000
+		現在ページ = MAX(現在ページ - 1, 0)
+		GOTO 表示_LOOP
+	CASE 9001
+		SIF LOCAL:1 == 0
+			現在ページ += 1
+		GOTO 表示_LOOP
+	CASE 9990, 9991
+		FOR LOCAL, 0, VARSIZE("表示候補")
+			;登録キャラが終わったら処理終了
+			IF 表示候補:LOCAL == -1
+				BREAK
+			ENDIF
+			CFLAG:(表示候補:LOCAL):例外招待 = 9991 - 入力値
+		NEXT
+		GOTO 表示_LOOP
+	CASE 9992, 9993
+		FOR 対象キャラ, 1, CHARANUM
+			;招待不可キャラは排除
+			SIF CFLAG:対象キャラ:招待不可フラグ
+				CONTINUE
+
+			;オプションでオフになってるキャラのみ
+			SWAP CFLAG:対象キャラ:例外招待, フラグ保存
+			CFLAG:対象キャラ:例外招待 = 0
+			SIF 性別招待制御_実処理(対象キャラ) == 0
+				CONTINUE
+			SWAP CFLAG:対象キャラ:例外招待, フラグ保存
+
+			IF MATCH(表示候補, 対象キャラ) == 0
+				;表示候補にないなら例外招待を操作
+				CFLAG:対象キャラ:例外招待 = 9993 - 入力値
+			ENDIF
+		NEXT
+		GOTO 表示_LOOP
+	CASE 9999
+		RETURN -1
+	CASE 9998
+		CALL OPTION_招待制御例外規定_作品別()
+		GOTO 表示_LOOP
+	CASE 9997
+		$セーブループ
+		PRINTL
+		DRAWLINE
+		PRINTL 可对例外设置进行保存・调用。
+		PRINTL 请选择操作。
+		PRINTL
+		PRINT ・存档１　例外设置角色：
+		キャラカウント = 0
+		FOR 対象キャラ, 1, CHARANUM
+			SIF CFLAG:対象キャラ:例外招待_セーブ1
+				キャラカウント++
+		NEXT
+		PRINTFORML {キャラカウント}名
+		PRINT 　　
+		IF SAVESTR:例外設定セーブコメント1 == ""
+			PRINTL 备注：无
+		ELSE
+			PRINTFORML 备注：%SAVESTR:例外設定セーブコメント1%
+		ENDIF
+		PRINT 　　
+		PRINTBUTTONLC "[0] 在此保存设置", 0
+		PRINT 　　
+		PRINTBUTTONLC "[1] 加载此处的设置", 1
+		PRINT 　　
+		PRINTBUTTONLC "[2] 添加备注", 2
+		PRINTL
+		PRINTL
+
+		PRINT ・存档２　例外设置角色：
+		キャラカウント = 0
+		FOR 対象キャラ, 1, CHARANUM
+			SIF CFLAG:対象キャラ:例外招待_セーブ2
+				キャラカウント++
+		NEXT
+		PRINTFORML {キャラカウント}名
+		PRINT 　　
+		IF SAVESTR:例外設定セーブコメント2 == ""
+			PRINTL 备注：无
+		ELSE
+			PRINTFORML 备注：%SAVESTR:例外設定セーブコメント2%
+		ENDIF
+		PRINT 　　
+		PRINTBUTTONLC "[10] 在此保存设置", 10
+		PRINT 　　
+		PRINTBUTTONLC "[11] 加载此处的设置", 11
+		PRINT 　　
+		PRINTBUTTONLC "[12] 添加备注", 12
+		PRINTL
+		PRINTL
+
+		PRINT ・存档３　例外设置角色：
+		キャラカウント = 0
+		FOR 対象キャラ, 1, CHARANUM
+			SIF CFLAG:対象キャラ:例外招待_セーブ3
+				キャラカウント++
+		NEXT
+		PRINTFORML {キャラカウント}名
+		PRINT 　　
+		IF SAVESTR:例外設定セーブコメント3 == ""
+			PRINTL 备注：无
+		ELSE
+			PRINTFORML 备注：%SAVESTR:例外設定セーブコメント3%
+		ENDIF
+		PRINT 　　
+		PRINTBUTTONLC "[20] 在此保存设置", 20
+		PRINT 　　
+		PRINTBUTTONLC "[21] 加载此处的设置", 21
+		PRINT 　　
+		PRINTBUTTONLC "[22] 添加备注", 22
+		PRINTL
+		PRINTL
+		PRINTL 
+		PRINTBUTTONLC "[999] 返回", 999
+		PRINTL
+		BINPUT
+		フラグ保存 = RESULT
+		SELECTCASE フラグ保存
+			CASE 0, 10, 20
+				FOR 対象キャラ, 1, CHARANUM
+					SETVAR @"CFLAG:対象キャラ:例外招待_セーブ{フラグ保存 / 10 + 1}", CFLAG:対象キャラ:例外招待
+				NEXT
+				PRINTFORMW 已向存档{フラグ保存 / 10 + 1}保存例外设置。
+			CASE 1, 11, 21
+				FOR 対象キャラ, 1, CHARANUM
+					CFLAG:対象キャラ:例外招待 = GETVAR(@"CFLAG:対象キャラ:例外招待_セーブ{フラグ保存 / 10 + 1}")
+				NEXT
+				PRINTFORMW 已从存档{フラグ保存 / 10 + 1}读取例外设置。
+			CASE 2, 12, 22
+				PRINTL 请输入任意备注内容。
+				PRINTL
+				INPUTS
+				SETVAR @"SAVESTR:例外設定セーブコメント{フラグ保存 / 10 + 1}", RESULTS
+				PRINTFORMW 已为存档{フラグ保存 / 10 + 1}设置备注。
+			CASE 999
+				GOTO 表示_LOOP
+		ENDSELECT
+		GOTO セーブループ
+	CASE IS >= CHARANUM, IS < 0
+		REUSELASTLINE 
+		GOTO INPUT_LOOP
+	CASEELSE
+		IF 表示候補:入力値 < 0
+			REUSELASTLINE 
+			GOTO INPUT_LOOP
+		ENDIF
+		INVERTBIT CFLAG:(表示候補:入力値):例外招待, 0
+		PRINTL 
+		PRINTL 
+		PRINTL 
+		GOTO 表示_LOOP
+ENDSELECT
+
+@OPTION_招待制御例外規定_作品別()
+#LOCALSIZE 1
+#LOCALSSIZE 1
+#DIM 表示候補, キャラクタ数上限
+#DIM 現在ページ
+#DIM 入力番号
+#DIM 描画開始行
+#DIM 対象キャラ
+#DIM START_NO
+#DIM END_NO
+#DIM REDRAW_TEMP
+#DIM リスタートフラグ
+#DIMS BUTTON_TEXT
+#DIM DYNAMIC 初回実行フラグ = 1
+#DIM CONST 表示人数 = 15
+#DIMS 判定作品名
+#DIMS 出典作品配列, 500
+#DIM 出典情報配列, 500
+#DIM 出典例外表示フラグ, 500
+#DIM 出典番号
+#DIM 配列番号
+#DIM 動作モード
+#DIM シリーズモード
+#DIM リスト更新判定
+#DIM ソートモード
+#DIM ソートモード前回値
+#DIMS 招待後作品保存
+#DIMS ソートキー, 3
+#DIM BTN_NUM
+#DIMS BTN_TEXT
+#DIM CONST LINE_LEN  = 80
+#DIM CONST SPACE_LEN = 56
+#DIMS ページ番号文字列
+#DIM ページ番号文字列長
+#DIM 最大ページ
+#DIMS ソート情報
+
+; RESTART時に現在ページをリセットしない
+IF 初回実行フラグ
+	初回実行フラグ = 0
+	リスト更新判定 = 1
+	動作モード = 1
+	現在ページ = 0
+	描画開始行 = LINECOUNT
+	ソートモード = 0
+	ソートモード前回値 = -1
+	;描画設定を変更
+	REDRAW_TEMP = CURRENTREDRAW()
+	REDRAW 1
+ENDIF
+
+;表示キャラを登録
+;・フィルタ処理の追加でリスト処理が重くなったので必要なタイミングでのみ更新するようにする
+IF リスト更新判定
+	リスト更新判定 = 0
+	
+	VARSET 表示候補, -1
+	VARSET 出典作品配列
+	VARSET 出典情報配列
+	ソートキー:0 = 出典情報配列
+	ソートキー:1 = 出典作品配列
+	ソートキー:2 = 出典例外表示フラグ
+	; リスト更新後にソートを実行するように前回値をリセット
+	ソートモード前回値 = -1
+	出典番号 = 1
+	出典作品配列:0 = グランブルーファンタジー
+	出典例外表示フラグ:0 = 1
+	
+	;-リスト表示対象の出典作品を記録
+	FOR 対象キャラ, 1, CHARANUM
+		IF CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品")) == ""
+			;出典なし＝グラブルキャラとしてカウント
+			出典情報配列:0 ++
+			IF CFLAG:対象キャラ:例外招待 == 0
+				;例外設定されてないキャラがいるなら表示フラグOFF
+				出典例外表示フラグ:0 = 0
+			ENDIF
+		ELSEIF シリーズモード && MAP_HAS("シリーズ出典", CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品")))
+			IF MATCH(出典作品配列, MAP_GET("シリーズ出典", CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品"))))
+				;出典あり＆リストに登録済みの場合は人数をカウント
+				配列番号 = FINDELEMENT(出典作品配列, MAP_GET("シリーズ出典", CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品"))), , , 1)
+				出典情報配列:配列番号 ++
+				IF CFLAG:対象キャラ:例外招待 == 0
+					;例外設定されてないキャラがいるなら表示フラグOFF
+					出典例外表示フラグ:配列番号 = 0
+				ENDIF
+			ELSE
+				;出典あり＆リストに未登録の場合は新規登録
+				出典作品配列:出典番号 = %MAP_GET("シリーズ出典", CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品")))%
+				出典情報配列:出典番号 ++
+				出典例外表示フラグ:出典番号 = 1
+				IF CFLAG:対象キャラ:例外招待 == 0
+					;例外設定されてないキャラがいるなら表示フラグOFF
+					出典例外表示フラグ:出典番号 = 0
+				ENDIF
+				出典番号 ++
+			ENDIF
+		ELSEIF MATCH(出典作品配列, CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品")))
+			;出典あり＆リストに登録済みの場合は人数をカウント
+			配列番号 = FINDELEMENT(出典作品配列, CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品")), , , 1)
+			出典情報配列:配列番号 ++
+			IF CFLAG:対象キャラ:例外招待 == 0
+				;例外設定されてないキャラがいるなら表示フラグOFF
+				出典例外表示フラグ:配列番号 = 0
+			ENDIF
+		ELSE
+			;出典あり＆リストに未登録の場合は新規登録
+			出典作品配列:出典番号 = %CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品"))%
+			出典情報配列:出典番号 ++
+			出典例外表示フラグ:出典番号 = 1
+			IF CFLAG:対象キャラ:例外招待 == 0
+				;例外設定されてないキャラがいるなら表示フラグOFF
+				出典例外表示フラグ:出典番号 = 0
+			ENDIF
+			出典番号 ++
+		ENDIF
+	NEXT
+ENDIF
+
+;ソートモードが切り替わった場合はソートする
+;・ARRAYMSORTEXが安定ソートではないようで、モード切替、リスト更新時のみソートを実行
+;　(制限しないと人数順ソートでリストを表示するごとに人数が同じの作品の順番が変わる)
+IF ソートモード != ソートモード前回値
+	ソートモード前回値 = ソートモード
+	SELECTCASE ソートモード
+		CASE 0
+			;人数順
+			ARRAYMSORTEX "出典情報配列", ソートキー, 0, 出典番号
+		CASE 1
+			;シリーズ名順
+			ARRAYMSORT 出典作品配列, 出典情報配列, 出典例外表示フラグ
+	ENDSELECT
+ENDIF
+
+;広告対象の表示
+PRINTL
+DRAWLINE
+PRINTL 可在角色邀请的OPTION设置中选择要设为例外的作品系列。
+PRINTL 使用范例：将「所有性别设为「不访问度假村」」→「仅对特定作品设置例外」，
+PRINTL 即可实现仅邀请该作品系列的角色。
+PRINTL 本OPTION仅作用于邀请时的控制，不影响已存在于度假村的角色。
+DRAWLINE
+; 動作モード
+IF 動作モード
+	PRINTPLAIN [设置例外模式]
+	PRINT  / 
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTBUTTON "[解除例外模式]", 9998
+	RESETCOLOR
+	PRINTL 
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTBUTTON "[设置例外模式]", 9998
+	RESETCOLOR
+	PRINT  / 
+	PRINTPLAIN [解除例外模式]
+	PRINTL 
+ENDIF
+DRAWLINE
+; シリーズ選択/シリーズ表示
+最大ページ = MAX((出典番号 + 表示人数 - 1) / 表示人数, 1) - 1
+;シリーズの表示（15作品まで）
+START_NO = (現在ページ * 表示人数)
+END_NO   = (現在ページ * 表示人数) + 表示人数 - 1
+FOR LOCAL, START_NO, END_NO + 1
+	IF 出典作品配列:LOCAL == ""
+		PRINTL
+		CONTINUE
+		;登録が終わったら表示終了
+		BREAK
+	ENDIF
+	PRINTBUTTON @"[{LOCAL, 3}] %出典作品配列:LOCAL, 41, LEFT%：全{出典情報配列:LOCAL, 3}名", LOCAL
+	IF 出典例外表示フラグ:LOCAL
+		SETCOLOR カラーパレット("黄")
+		PRINT 　　全员例外设置已完成
+		RESETCOLOR
+	ENDIF
+	PRINTL 
+NEXT
+SKIPDISP 0
+
+;- ページ操作ボタン
+PRINTSL "-" * LINE_LEN
+
+;ページめくり表示
+BTN_NUM   = 9001
+BTN_TEXT '= @"[上一页]"
+IF 現在ページ > 0
+	PRINTBUTTON BTN_TEXT, BTN_NUM
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM %BTN_TEXT%
+	RESETCOLOR
+ENDIF
+; ページ数
+ページ番号文字列  '= @"- {現在ページ + 1, LOG10(MAX(最大ページ +1, 1)) + 1}/{最大ページ + 1, LOG10(MAX(最大ページ +1, 1)) + 1} -"
+ページ番号文字列長 = SPACE_LEN - STRLENS(ページ番号文字列)
+PRINTS " " * (ページ番号文字列長 / 2)
+PRINTFORM %ページ番号文字列%
+; 割り切れなかった分のスペースは後半に足す
+PRINTS " " * (ページ番号文字列長 / 2 + (ページ番号文字列長 % 2))
+
+; 1ページ次へ
+BTN_NUM   = 9011
+BTN_TEXT '= @"[下一页]"
+IF 現在ページ < 最大ページ
+	PRINTBUTTON BTN_TEXT, BTN_NUM
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM %BTN_TEXT%
+	RESETCOLOR
+ENDIF
+PRINTL
+
+; 最初のページへ
+BTN_NUM   = 9009
+BTN_TEXT '= "[|≪]"
+IF 現在ページ > 0
+	PRINTBUTTON BTN_TEXT, BTN_NUM
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM %BTN_TEXT%
+	RESETCOLOR
+ENDIF
+PRINTS " " * 1
+; 5ページ前へ
+BTN_NUM   = 9005
+BTN_TEXT '= "[－５]"
+IF 現在ページ > 0
+	PRINTBUTTON BTN_TEXT, BTN_NUM
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM %BTN_TEXT%
+	RESETCOLOR
+ENDIF
+; 余白
+PRINTS " " * SPACE_LEN
+
+; 5ページ次へ
+BTN_NUM   = 9015
+BTN_TEXT '= "[＋５]"
+IF 現在ページ < 最大ページ
+	PRINTBUTTON BTN_TEXT, BTN_NUM
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM %BTN_TEXT%
+	RESETCOLOR
+ENDIF
+PRINTS " " * 1
+; 最後のページへ
+BTN_NUM   = 9019
+BTN_TEXT '= "[≫|]"
+IF 現在ページ < 最大ページ
+	PRINTBUTTON BTN_TEXT, BTN_NUM
+ELSE
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAINFORM %BTN_TEXT%
+	RESETCOLOR
+ENDIF
+PRINTL
+
+;- その他ボタン
+PRINTBUTTONLC "[9999]返回", 9999
+SELECTCASE ソートモード
+	CASE 0
+		PRINTBUTTON "[9996]按系列名称排序", 9996
+	CASE 1
+		PRINTBUTTON "[9996]按登记角色数排序", 9996
+ENDSELECT
+REDRAW 0
+
+;入力処理
+WHILE 1
+	BINPUT
+	入力番号 = RESULT
+	SELECTCASE 入力番号
+		CASE 9101
+			;- [シリーズをまとめる]
+			INVERTBIT シリーズモード, 0
+			現在ページ = 0
+			リスト更新判定 = 1
+			リスタートフラグ = 1
+			BREAK
+		CASE 9001, 9005
+			;- 前ページへ
+			; ページ番号を更新後、リスタートしてリスト表示へ戻る
+			現在ページ = MAX(現在ページ - (入力番号 - 9000), 0)
+			リスタートフラグ = 1
+			BREAK
+		CASE 9011, 9015
+			;- 次ページへ
+			現在ページ = MIN(現在ページ + (入力番号 - 9010), 最大ページ)
+			リスタートフラグ = 1
+			BREAK
+		CASE 9009
+			; 最初のページ
+			現在ページ = 0
+			リスタートフラグ = 1
+			BREAK
+		CASE 9019
+			; 最後のページ
+			現在ページ = 最大ページ
+			リスタートフラグ = 1
+			BREAK
+		CASE 9998
+			INVERTBIT 動作モード, 0
+			リスタートフラグ = 1
+			BREAK
+		CASE 9999
+			;- 戻る
+			; リスタートせずにZPショップメニューへ戻る
+			リスタートフラグ = 0
+			BREAK
+		CASE 9996
+			;- 作品ソートモード切替処理
+			INVERTBIT ソートモード, 0
+			現在ページ = 0
+			リスタートフラグ = 1
+			BREAK
+		CASEELSE
+			;- シリーズ選択時処理
+			判定作品名 '= 出典作品配列:入力番号
+			FOR 対象キャラ, 1, CHARANUM
+				IF 判定作品名 == "グランブルーファンタジー" && CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品")) == ""
+					CFLAG:対象キャラ:例外招待 = 動作モード
+				ELSEIF CSVCSTR(NO:対象キャラ, GETNUM(CSTR, "出演作品")) == 判定作品名
+					CFLAG:対象キャラ:例外招待 = 動作モード
+				ENDIF
+			NEXT
+			リスト更新判定 = 1
+			リスタートフラグ = 1
+			BREAK
+	ENDSELECT
+WEND
+IF リスタートフラグ
+	CLEARLINE LINECOUNT - 描画開始行
+	RESTART
+ENDIF
+;描画設定を戻す
+REDRAW REDRAW_TEMP
+RETURN -1
+
+
+
+
+

@@ -1,0 +1,358 @@
+﻿;-------------------------------------------------
+;外出探索
+;-------------------------------------------------
+@COMNAME601
+#FUNCTIONS
+TSTR:コマンド名受渡 = 外出探索
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_601
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("単独可能_探索")
+
+@COM601
+#DIM ループ用
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+;現状はお金がちょっと上がって好感度UP用の仮アイテムが手に入る
+
+
+DRAWLINE
+PRINTL 请选择探索模式。
+DRAWLINE
+IF 探索フラグ
+	PRINTL 每日仅限一次探索
+	SETCOLOR カラーパレット("グレーアウト")
+	PRINTPLAIN [0] 简易探索
+	PRINTL 
+	PRINTL 　　　：探索周边安全区域，获取卢比及素材等
+	PRINTL 
+	IF BATTLE_STATE:0:キャラ登録番号
+		PRINTPLAIN [1] 迷宫探索
+	ELSE
+		SETCOLOR カラーパレット("グレーアウト")
+		PRINTPLAIN [1] 迷宫探索（需要至少一名队员）
+	ENDIF
+	PRINTL 
+	PRINTL 　　　：攻略已解锁的迷宫
+	RESETCOLOR
+	PRINT 　　　　…
+	IF 突入時アニメーション封印フラグ
+		PRINTBUTTON "[10] 切换迷宫进入动画［现在：OFF］", 10
+	ELSE
+		PRINTBUTTON "[10] 切换迷宫进入动画［现在：ON］", 10
+	ENDIF
+	PRINTL
+ELSE
+	PRINTBUTTONLC "[0] 简易探索", 0
+	PRINTL 
+	PRINTL 　　　：探索周边安全区域，获取卢比及素材等
+	PRINTL 
+	IF BATTLE_STATE:0:キャラ登録番号
+		PRINTBUTTONLC "[1] 迷宫探索", 1
+	ELSE
+		SETCOLOR カラーパレット("グレーアウト")
+		PRINTPLAIN [1] 迷宫探索（需要至少一名队员）
+	ENDIF
+	PRINTL 
+	PRINTL 　　　：攻略已解锁的迷宫
+	RESETCOLOR
+	PRINT 　　　　…
+	IF 突入時アニメーション封印フラグ
+		PRINTBUTTON "[10] 切换迷宫进入动画［现在：OFF］", 10
+	ELSE
+		PRINTBUTTON "[10] 切换迷宫进入动画［现在：ON］", 10
+	ENDIF
+	PRINTL
+	PRINT 　　　　…
+	IF ダメージアニメーション封印フラグ
+		PRINTBUTTON "[11] 切换伤害动画［現在：OFF］", 11
+	ELSE
+		PRINTBUTTON "[11] 切换伤害动画［現在：ON］", 11
+	ENDIF
+	PRINTL
+ENDIF
+PRINTL 
+PRINTBUTTONLC "[2] 自动探索编队", 2
+PRINTL 
+PRINTL 　　　：设置业务［自动探索］派遣角色前往迷宫
+PRINTL 
+PRINTL
+PRINTBUTTONLC "[998] 系统说明", 998
+PRINTL
+PRINTBUTTONLC "[999] 返回", 999
+PRINTL
+
+IF チュートリアルフラグ:探索へ出かける == 0
+	RESULT = 998
+ELSE
+	BINPUT
+ENDIF
+
+SELECTCASE RESULT
+	CASE 0
+		CALL 最大レベル算出保存
+		LOCAL = 最大レベル保存 * 1000 * RAND(95, 105) / 100
+		PRINTL 完成外出探索并讨伐魔物。
+		PRINTFORML 获得{LOCAL}卢比
+		MONEY += LOCAL
+
+		EXP:MASTER:探索経験 ++
+		FOR ループ用, 0, 14
+			SIF ループ用 > 3 && ループ用 < 10
+				CONTINUE
+			SIF BATTLE_STATE:ループ用:キャラ登録番号 < 1
+				CONTINUE
+			IF BATTLE_STATE:ループ用:キャラ登録番号
+				EXP:(BATTLE_STATE:ループ用:キャラ登録番号):探索経験 ++
+				CALL SOURCE_CALC_好感度要素_信頼度UP(BATTLE_STATE:ループ用:キャラ登録番号, PLAYER, 100)
+			ENDIF
+		NEXT
+		PRINTW 你与队员的探索经验获得提升
+		TIME += 120
+		探索フラグ ++
+	CASE 1
+		IF BATTLE_STATE:0:キャラ登録番号 < 1
+			RESTART
+		ENDIF
+		CALL ダンジョンリスト描画
+		SIF RESULT == -1
+			RETURN -1
+		TIME += 120
+		探索フラグ ++
+	CASE 2
+		CALL ダンジョン自動探索編成処理
+		SIF RESULT == -1
+			RESTART
+		RETURN -1
+	CASE 10
+		INVERTBIT 突入時アニメーション封印フラグ, 0
+		RESTART
+	CASE 11
+		INVERTBIT ダメージアニメーション封印フラグ, 0
+		RESTART
+	CASE 998
+		CALL 探索へ出かけるチュートリアル()
+		RESTART
+	CASE 999
+		RETURN -1
+ENDSELECT
+
+CALL 特定キャラモードリセット(PLAYER)
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE601
+;移動実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(601)
+	RETURN RESULT
+;宿泊エリアからはダメ
+SIF CFLAG:PLAYER:現在マップ種別 == 999
+	RETURN 0
+;玄関
+CALLFORM エリア情報登録_{CFLAG:PLAYER:現在マップ種別}("エリア移動可能場所")
+SIF CFLAG:PLAYER:現在位置 != RESULT
+	RETURN 0
+;ハーヴィンオナホ時禁止
+SIF MODE_存在判定_プレイヤー側("ハーヴィンオナホ系", PLAYER)
+	RETURN 0
+
+RETURN 1
+
+
+@ダンジョンリスト描画
+#DIMS 表示用リスト_未クリア, 50
+#DIMS 表示用リスト_クリア済み, 100
+#DIMS 表示用リスト_ランダムD, 50
+#DIM レベルソート_未クリア, 50
+#DIM レベルソート_クリア済み, 100
+#DIM レベルソート_ランダムD, 50
+#DIMS ダンジョン名保存
+#DIMS 未クリアリスト表示文
+#DIMS クリア済みリスト表示文
+#DIMS ランダムDリスト表示文
+#DIM 表示候補数
+#DIM ページ数_未クリア
+#DIM ページ数_クリア済み
+
+VARSET LOCAL
+VARSET LOCALS
+VARSET 表示用リスト_未クリア
+VARSET 表示用リスト_クリア済み
+VARSET 表示用リスト_ランダムD
+VARSET レベルソート_未クリア
+VARSET レベルソート_クリア済み
+VARSET レベルソート_ランダムD
+
+表示候補数 = ENUMFUNCBEGINSWITH("ダンジョン初期処理_")
+
+DRAWLINE
+PRINTL 请选择要攻克的迷宫。
+DRAWLINE
+
+
+VARSET LOCAL
+FOR LOCAL, 0, 表示候補数
+	ダンジョン名保存 = %SUBSTRING(RESULTS:LOCAL, 19)%
+	IF GETVAR(@"ダンジョン出現フラグ_%ダンジョン名保存%")
+		IF GETVAR(@"ダンジョンクリアフラグ_%ダンジョン名保存%") == 1
+			ランダムダンジョンフラグ = 0
+			CALLFORM ダンジョン解説文_%ダンジョン名保存%
+			IF ランダムダンジョンフラグ
+				;降順ソートするためマイナス数値
+				レベルソート_ランダムD:(LOCAL:3) = RESULT * -1
+				表示用リスト_ランダムD:(LOCAL:3) = %ダンジョン名保存%
+				LOCAL:3 += 1
+			ELSE
+				;降順ソートするためマイナス数値
+				レベルソート_クリア済み:(LOCAL:2) = RESULT * -1
+				表示用リスト_クリア済み:(LOCAL:2) = %ダンジョン名保存%
+				LOCAL:2 += 1
+			ENDIF
+		ELSE
+			表示用リスト_未クリア:(LOCAL:1) = %ダンジョン名保存%
+			CALLFORM ダンジョン解説文_%ダンジョン名保存%
+			;降順ソートするためマイナス数値
+			レベルソート_未クリア:(LOCAL:1) = RESULT * -1
+			LOCAL:1 += 1
+		ENDIF
+	ENDIF
+NEXT
+
+;推奨レベルでソート
+ARRAYMSORT レベルソート_クリア済み, 表示用リスト_クリア済み
+ARRAYMSORT レベルソート_未クリア, 表示用リスト_未クリア
+ARRAYMSORT レベルソート_ランダムD, 表示用リスト_ランダムD
+
+VARSET LOCAL
+VARSET LOCALS
+未クリアリスト表示文 = 
+クリア済みリスト表示文 = 
+ランダムDリスト表示文 = 
+FOR LOCAL, 0, 表示候補数
+	IF 表示用リスト_未クリア:LOCAL == ""
+		BREAK
+	ENDIF
+	CALLFORM ダンジョン解説文_%表示用リスト_未クリア:LOCAL%
+	未クリアリスト表示文 += @"<button value='{LOCAL}'>[{LOCAL}]%表示用リスト_未クリア:LOCAL, 34, LEFT%</button>推荐等级：{RESULT, 3}<br>"
+NEXT
+
+FOR LOCAL, 0, 表示候補数
+	IF 表示用リスト_クリア済み:LOCAL == ""
+		BREAK
+	ENDIF
+	CALLFORM ダンジョン解説文_%表示用リスト_クリア済み:LOCAL%
+	LOCALS:2 = <button value='{LOCAL + 50}'>[{LOCAL + 50}]%表示用リスト_クリア済み:LOCAL, 34, LEFT%</button>推荐等级：{RESULT, 3}<br>
+	クリア済みリスト表示文 += @"%LOCALS:2%"
+NEXT
+
+FOR LOCAL, 0, 表示候補数
+	IF 表示用リスト_ランダムD:LOCAL == ""
+		BREAK
+	ENDIF
+	CALLFORM ダンジョン解説文_%表示用リスト_ランダムD:LOCAL%
+	LOCALS:2 = <button value='{LOCAL + 150}'>[{LOCAL + 150}]%表示用リスト_ランダムD:LOCAL, 34, LEFT%</button>推荐等级：{RESULT, 3}<br>
+	ランダムDリスト表示文 += @"%LOCALS:2%"
+NEXT
+
+LOCALS = <div rect='81,31,2875,1812' border='31' bcolor='#C0C0C0'></div>
+LOCALS += "<div rect='3000,31,2875,2812' border='31' bcolor='#C0C0C0'></div>"
+LOCALS += "<div rect='81,1881,2875,950' border='31' bcolor='#C0C0C0'></div>"
+LOCALS += "<div width='950' height='125' xpos='337' ypos='0' color='#101010'>未通关迷宫</div>"
+LOCALS += "<div width='950' height='125' xpos='3256' ypos='0' color='#101010'>已通关迷宫</div>"
+LOCALS += "<div width='950' height='125' xpos='337' ypos='1850' color='#101010'>随机迷宫</div>"
+LOCALS += @"<div rect='156,156,2875,1812'>%未クリアリスト表示文%</div>"
+LOCALS += @"<div rect='3075,156,2875,2812'>%クリア済みリスト表示文%</div>"
+LOCALS += @"<div rect='156,1975,2875,950'>%ランダムDリスト表示文%</div>"
+HTML_PRINT LOCALS
+
+FOR LOCAL, 0, 25
+	PRINTL
+NEXT
+PRINTBUTTON "[999]返回", 999
+PRINTL
+$INPUT_LOOP
+BINPUT
+
+LOCAL = RESULT
+SELECTCASE LOCAL
+	CASE IS < 50
+		TRYCCALLFORM ダンジョン突入時特殊処理_%表示用リスト_未クリア:LOCAL%
+			SIF RESULT == -1
+				RESTART
+		CATCH
+			CALLFORM ダンジョン解説文_%表示用リスト_未クリア:LOCAL%
+			PRINTFORML ■%表示用リスト_未クリア:LOCAL%　　推荐等级：{RESULT,3}
+			PRINTL
+			HTML_PRINT 詳細文文字列受け渡し変数
+			PRINTL
+			PRINTL 是否进入该迷宫？
+			PRINTBUTTONLC "[0] 确定", 0
+			PRINTBUTTONLC "[1] 取消", 1
+			PRINTL
+			BINPUT
+			IF RESULT == 0
+				ランダムダンジョン中加護 = 
+				CALL DUNGEON_MAIN_LOOP(表示用リスト_未クリア:LOCAL)
+			ELSE
+				RESTART
+			ENDIF
+		ENDCATCH
+	CASE IS < 150
+		TRYCCALLFORM ダンジョン突入時特殊処理_%表示用リスト_クリア済み:(LOCAL - 50)%
+			SIF RESULT == -1
+				RESTART
+		CATCH
+			CALLFORM ダンジョン解説文_%表示用リスト_クリア済み:(LOCAL - 50)%
+			PRINTFORML ■%表示用リスト_クリア済み:(LOCAL - 50)%　　推荐等级：{RESULT,3}
+			PRINTL
+			HTML_PRINT 詳細文文字列受け渡し変数
+			PRINTL
+			PRINTL 是否进入该迷宫？
+			PRINTBUTTONLC "[0] 确定", 0
+			PRINTBUTTONLC "[1] 取消", 1
+			PRINTL
+			BINPUT
+			IF RESULT == 0
+				CALL DUNGEON_MAIN_LOOP(表示用リスト_クリア済み:(LOCAL - 50))
+			ELSE
+				RESTART
+			ENDIF
+		ENDCATCH
+	CASE IS < 200
+		TRYCCALLFORM ダンジョン突入時特殊処理_%表示用リスト_ランダムD:(LOCAL - 150)%
+			SIF RESULT == -1
+				RESTART
+		CATCH
+			CALLFORM ダンジョン解説文_%表示用リスト_ランダムD:(LOCAL - 150)%
+			PRINTFORML ■%表示用リスト_ランダムD:(LOCAL - 150)%　　推荐等级：{RESULT,3}
+			PRINTL
+			HTML_PRINT 詳細文文字列受け渡し変数
+			PRINTL
+			PRINTL 是否进入该迷宫？
+			PRINTBUTTONLC "[0] 确定", 0
+			PRINTBUTTONLC "[1] 取消", 1
+			PRINTL
+			BINPUT
+			IF RESULT == 0
+				CALL DUNGEON_MAIN_LOOP(表示用リスト_ランダムD:(LOCAL - 150))
+			ELSE
+				RESTART
+			ENDIF
+		ENDCATCH
+	CASE 999
+		ページ数_未クリア = 0
+		ページ数_クリア済み = 0
+		RETURN -1
+ENDSELECT
+
+

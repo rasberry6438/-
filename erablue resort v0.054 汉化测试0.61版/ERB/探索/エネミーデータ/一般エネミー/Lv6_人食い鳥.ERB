@@ -1,0 +1,85 @@
+﻿
+@敵BATTLE_STATE_Lv6_食人鸟(ARG)
+敵BATTLE_STATE:ARG:Lv = 6
+敵BATTLE_STATE:ARG:最大ＨＰ = 360
+敵BATTLE_STATE:ARG:ＨＰ = 360
+敵BATTLE_STATE:ARG:攻撃力 = 320
+敵BATTLE_STATE:ARG:防御力 = 270
+敵BATTLE_STATE:ARG:回復力 = 0
+敵BATTLE_STATE:ARG:行動速度 = 330
+敵BATTLE_STATE:ARG:DA率 = 10
+敵BATTLE_STATE:ARG:TA率 = 10
+敵BATTLE_STATE:ARG:命中率 = 95
+敵BATTLE_STATE:ARG:回避率 = 5
+敵BATTLE_STATE:ARG:属性 = 2
+敵BATTLE_STATE:ARG:所持EXP = 28
+敵BATTLE_STATE:ARG:所持ルピ = 34
+敵BATTLE_STATE:ARG:最大チャージターン = 3
+
+敵BATTLE_STATE_STR:ARG:種族 = 動物_鳥類
+
+@敵討伐後処理_Lv6_食人鸟(隊列番号)
+#DIM 隊列番号
+#DIM ドロップ確率
+#DIMS ドロップアイテム
+#DIM データベース行数
+#DIM トレハンLv
+
+トレハンLv = 0
+データベース行数 = デバフ番号取得("ドロップ率UP")
+SIF データベース行数 > -1
+	トレハンLv = DT_CELL_GET("戦闘効果データベース", データベース行数, "効果量_固定値")
+
+
+ドロップ確率 = 15 + トレハンLv * 5
+ドロップアイテム = 普通禽肉
+CALL ドロップ判定処理(ドロップ確率, ドロップアイテム)
+
+ドロップ確率 = 15 + トレハンLv * 5
+ドロップアイテム = 鸟蛋
+CALL ドロップ判定処理(ドロップ確率, ドロップアイテム)
+
+ドロップ確率 = 10 + トレハンLv * 5
+ドロップアイテム = 柔软的羽毛
+CALL ドロップ判定処理(ドロップ確率, ドロップアイテム)
+
+@敵チャージ行動_Lv6_食人鸟
+;仲間を呼ぶ処理はとりあえずテンプレート化せず直接記述
+#DIM 追加完了フラグ
+#DIMS 追加エネミー名, 2
+
+CALL 口上変数初期化
+KSTR:(K++) = %敵BATTLE_STATE_STR:(戦闘行動キャラ - 10):エネミー名%开始召唤同伴！
+CALL メッセージ欄表示用関数()
+
+追加完了フラグ = 0
+VARSET 追加エネミー名, ""
+;空いてる枠判定
+FOR LOCAL, 0, 10
+	IF 敵BATTLE_STATE:LOCAL:ボスフラグ
+		LOCAL += 3
+		CONTINUE
+	ENDIF
+	IF 敵BATTLE_STATE_STR:LOCAL:エネミー名 == ""
+		敵BATTLE_STATE_STR:LOCAL:エネミー名 = Lv4_食人鸟
+		敵BATTLE_STATE:LOCAL:ランダムエネミーフラグ = 敵BATTLE_STATE:(戦闘行動キャラ - 10):ランダムエネミーフラグ
+		CALL エネミー初期化処理(LOCAL)
+		敵BATTLE_STATE:LOCAL:行動済みフラグ = 1
+		追加エネミー名:(追加完了フラグ++) '= 敵BATTLE_STATE_STR:LOCAL:エネミー名
+		SIF 追加完了フラグ >= 2
+			BREAK
+	ENDIF
+NEXT
+
+IF 追加完了フラグ == 2
+	WSTR:(K++) = %追加エネミー名:0%即将出现！
+	WSTR:(K++) = %追加エネミー名:1%即将出现！
+ELSEIF 追加完了フラグ == 1
+	WSTR:(K++) = %追加エネミー名:0%即将出现！
+ELSE
+	WSTR:(K++) = 然而没有响应……
+ENDIF
+
+;エネミー画像を発生させるために再描画
+CALL 探索用顔グラフィック生成
+CALL 画面再描画

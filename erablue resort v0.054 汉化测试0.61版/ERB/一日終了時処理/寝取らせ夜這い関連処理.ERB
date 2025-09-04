@@ -1,0 +1,840 @@
+﻿@寝取らせ夜這い判定()
+#DIM ピックアップ配列, 5000
+#DIM 島内配列, 5000
+#DIM 主導キャラ配列, 5000
+#DIM 主導キャラ
+#DIM 候補カップリング配列, 5000, 2
+#DIM 候補数
+#DIM RAND値
+#DIM ピックアップ数
+#DIM カップリングキャラ１
+#DIM カップリングキャラ２
+#DIMS カップリング関係性
+#DIM DT_ID
+#DIM 選択結果
+#DIM 対象キャラ
+#DIM L_CNT
+
+SIF OPTION変数:夜這い全部禁止
+	RETURN 0
+
+;気になってどういうものか見に来たあなたに向けて簡単な仕様説明
+;
+;・性癖開拓システムでリゾート客(仮にＡとする)にエロ本を押し付けてＡの脳を破壊し、性癖素質[寝取られ(興味)]を与えます。
+;・縁結びシステムを使って、Ａと他のキャラ(仮にＢとする)をくっつけます。関係性は恋慕でもセフレでもＯＫ。
+;・あなたとＡの「信頼度」を、一定以上にします。その際あなたが「遊び人」として極まってきているなら、このボーダーはちょっとだけ下がります。Ａが「従業員」であるなら、このボーダーは劇的に下がります。
+;上記のみっつの条件を、すべて満たせば準備完了！(別にＡもＢも両方寝取られ性癖持ってても大丈夫だよ！)
+;
+;「ＡとＢがどちらも島にいる」状態で、あなたが「自室」で「就寝」する際、「他に同衾するキャラがいなければ(一人寝であるなら)」確率でイベントが発生。
+;一日の終わりに、度し難い性癖に脳を破壊されたＡがあなたの部屋を訪ねてきて、「Ｂを抱いてくれ」とお願いされます。性癖名は「寝取られ」だけど、Ａがやる実際のプレイは「寝取らせ」が正しいわけですな。
+;いやぁ、頼まれちゃったからなぁ～！しょうがないなぁ～～～！！ほな、いただきま～～～っす！！
+;
+;毎日来られても困るし特別感もないので、発生確率は低め。「こんなもんかな～」で適当に決めてるので、低すぎる！と思ったら本スレとかDiscordで教えてください。調整します。
+;実際問題、発生に一人寝を要求すること自体がプレイに対する一つの縛りになっちゃってるから、もうちょい高くてもいいかもな～とは書いた本人も思ってます。
+;抽出処理とタイミングの関係で、条件を満たしたカップルが増えるほどに発生確率は平均化されちゃうし、狙った組み合わせも出づらくなるし。
+;あなたの「遊び人」が５とかだと確率がちょっと上がる。理由は確率処理んとこに書いた。
+;
+;さいごに
+;エロ本ばら撒きには要注意。みんながみんな性癖持ちだと、「男あなたにグラン(♂)を差し出してくるジータ(寝取られ性癖持ち)」とかそういう事故が起きます。
+;まぁ、意図して除外処理しなかったんですけども。だ、だってそういう需要もあるかもだし……。
+
+;補正値の減衰
+;・毎日減衰させたいので各種判定前に実行
+FOR 対象キャラ, 1, CHARANUM
+	; 1日ごとに補正が10％づつ増加(上限0％)
+	SIF 寝取らせ_発生率補正:対象キャラ:0
+		寝取らせ_発生率補正:対象キャラ:0 = MIN(寝取らせ_発生率補正:対象キャラ:0 + 10, 0)
+NEXT
+
+;あなたが自室に居ない場合はダメ
+SIF CFLAG:PLAYER:現在位置 != CFLAG:PLAYER:自室位置
+	RETURN 0
+SIF CFLAG:PLAYER:現在マップ種別 != 0
+	RETURN 0
+
+;同衾キャラが居る場合はダメ
+SIF TARGET:1 > 0
+	RETURN 0
+SIF FLAG:挿入睡眠相手記録 > 0
+	RETURN 0
+
+VARSET ピックアップ配列
+;恋慕の組み合わせピックアップ処理
+;まず恋慕orセフレで、組み合わせにあなたが入っていないカップリングを割り出す
+ピックアップ数 = DT_SELECT("関係性データベース", @"対象キャラ１ <> {CFLAG:MASTER:人物番号} And 対象キャラ２ <> {CFLAG:MASTER:人物番号} And (関係性種別 = '恋慕' Or 関係性種別 = 'セフレ')", ,ピックアップ配列)
+;この命令でピックアップ数には「該当するカップリングの数」が
+;ピックアップ配列には「該当するデータベースID」が順番に入っている
+
+;例外フォロー忘れずに
+SIF ピックアップ数 < 1
+	RETURN 0
+
+;組み合わせが島内にいるかどうかを見る
+VARSET 島内配列
+VARSET 主導キャラ配列
+候補数 = 0
+FOR L_CNT, 0, ピックアップ数
+	DT_ID = ピックアップ配列:L_CNT
+	カップリングキャラ１ = FIND_CHARA_FROM_PERSON_ID(DT_CELL_GET("関係性データベース", DT_ID, "対象キャラ１", 1))
+	カップリングキャラ２ = FIND_CHARA_FROM_PERSON_ID(DT_CELL_GET("関係性データベース", DT_ID, "対象キャラ２", 1))
+
+	;どちらかが滞在していない場合はダメ
+	SIF CFLAG:カップリングキャラ１:滞在期間 < 1
+		CONTINUE
+	SIF CFLAG:カップリングキャラ２:滞在期間 < 1
+		CONTINUE
+
+	;どちらかが寝取られ素質を持っているならOK
+	SIF 性癖素質:カップリングキャラ１:寝取られ <= 0 && 性癖素質:カップリングキャラ２:寝取られ <= 0
+		CONTINUE
+
+	;- 主導/献上品が関係ない判定
+	SIF !寝取らせ夜這い判定_キャラ状態判定(カップリングキャラ１) || !寝取らせ夜這い判定_キャラ状態判定(カップリングキャラ２)
+		CONTINUE
+	
+	SIF !寝取らせ夜這い判定_身体条件判定(カップリングキャラ１) || !寝取らせ夜這い判定_身体条件判定(カップリングキャラ２)
+		CONTINUE
+
+	;1カップリングごとに主導キャラを入れ替えて2回判定する
+	FOR 主導キャラ, 1, 2 + 1
+		IF 主導キャラ == 1
+			寝取らせ_主導キャラ   = カップリングキャラ１
+			寝取らせ_献上品キャラ = カップリングキャラ２
+		ELSE
+			寝取らせ_主導キャラ   = カップリングキャラ２
+			寝取らせ_献上品キャラ = カップリングキャラ１
+		ENDIF
+		;主導側が寝取られ素質を持っていない場合はダメ
+		SIF 性癖素質:寝取らせ_主導キャラ:寝取られ <= 0
+			CONTINUE
+		;献上品側があなたと同性で同性愛を持っていない場合はダメ
+		SIF 同性愛性癖判定(寝取らせ_献上品キャラ, PLAYER) && 性癖素質:寝取らせ_献上品キャラ:同性愛 < 1
+			CONTINUE
+		;主導側の信頼度が足りない場合はダメ
+		SIF !寝取らせ夜這い判定_信頼度判定(寝取らせ_主導キャラ)
+			CONTINUE
+		;主導側の確率判定
+		SIF !寝取らせ夜這い判定_確率判定(寝取らせ_主導キャラ)
+			CONTINUE
+		;候補に登録
+		候補カップリング配列:候補数:0 = DT_ID
+		候補カップリング配列:候補数:1 = 主導キャラ
+		候補数 ++
+	NEXT
+NEXT
+
+;例外フォロー忘れずに
+SIF 候補数 < 1
+	RETURN 0
+
+;イベント本文
+DRAWLINE
+PRINTL
+PRINTFORMW ──深夜，%CALLNAME:PLAYER%的房门被敲响
+PRINTL
+PRINTFORML 这个时间会是谁呢……
+PRINTFORM 当%CALLNAME:PLAYER%打开门迎接不速之客时，
+IF 候補数 < 寝取らせ_対象選択化しきい値
+	; 候補が少ないときは1組だけ選出
+	RAND値 = RAND:候補数
+	DT_ID      = 候補カップリング配列:RAND値:0
+	主導キャラ = 候補カップリング配列:RAND値:1
+
+	;該当のIDから対象キャラを持ってきてキャラ番号を取る
+	カップリングキャラ１ = FIND_CHARA_FROM_PERSON_ID(DT_CELL_GET("関係性データベース", DT_ID, "対象キャラ１", 1))
+	カップリングキャラ２ = FIND_CHARA_FROM_PERSON_ID(DT_CELL_GET("関係性データベース", DT_ID, "対象キャラ２", 1))
+	カップリング関係性  '= DT_CELL_GETS("関係性データベース", DT_ID, "関係性種別", 1)
+
+	;寝取らせの主導側と差し出される側を決める
+	IF 主導キャラ == 1
+		寝取らせ_主導キャラ   = カップリングキャラ１
+		寝取らせ_献上品キャラ = カップリングキャラ２
+	ELSE
+		寝取らせ_主導キャラ   = カップリングキャラ２
+		寝取らせ_献上品キャラ = カップリングキャラ１
+	ENDIF
+	PRINTFORML 映入眼帘的是%CALLNAME:寝取らせ_主導キャラ%与%CALLNAME:寝取らせ_献上品キャラ%的身影
+ELSE
+	; 候補が多いときは複数選出してそこから選択
+	PRINTFORML 那里是…
+	; シャッフル
+	FOR L_CNT, 0, 候補数
+		RAND値 = RAND:候補数
+		SWAP 候補カップリング配列:L_CNT:0, 候補カップリング配列:RAND値:0
+		SWAP 候補カップリング配列:L_CNT:1, 候補カップリング配列:RAND値:1
+	NEXT
+	; シャッフルしたリストから表示人数分だけ表示
+	FOR L_CNT, 0, MIN(候補数, 寝取らせ_選択表示人数)
+		DT_ID      = 候補カップリング配列:L_CNT:0
+		主導キャラ = 候補カップリング配列:L_CNT:1
+
+		;該当のIDから対象キャラを持ってきてキャラ番号を取る
+		カップリングキャラ１ = FIND_CHARA_FROM_PERSON_ID(DT_CELL_GET("関係性データベース", DT_ID, "対象キャラ１", 1))
+		カップリングキャラ２ = FIND_CHARA_FROM_PERSON_ID(DT_CELL_GET("関係性データベース", DT_ID, "対象キャラ２", 1))
+		カップリング関係性  '= DT_CELL_GETS("関係性データベース", DT_ID, "関係性種別", 1)
+		IF 主導キャラ == 1
+			寝取らせ_主導キャラ   = カップリングキャラ１
+			寝取らせ_献上品キャラ = カップリングキャラ２
+		ELSE
+			寝取らせ_主導キャラ   = カップリングキャラ２
+			寝取らせ_献上品キャラ = カップリングキャラ１
+		ENDIF
+		PRINTS "　"
+		PRINTBUTTON @"[{L_CNT, 2}]%CALLNAME:寝取らせ_主導キャラ%与%CALLNAME:寝取らせ_献上品キャラ%的身影", L_CNT
+		PRINTL
+	NEXT
+	PRINTS "　"
+	PRINTBUTTON "[-1]空无一人", -1
+	PRINTL
+	BINPUT
+	選択結果 = RESULT
+	IF 選択結果 == -1
+		; キャンセル
+		PRINTL
+		PRINTFORML …门外空无一人。看来是幻听了
+		PRINTFORMW %CALLNAME:PLAYER%关上门回到房间
+		PRINTL
+		RETURN 1
+	ENDIF
+	; 選択したカップリングの情報を取得
+	DT_ID      = 候補カップリング配列:選択結果:0
+	主導キャラ = 候補カップリング配列:選択結果:1
+	カップリングキャラ１ = FIND_CHARA_FROM_PERSON_ID(DT_CELL_GET("関係性データベース", DT_ID, "対象キャラ１", 1))
+	カップリングキャラ２ = FIND_CHARA_FROM_PERSON_ID(DT_CELL_GET("関係性データベース", DT_ID, "対象キャラ２", 1))
+	カップリング関係性  '= DT_CELL_GETS("関係性データベース", DT_ID, "関係性種別", 1)
+	IF 主導キャラ == 1
+		寝取らせ_主導キャラ   = カップリングキャラ１
+		寝取らせ_献上品キャラ = カップリングキャラ２
+	ELSE
+		寝取らせ_主導キャラ   = カップリングキャラ２
+		寝取らせ_献上品キャラ = カップリングキャラ１
+	ENDIF
+	PRINTL
+ENDIF
+PRINTL 
+
+RESULT = 0
+TRYCALLFORM KOJO_EVENT_寝取らせ夜這い_訪問_{NO:寝取らせ_主導キャラ}(寝取らせ_主導キャラ, 寝取らせ_献上品キャラ)
+SIF RESULT > 0
+	GOTO 訪問ラベル
+
+PRINTFORM 黑暗的走廊中，%CALLNAME:寝取らせ_主導キャラ%充满欲望的瞳孔如星火般灼灼发亮
+;訪問キャラふたりの間では事前に話がついているので、これからの事に対する反応
+IF EXP:寝取らせ_献上品キャラ:貸出経験 >= 3
+	PRINTFORMW 随行的%CALLNAME:寝取らせ_献上品キャラ%也面泛潮红，对即将体验的背德快感充满期待
+ELSEIF TALENT:寝取らせ_献上品キャラ:処女 && GETBIT(TALENT:寝取らせ_献上品キャラ:性別, 0)
+	PRINTFORMW 与之形成对比，随行的%CALLNAME:寝取らせ_献上品キャラ%满脸不安与恐惧
+ELSEIF TALENT:寝取らせ_献上品キャラ:羞恥心 == 1 || TALENT:寝取らせ_献上品キャラ:貞操 == 1
+	PRINTFORMW 随行的%CALLNAME:寝取らせ_献上品キャラ%正羞赧地垂首而立
+ELSEIF TALENT:寝取らせ_献上品キャラ:経験豊富
+	PRINTFORMW 随行的%CALLNAME:寝取らせ_献上品キャラ%也浮现出妖艳的笑容
+ELSE
+	PRINTFORMW 与之形成对比，随行的%CALLNAME:寝取らせ_献上品キャラ%却低头踌躇不知所措
+ENDIF
+PRINTL
+PRINTFORML 无论来意为何，总不好在门口交谈
+PRINTFORMW %CALLNAME:PLAYER%将两人请入房中……
+PRINTL
+PRINTFORML ────────
+PRINTW
+PRINTFORM ……兴奋的%CALLNAME:寝取らせ_主導キャラ%所求之事，无非是希望%CALLNAME:PLAYER%
+IF EXP:寝取らせ_主導キャラ:寝取られ経験 >= 5
+	PRINTFORM 像往常那样
+ELSEIF EXP:寝取らせ_主導キャラ:寝取られ経験 >= 2
+	PRINTFORM 像上次那样
+ENDIF
+PRINTFORMW 与%CALLNAME:寝取らせ_献上品キャラ%%TEXTR("上床/做爱")%
+PRINTL
+PRINTFORML 看来两人在来到%CALLNAME:PLAYER%的房间之前已达成某种协议
+;寝取られ中毒彼氏クンの手によって、セクシーランジェリーで飾りたてられているかもしれない？
+IF 知識素質:寝取らせ_主導キャラ:性知識 > 1 && 性癖素質:寝取らせ_主導キャラ:寝取られ == 3
+		SIF CSTR:寝取らせ_献上品キャラ:コスプレ前の服 == "" && CSTR:寝取らせ_献上品キャラ:表示グラフィックカテゴリ != ""
+			CSTR:寝取らせ_献上品キャラ:コスプレ前の服 '= CSTR:寝取らせ_献上品キャラ:表示グラフィックカテゴリ
+	LOCALS '= CSTR:寝取らせ_献上品キャラ:脱ぐ前の服
+	CALL CLOTHES_CHANGE(寝取らせ_献上品キャラ, "性感内衣")
+	CSTR:寝取らせ_献上品キャラ:脱ぐ前の服 '= LOCALS
+	PRINTFORMW 为煽动%CALLNAME:PLAYER%的欲望，%CALLNAME:寝取らせ_主導キャラ%甚至让%CALLNAME:寝取らせ_献上品キャラ%穿上了挑逗内衣……
+ENDIF
+PRINTL
+IF EXP:寝取らせ_献上品キャラ:貸出経験 >= 1
+	IF EXP:寝取らせ_献上品キャラ:貸出経験 <= 2
+		;「今回が三回目」まで
+		PRINTFORM 当%CALLNAME:PLAYER%低语「请多指教」时
+		IF TALENT:寝取らせ_献上品キャラ:経験豊富
+			PRINTFORML %CALLNAME:寝取らせ_献上品キャラ%回以妩媚微笑
+		ELSE
+			PRINTFORML 想起了之前的事情的%CALLNAME:寝取らせ_献上品キャラ%面泛红潮垂首应允
+		ENDIF
+	ELSEIF ABL:寝取らせ_献上品キャラ:マゾ性感 >= 2
+		PRINTFORML 当%CALLNAME:PLAYER%%TEXTR("宣告/居高临下宣告/边宣告边粗暴揉捏胸脯")%「有什么要说的吗」时，认清立场的%CALLNAME:寝取らせ_献上品キャラ%%TEXTR("战栗/恍然")%着浑身颤抖
+		IF ABL:寝取らせ_献上品キャラ:マゾ性感 >= 3
+			IF 知識素質:寝取らせ_献上品キャラ:高貴
+				;全裸土下座はこのあとの服の扱いが大変なのでパス。いや「全裸土下座フラグが1なら全裸スタート」とかできなくはないだろうけども……
+				;手の甲へのキスは「敬愛」「忠誠」、足の甲へのキスは「服従」の意味を持つ。高貴だから詳しいんだ！
+				PRINTFORM %TEXTR("优雅地行五体投地礼/将额头紧贴地面行大礼/单膝跪地轻吻手背/俯身亲吻足背")%
+			ELSE
+				;「深々と頭を下げる」は微妙に状況にそぐわない気がしたので、とりあえず男だけで
+				;土下座は……高貴ゆえに美しい土下座ができる方々と比べるとなんかこう、格が落ちるというか、下位互換的な被りかたっていうか……
+				IF TEQUIP:スカートめくり可 == 1
+					PRINTFORM 边掀起裙摆，
+				ELSEIF TALENT:寝取らせ_献上品キャラ:性別 == 1
+					PRINTFORM 引导%CALLNAME:PLAYER%的手揉捏自己胸部，
+				ELSE
+					PRINTFORM 深深鞠躬，
+				ENDIF
+			ENDIF
+			IF RISKY_DAY(寝取らせ_献上品キャラ) >= 1 && GETBIT(TALENT:PLAYER:性別, 1)
+				PRINTFORM 「今天是危险期，请%TEXTR("赐予我生命的种子/让我怀上您的孩子/让我怀上您的宝宝/赐予我您的精液")%
+				CALL PRINT_STR("……_H_」")
+				PRINTFORMW 如此祈求着
+			ELSE
+				;できるだけ男女兼用できる文面に
+				SELECTCASE RAND:4
+				CASE 0
+					PRINTFORM 「请再次教导我与%CALLNAME:寝取らせ_主導キャラ%不同的『真正的性爱』
+				CASEELSE
+					PRINTFORM 「今晚请%TEXTR("好好调教我/多多疼爱我/与我尽情『玩乐』/让我欲仙欲死")%
+				ENDSELECT
+				CALL PRINT_STR("……_H_」")
+				PRINTFORMW 如此恳求着
+			ENDIF
+		ELSE
+			;「深々と頭を下げる」は微妙に状況にそぐわない気がしたので、とりあえず男だけで
+			;土下座は……高貴ゆえに美しい土下座ができる方々と比べるとなんかこう、格が落ちるというか、下位互換的な被りかたっていうか……
+			IF TEQUIP:スカートめくり可 == 1
+				PRINTFORM 边掀起裙摆，
+			ELSEIF TALENT:寝取らせ_献上品キャラ:性別 == 1
+				PRINTFORM 引导%CALLNAME:PLAYER%的手揉捏自己胸部，
+			ELSE
+				PRINTFORM 深深鞠躬，
+			ENDIF
+			IF TALENT:寝取らせ_献上品キャラ:プライド == 1
+				PRINTFORM 用饱含屈辱的颤抖声线
+			ELSEIF TALENT:寝取らせ_献上品キャラ:羞恥心 == 1 || TALENT:寝取らせ_献上品キャラ:貞操 == 1 || TALENT:寝取らせ_献上品キャラ:陽気／陰気 == -1
+				PRINTFORM 用迟疑颤抖的声线
+			ENDIF
+			;マゾ性感3の時よりも語彙と丁寧さを落とした感じ
+			;できるだけ男女兼用できる文面に
+			PRINTFORM 「今晚请%TEXTR("好好调教我/多多疼爱我/让我欲仙欲死")%
+			CALL PRINT_STR("……_H_」")
+			PRINTFORMW 如此恳求着
+		ENDIF
+	ELSE
+	;マゾ性感１以下かつ４回目以降。慣れで雑な扱いされてもよくなってしまう態度の変化
+		PRINTFORM %CALLNAME:PLAYER%%TEXTR("以揉胸代替问候/以揉臀代替问候/以掐乳头代替问候/以拉扯乳首代替问候/揽住肩膀/搂住纤腰/搭肩揉胸/强吻代替问候")%
+		PRINTFORMW %CALLNAME:寝取らせ_献上品キャラ%发出甜腻喘息，这般景象令%CALLNAME:寝取らせ_主導キャラ%不禁咽下口水
+	ENDIF
+ELSE
+	;はじめて「貸し出される」場合
+	PRINTFORM 当%CALLNAME:PLAYER%询问「真的可以吗」时
+	IF TALENT:寝取らせ_献上品キャラ:処女 || TALENT:寝取らせ_献上品キャラ:陽気／陰気 == -1 && GETBIT(TALENT:寝取らせ_献上品キャラ:性別, 0)
+		PRINTFORMW ，%CALLNAME:寝取らせ_献上品キャラ%声音发颤却坚定点头：「都是为了%CALLNAME:寝取らせ_主導キャラ%」
+	ELSEIF TALENT:寝取らせ_献上品キャラ:羞恥心 == 1 || TALENT:寝取らせ_献上品キャラ:貞操 == 1
+		PRINTFORMW ，%CALLNAME:寝取らせ_献上品キャラ%垂首低语：「都是为了%CALLNAME:寝取らせ_主導キャラ%」
+	ELSEIF TALENT:寝取らせ_献上品キャラ:経験豊富
+		PRINTFORMW ，%CALLNAME:寝取らせ_献上品キャラ%将胸部贴向%CALLNAME:PLAYER%手臂：「都是%CALLNAME:寝取らせ_主導キャラ%的挫」并向%CALLNAME:寝取らせ_主導キャラ%抛去媚眼
+	ELSEIF TALENT:寝取らせ_献上品キャラ:プライド == 1
+		PRINTFORMW ，%CALLNAME:寝取らせ_献上品キャラ%因被%CALLNAME:寝取らせ_主導キャラ%当作贡品送给%CALLNAME:PLAYER%的屈辱而面容扭曲，勉强点头同意
+	ELSE
+		PRINTFORMW ，%CALLNAME:寝取らせ_献上品キャラ%强装镇定挤出笑容：「都是为了%CALLNAME:寝取らせ_主導キャラ%」
+	ENDIF
+ENDIF
+$訪問ラベル
+PRINTL 
+PRINTFORML ────那么，该怎么办呢？
+DRAWLINE
+PRINTBUTTON "[0] 接受", 0
+PRINTL
+PRINTBUTTON "[1] 拒绝", 1
+PRINTL
+PRINTL
+PRINTBUTTON "[100] 关于选项说明", 100
+
+BINPUT
+;口上用に選択肢を記録
+RFLAG:コマンド結果受渡し変数２ = RESULT
+選択結果 = RESULT
+SELECTCASE 選択結果
+	CASE 0
+		RESULT = 0
+		TRYCALLFORM KOJO_EVENT_寝取らせ夜這い_受諾_{NO:寝取らせ_主導キャラ}(寝取らせ_主導キャラ, 寝取らせ_献上品キャラ)
+		SIF RESULT != 0
+			GOTO 寝取らせ夜這い受諾_テキスト表示スキップ
+		
+		;貸出回数で分岐
+		IF EXP:寝取らせ_献上品キャラ:貸出経験 >= 1
+			PRINTFORML 既然是%CALLNAME:寝取らせ_主導キャラ%精心准备的盛宴，自然没有拒绝的理由
+			PRINTL 
+			PRINTFORML 回味着之前%TEXTR("充分/彻底")%%TEXTR("品尝/享用/享受")%%CALLNAME:寝取らせ_献上品キャラ%的体验，%CALLNAME:PLAYER%向%CALLNAME:寝取らせ_献上品キャラ%伸出了手……
+		ELSE
+			PRINTFORML 既是%CALLNAME:寝取らせ_主導キャラ%的郑重请求，在双方合意的前提下无需任何顾虑
+			PRINTL 
+			PRINTFORML ……况且%CALLNAME:寝取らせ_献上品キャラ%与%CALLNAME:寝取らせ_主導キャラ%能发展至此等关系，全赖%CALLNAME:PLAYER%的牵线搭桥
+			PRINTFORMW 此刻%CALLNAME:PLAYER%收取这份「正当报酬」亦是理所当然
+			PRINTL 
+			PRINTFORML ──只需尽情享受，任由欲望驱使
+			PRINTFORMW %CALLNAME:PLAYER%注视着被异常性癖腐蚀的%CALLNAME:寝取らせ_献上品キャラ%，暗自冷笑着将%CALLNAME:寝取らせ_献上品キャラ%揽入怀中……
+		ENDIF
+		;関係性で分岐
+		IF カップリング関係性 != "セフレ"
+		;なんかあなたとの関係性も参照されちゃったっぽくて恋慕じゃ発生しなかったので
+			PRINTL 
+			;ふたりの関係が恋慕で、差し出される側が浮気を持っていない場合。必然、献上品にとってはこれが初めての貸出になるはず
+			IF TALENT:寝取らせ_献上品キャラ:浮気 == 0
+				IF TALENT:寝取らせ_献上品キャラ:処女 && GETBIT(TALENT:寝取らせ_献上品キャラ:性別, 0)
+					PRINTFORM 尚未将处女之身献给挚爱%CALLNAME:寝取らせ_主導キャラ%的%CALLNAME:寝取らせ_献上品キャラ%，此刻却在%CALLNAME:寝取らせ_主導キャラ%注视下被迫踏入
+				ELSE
+					PRINTFORM 在挚爱%CALLNAME:寝取らせ_主導キャラ%的注视下，%CALLNAME:寝取らせ_献上品キャラ%无奈步入
+				ENDIF
+				SETCOLOR カラーパレット("えっちな色")
+				PRINT [出轨]
+				RESETCOLOR
+				PRINTFORMW 的深渊……
+			ELSE
+				PRINTL
+				PRINTFORM 在挚爱%CALLNAME:寝取らせ_主導キャラ%的注视下，%CALLNAME:寝取らせ_献上品キャラ%再次堕入
+				SETCOLOR カラーパレット("えっちな色")
+				PRINT [出轨]
+				RESETCOLOR
+				PRINTFORMW 的漩涡……
+			ENDIF
+		ENDIF
+		PRINTL 
+		PRINTFORM 为实现%CALLNAME:寝取らせ_主導キャラ%的愿望，%CALLNAME:寝取らせ_献上品キャラ%今夜将完全成为%CALLNAME:PLAYER%的
+		SETCOLOR カラーパレット("えっちな色")
+		PRINT [玩物]
+		RESETCOLOR
+		PRINTFORMW 。任何要求都将被满足……
+		PRINTL 
+		$寝取らせ夜這い受諾_テキスト表示スキップ
+		
+		RESULT = 0
+		TRYCALLFORM KOJO_EVENT_寝取らせ夜這い_履歴登録_{NO:寝取らせ_主導キャラ}(寝取らせ_主導キャラ, 寝取らせ_献上品キャラ)
+		SIF RESULT != 0
+			GOTO 寝取らせ夜這い受諾_履歴登録スキップ
+		IF カップリング関係性 != "セフレ"
+			;ふたりの関係が恋慕で、差し出される側が浮気を持っていない場合。必然、献上品にとってはこれが初めての貸出になるはず
+			IF TALENT:寝取らせ_献上品キャラ:浮気 == 0
+				IF TALENT:寝取らせ_献上品キャラ:処女 && GETBIT(TALENT:寝取らせ_献上品キャラ:性別, 0)
+					CALL 履歴データベース登録(CFLAG:MASTER:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>在%CALLNAME:寝取らせ_主導キャラ%的请求下，夺取了%CALLNAME:寝取らせ_献上品キャラ%的处女之身</font><img src='えっちハート'>","うふふ")
+					CALL 履歴データベース登録(CFLAG:寝取らせ_献上品キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>尽管还是处女，但在恋人%CALLNAME:寝取らせ_主導キャラ%的要求下，被迫[出轨]与%CALLNAME:PLAYER%发生性关系</font><img src='えっちハート'>","うふふ")
+					CALL 履歴データベース登録(CFLAG:寝取らせ_主導キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>将%CALLNAME:寝取らせ_献上品キャラ%的处女之身献给%CALLNAME:PLAYER%，被%CALLNAME:PLAYER%戴绿帽子</font><img src='えっちハート'>","うふふ")
+				ELSE
+					CALL 履歴データベース登録(CFLAG:MASTER:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>应%CALLNAME:寝取らせ_主導キャラ%的请求与%CALLNAME:寝取らせ_献上品キャラ%结合</font><img src='えっちハート'>","うふふ")
+					CALL 履歴データベース登録(CFLAG:寝取らせ_献上品キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>在恋人%CALLNAME:寝取らせ_主導キャラ%的要求下，被迫[出轨]与%CALLNAME:PLAYER%发生性关系</font><img src='えっちハート'>","うふふ")
+					CALL 履歴データベース登録(CFLAG:寝取らせ_主導キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>把恋人%CALLNAME:寝取らせ_献上品キャラ%未被自己触碰过的身体献给%CALLNAME:PLAYER%，被%CALLNAME:PLAYER%戴绿帽子</font><img src='えっちハート'>","うふふ")
+				ENDIF
+			ENDIF
+		ELSEIF EXP:寝取らせ_献上品キャラ:貸出経験 == 0
+			;はじめて貸し出される時
+			IF TALENT:寝取らせ_献上品キャラ:処女 && GETBIT(TALENT:寝取らせ_献上品キャラ:性別, 0)
+				CALL 履歴データベース登録(CFLAG:MASTER:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>在%CALLNAME:寝取らせ_主導キャラ%的请求下，夺取了%CALLNAME:寝取らせ_献上品キャラ%的处女之身</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:寝取らせ_献上品キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>尽管还是处女，但在%CALLNAME:寝取らせ_主導キャラ%的要求下，被迫与%CALLNAME:PLAYER%发生性关系</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:寝取らせ_主導キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>将%CALLNAME:寝取らせ_献上品キャラ%的处女之身献给%CALLNAME:PLAYER%，被%CALLNAME:PLAYER%戴绿帽子</font><img src='えっちハート'>","うふふ")
+			ELSE
+				CALL 履歴データベース登録(CFLAG:MASTER:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>应%CALLNAME:寝取らせ_主導キャラ%的请求与%CALLNAME:寝取らせ_献上品キャラ%结合</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:寝取らせ_献上品キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>在%CALLNAME:寝取らせ_主導キャラ%的要求下，被迫与%CALLNAME:PLAYER%发生性关系</font><img src='えっちハート'>","うふふ")
+				CALL 履歴データベース登録(CFLAG:寝取らせ_主導キャラ:人物番号, @"<img src='えっちハート'><font color='#%カラーパレット_HTML("赤ピンク")%'>将%CALLNAME:寝取らせ_献上品キャラ%的身体献给%CALLNAME:PLAYER%，被%CALLNAME:PLAYER%戴绿帽子</font><img src='えっちハート'>","うふふ")
+			ENDIF
+		ENDIF
+		$寝取らせ夜這い受諾_履歴登録スキップ
+		
+		SIF TALENT:寝取らせ_献上品キャラ:浮気 == 0
+			TALENT:寝取らせ_献上品キャラ:浮気 = 1
+		EXP:寝取らせ_主導キャラ:寝取られ経験 += 1
+		EXP:寝取らせ_献上品キャラ:貸出経験 += 1
+		TCVAR:寝取らせ_献上品キャラ:言いなり = 1
+		;これが事実上の夜這いなので、あなたへの夜這いを抑制
+		TCVAR:PLAYER:夜這い済み = 2
+		;全員寝かせる
+		;・日中に寝た時用処理。陥落済みのキャラが起きていると終了時に呼ぶ選択肢が出るため
+		FOR 対象キャラ, 1, CHARANUM
+			SIF !CFLAG:対象キャラ:睡眠
+				CFLAG:対象キャラ:睡眠 = 1
+		NEXT
+		; 対象キャラを夜這い済みに設定
+		TCVAR:寝取らせ_主導キャラ:夜這い済み = 2
+		TCVAR:寝取らせ_献上品キャラ:夜這い済み = 2
+		; 献上品キャラのうふふ用設定
+		CFLAG:寝取らせ_献上品キャラ:睡眠 = 0
+		CFLAG:寝取らせ_献上品キャラ:現在位置 = CFLAG:PLAYER:現在位置
+		CFLAG:寝取らせ_献上品キャラ:現在マップ種別 = CFLAG:PLAYER:現在マップ種別
+		CFLAG:寝取らせ_献上品キャラ:同室 = 1
+		;あなたのうふふ用設定
+		CFLAG:MASTER:うふふ = 1
+		; 時間固定処理
+		FLAG:イベントTIME記録 = TIME
+		;処理の誤爆を防ぐためオートコマンド周りリセット
+		TFLAG:オートコマンドフラグ = 0
+		AUTOCOM_実行番号保存 = -1
+		AUTOCOM_対象番号保存 = -1
+		自慰ターゲット保存 = -1
+		; 献上品キャラのうふふ用設定2
+		CALL うふふ開始キャラ処理(寝取らせ_献上品キャラ, "寝取らせ")
+		;TFLAG:寝取らせ夜這いうふふ済み
+		;うふふ開始
+		CALL TRAIN_イベントうふふ_LOOP()
+		;うふふ終了後の処理
+		CALL 寝取られオナニー処理(寝取らせ_主導キャラ, 寝取らせ_献上品キャラ)
+	CASE 1
+		RESULT = 0
+		TRYCALLFORM KOJO_EVENT_寝取らせ夜這い_拒否_{NO:寝取らせ_主導キャラ}(寝取らせ_主導キャラ, 寝取らせ_献上品キャラ)
+		IF RESULT == 0
+			PRINTFORMW %CALLNAME:PLAYER%表示今日无意于此，%CALLNAME:寝取らせ_主導キャラ%面露遗憾带着%CALLNAME:寝取らせ_献上品キャラ%离去……
+		ENDIF
+		;断られるとしばらく対象キャラが主導の寝取らせ発生率が減少
+		;・3日は発生しない値を設定
+		;　補正値が残ってる状態で断られた場合は加算
+		寝取らせ_発生率補正:寝取らせ_主導キャラ:0 += (寝取らせ夜這い判定_発生率取得(寝取らせ_主導キャラ) + (10 * 30)) * -1
+	CASE 100
+		;選択肢の説明
+		DRAWLINE
+		PRINTFORML 接受：为满足%CALLNAME:寝取らせ_主導キャラ%的特殊癖好，将与%CALLNAME:寝取らせ_献上品キャラ%进入嘿咻模式
+		PRINTFORML 　　　　　　基于%CALLNAME:寝取らせ_主導キャラ%的意愿，除了无法执行的指令外%CALLNAME:寝取らせ_献上品キャラ%将无法拒绝任何要求
+		PRINTFORML 　　　　　　%CALLNAME:寝取らせ_主導キャラ%的戴绿帽经验与%CALLNAME:寝取らせ_献上品キャラ%的出借经验将分别+１
+		PRINTFORML 此外，%CALLNAME:寝取らせ_主導キャラ%将视为不在场（正在隐匿在房间角落激烈的自慰）
+		PRINTFORML ※嘿咻模式中时间不会流动
+		PRINTFORML 
+		PRINTFORML 拒绝：拒绝请求。%CALLNAME:寝取らせ_主導キャラ%将失望离去，其绿帽癖不会恶化
+		PRINTFORML 　　　%CALLNAME:寝取らせ_献上品キャラ%想必会松一口气
+		PRINTFORML 　　　此后一段时间内%CALLNAME:寝取らせ_主導キャラ%将不再提出戴绿帽请求
+		WAIT
+		GOTO 訪問ラベル
+ENDSELECT
+;寝取らせイベント用の変数をリセット
+寝取らせ_主導キャラ = -1
+寝取らせ_献上品キャラ = -1
+寝取らせ_嘘告白特殊イベント発生済 = 0
+RETURN 1
+
+
+;寝取らせ_主導キャラがシコってる描写とかそこから生み出されるZPとか
+
+@寝取られオナニー処理(オナニーキャラ, 寝取られキャラ)
+#DIM オナニーキャラ
+#DIM 寝取られキャラ
+#DIM オナニー回数
+#DIM オナニー絶頂回数
+#DIM オナニー射精回数
+#DIMS 射精語
+
+PRINTL 
+
+RESULT = 0
+TRYCALLFORM KOJO_EVENT_寝取らせ夜這い_寝取られオナニー口上_{NO:オナニーキャラ}(オナニーキャラ, 寝取られキャラ)
+SIF RESULT != 0
+	GOTO 寝取らせ夜這い_寝取られオナニーテキスト表示スキップ
+
+PRINTFORM %CALLNAME:PLAYER%的侵犯令其意乱情迷，
+IF EXP:寝取られキャラ:貸出経験 >= 4
+	SELECTCASE RAND:3
+	CASE 0
+		PRINTFORM 在娇喘中无意识流露对%CALLNAME:PLAYER%的爱慕
+	CASE 1
+		PRINTFORM 被侵犯时被迫向%CALLNAME:PLAYER%%TEXTR("表达谢意/告白爱意")%
+	CASE 2
+		PRINTFORM 被要求与%CALLNAME:オナニーキャラ%比较时毫不犹豫选择%CALLNAME:PLAYER%
+	ENDSELECT
+ELSEIF ABL:PLAYER:技巧 >= 4
+	PRINTFORM 发出从未体验过的%TEXTR("甜美婉转/甜腻浑浊/野兽般/放浪形骸")%的娇吟
+ELSE
+	PRINTFORM 彻底沦为%CALLNAME:PLAYER%性技的俘虏
+ENDIF
+PRINTFORMW 暗中窥视%CALLNAME:寝取られキャラ%姿态的%CALLNAME:オナニーキャラ%，似乎获得了绝佳的自慰素材……
+PRINTL 
+$寝取らせ夜這い_寝取られオナニーテキスト表示スキップ
+
+RESULT = 0
+TRYCALLFORM KOJO_EVENT_寝取らせ夜這い_寝取られオナニー実処理_{NO:オナニーキャラ}(オナニーキャラ, 寝取られキャラ)
+SIF RESULT != 0
+	GOTO 寝取らせ夜這い_寝取られオナニー処理スキップ
+
+IF TALENT:オナニーキャラ:性別 == 2
+;Ｖなしのオトコなら、絶頂は射精のみ
+;経験加算値はなんとなくで決定したので、もっと説得力あるのがあればそっちに書き換えてください
+	IF TALENT:オナニーキャラ:男性器サイズ <= -1
+	;短小以下
+		射精語 '= TEXTR("射精/噗啾")
+		SELECTCASE RAND:2
+		CASE 0
+			オナニー回数 = 5
+			オナニー絶頂回数 = 2
+			CALL コマンド外精力消費処理(オナニーキャラ, オナニー絶頂回数)
+			オナニー射精回数 = RESULT
+		CASE 1
+			オナニー回数 = 6
+			オナニー絶頂回数 = 3
+			CALL コマンド外精力消費処理(オナニーキャラ, オナニー絶頂回数)
+			オナニー射精回数 = RESULT
+		ENDSELECT
+	ELSEIF TALENT:オナニーキャラ:男性器サイズ == 0
+	;普通
+		射精語 '= "射精"
+		SELECTCASE RAND:2
+		CASE 0
+			オナニー回数 = 6
+			オナニー絶頂回数 = 3
+			CALL コマンド外精力消費処理(オナニーキャラ, オナニー絶頂回数)
+			オナニー射精回数 = RESULT
+		CASE 1
+			オナニー回数 = 7
+			オナニー絶頂回数 = 4
+			CALL コマンド外精力消費処理(オナニーキャラ, オナニー絶頂回数)
+			オナニー射精回数 = RESULT
+		ENDSELECT
+	ELSEIF TALENT:オナニーキャラ:男性器サイズ >= 1
+	;巨根以上
+		射精語 '= "射精"
+		SELECTCASE RAND:2
+		CASE 0
+			オナニー回数 = 8
+			オナニー絶頂回数 = 4
+			CALL コマンド外精力消費処理(オナニーキャラ, オナニー絶頂回数)
+			オナニー射精回数 = RESULT
+		CASE 1
+			オナニー回数 = 9
+			オナニー絶頂回数 = 5
+			CALL コマンド外精力消費処理(オナニーキャラ, オナニー絶頂回数)
+			オナニー射精回数 = RESULT
+		ENDSELECT
+	ENDIF
+	;リザルト
+	SELECTCASE オナニー射精回数
+	CASE 0
+		PRINTFORM %CALLNAME:オナニーキャラ%在%TOFULL(TOSTR(オナニー回数))%次自慰中迎接了%TOFULL(TOSTR(オナニー絶頂回数))%次高潮，而
+		IF TALENT:オナニーキャラ:男性器サイズ <= -2
+			PRINT 寒碜的小鸡鸡
+		ELSEIF TALENT:オナニーキャラ:男性器サイズ <= -1
+			PRINT 小巧的鸡鸡
+		ELSEIF TALENT:オナニーキャラ:男性器サイズ == 0
+			PRINT 肉棒
+		ELSE
+			PRINT 徒有其表的大肉棒
+		ENDIF
+		PRINTFORMW 始终未能射出精液……
+	CASE 1
+		PRINTFORMW 成功%射精語%１次！继续努力吧！
+	CASE 2
+		PRINTFORMW 竟然%射精語%２次！表现不错！
+	CASE 3
+		PRINTFORMW 意外达成３次%射精語%！干得漂亮！
+	CASE 4
+		PRINTFORMW 惊人完成４次%射精語%！太厉害了！！
+	CASE 5
+		PRINTFORMW 难以置信５次%射精語%！！突破极限！！
+	ENDSELECT
+	EXP:オナニーキャラ:自慰経験 += オナニー回数
+	PRINTFORML 自慰经验 + {オナニー回数}
+	EXP:オナニーキャラ:絶頂経験 += オナニー絶頂回数
+	PRINTFORML 高潮经验 + {オナニー絶頂回数}
+	EXP:オナニーキャラ:Ｃ絶頂経験 += オナニー絶頂回数
+	PRINTFORML Ｃ高潮经验 + {オナニー絶頂回数}
+	IF オナニー射精回数 > 0
+		EXP:オナニーキャラ:射精経験 += オナニー射精回数
+		PRINTFORML 射精经验 + {オナニー射精回数}
+	ENDIF
+	FLAG:ZP所持量 += オナニー絶頂回数
+	PRINTFORML ZP持有数 + {オナニー絶頂回数}
+
+ELSE
+;Ｖありなら射精以外でも絶頂できるから回数いっぱい。でもあなたほどいっぱいイけるわけじゃない
+	;Ｃ絶頂
+	IF GETBIT(TALENT:オナニーキャラ:性別, 1)
+		;ちんちんある場合
+		SELECTCASE RAND:2
+			CASE 0
+				EXP:オナニーキャラ:Ｃ絶頂経験 += 3
+				PRINTFORML Ｃ高潮经验 + 3
+				オナニー回数 = 5
+				オナニー絶頂回数 = 3
+				CALL コマンド外精力消費処理(オナニーキャラ, オナニー絶頂回数)
+				オナニー射精回数 = RESULT
+			CASE 1
+				EXP:オナニーキャラ:Ｃ絶頂経験 += 2
+				PRINTFORML Ｃ高潮经验 + 2
+				オナニー回数 = 5
+				オナニー絶頂回数 = 2
+				CALL コマンド外精力消費処理(オナニーキャラ, オナニー絶頂回数)
+				オナニー射精回数 = RESULT
+		ENDSELECT
+	ELSE
+		;クリの場合
+		SELECTCASE RAND:3
+			CASE 0
+				EXP:オナニーキャラ:Ｃ絶頂経験 += 3
+				PRINTFORML Ｃ高潮经验 + 3
+				オナニー回数 = 5
+				オナニー絶頂回数 = 3
+			CASE 1
+				EXP:オナニーキャラ:Ｃ絶頂経験 += 4
+				PRINTFORML Ｃ高潮经验 + 4
+				オナニー回数 = 6
+				オナニー絶頂回数 = 4
+			CASE 2
+				EXP:オナニーキャラ:Ｃ絶頂経験 += 5
+				PRINTFORML Ｃ高潮经验 + 5
+				オナニー回数 = 7
+				オナニー絶頂回数 = 5
+		ENDSELECT
+	ENDIF
+	;Ｂ絶頂
+	SELECTCASE RAND:3
+		CASE 0
+			EXP:オナニーキャラ:Ｂ絶頂経験 += 3
+			PRINTFORML Ｂ高潮经验 + 3
+			オナニー回数 += 5
+			オナニー絶頂回数 += 3
+		CASE 1
+			EXP:オナニーキャラ:Ｂ絶頂経験 += 4
+			PRINTFORML Ｂ高潮经验 + 4
+			オナニー回数 += 6
+			オナニー絶頂回数 += 4
+		CASE 2
+			EXP:オナニーキャラ:Ｂ絶頂経験 += 5
+			PRINTFORML Ｂ高潮经验 + 5
+			オナニー回数 += 7
+			オナニー絶頂回数 += 5
+	ENDSELECT
+	IF TALENT:オナニーキャラ:処女 == 0
+	;処女でないならＶでもオナニー
+		SELECTCASE RAND:3
+			CASE 0
+				EXP:オナニーキャラ:Ｖ絶頂経験 += 3
+				PRINTFORML Ｖ高潮经验 + 3
+				オナニー回数 += 5
+				オナニー絶頂回数 += 3
+			CASE 1
+				EXP:オナニーキャラ:Ｖ絶頂経験 += 4
+				PRINTFORML Ｖ高潮经验 + 4
+				オナニー回数 += 6
+				オナニー絶頂回数 += 4
+			CASE 2
+				EXP:オナニーキャラ:Ｖ絶頂経験 += 5
+				PRINTFORML Ｖ高潮经验 + 5
+				オナニー回数 += 7
+				オナニー絶頂回数 += 5
+		ENDSELECT
+	ENDIF
+	;リザルト
+	PRINTFORM %CALLNAME:オナニーキャラ%
+	SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW 托%CALLNAME:PLAYER%的福，获得了{オナニー絶頂回数}次高潮……
+		CASE 1
+			PRINTFORMW 通过频繁自慰赚取了{オナニー絶頂回数}ZP……
+		CASE 2
+			PRINTFORMW 在{オナニー回数}次自慰中达成{オナニー絶頂回数}次高潮……
+	ENDSELECT
+	EXP:オナニーキャラ:自慰経験 += オナニー回数
+	PRINTFORML 自慰经验 + {オナニー回数}
+	EXP:オナニーキャラ:絶頂経験 += オナニー絶頂回数
+	PRINTFORML 高潮经验 + {オナニー絶頂回数}
+	IF オナニー射精回数 > 0
+		EXP:オナニーキャラ:射精経験 += オナニー射精回数
+		PRINTFORML 射精经验 + {オナニー射精回数}
+	ENDIF
+	FLAG:ZP所持量 += オナニー絶頂回数
+	PRINTFORML ZP持有数 + {オナニー絶頂回数}
+ENDIF
+$寝取らせ夜這い_寝取られオナニー処理スキップ
+IF CFLAG:オナニーキャラ:リゾート内オナニー回数 < 1
+	CALL 履歴データベース登録(CFLAG:オナニーキャラ:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>初次在度假村内进行[自慰]行为</font>","うふふ")
+ELSEIF CFLAG:オナニーキャラ:リゾート内オナニー回数 == 9
+	CALL 履歴データベース登録(CFLAG:オナニーキャラ:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>在度假村内累计[自慰]次数达１０次</font>","うふふ")
+ELSEIF CFLAG:オナニーキャラ:リゾート内オナニー回数 == 49
+	CALL 履歴データベース登録(CFLAG:オナニーキャラ:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>在度假村内累计[自慰]次数达５０次</font>","うふふ")
+ELSEIF CFLAG:オナニーキャラ:リゾート内オナニー回数 == 99
+	CALL 履歴データベース登録(CFLAG:オナニーキャラ:人物番号,@"<font color='#%カラーパレット_HTML("薄ピンク")%'>在度假村内累计[自慰]次数达１００次</font>","うふふ")
+ENDIF
+CFLAG:オナニーキャラ:リゾート内オナニー回数 ++
+PRINTL
+
+@寝取らせ夜這い判定_キャラ状態判定(対象キャラ)
+#FUNCTION
+#DIM 対象キャラ
+;酔い潰れや体力０の時は発生しない
+;泥酔眠姦が実装されたら献上品の酔いすぎは条件から外してもいいと思う
+SIF CFLAG:対象キャラ:酔いすぎ
+	RETURNF 0
+SIF CFLAG:対象キャラ:体力限界
+	RETURNF 0
+RETURNF 1
+
+@寝取らせ夜這い判定_身体条件判定(対象キャラ)
+#FUNCTION
+#DIM 対象キャラ
+;どちらかが「ＣもＶもないキャラ」だった場合発生しない
+SIF TALENT:対象キャラ:Ｖ感度 == -2 && TALENT:対象キャラ:Ｃ感度 == -2
+	RETURNF 0
+RETURNF 1
+
+
+@寝取らせ夜這い判定_信頼度判定(対象キャラ)
+#FUNCTION
+#DIM 対象キャラ
+;とりあえず寝取らせ_主導キャラの信頼が親友以上から発生するようにしてみる。献上品の信頼は不問
+;ただしあなたの遊び人が４以上の竿役適任つよつよオスである場合、ハードルがワンランク下がる。
+
+IF TALENT:対象キャラ:従業員
+	;寝取らせ_主導キャラが従業員である場合、「気にくわない上司に寝取られる」的なプレイを望むかも、みたいなフレーバーで信頼度要求を劇的に下げてみる。
+	;これはこれで個人的に癖なので、思いついちゃったし仕方ないよね！縁結びでくっつける手間もあるわけだし……まぁヨシ！
+	SIF CFLAG:対象キャラ:信頼度 < 経験値テーブル:(関係閾値:1)
+		RETURNF 0
+ELSEIF あなた特殊能力:遊び人 >= 4
+	SIF CFLAG:対象キャラ:信頼度 < 経験値テーブル:(関係閾値:3)
+		RETURNF 0
+ELSE
+	SIF CFLAG:対象キャラ:信頼度 < 経験値テーブル:(関係閾値:4)
+		RETURNF 0
+ENDIF
+RETURNF 1
+
+@寝取らせ夜這い判定_発生率取得(対象キャラ)
+#FUNCTION
+#DIM 対象キャラ
+#DIM 発生率
+;夜這いは性欲条件だけど、寝取られは何を条件にするのが適切なのかわからない。
+;ので、普通に確率制御にしてみる。とりあえず性癖開拓のとこから処理持ってきていじってみる
+
+;基礎確率は寝取られ性癖ごとに8%。きついのは初回だけでイベントが引ければ即2になるので、実質基礎16%
+;ここで最大24%(Lv3×8)盛って、あとはおまけ程度の補正にする
+SIF 性癖素質:対象キャラ:寝取られ > 0
+	発生率 = 性癖素質:対象キャラ:寝取られ * 8
+
+;あなたへの信頼。おまけ
+SELECTCASE CFLAG:対象キャラ:信頼度
+	CASE IS >= 経験値テーブル:(関係閾値:4)
+		発生率 += 2
+	CASEELSE
+		;その他は補正なし
+		発生率 += 0
+ENDSELECT
+
+;あなたの遊び人素質による加算。最大10%
+;女の扱いがうまいと噂がたっていれば、性癖を満たすに丁度いい竿役と認識してもらえる可能性が高くなると思われるため
+発生率 += あなた特殊能力:遊び人 * 2
+
+;最低確率は5%。一応設定だけしとく。
+発生率 = MAX(発生率, 5)
+
+;これで最大確率36%。毎晩出てこられても困るだろうし、こんなもんじゃない？
+RETURNF 発生率
+
+@寝取らせ夜這い判定_確率判定(対象キャラ)
+#FUNCTION
+#DIM 対象キャラ
+#DIM 発生率
+
+;発生率取得
+発生率 = 寝取らせ夜這い判定_発生率取得(対象キャラ)
+
+;補正
+;・過去に断られたことによる発生率減少
+;　この補正による発生率の最低確率を超えて0％にする(断られてからしばらくは絶対に発生しない)
+発生率 = MAX(発生率 + 寝取らせ_発生率補正:対象キャラ:0, 0)
+
+;確率判定
+SIF RAND:100 < 発生率
+	RETURNF 1
+RETURNF 0
+

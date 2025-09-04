@@ -1,0 +1,153 @@
+﻿;-------------------------------------------------
+;强制口交
+;奉仕系コマンド、レベル2
+;-------------------------------------------------
+@RAPE_COMNAME13
+#FUNCTIONS
+TSTR:コマンド名受渡 = 强制口交
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@RAPE_COMTYPE_13
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = RAPE_COMTYPE("うふふ")
+
+
+@RAPE_COM_TOOLTIP_13
+LOCALS = <br>■强制口交<br>
+LOCALS += "强迫对方用口腔爱抚阴茎的指令。<br>进入口交模式，在模式变更或性行为结束前持续产生特定效果。<br>因属强奸行为不会转变为[乳交口交]。"
+LOCALS += "<br>强奸指令类型：嘿咻<br>获取来源：暴露・接触・侍奉・不洁"
+LOCALS += "<br>专属经验值：口交经验(TARGET)<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@RAPE_COM13
+;-------------------------------------------------
+;モードの設定
+;-------------------------------------------------
+
+CALL MODE_CHANGE("フェラチオ", TARGET, PLAYER)
+
+;-------------------------------------------------
+;RAPE_COM別FLAGの設定
+;-------------------------------------------------
+
+;奉仕快楽
+RCVAR:TARGET:奉仕コマンドフラグ = 1
+RCVAR:TARGET:汎用喘ぎ_文節低減フラグ = 1
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 150)
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 30)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 120)
+CALL SOURCE_CALC_奉仕(TARGET, PLAYER, 300)
+
+CALL SOURCE_CALC_不潔(TARGET, PLAYER, 250)
+
+;-------------------------------------------------
+;特殊ソース処理
+;-------------------------------------------------
+
+;舌使いによって、快感のソース増加
+IF TALENT:TARGET:舌使い
+	CALL SOURCE_CALC_快Ｃ(PLAYER, TARGET, 150)
+ENDIF
+
+;猫舌では苦痛ちょいある
+SIF TALENT:PLAYER:猫舌
+	CALL SOURCE_CALC_苦痛(PLAYER, TARGET, 20)
+
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+;フェラ経験
+EXP:口淫経験 += 1
+
+;同性愛　レズなら戻り値1ゲイなら戻り値2
+IF HETEROSEX(TARGET,PLAYER)
+	EXP:同性愛経験 += 7
+	EXP:PLAYER:同性愛経験 += 7
+ENDIF
+
+;愛情経験
+SIF TALENT:恋慕
+	EXP:愛情経験 += 1
+
+;奴隷が猫舌持ちの場合は、調教者に嗜虐快楽経験を追加
+SIF TALENT:TARGET:猫舌
+	EXP:嗜虐快楽経験 += 1
+
+CALL 初体験日登録処理(TARGET, PLAYER, "ファーストキス", DAY * 1440 + TIME, GETPLACENAME(CFLAG:PLAYER:現在マップ種別, CFLAG:PLAYER:現在位置), "陰茎", "", 1)
+IF RESULT
+	CALL 履歴データベース登録(CFLAG:TARGET:人物番号, @"<font color='#%カラーパレット_HTML("薄ピンク")%'>被迫将初吻献给%CALLNAME:PLAYER%的[阴茎]</font><img src='えっちハート'>","うふふ")
+	RFLAG:コマンド結果受渡し変数 = 1
+ENDIF
+
+RETURN 1
+
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@RAPE_COM_ABLE13
+;フェラチオ実行判定
+SIF GLOBAL_RAPE_COMABLE(13)
+	RETURN RESULT
+;調教者がオトコか半人半妖かふたなりじゃないとダメ
+SIF !(TALENT:PLAYER:性別 & 2)
+	RETURN 0
+;ちんこがない場合駄目
+SIF TALENT:PLAYER:Ｃ感度 == -2
+	RETURN 0
+;下半身着衣
+;前鎧、タイツ、前張りがあると無理
+SIF TEQUIP:PLAYER:下腹部前鎧あり
+	RETURN 0
+SIF TEQUIP:PLAYER:下タイツあり && !TEQUIP:PLAYER:下タイツ破れ
+	RETURN 0
+SIF TEQUIP:PLAYER:下半身下着あり == 2
+	RETURN 0
+;猫舌の奴隷の場合は技巧Lv2以上必要
+SIF TALENT:猫舌 && ABL:技巧 < 2
+	RETURN 0
+;ボールギャグ使用中は不可
+; SIF TEQUIP:ボールギャグ
+; 	RETURN 0
+;口、ペニスを何かに使ってる・届かないなら無理
+IF MODE_確認_完全一致("パイズリ", TARGET, PLAYER) < 0
+	SIF TEQUIP:PLAYER:ペニス
+		RETURN 0
+	SIF TEQUIP:TARGET:口
+		RETURN 0
+ENDIF
+
+;オートコマンド中の制限
+IF FLAG:オートコマンド判定中フラグ
+	SIF 初体験済みチェック("ファーストキス", PLAYER) == 0
+		RETURN 0
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@RAPE_MESSAGE_COM13
+
+PRINTFORM %CALLNAME:PLAYER%
+IF CFLAG:TARGET:睡眠
+	IF TCVAR:TARGET:泥酔眠姦
+		PRINTFORM 醉倒了
+	ELSE
+		PRINTFORM 睡着了
+	ENDIF
+ENDIF
+PRINTFORM %CALLNAME:TARGET%的
+SIF RFLAG:コマンド結果受渡し変数 == 1
+	PRINTFORM 连亲吻都未完成的
+PRINTFORML %TEXTR("口腔/双唇")%用%TEXTR("阴茎/鸡巴")%套弄，%TEXTR("在温热濡湿的口腔进行『自慰』/当作性玩具肆意取乐/通过味觉灌输地位差距/自顾自摆动腰肢/让其记住阴茎滋味")%…
+
+
+

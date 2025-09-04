@@ -1,0 +1,214 @@
+﻿@証関数_祭司之证(処理モード, 対象キャラ)
+#DIM 対象キャラ
+#DIMS 処理モード
+
+SELECTCASE 処理モード
+	CASE "ジョブ証種別"
+		証関連文字列受け渡し = 通常ジョブ
+	CASE "証名"
+		TSTR:コマンド名受渡 = 祭司之证
+	CASE "クラス名"
+		SIF 対象キャラ <= 0
+			RETURN 0
+		SELECTCASE GET_JOBSKILL_LEVEL(対象キャラ)
+			CASE IS >= 3
+				RESULTS = 主教
+				RESULTS:1 = Class.III
+				RETURN 1
+			CASE 2
+				RESULTS = 牧师
+				RESULTS:1 = Class.II
+				RETURN 1
+			CASEELSE
+				RESULTS = 祭司
+				RESULTS:1 = Class.I
+				RETURN 1
+		ENDSELECT
+	CASE "フレーバー"
+		詳細文文字列受け渡し変数 '= "掌握治愈与驱邪的圣职者之证。<br>"
+		詳細文文字列受け渡し変数 += "效果虽不突出但拥有全体恢复能力，并能消除增益与减益。<br>"
+		詳細文文字列受け渡し変数 += "装备时会莫名感到心神清明。<br>"
+ENDSELECT
+
+;ランダム抽選では出現しない（入手法：ダンジョン「人食い鳥の島」のイベントで入手）
+;@証出現率_祭司之证(入手タイプ, 装備ランク)
+
+@証アビ関数_祭司之证_1(処理モード, 対象キャラ)
+#DIM 対象キャラ
+#DIMS 処理モード
+#DIM LEVEL
+#DIM 効果数値, 1
+#DIMS CONST アビ名 = "全体治疗"
+#DIM CONST 消費ＭＰ = 50
+IF 対象キャラ > 0
+	LEVEL = GET_JOBSKILL_LEVEL(対象キャラ)
+ELSE
+	LEVEL = 1
+ENDIF
+SELECTCASE LEVEL
+	CASE IS >= 3
+		効果数値:0 = 70
+	CASE 2
+		効果数値:0 = 60
+	CASEELSE
+		効果数値:0 = 50
+ENDSELECT
+
+SELECTCASE 処理モード
+	CASE "アビ名"
+		TSTR:コマンド名受渡 '= アビ名
+	CASE "アビ説明文"
+		詳細文文字列受け渡し変数 '= @"■%アビ名%<br>"
+		詳細文文字列受け渡し変数 += @"　消耗ＭＰ：{消費ＭＰ}<br>"
+		詳細文文字列受け渡し変数 += @"　效果：我方全体ＨＰ恢复［恢复力✕{効果数値:0}％］。"
+		RETURN 消費ＭＰ
+	CASE "アビ効果"
+		CALL アビ対象選択テンプレート_味方全体_生者のみ
+		アビ汎用変数:効果割合 = 効果数値:0
+		CALL アビテンプレート_回復処理
+ENDSELECT
+
+@証アビ関数_祭司之证_2(処理モード, 対象キャラ)
+#DIM 対象キャラ
+#DIMS 処理モード
+#DIM LEVEL
+#DIM 全体フラグ
+#DIM 消費ＭＰ
+#DIMS CONST アビ名 = "净化", "全体净化"
+#DIMS CONST 範囲テキスト = "味方単体", "味方全体"
+IF 対象キャラ > 0
+	LEVEL = GET_JOBSKILL_LEVEL(対象キャラ)
+	IF 得意武器判定(対象キャラ, "杖")
+	ELSEIF 基礎BATTLE_STATE:対象キャラ:ステータスタイプ保存 == タイプ文字列数値変換("回復")
+	ELSE
+		LEVEL --
+	ENDIF
+ELSE
+	LEVEL = 1
+ENDIF
+SELECTCASE LEVEL
+	CASE IS >= 3
+		全体フラグ = 1
+		消費ＭＰ = 15
+	CASE 2
+		全体フラグ = 1
+		消費ＭＰ = 20
+	CASEELSE
+		全体フラグ = 0
+		消費ＭＰ = 5
+ENDSELECT
+
+SELECTCASE 処理モード
+	CASE "アビ名"
+		SIF LEVEL > 0
+			TSTR:コマンド名受渡 '= アビ名:全体フラグ
+	CASE "アビ説明文"
+		IF 対象キャラ <= 0
+			詳細文文字列受け渡し変数 '= @"■%アビ名:全体フラグ%（装备者为法杖专精或恢复类型时）<br>"
+		ELSE
+			詳細文文字列受け渡し変数 '= @"■%アビ名:全体フラグ%<br>"
+		ENDIF
+		詳細文文字列受け渡し変数 += @"　消耗ＭＰ：{消費ＭＰ}<br>"
+		詳細文文字列受け渡し変数 += @"　效果：消除%範囲テキスト:全体フラグ%的1个减益效果。"
+		RETURN 消費ＭＰ
+	CASE "アビ効果"
+		IF 全体フラグ
+			CALL アビ対象選択テンプレート_味方全体_生者のみ
+		ELSE
+			CALL アビ対象選択テンプレート_味方単体_生者のみ
+		ENDIF
+		CALL アビテンプレート_有利効果_デバフ消去
+ENDSELECT
+
+@証アビ関数_祭司之证_3(処理モード, 対象キャラ)
+#DIM 対象キャラ
+#DIMS 処理モード
+#DIM LEVEL
+#DIMS CONST アビ名 = "驱散"
+#DIM CONST 消費ＭＰ = 10
+IF 対象キャラ > 0
+	LEVEL = GET_JOBSKILL_LEVEL(対象キャラ)
+	IF 得意武器判定(対象キャラ, "槍")
+	ELSEIF 基礎BATTLE_STATE:対象キャラ:ステータスタイプ保存 == タイプ文字列数値変換("回復")
+	ELSE
+		LEVEL --
+	ENDIF
+ELSE
+	LEVEL = 1
+ENDIF
+
+SELECTCASE 処理モード
+	CASE "アビ名"
+		SIF LEVEL > 0
+			TSTR:コマンド名受渡 '= アビ名
+	CASE "アビ説明文"
+		IF 対象キャラ <= 0 && LEVEL <= 1
+			詳細文文字列受け渡し変数 '= @"■%アビ名%（装备者为长枪专精或恢复类型时）<br>"
+		ELSE
+			詳細文文字列受け渡し変数 '= @"■%アビ名%<br>"
+		ENDIF
+		詳細文文字列受け渡し変数 += @"　消耗ＭＰ：{消費ＭＰ}<br>"
+		詳細文文字列受け渡し変数 += "　效果：消除敌方单体的1个增益效果。"
+		RETURN 消費ＭＰ
+	CASE "アビ効果"
+		CALL アビ対象選択テンプレート_敵単体
+		CALL アビテンプレート_不利効果_バフ消去
+ENDSELECT
+
+@証アビ関数_祭司之证_4(処理モード, 対象キャラ)
+#DIM 対象キャラ
+#DIMS 処理モード
+#DIM LEVEL
+#DIM 消費ＭＰ
+#DIM 効果数値, 1
+#DIMS CONST アビ名 = "复活术"
+IF 対象キャラ > 0
+	LEVEL = GET_JOBSKILL_LEVEL(対象キャラ) - 1
+ELSE
+	LEVEL = 0
+ENDIF
+SELECTCASE LEVEL
+	CASE IS >= 2
+		消費ＭＰ = 16
+		効果数値:0 = 45
+	CASEELSE
+		消費ＭＰ = 20
+		効果数値:0 = 30
+ENDSELECT
+
+SELECTCASE 処理モード
+	CASE "アビ名"
+		SIF LEVEL > 0
+			TSTR:コマンド名受渡 '= アビ名
+	CASE "アビ説明文"
+		詳細文文字列受け渡し変数 '= @"■%アビ名%<br>"
+		詳細文文字列受け渡し変数 += @"　消耗ＭＰ：最大ＭＰ的{消費ＭＰ}％<br>"
+		詳細文文字列受け渡し変数 += @"　效果：复活战斗不能的单个队友并恢复ＨＰ［恢复力✕{効果数値:0}％］。"
+		RETURN (基礎BATTLE_STATE:対象キャラ:最大ＭＰ * 消費ＭＰ + 99) / 100
+	CASE "アビ効果"
+		CALL アビ対象選択テンプレート_味方単体_死者のみ
+		アビ汎用変数:効果割合 = 効果数値:0
+		アビ汎用変数:蘇生可能オプション = 1
+		CALL アビテンプレート_回復処理
+ENDSELECT
+
+@証アビ関数_祭司之证_10(処理モード, 対象キャラ)
+#DIM 対象キャラ
+#DIMS 処理モード
+#DIMS CONST アビ名 = "退魔祷言"
+#DIM CONST 消費ＭＰ = 0
+
+SELECTCASE 処理モード
+	CASE "アビ名"
+		TSTR:コマンド名受渡 '= アビ名
+	CASE "アビ説明文"
+		詳細文文字列受け渡し変数 '= @"■%アビ名%<br>"
+		詳細文文字列受け渡し変数 += @"　消耗ＭＰ：{消費ＭＰ}<br>"
+		詳細文文字列受け渡し変数 += "　效果：对敌方单体造成［恢复力✕100％］的自身属性伤害。"
+		RETURN 消費ＭＰ
+	CASE "アビ効果"
+		CALL アビ対象選択テンプレート_敵単体
+		アビ汎用変数:効果割合 = 100
+		アビ汎用文字列:攻撃側使用能力値 = 回復力
+		CALL アビテンプレート_ダメージ処理_自属性
+ENDSELECT

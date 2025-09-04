@@ -1,0 +1,199 @@
+﻿;-------------------------------------------------
+;美乳精油护理
+;-------------------------------------------------
+@MASSAGE_COMNAME21
+#FUNCTIONS
+TSTR:コマンド名受渡 = 美乳精油护理
+SIF TALENT:TARGET:バストサイズ <= -1
+	TSTR:コマンド名受渡 = 丰胸精油护理
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@MASSAGE_COMTYPE_21
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = MASSAGE_COMTYPE("エロマッサージ")
+
+@MASSAGE_COM_TOOLTIP_21
+IF TALENT:TARGET:バストサイズ <= -1
+	LOCALS = <br>■丰胸精油护理<br>
+	LOCALS += "使用按摩精油揉捏乳房，专为对贫乳困扰者设计"
+	LOCALS += "<br>宣称具有提升肌肤弹性与丰胸效果"
+	LOCALS += "<br>愉悦度越高效果越显著～无需压抑呻吟～"
+	LOCALS += "<br>指令类型：情色按摩<br>获取来源：快Ｂ・暴露・接触・欢愉・不快(警戒时)・反感(警戒时)"
+	LOCALS += "<br>专属经验值：无<br>"
+	TSTR:ツールチップ受渡 = %LOCALS%
+ELSE
+	LOCALS = <br>■美乳精油护理<br>
+	LOCALS += "使用按摩精油进行乳房按摩"
+	LOCALS += "<br>宣称通过改善淋巴循环实现美乳美肤效果"
+	LOCALS += "<br>指令类型：情色按摩<br>获取来源：快Ｂ・暴露・接触・欢愉・不快(警戒时)・反感(警戒时)"
+	LOCALS += "<br>专属经验值：无<br>"
+	TSTR:ツールチップ受渡 = %LOCALS%
+ENDIF
+
+@MASSAGE_COM21
+;-------------------------------------------------
+;ソース追加処理
+;-------------------------------------------------
+
+;Ｂ愛撫より全体的に強め。勿論です、プロですから。
+;性交ではなくマッサージの中での行為のため露出強め。エロマッサージなので歓楽は通常より弱め
+CALL SOURCE_CALC_露出(TARGET, PLAYER, 100)
+CALL SOURCE_CALC_接触(TARGET, PLAYER, 80)
+CALL SOURCE_CALC_快Ｂ(TARGET, PLAYER, 150)
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, 100)
+
+;胸を揉むため性欲を煽る。
+BASE:TARGET:性欲 += 80
+
+;警戒は理性の倍回復する。性欲の値で減少したりする。
+
+
+IF BASE:TARGET:理性 <= 1
+;理性がおしまいになってしまった場合、快楽に流されて警戒が下がっていく。
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -40)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 80)
+
+ELSEIF 知識素質:TARGET:性知識 <= -1
+;性知識がない場合、そもそも警戒することができない。そういうもんかって受け入れるため理性は下がり続けるし、快感を伴うから警戒も下がり続ける。
+;……シヴァお前……
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -60)
+	BASE:TARGET:警戒 += 警戒変動値算出(TARGET, -60)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 80)
+
+ELSEIF (BASE:TARGET:理性 + BASE:TARGET:警戒) < 900
+;実行に際し十分な理性・警戒削りがなされている場合。
+;警戒140で理性が70回復するも、煽られる性欲と与えられる刺激で理性が80削られて理性変動は-10。
+;……というのが平常時における挙動だが、ここまで削られていると与えられる快感に警戒心が塗りつぶされてしまう。
+;よって警戒56で理性28回復、そこから理性80低下でこの数字となる。理性と警戒の合計値はほんの少しだけ上がり、そのまま次のコマンドへ。
+	BASE:TARGET:理性 += 理性変動値算出(TARGET, -52)
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 56)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 80)
+
+ELSEIF BASE:TARGET:理性 <= 200
+;理性がグズグズに煮詰まっちゃってると、警戒及び理性の回復は半分になる。
+	BASE:TARGET:理性 +=理性変動値算出(TARGET, 35)
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 70)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 80)
+
+ELSEIF TALENT:TARGET:バストサイズ <= -1
+;相手が貧乳以下の場合、実行可能であるならば「おっぱい大きくするためだし……」ってしぶしぶ受け入れるイメージ。
+;育ててくれるからちょっとだけ友情も上がるし、理性と警戒の回復も抑えめになる。いっぱい揉んで育ててあげよう。
+	BASE:TARGET:理性 +=理性変動値算出(TARGET, 40)
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 80)
+	CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, 40)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 80)
+
+ELSEIF TALENT:TARGET:バストサイズ > -1 && (BASE:TARGET:理性 + BASE:TARGET:警戒) > 1100
+;普乳以上かつ理性と警戒の削りが足りていないと、一気に警戒度が上がり、危機感で理性も回復してしまう。不快、反感も増える。
+;理性200以下と共存しちゃうけど、この場合理性200以下のほうが優先となる。
+	BASE:TARGET:理性 +=理性変動値算出(TARGET, 150)
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 300)
+	CALL SOURCE_CALC_不快(TARGET, PLAYER, 200)
+	CALL SOURCE_CALC_反感(TARGET, PLAYER, 200)
+
+ELSE
+;基本値 警戒が1100～900
+;反感まではいかないが、確実に回復してくる。このまま黒閃で反転術式の出力を戻されたらふりだしまで一直線なのでもっと理性を削りましょう。
+	BASE:TARGET:理性 +=理性変動値算出(TARGET, 50)
+	BASE:TARGET:警戒 +=警戒変動値算出(TARGET, 140)
+	CALL SOURCE_CALC_好感度要素_性愛度UP(TARGET, PLAYER, 80)
+ENDIF
+
+
+;施術着を着ている場合、25%で脱がす。ここに関してはプレイヤーが選択できたほうがいいかも？
+IF TEQUIP:上半身下着あり && RAND:4 == 0
+	TEQUIP:上半身下着あり = 0
+	RFLAG:コマンド結果受渡し変数 = 1
+ENDIF
+
+IF TARGET == MASTER
+	CALL ちんイラ増加処理(PLAYER, 50)
+ELSE
+	CALL ちんイラ増加処理(TARGET, 100)
+ENDIF
+;-------------------------------------------------
+;経験の処理
+;-------------------------------------------------
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+
+@MASSAGE_COM_ABLE21
+SIF SAVESTR:ゲームフェイズ管理 != "マッサージモード"
+	RETURN 0
+
+SIF GLOBAL_MASSAGE_COMABLE(21)
+	RETURN RESULT
+
+;Bがない場合駄目
+SIF TALENT:TARGET:Ｂ感度 == -2
+	RETURN 0
+
+;相手に胸がないならダメ
+SIF TALENT:TARGET:性別 == 2
+	RETURN 0
+
+;うつ伏せだとダメ
+SIF TCVAR:TARGET:マッサージ_うつ伏せフラグ == 1
+	RETURN 0
+
+;実行するだけならそこそこ緩い。削りが足りてないと反感食らうし警戒されるけど。
+SIF (BASE:TARGET:理性 + BASE:TARGET:警戒) > 1400
+	RETURN 0
+
+
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MASSAGE_MESSAGE_COM21
+PRINTFORM %CALLNAME:PLAYER%
+	IF RFLAG:コマンド結果受渡し変数 == 1
+	;施術着を脱がせたとき
+		PRINTFORM %TEXTR("将%CALLNAME:TARGET%的理疗服衣襟褪下露出双峰/将%CALLNAME:TARGET%的理疗服下摆上卷暴露乳房/以「治疗需要」为由强行剥除%CALLNAME:TARGET%的衣物")%
+	ELSEIF TEQUIP:上半身下着あり == 1
+		PRINTFORM %TEXTR("将手探入%CALLNAME:TARGET%的衣襟内/让手掌滑入%CALLNAME:TARGET%的理疗服内侧/隔着衣服")%
+	ENDIF
+PRINTFORM %TEXTR("涂抹精油的手掌/以按摩为名义")%，对%CALLNAME:TARGET%的
+	IF TALENT:TARGET:バストサイズ == 3
+	;魔乳
+	;巨乳くらいまでは「デカパイ」とかそんな感じのワードでもいいかなと思ったんだけど、サイズ感の判別しっかりしてるほうがいいかもってことでTEXTRにはせず素質表記
+	;魔乳とか「ただのデカパイじゃないぜ？ド級のデカパイ、『ドデカパイ』だ！」にしてもよかった気はしなくもない。笑っちゃわなければだけど
+		PRINTFORM 沉甸甸的魔乳进行
+	ELSEIF TALENT:TARGET:バストサイズ == 2
+	;爆乳
+		PRINTFORM 丰硕饱满的爆乳进行
+	ELSEIF TALENT:TARGET:バストサイズ == 1
+	;巨乳
+		PRINTFORM 发育成熟的巨乳进行
+	ELSEIF TALENT:TARGET:バストサイズ == 0
+	;普乳
+		PRINTFORM 刚好盈满手掌的%TEXTR("美乳/酥胸")%进行
+	ELSEIF TALENT:TARGET:バストサイズ == -1
+	;貧乳
+		PRINTFORM 挺翘有致的%TEXTR("小巧乳丘/精致微乳")%进行
+	ELSEIF TALENT:TARGET:バストサイズ == -2
+	;絶壁
+	;フォリア様に「絶壁」だの「胸板」だの言うのは不敬！没収(コンフィスケイション)！死刑(デスペナルティ)！！
+		PRINTFORM 平坦如板却保有女性柔软触感的微乳进行
+	ENDIF
+PRINTFORML %TEXTR("细致揉捏按摩/充分揉捏把玩/沉浸式揉捏享受")%。
+
+
+;削りが十分な時は追加のメッセージ
+IF (BASE:TARGET:理性 + BASE:TARGET:警戒) < 900
+	PRINTW 
+	SELECTCASE RAND:2
+	CASE 0
+		PRINTFORM %CALLNAME:TARGET%%TEXTR("双眸迷离地/满脸陶醉地张着樱唇/神情恍惚地")%
+	CASE 1
+		PRINTFORM %CALLNAME:TARGET%从微张的唇间%TEXTR("溢出甜腻呻吟/发出愉悦娇喘/漏出淫靡声响")%
+	ENDSELECT
+	PRINTFORML 任由%CALLNAME:PLAYER%%TEXTR("的『按摩』/的技法/带来的快感")%%TEXTR("摆布着双峰/沉醉其中/予取予求/全盘接受/甘之如饴")%…
+ENDIF

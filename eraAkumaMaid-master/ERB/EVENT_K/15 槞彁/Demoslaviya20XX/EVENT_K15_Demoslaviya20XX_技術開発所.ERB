@@ -1,0 +1,324 @@
+﻿;ボタンとかは実装したらダメだよ
+@D20XX_TextCover(Text,Cover)
+	#DIMS DYNAMIC Text
+	#DIMS DYNAMIC Cover
+	#DIMS DYNAMIC TextHTML
+	#DIMS DYNAMIC ResultHTML
+	#DIM DYNAMIC LCOUNT
+
+	ResultHTML = 
+
+	SETCOLOR K15_VOICE_COLOR
+	CALL PRINT_STRL,@"%Text%"
+	RESETCOLOR 
+	PRINTL ↑これを表示した後
+	PRINTL 
+
+	SETCOLOR K15_VOICE_COLOR_F2
+	CALL PRINT_STRL,@"%Text%"
+	RESETCOLOR 
+	TextHTML = %HTML_GETPRINTEDSTR(0)%
+	;ここでいったん表示されている画像を消し、HTMLFを整理したうえで取得しなおす
+	CLEARLINE 1
+
+	;PRINTFORML TextHTML = %TextHTML%
+	
+	HTML_TAGSPLIT TextHTML
+	
+	;PRINTFORM RESULTS = 
+	FOR LCOUNT, 0, RESULT
+		IF SUBSTRING(RESULTS:LCOUNT, 0, 6) == "</nobr"
+			PRINT
+		ELSEIF SUBSTRING(RESULTS:LCOUNT, 0, 5) == "<nobr"
+			PRINT
+		ELSEIF SUBSTRING(RESULTS:LCOUNT, 0, 2) == "<p"
+			PRINT
+		ELSEIF SUBSTRING(RESULTS:LCOUNT, 0, 3) == "</p"
+			PRINT 
+		ELSE
+			ResultHTML += @"%RESULTS:LCOUNT%"
+		ENDIF
+	NEXT
+	WAIT
+	;PRINTFORML ResultHTML = %ResultHTML%
+	SETCOLOR K15_MACHINE_COLOR
+
+	CALL PRINT_STRL,@"%Cover%"
+	RESETCOLOR 
+	TextHTML = %HTML_GETPRINTEDSTR(0)%
+	CLEARLINE 1
+	
+	HTML_TAGSPLIT TextHTML
+	ResultHTML += @"<nonbutton pos='50'>";<font color='%TOSTR(K15_MACHINE_COLOR)%'>"
+	;ResultHTML += 
+	;ResultHTML += ""
+	FOR LCOUNT, 0, RESULT
+		IF SUBSTRING(RESULTS:LCOUNT, 0, 6) == "</nobr"
+			PRINT
+		ELSEIF SUBSTRING(RESULTS:LCOUNT, 0, 5) == "<nobr"
+			PRINT
+		ELSEIF SUBSTRING(RESULTS:LCOUNT, 0, 2) == "<p"
+			PRINT
+		ELSEIF SUBSTRING(RESULTS:LCOUNT, 0, 3) == "</p"
+			PRINT 
+		ELSE
+			;PRINTFORM %RESULTS:LCOUNT%
+			ResultHTML += @"%RESULTS:LCOUNT%"
+		ENDIF
+	NEXT
+	;</font>
+	ResultHTML += @"</nonbutton>"
+	;PRINTFORML %ResultHTML%
+	HTML_PRINT @"<nobr>%ResultHTML%</nobr>"
+	PRINTL ↑こうしたい
+	WAIT
+;
+;このフォルダにあるメソッドはリリース版では呼び出しちゃいけんよ
+
+@SAMPLE_04
+	CALL D20XX_BACKGROUND_GSC, "D20XX_Title+0xAF000000"
+	PRINTFORMW YES
+	CALL EFFECT_ALLRESET
+
+@D20XX_BACKGROUND_GSC, ARGS
+
+	;先に黒帯を作成
+	;CALL LETTERBOX_CREATE
+
+	;再表示用に重置
+	CBGREMOVERANGE 1, 1
+
+	;背景画像の作成
+	CALL OVERLAY_GCREATE, 3, ARGS, CLIENTWIDTH(), CLIENTHEIGHT() - LETTERBOX_HEIGHT
+	SIF RESULT == 0		;作成失敗
+		RETURN 0
+
+	;Z = 1に表示
+	CBGSETG 3, 0, 0, 1
+
+	RETURN 1
+
+
+
+;
+;================================================================
+; カラーバー用の文字列を生成する
+;--------------------------------
+;[引数]
+;	nBarVol			: バー現在値
+;	nBarVolMax		: バー最大値（0以下指定だとnBarVolと同値として扱う）
+;	nScaleNum		: 目盛数（半角文字の個数）
+;	colorLeft		: バーの左端の色
+;	colorRight		: バーの右端(100%)の色
+;	colorEmpty		: バーのEmpty部分の色
+;	flgExtra		: 特殊表示フラグ（ビット演算。）
+;						0x01	: カラーバーの後ろに現在値と最大値を記述する	" ({nBarVol,5}/{nBarVolMax,5})"
+;	strScaleText	: メモリ文字（半角文字。未指定時は%UNICODE(0x2586)%）
+;--------------------------------ColorCalc
+;[戻り値など]
+;	カラーバー用の文字列（色指定タグと■で構成された文字列）
+;================================================================
+;@FuncTagSetText_CreateColorBarText( nBarVol, nBarVolMax, nScaleNum, colorLeft, colorRight, colorEmpty, flgExtra, strScaleText = "" )
+;	#FUNCTIONS
+;	#DIM  nBarVol
+;	#DIM  nBarVolMax
+;	#DIM  nScaleNum
+;	#DIM  colorLeft
+;	#DIM  colorRight
+;	#DIM  colorEmpty
+;	#DIM  flgExtra
+;	#DIMS strScaleText
+;
+;	#DIM  LeftColor, 3
+;	#DIM  RightColor, 3
+;	#DIM  ColorCalc, 3
+;	#DIM  colorBuf
+;	#DIM  flgEmpty
+;	#DIM  Lcount
+;	#DIMS strBarText
+;
+;	IF STRLENS( strScaleText ) <= 0
+;		;strScaleText '= UNICODE(0x2586)
+;		;strScaleText '= UNICODE(0x220E)
+;		strScaleText '= UNICODE(0x2588)
+;		;strScaleText '= UNICODE(0x2585)
+;	ENDIF
+;
+;	VARSET strBarText, ""
+;
+;	LeftColor:0 = colorLeft / 256 / 256
+;	LeftColor:1 = colorLeft / 256 % 256
+;	LeftColor:2 = colorLeft % 256
+;	RightColor:0 = colorRight / 256 / 256
+;	RightColor:1 = colorRight / 256 % 256
+;	RightColor:2 = colorRight % 256
+;
+;	flgEmpty = 0
+;	FOR Lcount, 0, nScaleNum
+;		IF nBarVol > Lcount * nBarVolMax / nScaleNum
+;			ColorCalc:0 = (RightColor:0 - LeftColor:0) * Lcount / MAX( nScaleNum - 1 )
+;			ColorCalc:1 = (RightColor:1 - LeftColor:1) * Lcount / MAX( nScaleNum - 1 )
+;			ColorCalc:2 = (RightColor:2 - LeftColor:2) * Lcount / MAX( nScaleNum - 1 )
+;			colorBuf = FuncColor_ChangeColor( colorLeft, ColorCalc:0, ColorCalc:1, ColorCalc:2 )
+;			strBarText += @"@C:{colorBuf}@"
+;		ELSE
+;			IF flgEmpty == 0
+;				strBarText += @"@C:{colorEmpty}@"
+;				flgEmpty = 1
+;			ENDIF
+;		ENDIF
+;		strBarText += strScaleText
+;		IF flgEmpty == 0 || Lcount == nScaleNum - 1
+;			strBarText += @"@/C@"
+;		ENDIF
+;	NEXT
+;
+;	IF (flgExtra & 0x01) > 0
+;		strBarText += @" ({nBarVol,5}/{nBarVolMax,5})"
+;	ENDIF
+;
+;	RETURNF strBarText
+
+
+
+;
+@D20XX_OS_HTMLReInputスパゲッティ版(Xpos)
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Lcount,10
+	#DIMS DYNAMIC HtmlTag,100
+	#DIM DYNAMIC HtmlTagCounts
+	#DIMS DYNAMIC HtmlElement,100
+	#DIM DYNAMIC HtmlElementCount
+	#DIMS DYNAMIC Temp
+	;一つのウィンドウに100個も颜绘描画する事なんざないべさ
+	#DIMS DYNAMIC FACE_Temp,10
+	#DIM DYNAMIC FACE_TempYpos,10
+	#DIM DYNAMIC FACE_TempCount
+
+	FACE_TempCount = 0
+
+	FOR Lcount:0, 0, 43
+		HTML_TAGSPLIT D20XX_OS_WindowInput:(Lcount:0)
+		HtmlTagCounts = RESULT
+		;PRINTFORML {Lcount:0} HtmlTagCounts = {HtmlTagCounts}
+		FOR Lcount:6, 0, HtmlTagCounts
+			HtmlTag:(Lcount:6) = %RESULTS:(Lcount:6)%
+		NEXT
+		FOR (Lcount:1), 0, HtmlTagCounts
+			IF STRCOUNT(HtmlTag:((Lcount:1)), "颜绘")
+				SPLIT HtmlTag:(Lcount:1), "\"", HtmlElement
+				HtmlElementCount = RESULT
+				IF HtmlElementCount > 1
+					FOR (Lcount:2), 0, HtmlElementCount
+						IF ISNUMERIC(HtmlElement:(Lcount:2))
+							;PRINTFORML HtmlElement:((Lcount:2)-1) = %HtmlElement:((Lcount:2))%
+							IF (Lcount:2) > 0
+								IF STRCOUNT(HtmlElement:((Lcount:2)-1), "ypos") > 0
+									HtmlElement:(Lcount:3) = -945
+								ELSEIF  STRCOUNT(HtmlElement:((Lcount:2)-1), "pos") > 0
+									Temp = %HtmlElement:(Lcount:2)%
+									HtmlElement:(Lcount:2) = %TOSTR(TOINT(Temp)+(Xpos+2)*50)%
+									;PRINTFORML HtmlElement:(Lcount:2) = %HtmlElement:(Lcount:2)%
+								ENDIF
+							ENDIF
+						ENDIF
+					NEXT
+
+				ELSE
+					SPLIT HtmlTag:(Lcount:1), "\'", HtmlElement
+					HtmlElementCount = RESULT
+					FOR (Lcount:3), 0, HtmlElementCount
+						IF ISNUMERIC(HtmlElement:(Lcount:3))
+							PRINTFORML HtmlElement:((Lcount:2)-1) = %HtmlElement:((Lcount:2))%
+							IF (Lcount:3) > 0
+								PRINTFORML test!!!!!!!!!!!!!!!!! {STRCOUNT(HtmlElement:((Lcount:3)-1), "ypos")}
+								IF STRCOUNT(HtmlElement:((Lcount:3)-1), "ypos") > 0
+									HtmlElement:(Lcount:3) = -945
+									
+								ELSEIF STRCOUNT(HtmlElement:((Lcount:3)-1), "pos") >0 
+									Temp = %HtmlElement:(Lcount:3)%
+									HtmlElement:(Lcount:3) = %TOSTR(TOINT(Temp)+(Xpos+2)*50)%
+									PRINTFORML HtmlElement:(Lcount:3) = %HtmlElement:(Lcount:3)%
+								ENDIF
+							ENDIF
+						ENDIF
+					NEXT
+				ENDIF
+				HtmlTag:(Lcount:1) = 
+				FOR Lcount:4, 0, HtmlElementCount
+					SIF Lcount:4%2
+						HtmlTag:(Lcount:1) += @"\'"
+					HtmlTag:(Lcount:1) += @"%HtmlElement:(Lcount:4)%"
+					SIF Lcount:4%2
+						HtmlTag:(Lcount:1) += @"\'"
+				NEXT
+				;#region 颜绘表示位置ずらし
+					FACE_Temp:FACE_TempCount = %HtmlTag:(Lcount:1)%
+					HtmlTag:(Lcount:1) = 
+					FACE_TempYpos:FACE_TempCount = (Lcount:0)+9
+					FACE_TempCount++
+				;#endregion
+			ELSE
+				SPLIT HtmlTag:(Lcount:1), "\"", HtmlElement
+				HtmlElementCount = RESULT
+				IF HtmlElementCount > 1
+					FOR (Lcount:2), 0, HtmlElementCount
+						IF ISNUMERIC(HtmlElement:(Lcount:2))
+							PRINTFORML HtmlElement:((Lcount:2)-1) = %HtmlElement:((Lcount:2))%
+							IF (Lcount:2) > 0
+								IF STRCOUNT(HtmlElement:((Lcount:2)-1), "ypos") > 0
+									PRINT 
+								ELSEIF  STRCOUNT(HtmlElement:((Lcount:2)-1), "pos") > 0
+									Temp = %HtmlElement:(Lcount:2)%
+									HtmlElement:(Lcount:2) = %TOSTR(TOINT(Temp)+(Xpos+2)*50)%
+									;PRINTFORML HtmlElement:(Lcount:2) = %HtmlElement:(Lcount:2)%
+								ENDIF
+							ENDIF
+						ENDIF
+					NEXT
+				ELSE
+					SPLIT HtmlTag:(Lcount:1), "\'", HtmlElement
+					HtmlElementCount = RESULT
+					FOR (Lcount:3), 0, HtmlElementCount
+						IF ISNUMERIC(HtmlElement:(Lcount:3))
+							PRINTFORML HtmlElement:((Lcount:2)-1) = %HtmlElement:((Lcount:2))%
+							IF (Lcount:3) > 0
+								PRINTFORML test!!!!!!!!!!!!!!!!! {STRCOUNT(HtmlElement:((Lcount:3)-1), "ypos")}
+								IF STRCOUNT(HtmlElement:((Lcount:3)-1), "ypos") > 0
+									PRINT 
+									
+								ELSEIF STRCOUNT(HtmlElement:((Lcount:3)-1), "pos") >0 
+									Temp = %HtmlElement:(Lcount:3)%
+									HtmlElement:(Lcount:3) = %TOSTR(TOINT(Temp)+(Xpos+2)*50)%
+									PRINTFORML HtmlElement:(Lcount:3) = %HtmlElement:(Lcount:3)%
+								ENDIF
+							ENDIF
+						ENDIF
+					NEXT
+				ENDIF
+				HtmlTag:(Lcount:1) = 
+				FOR Lcount:4, 0, HtmlElementCount
+					SIF Lcount:4%2
+						HtmlTag:(Lcount:1) += @"\'"
+					HtmlTag:(Lcount:1) += @"%HtmlElement:(Lcount:4)%"
+					SIF Lcount:4%2
+						HtmlTag:(Lcount:1) += @"\'"
+				NEXT
+			ENDIF
+		NEXT
+		PRINTFORML FACE_TempCount = {FACE_TempCount}
+		D20XX_OS_WindowInput:(Lcount:0) = 
+
+		FOR Lcount:7, 0, FACE_TempCount
+			IF (Lcount:0) == FACE_TempYpos:(Lcount:7)
+				D20XX_OS_WindowInput:(Lcount:0) += @"%FACE_Temp:(Lcount:7)%"
+			ENDIF
+		NEXT
+
+		FOR Lcount:5, 0, HtmlTagCounts
+			D20XX_OS_WindowInput:(Lcount:0) += @"%HtmlTag:(Lcount:5)%"
+		NEXT
+		PRINTFORML D20XX_OS_WindowInput:(Lcount:0) = %D20XX_OS_WindowInput:(Lcount:0)%
+	NEXT
+	WAIT
+;

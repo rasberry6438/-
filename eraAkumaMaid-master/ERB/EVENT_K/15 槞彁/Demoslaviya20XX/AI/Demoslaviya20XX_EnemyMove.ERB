@@ -1,0 +1,70 @@
+﻿@D20XX_EnemyMove(TargetUnitID)
+	#DIM TargetUnitID
+	#DIM Y_Temp
+	#DIM X_Temp
+	#DIM Y_Local
+	#DIM X_Local
+	#DIM Y_Result
+	#DIM X_Result
+	#DIM FoundFlag
+	#DIM UnitID_Temp
+	
+	FoundFlag = 0
+	Y_Result = -1
+	X_Result = -1
+	CALL D20XX_UnitSearch(TargetUnitID)
+	Y_Local = D20XX_AstarMap:(RESULT:1):(RESULT:2):1
+	X_Local = D20XX_AstarMap:(RESULT:1):(RESULT:2):2
+	WHILE 1
+		IF D20XX_MoveCostMap:Y_Local:X_Local != -1 && TOINT(D20XX_MAP:Y_Local:X_Local:1) == 0 && FoundFlag == 0
+			;移動可能マス到達したら一応RESULTに移動先候補マスデータを渡す
+			Y_Result = Y_Local
+			X_Result = X_Local
+			FoundFlag = 1
+		ENDIF
+		
+		;それはそれとして移動予定ルートの途上にユ针织が居ないか最後まで確認する
+		Y_Temp = D20XX_AstarMap:Y_Local:X_Local:1
+		X_Temp = D20XX_AstarMap:Y_Local:X_Local:2
+		SIF Y_Local == Y_Temp && X_Local == X_Temp
+			BREAK
+		
+		Y_Local = Y_Temp
+		X_Local = X_Temp
+		CALL D20XX_UnitSearch(D20XX_SelectUnit)
+		IF TOINT(D20XX_MAP:Y_Temp:X_Temp:1) != 0
+			IF RESULT:1 != Y_Local && RESULT:2 != X_Local
+				FoundFlag = 0
+				Y_Result = -1
+				X_Result = -1
+			ENDIF
+		ENDIF
+
+		CALL D20XX_UnitSearch(D20XX_SelectUnit)
+		SIF RESULT:1 == Y_Local && RESULT:2 == X_Local
+			BREAK
+
+	WEND
+
+	;移動処理
+	IF Y_Result != -1 && X_Result != -1
+		CALL D20XX_UnitSearch(D20XX_SelectUnit)
+		D20XX_MAP:(RESULT:1):(RESULT:2):1 = "-1"
+
+		IF TOINT(D20XX_MAP:Y_Result:X_Result:1) == 0
+			D20XX_MAP:Y_Result:X_Result:1 = {D20XX_SelectUnit}
+		ELSE
+			PRINTFORML 【Debug!】エラー！　D20XX_EnemyMove55
+		ENDIF
+		D20XX_Unit:D20XX_SelectUnit:3 = {D20XX_MoveCostMap:Y_Result:X_Result}
+
+	ENDIF
+
+
+
+
+	RESULT:0 = Y_Result
+	RESULT:1 = X_Result
+	
+	
+	RETURN RESULT

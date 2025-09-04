@@ -1,0 +1,578 @@
+﻿;-------------------------------------------------
+; 廁所ハプニングイベント
+;-------------------------------------------------
+@EVENT_TOILET_HAPPENING
+#DIM TGT_MEMO
+
+	; TARGETの退避
+	TGT_MEMO = TARGET
+
+	; 発生確認＆対象の選別
+	CALL EVENT_TOILET_HAPPENING_ENABLE
+	TARGET = RESULT
+
+	; ふさわしい対象が居る場合は廁所イベント本体発生
+	SIF RESULT
+		CALL EVENT_TOILET_HAPPENING_MAIN
+
+	; TARGETの復帰
+	TARGET = TGT_MEMO
+
+RETURN 1
+
+;-------------------------------------------------
+; 廁所イベント 発生確認
+;   返り値が 0 > のとき、イベント発生
+;   その場合、返り値が発生対象の番号となる
+;-------------------------------------------------
+@EVENT_TOILET_HAPPENING_ENABLE
+#DIM HEROINE
+	; 自宅でのみ発生
+	SIF !PLACE("自宅")
+		RETURN 0
+
+	; 你尿意確認
+	;   ちょっと緩めに判定
+	SIF BASE:PLAYER:尿意 < 3000
+		RETURN 0
+
+	; 既に発生済みの場合発生しない
+	; 発生は１日１回のみ
+	SIF CEVENT("廁所ハプニング", PLAYER)
+		RETURN 0
+
+	; 対象の選定
+	HEROINE = FIND_COND("廁所イベント可能")
+	IF HEROINE
+		; ヒロインの尿意判定
+		SIF BASE:HEROINE:尿意 < 3000
+			HEROINE = 0
+
+		; 条件を満たしたうえで随机判定
+		SIF RAND:10 > 3
+			HEROINE = 0
+	ENDIF
+
+	RETURN HEROINE
+
+RETURN 1
+
+;-------------------------------------------------
+; 廁所イベント メイン処理
+;   TARGET は対象となるヒロインに変更済み
+;-------------------------------------------------
+@EVENT_TOILET_HAPPENING_MAIN
+#DIMS EVENTS
+#DIMS MSGS
+#DIM SELNUM
+
+	EVENTS = 
+
+	; 描写１
+	DRAWLINE
+	PRINTFORMW %TEXTR("偶然/突然间/＿")%有了尿意的%CALLNAME:PLAYER%面向%TEXTR("洗手间/卫生间")%。
+	PRINTL 
+	PRINTW 
+	PRINTW 乱七八糟
+	PRINTL
+	PRINTW
+	PRINTFORMW 打開厕所的門、%CALLNAME:PLAYER%看到了%CALLNAME:TARGET%%TEXTR("呆然と/用吃惊的表情/呆気的様子")%看着%CALLNAME:PLAYER%……
+	PRINTFORMW %CALLNAME:TARGET%在%TEXTR("厕所/＿")%的马桶上就像是%TEXTR("坐下/放下腰")%%TEXTR("办着事/排泄着")%。
+	; 下腹部が見える格好
+	IF CHECK_SKIRT("裙") == 0
+		IF CHECK_CLO("下衣露出")
+			PRINTFORM %BOTTOM(TARGET, "略")%被敞開、
+		ELSE
+			PRINTFORM 看到的不是裙子、
+		ENDIF
+		PRINTFORMW 从暴露出的%CALLNAME:TARGET%的%TEXTR("会阴/秘所/陰部")%里、淡黄色的%TEXTR("小水/尿/圣水")%一边描画缓慢的拱形一边落下到马桶发出了水声。
+	ELSE
+		PRINTFORMW 与一点点的水音一起漂浮着微弱的氨气味。
+	ENDIF
+
+	; 口上呼び出し(メイン)
+	CALL KOJO_DAILYCOM, "廁所ハプニング"
+
+	; ヒロインから招かれる場合
+	IF TALENT:淫乱 + TALENT:好色 && COND("欲求不満") >= 2 && BASE:欲求不満/10 > RAND:10
+		SELNUM = 99
+	ELSE
+		; 対応
+		EVENTS = 関上門
+		SIF TALENT:淫乱 || MARK:屈服刻印 >= 3 || COND("合意：检查阴部")
+			EVENTS += "/就这様继续看"
+		CALL PRINT_SELECT, EVENTS
+		SELNUM = RESULT
+	ENDIF
+
+	; 対応後の処理
+	SELECTCASE SELNUM
+		CASE 0
+		;   ドアを閉める
+			PRINTFORMW %CALLNAME:PLAYER%呆呆地望着眼前的情景、慌忙関上了門。
+			PRINTFORMW …………
+			PRINTFORMW ……
+			PRINTFORMW …………隔着淡淡的門传来微弱的水声……
+			PRINTFORMW ……
+			PRINTFORMW 
+			PRINTFORM 不久%TEXTR("办完事/从厕所里出来")%的%CALLNAME:TARGET%出现了
+			MSGS = 脸上腾起绯红/一直红到耳朵根
+			SIF !TALENT:恋慕 && !TALENT:淫乱 && ABL:露出癖 < 3
+				MSGS += @"\/看了一眼想要说什么的%CALLNAME:PLAYER%"
+			PRINTFORM %TEXTR(MSGS)%
+			PRINTFORMW %TEXTR("装做冷静的/若无其事的")%离開了……
+
+		CASE 1
+			;  眺める
+			PRINTFORM 因为打算%TEXTR("带走/无视/制止")%慌张的%CALLNAME:TARGET%而関上了厕所的門、察觉到%CALLNAME:PLAYER%意図的%CALLNAME:TARGET%
+			IF TALENT:不知羞恥
+				MSGS = 并不是什么特别害羞的事情/像是要展示一様
+				SIF TALENT:強気
+					MSGS += "/自己大大地/一边对上視線一边"
+				SIF TALENT:開朗
+					MSGS += "/很轻松地/很開心地/姿势非常不雅地/一边突出着自己的腰一边"
+				SIF TALENT:高慢
+					MSGS += "/以好像是要把自信溢出来的態度/以充满優越感的态度"
+				PRINTFORM %TEXTR(MSGS)%
+			ELSE
+				PRINTFORM %TEXTR("害羞/观念转变/似乎放弃了")%地%TEXTR("垂下眼睛/背对着脸")%
+			ENDIF
+			SIF CHECK_SKIRT("裙")
+				PRINTFORM 在把裙子打褶的同時
+			;低確率でM字開脚姿勢
+			IF (TALENT:淫乱 || ABL:露出癖 >= 5) && RAND:4 == 0
+				PRINTFORM 大腿像M字開脚一様展開、
+			ELSE
+				PRINTFORM 打開着腿
+			ENDIF
+			PRINTFORMW %TEXTR("黄色的液体/带着微弱氨臭的液体/尿液/聖水")%从尿道给%TEXTR("迸出来/流出来")%的様子……
+			PRINTFORMW …………
+			PRINTFORMW ……
+			PRINTFORMW 
+			CALL EVENT_TOILET_HAPPENING_EX("見せつけくぱぁ")
+			IF RESULT
+				PRINTFORM %CALLNAME:PLAYER%的视线
+				IF MARK:屈服刻印 >= 3 || ABL:受虐属性 >= 4
+					PRINTFORM %TEXTR("腼腆地笑了笑/害羞地接受了")%
+				ELSE
+					PRINTFORM %TEXTR("脸变成了红色/带着忍受羞耻感的表情接受了考验")%
+				ENDIF
+				PRINTFORM %CALLNAME:TARGET%小心翼翼地擦干%TEXTR("膣穴/私密处/尿尿的地方")%、收拾完毕、撇下%CALLNAME:PLAYER%%TEXTR("仓促的/害羞的")%离開了厕所……
+			ELSE
+				PRINTFORMW 不久、结束了%TEXTR("排泄/排尿")%的%CALLNAME:TARGET%以%TEXTR("不満/不知道该说什么")%的脸色很快地结束了善后、%TEXTR("仓促的/逃似的")%离開了%TEXTR("厕所/洗手间")%。
+			ENDIF
+
+		CASEELSE
+			; 誘われた
+			PRINTFORM %CALLNAME:TARGET%%TEXTR("微笑着/笑脸浮现着")%、%TEXTR("突然间/不经意间")%的%TEXTR("小把戏/恶作剧")%、意料之外的事态让%CALLNAME:PLAYER%发呆、
+			PRINTFORMW %TEXTR("坐在马桶上/维持着上厕所的姿勢")%就那様邀请%CALLNAME:PLAYER%进厕所……
+			PRINTFORM %CALLNAME:PLAYER%一进厕所、%CALLNAME:TARGET%就说
+			SIF CHECK_SKIRT("裙")
+				PRINTFORM 在把裙子打褶的同時
+			PRINTFORMW 打開胯股、用手指展開%TEXTR("阴唇/女陰/女性器")%从尿道那里%TEXTR("小水/尿液/黄金水/聖水")%%TEXTR("迸发/流出/飛散")%的様子被看到了。
+			PRINTFORMW 与氨%TEXTS("气")%排出一起发出%TEXTR("响亮/大的")%水声的%TEXTR("小水/尿液/黄金水/聖水")%被便器吸入了……
+			PRINTFORMW …………
+			PRINTFORMW ……
+			PRINTFORMW 
+			CALL EVENT_TOILET_HAPPENING_EX("Ｈイベント")
+			IF RESULT
+				; 派生イベントが実行された
+				PRINTFORMW %CALLNAME:PLAYER%和%CALLNAME:TARGET%一起整理了厕所里残留的性行为的痕迹、好像什么都没发生过一様离開了厕所……
+			ELSE
+				PRINTFORMW 不久结束了%TEXTR("排泄/排尿")%的%CALLNAME:TARGET%以%TEXTR("满足/满意/開心/轻松")%脸色结束了善后、与%CALLNAME:PLAYER%一起离開了%TEXTR("厕所/手洗间")%。
+			ENDIF
+	ENDSELECT
+
+	;ドアを即閉じた以外だと露出経験取得
+	IF SELNUM
+		; 経験取得
+		EXP:露出経験 += 1
+		PRINTL 
+		PRINTFORMW 曝光经验+1
+
+		;ちんこを弄脏的ままにしておくのはあまり良くないので綺麗にする
+		SIF PENIS(MASTER) && COND("Ｐ汚れ", MASTER)
+			CALL RESET_STAIN_EX, "Ｐ", MASTER
+	ENDIF
+	DRAWLINE
+
+	; 尿意処理
+	CALL SETFLAG_DAILY, "廁所", TARGET
+	CALL SETFLAG_DAILY, "廁所", PLAYER
+
+	;廁所ハプニング発生フラグON
+	CALL SET_CEVENT, "廁所ハプニング", PLAYER
+
+RETURN 1
+
+;-------------------------------------------------
+; 廁所ハプニング 派生イベント
+;   一定条件を満たしたときに発生する派生イベント
+;-------------------------------------------------
+@EVENT_TOILET_HAPPENING_EX(ARGS)
+	; 発生確認
+	SIF EVENT_TOILET_HAPPENING_EX_ENABLE(ARGS) == 0
+		RETURN 0
+
+	; メイン処理
+	CALL EVENT_TOILET_HAPPENING_EX_MAIN(ARGS)
+
+	RETURN 1
+
+;-------------------------------------------------
+; 廁所ハプニング 派生イベント 続行判断
+;   ※拘るならば要調整
+;-------------------------------------------------
+@EVENT_TOILET_HAPPENING_EX_ENABLE(ARGS)
+#FUNCTION
+#DIMS TABLE
+
+	VARSET TABLE
+
+	SELECTCASE ARGS
+		CASE "見せつけくぱぁ"
+			SIF COND("胎内の精液量") < 40000
+				RETURNF 0
+			RETURNF 1
+		CASE "Ｈイベント"
+			;どれもチンコが必要
+			SIF PENIS(MASTER) == 0
+				RETURNF 0
+
+			;イベントが発生するか？
+			SIF CANTRAIN("自慰") && ABL:露出癖 >= 3 && ABL:自慰中毒 >= 3
+				TABLE += "相互自慰/"
+			SIF CANTRAIN("手淫")
+				TABLE += "手淫/"
+			SIF CANTRAIN("口交")
+				TABLE += "口交/"
+			SIF CANTRAIN("正常位") || CANTRAIN("後背位")
+				TABLE += "Ｖ性交/"
+			SIF CANTRAIN("Ａ正常位")
+				TABLE += "Ａ性交/"
+			SIF TABLE == ""
+				RETURNF 0
+
+			; 主动誘っているので高確率
+			SIF RAND:10 >= 8
+				RETURNF 1
+		CASEELSE
+			PRINTFORM 错误！%ARGS%未定义
+	ENDSELECT
+
+	; 性処理合意がある場合は高確率で続行
+	SIF COND("合意：性処理") && RAND:10 >= 3
+		RETURNF 1
+	; 淫乱判定
+	SIF TALENT:淫乱 && RAND:10 >= 5
+		RETURNF 1
+
+	; 性処理合意も、淫乱もない場合、恋慕がなければ意向の判定は無効
+	SIF !TALENT:恋慕
+		RETURNF 0
+
+	; TODO
+	;  追加条件
+
+	RETURNF 0
+
+;-------------------------------------------------
+; 廁所ハプニング 派生イベント メイン処理
+;-------------------------------------------------
+@EVENT_TOILET_HAPPENING_EX_MAIN(ARGS)
+#DIMS TABLE
+#DIMS EVENTS
+
+	; テーブル初期化
+	VARSET EVENTS
+	VARSET TABLE
+	;ここで起きうるイベントのSELECTCOMが必要なら決めてしまう
+	SELECTCASE ARGS
+		CASE "見せつけくぱぁ"
+			EVENTS = 見せつけくぱぁ
+			SELECTCOM = GETNUM(TRAINNAME, "扒開阴道")
+		CASE "Ｈイベント"
+			SIF CANTRAIN("自慰") && ABL:露出癖 >= 3 && ABL:自慰中毒 >= 3
+				TABLE += "相互自慰/"
+			SIF CANTRAIN("手淫")
+				TABLE += "手淫/"
+			SIF CANTRAIN("口交")
+				TABLE += "口交/"
+			SIF CANTRAIN("正常位") || CANTRAIN("後背位")
+				TABLE += "Ｖ性交/"
+			SIF CANTRAIN("Ａ正常位")
+				TABLE += "Ａ性交/"
+
+			EVENTS = %TEXTR(TABLE)%
+
+			SELECTCASE EVENTS
+				CASE "相互自慰"
+					SELECTCOM = GETNUM(TRAINNAME, "自慰")
+				CASE "手淫"
+					SELECTCOM = GETNUM(TRAINNAME, "手淫")
+				CASE "口交"
+					SELECTCOM = GETNUM(TRAINNAME, "口交")
+				CASE "Ｖ性交"
+					SIF CANTRAIN("正常位")
+						SELECTCOM = GETNUM(TRAINNAME, "正常位")
+					SIF CANTRAIN("後背位") && (CANTRAIN("正常位") == 0 || RAND:2)
+						SELECTCOM = GETNUM(TRAINNAME, "後背位")
+				CASE "Ａ性交"
+					SELECTCOM = GETNUM(TRAINNAME, "肛門後背位")
+			ENDSELECT
+	ENDSELECT
+
+	STR:日常イベント名 = 廁所イベント：%EVENTS%
+
+	SELECTCASE EVENTS
+		CASE "見せつけくぱぁ"
+			PRINTFORMW 不久、水音变弱而中断了、%CALLNAME:TARGET%却以别扭的姿态扭捏着什么……
+			PRINTFORM 等了一会儿、脸红了的%CALLNAME:TARGET%
+			PRINTFORM %TEXTR("双腿像展示一样以更大幅度打開/身體後仰將腰肢挺起")%
+			PRINTFORMW 用双手的手指展開%TEXTR("自己的秘所/阴唇")%……
+			PRINTFORM 水滴残留的女阴小穴蠢蠢欲动、从孔穴深处传来
+			IF CFLAG:Ｖ已中出
+				PRINTFORM %TEXTR("刚才/刚刚")%
+			ELSE
+				PRINTFORM %TEXTR("上次/前回")%
+			ENDIF
+			PRINTFORM %TEXTR("充分的/大量得")%%TEXTR("注込/中出")%
+			IF CFLAG:Ｖ已中出
+				PRINTFORM %TEXTR("新鮮的/鲜活的")%
+			ELSE
+				PRINTFORM %TEXTR("留在了子宫里/白濁液")%
+			ENDIF
+			PRINTFORMW %TEXTR("精液/白濁液")%发出黏腻的声音溢了出来……
+
+			; 仮想指令実行処理
+			CALL EVENT_TOILET_HAPPENING_EX_TRAIN_SIM, EVENTS
+
+		CASE "相互自慰"
+			PRINTFORM 看着%CALLNAME:TARGET%的%TEXTR("排尿姿势/羞耻姿势/春姿")%的%CALLNAME:PLAYER%、取出%TEXTR("硬邦邦/臨戦態勢/勃起/元気满满")%的%TEXTR("小兄弟/丁丁/自己的分身")%、
+			PRINTFORM 将那个
+			IF TALENT:淫乱
+				PRINTFORM 凝视%TEXTR("充满欲望的双眼/期待的眼神/热情满满的瞳孔")%
+			ELSE
+				PRINTFORM 偷看%TEXTR("一晃一晃/背对着脸")%
+			ENDIF
+			PRINTFORMW 在%CALLNAME:TARGET%面前%TEXTR("安慰自己/自慰")%。
+			PRINTFORM %CALLNAME:TARGET%就坐在马桶上
+			IF TALENT:淫乱
+				PRINTFORM %TEXTR("吮吸着自己的食指/脸颊写满了欲望/瞳孔潤湿了")%
+			ELSE
+				PRINTFORM %TEXTR("难为情的/羞耻的")%
+			ENDIF
+			PRINTFORMW %CALLNAME:PLAYER%进行着%TEXTR("自慰/一人游戏")%、%TEXTR("観察/看見/视线離不開")%%CALLNAME:TARGET%用自己的手指剥開%TEXTR("阴唇/女性器/女陰")%伸进去进行着%TEXTR("自慰/一人游戏")%……
+
+			; 仮想指令実行処理
+			CALL EVENT_TOILET_HAPPENING_EX_TRAIN_SIM, EVENTS
+
+			PRINTFORMW 吐出甜蜜的呼吸、%CALLNAME:TARGET%的身体微微颤抖、
+			PRINTFORM %CALLNAME:PLAYER%看着只是%TEXTR("自慰/用自己的手指/一人游戏就")%
+			IF NOWEX:Ｃ絶頂 + NOWEX:Ｖ絶頂 + NOWEX:Ａ絶頂 + NOWEX:Ｂ絶頂 + NOWEX:尿道絶頂
+				PRINTFORMW 绝顶了的%CALLNAME:TARGET%的脸射出了精液。
+			ELSE
+				PRINTFORMW 就露出了開心的表情的%CALLNAME:TARGET%的脸射出了精液。
+			ENDIF
+			PRINTFORMW 面对着%CALLNAME:PLAYER%的%TEXTR("精液/白浊")%在脸上%TEXTR("大量射出/滴滴荟萃/狠狠地颜射")%、%CALLNAME:TARGET%一脸茫然……
+		CASE "手淫"
+			PRINTFORM 突然停止了水声、%TEXTR("结束了排尿/结束排泄的/因为排尿的快感而阵阵抖起身体的")%%CALLNAME:TARGET%
+			IF TALENT:害羞 || ABL:露出癖 < 5
+				PRINTFORM 将%TEXTR("满是羞耻的/像是害羞地烧起来了的")%脸%TEXTR("背过去/转过去/低下来")%忍耐着内心羞耻到不行的痛苦…
+			ELSE
+				PRINTFORM 没有任何想要隐藏起自己%TEXTR("似乎是因为被看到而兴奋了起来而/因为满足了下流的欲望而")%露出的下流高潮的表情的样子。
+			ENDIF
+			PRINTFORMW 看到了那样的%CALLNAME:TARGET%而%TEXTR("膨胀起来的/勃起的/变硬的")%%CALLNAME:MASTER%的%TEXTR("阴茎/欲望/男性器/肉棒")%出现在了%CALLNAME:TARGET%的面前。
+			PRINTFORM %TEXTR("用满是羞耻的脸颊/用露出了焦躁的表情/用湿润了的双眼/慢慢地吐出湿润的吐息")%
+			IF TALENT:淫乱 && RAND:3
+				PRINTFORM 绽放出淫乱的%TEXTR("笑容/笑颜/神色")%的%CALLNAME:TARGET%一句话也没有说
+			ELSEIF (TALENT:小悪魔 || ABL:施虐属性 >= 3) && RAND:3
+				PRINTFORM %TEXTR("露出了轻薄的笑容/带着优越感放松了表情/嘲笑着那样不堪的丑态")%、像是准备惩罚一样靠近了%CALLNAME:MASTER%的%CALLNAME:TARGET%
+			ELSEIF TALENT:害羞 && RAND:3
+				PRINTFORM 露出了似乎是在说着「%TEXTR("这样下去该怎么办好/是自己的错吗/好像很辛苦的样子……但是")%」的表情的%CALLNAME:TARGET%
+			ELSE 
+				PRINTFORM %TEXTR("咕噜地咽下了一口唾沫的/苦笑着的/微微低下頭的")%%CALLNAME:TARGET%
+			ENDIF
+			IF (TALENT:恋慕 && ABL:技巧 >= 5) || TALENT:淫乱
+				PRINTFORMW 熟练地只用嘴唇将%CALLNAME:MASTER%的%TEXTR("凶猛阴茎/欲望/燥熱/怒張/肉棒/阴茎")%从内裤中解放出来、毫不犹豫地%TEXTR("帮助处理/用手指触摸着開始温柔的奉仕/用手指抚摸着湿润的前端")%……
+			ELSEIF ABL:技巧 >= 3
+				PRINTFORMW %TEXTR("顺从地/单手抓着/什么都没有说地")%拉下%CALLNAME:MASTER%的内裤、将自己的手指用唾液润滑之后開始了%TEXTR("撸动/奉仕")%……
+			ELSE
+				PRINTFORMW 将手放在%CALLNAME:MASTER%的内裤上、%TEXTR("艰难地/笨手笨脚地/犹豫不决地")%%TEXTR("開始了手淫/開始用手奉仕/握住了那根冒出来的东西")%……
+			ENDIF
+			; 仮想指令実行処理
+			CALL EVENT_TOILET_HAPPENING_EX_TRAIN_SIM, EVENTS
+
+		CASE "口交"
+			PRINTFORM %CALLNAME:PLAYER%的视线
+			IF TALENT:恋慕 || TALENT:淫乱
+				PRINTFORM 一边沐浴在
+			ELSE
+				PRINTFORM 一边忍耐
+			ENDIF
+			PRINTFORMW 看着%TEXTR("不断地撒着尿/持续排泄/聖水排出")%的%CALLNAME:TARGET%的%TEXTR("私密/羞耻")%姿势、涌出了与尿意不同的排泄欲……
+			PRINTFORM 取出%TEXTR("勃起/硬邦邦/臨戦態勢")%的%TEXTR("丁丁/男性器/小兄弟")%后、%CALLNAME:TARGET%说
+			IF TALENT:恋慕 || TALENT:淫乱
+				PRINTFORM 似乎在焦急地等待
+			ELSE
+				PRINTFORM 犹豫不决
+			ENDIF
+			PRINTFORMW 把%CALLNAME:PLAYER%的那个%TEXTR("含在嘴里/開始口交/吞到最里面")%……
+
+			; 仮想指令実行処理
+			CALL EVENT_TOILET_HAPPENING_EX_TRAIN_SIM, EVENTS
+
+			; さらに派生(ToDo)
+
+			PRINTFORM 就算从%TEXTR("秘所/女陰/尿道口")%中溢出的%TEXTR("小水/尿液/聖水")%停了下来、%CALLNAME:TARGET%也不会停止%TEXTR("口交/舔舐")%阴茎的、
+			PRINTFORMW 在%CALLNAME:TARGET%的%TEXTR("口中/舌上/喉咙深处")%射出大量的精液、一边咳嗽一边将嘴里积存的%CALLNAME:PLAYER%的精液一滴不剩地吞下。
+
+		CASE "Ｖ性交"
+			; 避孕套の有無
+			TEQUIP:PLAYER:避孕套 = 1
+			SIF COND("女性主導生性交")
+				TEQUIP:PLAYER:避孕套 = 0
+
+			IF ABL:受虐属性 >= 3 || ABL:露出癖 >= 5
+				PRINTFORM 为了展现自己的排泄姿态而张開双脚
+			ELSE
+				PRINTFORM 一边忍受着害羞
+			ENDIF
+			PRINTFORMW 持续排泄的%CALLNAME:TARGET%的姿态让情欲沸腾……
+			PRINTFORM 暂且把%TEXTR("勃起/硬邦邦/準備万端")%的%TEXTR("阴茎/男性器")%交给%TEXTR("上完厕所/排泄終止/尿液途中流尽/聖水排完")%的%CALLNAME:TARGET%
+			PRINTFORM 在%CALLNAME:TARGET%眼前、%CALLNAME:TARGET%是
+			IF TEQUIP:PLAYER:避孕套
+				SELECTCASE RAND:2
+					CASE 0
+						PRINTFORM %SKIRT(TARGET, "略")%的口袋
+					CASE 1
+						PRINTFORM 在备置的小盒子里
+				ENDSELECT
+				PRINTFORM 从中取出避孕套
+				SIF ABL:奉仕精神 > 3
+					PRINTFORM 用嘴巴
+				PRINTFORM 快速安装、
+			ENDIF
+			; 体位が後背位
+			IF SELECTCOM == GETNUM(TRAINNAME, "後背位")
+				PRINTFORM 屁股朝这边坐上马桶
+			ELSE
+				PRINTFORM 像抱着自己的脚一様
+			ENDIF
+			PRINTFORM 采取姿势
+			IF MARK:屈服刻印 > 1
+				PRINTFORM 充满期待的眼睛
+			ELSE
+				PRINTFORM 害羞地红着脸
+			ENDIF
+			PRINTFORMW %CALLNAME:PLAYER%的%TEXTR("阴茎/肉棒")%将%TEXTR("私密深处/魅惑的柔肉")%%TEXTR("完全吞没/深深插入")%……
+
+			; 仮想指令実行処理
+			CALL EVENT_TOILET_HAPPENING_EX_TRAIN_SIM, EVENTS
+
+			; さらに派生(ToDo)
+
+		CASE "Ａ性交"
+			PRINTFORM %TEXTR("排泄終止/上完厕所/聖水排出完毕")%的%CALLNAME:TARGET%
+			IF MARK:屈服刻印 >= 3 || ABL:受虐属性 >= 4
+				PRINTFORM 带着满怀期待的眼神
+			ELSE
+				PRINTFORM 脸红到耳朵
+			ENDIF
+			PRINTFORMW 手扶着马桶、像是在强调%TEXTR("菊花/肛門")%一様伸出屁股。
+			PRINTFORMW 响应着%TEXTR("欲望/希望/诱惑/期待")%、将阴茎塞进%TEXTR("突然缩了一下/紧紧绷住")%的%CALLNAME:TARGET%后面的洞穴、%CALLNAME:TARGET%发出像被拔掉了什么的长长的叹息、一口气吞噬了%CALLNAME:PLAYER%的%TEXTR("陰茎/分身/肉棒")%……
+
+			; 仮想指令実行処理
+			CALL EVENT_TOILET_HAPPENING_EX_TRAIN_SIM, EVENTS
+
+		CASEELSE
+			PRINTFORMW 错误！%EVENTS%未定义的内容。
+			RETURN 0
+	ENDSELECT
+
+;-------------------------------------------------
+; 廁所ハプニング 派生イベント 指令仮想実行処理
+;-------------------------------------------------
+@EVENT_TOILET_HAPPENING_EX_TRAIN_SIM(ARGS)
+#DIM LCOUNT
+#DIM LINE_MEMO
+
+	;絶頂度合いを重置
+	VARSET EX
+	VARSET NOWEX
+	VARSET EX:PLAYER:0
+	VARSET NOWEX:PLAYER:0
+	VARSET LOCAL
+
+	;前準備開始
+	CALL SIMULATE_TRAIN_FIRST
+
+	SELECTCASE ARGS
+		CASE "相互自慰"
+			; 相互 なのでヒロイン側の絶頂処理を先に済ませる
+			FOR LCOUNT, 0, MAX(MIN(ABL:欲望, 10)/2, MIN(ABL:自慰中毒, 5), 1) + RAND:3
+				CALL SIMULATE_TRAIN_COM, SELECTCOM, 1
+
+				;絶頂済みならここでおしまい
+				SIF NOWEX:Ｃ絶頂 + NOWEX:Ｖ絶頂 + NOWEX:Ａ絶頂 + NOWEX:Ｂ絶頂 + NOWEX:尿道絶頂
+					BREAK
+			NEXT
+			;PRINTFORMW {EXP_GAIN("Ｖ経験")}
+
+			SELECTCOM = GETNUM(TRAINNAME, "自慰")
+		CASE "手淫"
+
+		CASE "口交"
+
+		CASE "Ｖ性交"
+
+		CASE "Ａ性交"
+
+		CASE "見せつけくぱぁ"
+			; 絶頂とは関係ない
+			LOCAL = 1
+		;CASE "口交後飲尿"
+		;	SELECTCOM = GETNUM(TRAINNAME, "扒開阴道")
+		;	; 絶頂とは関係ない
+		;	LOCAL = 1
+	ENDSELECT
+
+	; COM格子
+	IF SELECTCOM < 0
+		PRINTFORMW 错误！对应%ARGS%的COM不存在({SELECTCOM})
+		RETURN 0
+	ENDIF
+
+	SIF !LOCAL
+		LOCAL = 999
+
+	; 実行ループ
+	FOR LCOUNT, 0, LOCAL
+		CALL SIMULATE_TRAIN_COM, SELECTCOM, 1
+
+		;射精済みならここでおしまい
+		SIF NOWEX:PLAYER:射精
+			BREAK
+	NEXT
+
+	;経験や珠などの獲得量計算
+	CALL SIMULATE_TRAIN_CALC
+
+	;結果発表
+	CALL SIMULATE_TRAIN_SHOW
+
+	; 口上対応
+	LINE_MEMO = LINECOUNT
+	CALL KOJO_DAILYCOM, "廁所Ｈ"
+	SIF NOWEX:PLAYER:射精 && LINECOUNT == LINE_MEMO
+		CALL SAMEN_SHOOT_MESSAGE
+
+	CALL SETFLAG, "調教外Ｈ終了", MASTER
+	CALL SETFLAG, "調教外Ｈ終了", TARGET
+
+;-------------------------------------------------
+; 廁所ハプニング イベントフラグ阴蒂ア
+;   日期が変わるとき(EVENTTURNEND)に呼ばれる
+;-------------------------------------------------
+@EVENTTURNEND_TOILET_HAPPENING
+CALL DEL_CEVENT, "廁所ハプニング", PLAYER

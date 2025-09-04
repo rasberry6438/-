@@ -1,0 +1,56 @@
+﻿
+@アイテム個別文章表示_海苔仙贝套装(ARGS)
+;海苔おせんべセット
+IF ARGS == "値段"
+	詳細文文字列受け渡し変数 = 卢比
+	RETURN 5500
+ENDIF
+
+LOCALS = 
+LOCALS += @"■海苔仙贝套装　　　持有数:{DT_CELL_GET("所持アイテムデータベース", 0, "海苔仙贝套装")}<br>"
+LOCALS += "酥脆可口的仙贝点心套装，海苔香气扑鼻。<br>"
+LOCALS += "食用后全体成员魔力小幅恢复。<br>"
+LOCALS += "无法在战斗中使用。<br>"
+LOCALS += "<br>"
+LOCALS += "【效果】<br>"
+LOCALS += "我方全体ＭＰ恢复[１５０]。<br>"
+
+詳細文文字列受け渡し変数 = %LOCALS%
+
+@アイテム使用先表示_海苔仙贝套装
+;戦闘時使用不可
+CALL 汎用使用先表示("味方全体", -1)
+
+@アイテム効果処理_海苔仙贝套装(ARG)
+;ARG = 隊列の何番目か
+
+IF DT_CELL_GET("所持アイテムデータベース", 0, "海苔仙贝套装") < 1
+	PRINTW 没有该物品
+	RETURN 0
+ENDIF
+
+LOCAL:1 = 0
+FOR LOCAL, 0, 14
+	SIF LOCAL > 3 && LOCAL < 10
+		CONTINUE
+	SIF !BATTLE_STATE:LOCAL:キャラ登録番号
+		CONTINUE
+	SIF BATTLE_STATE:LOCAL:最大ＭＰ == BATTLE_STATE:LOCAL:ＭＰ
+		CONTINUE
+	IF BATTLE_STATE:LOCAL:最大ＭＰ - BATTLE_STATE:LOCAL:ＭＰ < 150
+		PRINTFORML %CALLNAME:(BATTLE_STATE:LOCAL:キャラ登録番号)%的ＭＰ恢复了{BATTLE_STATE:LOCAL:最大ＭＰ - BATTLE_STATE:LOCAL:ＭＰ}
+	ELSE
+		PRINTFORML %CALLNAME:(BATTLE_STATE:LOCAL:キャラ登録番号)%的ＭＰ恢复了150
+	ENDIF
+	BATTLE_STATE:LOCAL:ＭＰ = MIN(BATTLE_STATE:LOCAL:ＭＰ + 150, BATTLE_STATE:LOCAL:最大ＭＰ)
+	LOCAL:1 += 1
+NEXT
+
+IF LOCAL:1 > 0
+	WAIT
+ELSE
+	PRINTW 没有可恢复对象。
+	RETURN 0
+ENDIF
+
+RETURN 1

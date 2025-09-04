@@ -1,0 +1,358 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;101は角色番号に置換してください
+;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+;ここで TFLAG:取引可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K70_ADDSELECT
+;STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("追加選択肢その１", 16)% … %CALLNAME:TARGET%にＡＡＡしてもらいます/
+;STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("追加選択肢之２", 16)% … %CALLNAME:TARGET%にＢＢＢしてもらいます/
+
+;お願い・取引で増やした選択肢の地の文と台詞
+@KOJO_WISH_K70_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+	;フラグを弄る場合はそれもここで行う
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+	;フラグを弄る場合はそれもここで行う
+ENDSELECT
+
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K70_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;選択後にＨに直接移動したい場合(ここの エッチする は好きに変えてよい)
+;STR:選択肢 += "エッチする/"
+;選択後にターンを終了したい場合(ここの ターンを終わらせる は好きに変えてよい)
+;STR:選択肢 += "ターンを終わらせる/"
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K70_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+;直接Ｈしたい場合
+CASE "エッチする"
+	;前編
+	IF CEVENTS("追加選択肢からＨ") == ""
+		PRINTFORMW テ接吻ト
+		PRINTL [0]選択肢１(これを選ぶとＨします)
+		PRINTL [1]選択肢２(これを選ぶとＨしません)
+		CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+		FLAG:SELECT_USERSHOP = 100
+	ELSE
+		IF TFLAG:床イン
+			PRINTFORMW Ｈする場合の展開です
+		ELSE
+			PRINTFORMW こっちはＨしない場合の展開です
+		ENDIF
+	ENDIF
+;直接ターンエンドしたい場合
+CASE "ターンを終わらせる"
+	;前編
+	IF CEVENTS("追加選択肢からターンエンド") == ""
+		PRINTFORMW テ接吻ト
+		PRINTL [0]選択肢１(これを選ぶとターンエンドします)
+		PRINTL [1]選択肢２(これを選ぶとターンエンドしません)
+		CALL SET_CEVENT, @"追加選択肢からターンエンド：%ARGS%"
+		FLAG:SELECT_USERSHOP = 998
+	ELSE
+		IF TFLAG:ターンエンド
+			PRINTFORMW ターンエンドする場合の展開です
+		ELSE
+			PRINTFORMW こっちはターンエンドしない場合の展開です
+		ENDIF
+	ENDIF
+
+ENDSELECT
+
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K70_ADDSELECT
+IF CEVENT("調教開始：初調教")
+	STR:選択肢 += "じゃんけんする/"
+ENDIF
+;STR:選択肢 += "追加選択肢之２/"
+;選択後にＨに直接移動したい場合(ここの エッチする は好きに変えてよい)
+;STR:選択肢 += "エッチする/"
+;選択後にターンを終了したい場合(ここの ターンを終わらせる は好きに変えてよい)
+;STR:選択肢 += "ターンを終わらせる/"
+
+;睡眠時の互动指令の選択肢を追加
+@DAILY2_SLEEP_K70_ADDSELECT
+;STR:選択肢 += "睡眠時追加選択肢その１/"
+;STR:選択肢 += "睡眠時追加選択肢之２/"
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K70_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "じゃんけんする"
+	CALL EMOTION_PLUS, "重置/对话框兴奋/楕円///"
+	IF CEVENT("調教開始：初じゃんけん") == 0
+		PRINTFORMW 「おや、%CNAME("二人称")%…じゃんけんがなさりたいのですか？」
+		PRINTFORMW 「懐かしいですねぇ。昔はよくじゃんけんで玩耍ましたね。」
+		PRINTFORMW 「では、さいしょは石頭といきたいのですが、
+		PRINTFORMW 「%CNAME("二人称")%も大きくなられたですし、“普通”のじゃんけんでは面白く有ませんよね」
+		PRINTFORMW 「そこで提案です。じゃんけんをして%CNAME("二人称")%が勝ったら、すぐに子作りの練習を」
+		PRINTFORMW 「%CNAME("一人称")%が勝ったら魂を一ついただきます。どうでしょうか？もちろん無理很强はしませんが…」
+		CALL SET_CEVENT, "調教開始：初じゃんけん"
+	ELSE
+		PRINTFORMW 「おや、じゃんけん…したいのですか？」
+	ENDIF
+	PRINTFORML
+	IF BASE:MASTER:魂 < 101
+		PRINTFORMW 「それにしては%CNAME("二人称")%の魂が足りないようですね…」
+		PRINTFORMW 「う～ん、%CNAME("一人称")%も一緒に玩耍たいのですが、」
+		PRINTFORMW 「%CNAME("二人称")%に何かあっては責任が取れませんので……また今度玩耍ましょう」
+	ELSE
+		CALL PRINT_SELECT, "やろう！/还是算了"
+		IF RESULT == 0		;最初の結果
+			CALL EMOTION_PLUS, "重置/石頭/憤怒眉/呀哒２/对话框！/"
+			PRINTFORMW 「では……さいしょは石頭、じゃんけん！」
+			PRINTFORML
+			$AIKO	
+			PRINTFORMLC [1]  石頭を出す！
+			PRINTFORMLC [2]  剪刀を出す！
+			PRINTFORML [3]  布を出す！
+			INPUT
+			IF RESULT == 1	
+				SELECTCASE RAND:3	;石頭を出す！
+				CASE 0
+					CALL EMOTION_PLUS, "重置/石頭/ヮ/憤怒眉/对话框！/"
+					PRINTFORMW %CALLNAME:TARGET%は石頭を出した。
+					PRINTFORMW 「あいこで！」
+					GOTO AIKO
+				CASE 1
+					CALL EMOTION_PLUS, "重置/布//婴儿红晕/对话框開心/通常眉２/ヮ２//"
+					PRINTFORMW %CALLNAME:TARGET%は布を出した。
+					PRINTFORMW 「ほっほっほ♪%CNAME("一人称")%の勝ちのようですね。」
+					GOTO MAKE
+				CASE 2
+					CALL EMOTION_PLUS, "重置/剪刀/困扰眉/对话框乱////"
+					PRINTFORMW %CALLNAME:TARGET%は剪刀ーを出した。
+					PRINTFORMW 「とほほ～負けてしまいました～」
+					GOTO KATI
+				ENDSELECT
+			ELSEIF RESULT == 2		;剪刀を出す！
+				SELECTCASE RAND:3
+				CASE 0
+					CALL EMOTION_PLUS, "重置/石頭//婴儿红晕/对话框開心/通常眉２/ヮ２/"
+					PRINTFORMW %CALLNAME:TARGET%は石頭を出した。
+					PRINTFORMW 「ほっほっほ♪%CNAME("一人称")%の勝ちのようですね。」
+					GOTO MAKE
+				CASE 1
+					CALL EMOTION_PLUS, "重置/剪刀/ヮ/憤怒眉/对话框！/"
+					PRINTFORMW %CALLNAME:TARGET%は剪刀を出した。
+					PRINTFORMW 「あいこで！」
+					GOTO AIKO
+				CASE 2
+					CALL EMOTION_PLUS, "重置/布/困扰眉/对话框乱////"
+					PRINTFORMW %CALLNAME:TARGET%は布を出した。
+					PRINTFORMW 「とほほ～負けてしまいました～」
+					GOTO KATI
+				ENDSELECT
+			ELSEIF RESULT == 3		;布を出す！
+				SELECTCASE RAND:3
+				CASE 0
+					CALL EMOTION_PLUS, "重置/石頭/困扰眉/对话框乱//"
+					PRINTFORMW %CALLNAME:TARGET%は石頭を出した。
+					PRINTFORMW 「とほほ～負けてしまいました～」
+					GOTO KATI
+				CASE 1
+					CALL EMOTION_PLUS, "重置/剪刀/婴儿红晕/对话框開心/通常眉２/ヮ２"
+					PRINTFORMW %CALLNAME:TARGET%は剪刀を出した。
+					PRINTFORMW 「ほっほっほ♪%CNAME("一人称")%の勝ちのようですね。」
+					GOTO MAKE
+				CASE 2
+					CALL EMOTION_PLUS, "重置/布/ヮ/憤怒眉/对话框！/"
+					PRINTFORMW %CALLNAME:TARGET%は布を出した。
+					PRINTFORMW 「あいこで！」
+					GOTO AIKO
+				ENDSELECT
+			ENDIF
+			IF RAND:2
+				$MAKE
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORMW
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				CALL EMOTION_PLUS, "重置/斜眼６/"
+				PRINTFORMW 「では、%CNAME("一人称")%が勝ったことなので契約街道%CNAME("二人称")%の魂をいただきます。」
+				CALL EXCHANGE_SOUL, "取引", 100
+				PRINTFORML
+				PRINTFORMW そういって%CALLNAME:TARGET%は頭に手をかざした。急に体から力が抜け落ち、立つ感覚を忘れる。
+				PRINTFORMW 目の前にいる存在が改めて悪魔なのだと思い知った。
+			ELSE	
+				$KATI
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORMW
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				PRINTFORML
+				CALL SIMULATE_TRAIN_FIRST
+				CALL EMOTION_PLUS, "重置/斜眼２/左斜眼３/对话框爱心大量/赤面/会話口２/"
+				CALL PRINT_STRW, @"「では、%CNAME("二人称")%が勝ったご褒美でしたね_BBHH_」"
+				PRINTFORMW 「ほっほっほ、%CNAME("一人称")%の身体で存分にお玩耍ください。」
+				CALL SIMULATE_TRAIN_COM, 62, 4
+				PRINTFORMW 被窝に横たわった%CALLNAME:TARGET%の衣類を剥ぎ取り、屈曲位の姿勢で挿入する。
+				PRINTFORMW 陰部はとうに湿っており、抵抗なく奥まで入り切った。
+				PRINTFORMW 脚を掴み、動起腰身。%TEXTR("激烈地/何度も/ひたすら/容赦なく")%子宮を突き给と%CALLNAME:TARGET%は狂うように喜びの嬌声をあげた。
+				PRINTFORMW 互いが互いを興奮させ交わり合い、先ほどまで遊んでいたとは思えないように貪りあった。
+				PRINTFORMW やがて片方が絶頂に至り、それに呼応するようにもう片方も絶頂した。
+				PRINTFORMW 
+				CALL PRINT_STRW, @"「どうでしたか？%CNAME("二人称")%_BBHH_」"
+				CALL PRINT_STRW, @"「やはり魂を賭けると生存本能を刺激するのか動きがいいですね_BBHH_」"
+				CALL PRINT_STRW, @"「また、じゃんけんしましょっか_BBHH_」"
+				;経験や珠などの獲得量計算
+				CALL SIMULATE_TRAIN_CALC
+				;結果発表
+				CALL SIMULATE_TRAIN_SHOW
+				CALL SAMEN_SHOOT_MESSAGE
+				CALL CHECK_NINSHIN_ALLACTOR
+			ENDIF
+		ELSE			
+			PRINTFORMW 「是这様吗、%CNAME("一人称")%是つでもお相手しますので、また声をかけてください」
+		ENDIF
+	ENDIF
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+
+;直接Ｈしたい場合
+CASE "エッチする"
+	;前編
+	IF CEVENTS("追加選択肢からＨ") == ""
+		PRINTFORMW テ接吻ト
+		PRINTL [0]選択肢１(これを選ぶとＨします)
+		PRINTL [1]選択肢２(これを選ぶとＨしません)
+		CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+		FLAG:SELECT_USERSHOP = 100
+	ELSE
+		IF TFLAG:床イン
+			PRINTFORMW Ｈする場合の展開です
+		ELSE
+			PRINTFORMW こっちはＨしない場合の展開です
+		ENDIF
+	ENDIF
+;直接ターンエンドしたい場合
+CASE "ターンを終わらせる"
+	;前編
+	IF CEVENTS("追加選択肢からターンエンド") == ""
+		PRINTFORMW テ接吻ト
+		PRINTL [0]選択肢１(これを選ぶとターンエンドします)
+		PRINTL [1]選択肢２(これを選ぶとターンエンドしません)
+		CALL SET_CEVENT, @"追加選択肢からターンエンド：%ARGS%"
+		FLAG:SELECT_USERSHOP = 998
+	ELSE
+		IF TFLAG:ターンエンド
+			PRINTFORMW ターンエンドする場合の展開です
+		ELSE
+			PRINTFORMW こっちはターンエンドしない場合の展開です
+		ENDIF
+	ENDIF
+
+CASE "睡眠時追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "睡眠時追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+ENDSELECT
+
+;-------------------------------------------------
+;约会行き先の選択肢を追加。
+@DATE_K70_ADDSELECT
+;ここで増やした選択肢を選ぶと、それがSAVESTR:约会 に代入される仕組みです
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+@KOJO_DATE_K70_ADDSELECT
+SELECTCASE SAVESTR:约会
+CASE "追加選択肢その１"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応存疑
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+CASE "追加選択肢之２"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応存疑
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+ENDSELECT
+
+;-------------------------------------------------
+;場所を変える指令の選択肢を追加
+@MOVE_K70_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"

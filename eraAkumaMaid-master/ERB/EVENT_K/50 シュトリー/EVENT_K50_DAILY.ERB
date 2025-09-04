@@ -1,0 +1,3722 @@
+﻿;-------------------------------------------------
+;各種打招呼
+;-------------------------------------------------
+@KOJO_GREETING_K50, ARGS
+#DIM MEMO_LINECOUNT
+#DIM LCOUNT
+#DIM NUM_FIND
+;イベント発生中の角色
+#DIM ACTOR
+;イベント発生中の角色の默认のCALLNAME
+#DIMS CALLNAME_ACTOR
+
+
+MEMO_LINECOUNT = LINECOUNT
+ACTOR = 0
+NUM_FIND = 0
+
+;文字色変更
+CALL CHANGE_OFC, "セット", TARGET
+
+SELECTCASE ARGS
+CASE "朝拘束"
+
+;朝のＨイベントでのセリフ。下の"打招呼"だけ書いてあれば十分だと思います
+;ここでCALL SETFLAG, "地の文スキップ"すると地の文、経験表示、本来なら続いて表示される下のCASE "打招呼"の台詞、を全てすっ飛ばせます(上級者向け)
+;詳しくは@EVENT_NEWDAYの注釈などを見てください
+CASE "朝袭"
+	SELECTCASE CSTR:朝袭
+	CASE "朝逆正常位"
+
+	CASE "朝舐陰"
+
+	CASE "朝足交"
+
+	CASE "朝の新妻PLAY"
+
+	CASE "朝乳交"
+
+	CASE "朝騎乗位"
+
+	CASE "朝Ａ騎乗位"
+
+	CASE "朝接吻"
+
+	CASE "朝添い寝"
+
+	CASE "朝口交", "朝六九式"
+
+	ENDSELECT
+;朝のＨイベント終了後にする打招呼
+CASE "打招呼"
+	SELECTCASE CSTR:朝袭
+	CASE "朝口交"
+		[IF_DEBUG]
+			PRINTFORMW KOJO_GREETING_K50, %ARGS%, %CSTR:朝袭%
+		[ENDIF]
+	CASE "朝騎乗位"
+		[IF_DEBUG]
+			PRINTFORMW KOJO_GREETING_K50, %ARGS%, %CSTR:朝袭%
+		[ENDIF]
+	ENDSELECT
+
+	;何か発言してたらここまで
+	IF LINECOUNT > MEMO_LINECOUNT
+		CALL CHANGE_OFC, "重置", TARGET
+		RETURN 1
+	ENDIF
+
+	IF COND("体育")
+		PRINTFORMW 「おはよー！ %CNAME("二人称")%」
+		PRINTFORMW 「是、授業で使う体操服、忘れないでね？」
+	ELSE
+		PRINTFORMW 「おはよー！ %CNAME("二人称")%」
+		IF RAND:3 == 0
+			PRINTFORMW 「目は覚めた？ まだぼーっとしてるかな？」
+		ELSEIF RAND:2
+			PRINTFORM 「のんびりしてると
+			IF TEXTS("曜日") != "日" && RAND:2
+				PRINTFORMW 遅刻しちゃうよ？」
+			ELSE
+				PRINTFORMW ごはん冷めちゃうよ？」
+			ENDIF
+		ELSE
+			PRINTFORMW 「んふふー、今の気分はどう？」
+		ENDIF
+		
+	ENDIF
+CASE "一番乗り"
+	IF COND("同伴中")
+		CALL EMOTION_PLUS, "重置/笑颜/微笑/红晕", TARGET
+		IF CHARA_NUM("集合予定") == 3
+			PRINTFORMW 「%CNAME("弗理希艾尔")%はまだ来てないみたいだね！ ……なにしよっか？」
+		ELSE
+			PRINTFORMW 「皆はまだ来てないみたいだね！ ……なにしよっか？」
+		ENDIF
+	ELSE
+		IF RAND:2 && CHARA_NUM("集合予定") > 3
+			CALL EMOTION_PLUS, "重置/眯眯眼/对话框兴奋", TARGET
+			PRINTFORMW 「%CNAME("二人称")%、こんにちは」
+			PRINTFORMW 「二番目は%CNAME("二人称")%かー。……次は誰だろね？」
+		ELSE
+			CALL EMOTION_PLUS, "重置/眯眯眼/困扰眉/红晕/对话框汗", TARGET
+			PRINTFORMW 「%CNAME("二人称")%、こんにちは」
+			PRINTFORMW 「ちょっと早く来すぎちゃったみたい」
+		ENDIF
+	ENDIF
+CASE "ただいま"
+	PRINTFORMW 「ただいまー、%CNAME("二人称")%」
+	;打招呼に弗理希艾尔がいる
+	IF FINDT_COND_K50(TARGET, "入室打招呼中", "弗理希艾尔") && RAND:4 == 0
+		PRINTFORMW 「%CNAME("フェリシェル")%と買い物してたら遅くなっちゃった」
+	;会話に参加している角色がいる
+	ELSEIF FINDT_COND_K50(TARGET, "入室打招呼中") && RAND:3 == 0
+		PRINTFORMW 「归途で%CNAME(@"{FINDT_COND_K50(TARGET, "入室打招呼中")}")%とたまたま一緒变成了んだよ」
+	ENDIF
+	CALL SET_CEVENT, "Ｄイベ：帰宅の打招呼", TARGET
+CASE "既に入室"
+	;家で出迎えてくれる時
+	IF COND("夜")
+		;翌日でも归途の行動が変わらないパターンもあるので連続で発生不会うにする
+		SIF SAVESTR:归途の行動 != "相合傘" && CEVENT("雨の会話")
+			CALL DEL_CEVENT, "雨の会話", TARGET
+		IF DAYEV("試験間近")
+			PRINTFORMW 「%TEXTR("おかえりー/遅かったね/お疲れ様")%、%CNAME("二人称")%」
+			PRINTFORMW 「ねぇ、%CNAME("二人称")%、後で勉強教えてね！」
+		ELSEIF SAVESTR:归途の行動 == "相合傘" && CEVENT("雨の会話") == 0
+			PRINTFORMW 「%TEXTR("おかえりー/遅かったね/お疲れ様")%、%CNAME("二人称")%」
+			PRINTFORMW 「雨が降ったけど%CNAME("二人称")%は大丈夫だった？」
+			CALL SET_CEVENT, "雨の会話", TARGET
+		ELSEIF COND("同伴中", MASTER) && RAND:2
+			PRINTFORMW 「%CNAME("二人称")%、%CNAME("partner")%、おかえりなさい」
+		ELSE
+			;超レアだとは思うけど同居人が休托莉だけのパターン
+			IF RAND:4 == 0 && TALENT:恋慕 && CHARA_NUM("集合予定") == 2
+				CALL EMOTION_PLUS, "重置/紅潮/对话框爱心", TARGET
+				PRINTFORMW 「%TEXTR("おかえりー/遅かったね/お疲れ様")%、%CNAME("二人称")%」
+				PRINTFORMW 「ねぇねぇ、%CNAME("二人称")%♪」
+				CALL OFC_PRINT_STRW, "「ちゅっ_CBBH_ ……えへへっ_／／／_ 」", TARGET
+				PRINTFORMDW %CALLNAME:TARGET%とお帰りの接吻をした
+			ELSEIF RAND:3 && CHARA_NUM("集合予定") == 2
+				PRINTFORMW 「%TEXTR("おかえりー/遅かったね/お疲れ様")%、%CNAME("二人称")%」
+				PRINTFORMW 「ご飯の準備できてるよ？それとも先にお浴室にする？」
+			ELSEIF RAND:2
+				PRINTFORML 「%TEXTR("おかえりー/遅かったね/お疲れ様")%、%CNAME("二人称")%」
+				IF TEXTS("季節詳細") == "夏"
+					PRINTFORMW 「今日は暑かったね！ 熱中症にならないでね？」
+				ELSEIF TEXTS("季節詳細") == "冬"
+					PRINTFORMW 「今日は寒かったね！ 風邪をひいちゃうダメだよ？」
+				ELSE
+					PRINTFORMW 「今日は過ごしやすかったね。いい天気が続くといいな」
+				ENDIF
+			ELSE
+				PRINTFORMW 「%TEXTR("おかえりー/遅かったね/お疲れ様")%、%CNAME("二人称")%」
+				PRINTFORMW 「ねっ！ %CNAME("二人称")%、%TEXTR("この游戏でやろうよ！/新刊の漫画買ってきたけど読む？/この配信見た？ 面白色よ！")%」
+			ENDIF
+		ENDIF
+		CALL SET_CEVENT, "Ｄイベ：帰宅の打招呼", TARGET
+	;こっちは部室
+	ELSE
+		IF COND("同伴中", MASTER) && RAND:2
+			PRINTFORMW 「%CNAME("二人称")%、%CNAME("partner")%、こんにちは」
+		ELSE
+			IF RAND:4 == 0 && FINDT_COND_K50(TARGET, "点心当番")
+				CALL EMOTION_PLUS, "重置/笑颜", TARGET
+				PRINTFORMW 「%CNAME("二人称")%、こんにちは」
+				PRINTFORMW 「%CNAME(@"{FINDT_COND_K50(TARGET, "点心当番")}")%が点心を用意してくれてるよ！」
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 「%CNAME("二人称")%、こんにちは」
+				PRINTFORMW 「%CNAME("一人称")%もさっき着いたところ！」
+			ELSEIF RAND:2
+				PRINTFORMW 「%CNAME("二人称")%、こんにちは」
+				PRINTFORMW 「どこかでつまみ食いでもしてた？」
+			ELSE
+				PRINTFORMW 「%CNAME("二人称")%、こんにちは」
+			ENDIF
+		ENDIF
+	ENDIF
+
+CASE "入室打招呼"
+	IF CFLAG:呼び出された
+		CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/对话框兴奋", TARGET
+		PRINTFORMW 「是はーい！ お待たせ！」
+		PRINTFORMW 「%CNAME("一人称")%に%TEXTR("何か御用？/して欲しいことでもあるの？")%」
+	;你が現在的partnerにＨ的悪戯をしている最中に入室した
+	ELSEIF COND("Ｈ的いちゃつき中", MASTER)
+		IF EXP_GAIN("性処理経験")
+			CALL EMOTION_PLUS, "重置/斜眉/嘲笑/紅潮/对话框爱心", TARGET
+			PRINTFORMW 「お昼前に%CNAME("一人称")%が%TEXTR("いっぱい出/お世話")%してあげたのに♪」
+			CALL OFC_PRINT_STRW, @"「%CNAME("二人称")%ってほんっと元気いいよね_CBBH_ 」", TARGET
+		ELSE
+			CALL EMOTION_PLUS, "重置/＞＜/紅潮", TARGET
+			PRINTFORMW 「こんにちはー！」
+			PRINTFORMW 「%CNAME("二人称")%、今日もえろいねー♪」
+			PRINTFORMDW %CALLNAME:PARTNER()%とのやりとりを見られたようだ
+		ENDIF
+	;全裸の人がいる
+	ELSEIF FINDT_COND_K50(TARGET, "全裸状態終了可能")
+		CALL EMOTION_PLUS, "＞＜/斜眉/躁动难忍/对话框惊讶", TARGET
+		PRINTFORMW 「こんにちはー！」
+		PRINTFORMW 「わっ！ %CNAME(@"{FINDT_COND_K50(TARGET, "全裸状態終了可能")}")%、赤裸的だー！ すごーい！」
+	;内衣の人がいる
+	ELSEIF FINDT_COND_K50(TARGET, "薄着状態終了可能")
+		CALL EMOTION_PLUS, "＞＜/斜眉/躁动难忍/对话框惊讶", TARGET
+		PRINTFORMW 「こんにちはー！」
+		PRINTFORMW 「わっ！ %CNAME(@"{FINDT_COND_K50(TARGET, "薄着状態終了可能")}")%、すごい格好！」
+	ELSEIF CSTR:PREV_DAILYCOM == "Talk"
+		PRINTFORMW 「こんにちはー！」
+		PRINTFORMW 「なんだか盛り上がってるね♪」
+	ELSE
+		IF RAND:2
+			SIF CFLAG:心情好 == 0
+				CFLAG:心情好 = 2
+			PRINTFORMW 「こんにちはー♪」
+			PRINTFORMDW どうやら今日の%CALLNAME:TARGET%は心情が良いようだ
+		ELSE
+			PRINTFORMW 「こんにちはー！」
+			PRINTFORMDW %CALLNAME:TARGET%は今日も元気みたいだ
+		ENDIF
+	ENDIF
+;部屋にいる他の人から打招呼を返される打招呼。WAITの使用は一回が望ましい
+CASE "簡易入室打招呼"
+	;遅れた時のセリフ（既に部員の４分の３が集合済）
+	IF CHARA_NUM("入室打招呼時の室内人数") >= CHARANUM*3/4 && RAND:3 == 0
+		CALL EMOTION_PLUS, "重置/〇〇/憤怒眉/红晕/对话框惊讶", TARGET
+		PRINTFORML 「わっ！？ もう皆集まってる！」
+		PRINTFORMW 「こんにちはー！」
+
+	ELSEIF CFLAG:呼び出された
+		CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/红晕/对话框兴奋", TARGET
+		PRINTFORML 「こんにちはー！」
+		PRINTFORML 「%CNAME("二人称")%、お待たせ！」
+		PRINTFORMDW %CALLNAME:TARGET%は小走りで%CALLNAME:MASTER%のもとへやってきた
+	ELSE
+		CALL EMOTION_PLUS, "重置/笑颜", TARGET
+		PRINTFORMW 「こんにちはー！」
+	ENDIF
+;簡易入室打招呼に対する返し。WAITの使用は一回が望ましい
+;誰が入室してきた人はCOND("入室打招呼中")がONなのでFIND_COND("入室打招呼中")で検索可能
+;また、入ってきた人数はCHARA_NUM("入室打招呼中")で調べられる
+CASE "打招呼返し"
+	;打招呼してきた人の中から一人選ぶ
+	ACTOR = FIND_COND("入室打招呼中")
+	;選ばれた角色の默认のCALLNAME。この角色への呼びかけはCNAME(CALLNAME_ACTOR) で出来る
+	CALLNAME_ACTOR = %CSVCALLNAME(NO:ACTOR)%
+
+	;ここでは括弧に『』を使う
+
+	;打招呼してきた人に老师が混じっている
+	IF FIND_COND("教員", "入室打招呼中")
+		CALL EMOTION_PLUS, "重置/微笑/对话框兴奋", TARGET
+		PRINTFORMW 『%CNAME(@"{FIND_COND("教員", "入室打招呼中")}")%、こんにちは』
+	;相手が現れるのが遅かった（既に部員の４分の３が集合済）
+	ELSEIF CHARA_NUM("入室打招呼時の室内人数") >= CHARANUM*3/4 && RAND:3 == 0
+		CALL EMOTION_PLUS, "重置/对话框兴奋", TARGET
+		PRINTFORML 『%CNAME(@"{FIND_COND("入室打招呼中")}")%、こんにちは』
+		SELECTCASE CSTR:PLAYER:学年
+		CASE "初等部", "中等部"
+			PRINTFORMW 『遅かったね？ 何かあったの？』
+		CASE "１年生", "２年生", "３年生"
+			PRINTFORMW 『もう皆あつまってるよ！』
+		CASEELSE
+			IF TALENT:ACTOR:外見年齢 <= 2 && TALENT:PLAYER:萝莉老太婆 == 0
+				PRINTFORMW 『遅かったね？ 何かあったの？』
+			ELSEIF TALENT:ACTOR:外見年齢 == 4
+				WAIT
+			ELSE
+				PRINTFORMW 『もう皆あつまってるよ！』
+			ENDIF
+		ENDSELECT
+	ELSE
+		PRINTFORMW 『%CNAME(@"{FIND_COND("入室打招呼中")}")%、こんにちは』
+	ENDIF
+
+CASE "居間に現れた"
+	;酔っぱらいがいないか尋找
+	FOR LCOUNT, 2, CHARANUM
+		SIF LCOUNT == TARGET
+			CONTINUE
+		SIF STATE("酔酒", LCOUNT) == 0
+			CONTINUE
+		NUM_FIND += 1
+
+		SIF RAND:NUM_FIND == 0
+			ACTOR = LCOUNT
+	NEXT
+	;いた場合
+	IF ACTOR
+			CALL EMOTION_PLUS, "重置/〇〇/斜眉/半開/对话框惊讶", TARGET
+			PRINTFORMW 「……ねぇ、%CNAME("二人称")%」
+			PRINTFORMW 「%CNAME(@"{ACTOR}")%、なんか%TEXTR("変じゃない/顔が赤くない/酔ってない")%？」
+	ELSEIF CFLAG:呼び出された
+			PRINTFORMW 「%TEXTR("なーにー？ /呼んだ？ ")%%CNAME("二人称")%」
+	;一度も夜に出会ってないパターン
+	ELSEIF CMOVE("居間") + CEVENT("Ｄイベ：帰宅の打招呼") + COND("同伴中") == 0
+		CALL EMOTION_PLUS, "重置/笑颜/对话框兴奋", TARGET
+		PRINTFORMW 「%CNAME("二人称")%、帰ってたんだね」
+		PRINTFORMW 「おかえりー♪」
+	ELSE
+		CALL EMOTION_PLUS, "重置/眯眯眼/斜眉/ω/红晕", TARGET
+		PRINTFORMW 「%CNAME("二人称")%、何か面白色ことしない？」
+		PRINTFORMW %CALLNAME:TARGET%は闲を持て余しているようだ
+	ENDIF
+CASE "抜け出された"
+	IF COND("欲求不満") >= 2 || TALENT:恋慕
+		CALL EMOTION_PLUS, "重置/困扰眉/無口系/紅潮", TARGET
+		PRINTFORMW 「あ……%CNAME("二人称")%……」
+		PRINTFORMW 「……いってらっしゃい」
+		PRINTFORMDW %CALLNAME:TARGET%は寂しそうに%CALLNAME:MASTER%を見送った
+	ELSE
+		CALL EMOTION_PLUS, "重置/斜眼/ω/红晕", TARGET
+		PRINTFORMW 「%TEXTR("ははーん/ふーん/へー/ほー")% ……いってらっしゃい、%CNAME("二人称")%」
+		PRINTFORMDW %CALLNAME:TARGET%はニヤニヤしながら%CALLNAME:MASTER%を見送った
+	ENDIF
+CASE "便当"
+	IF CEVENT("初めての便当") == 0
+		CALL EMOTION_PLUS, "重置/困扰眉/無口系", TARGET
+		IF FINDT_COND_K50(TARGET, "同居中", "弗理希艾尔") && COND("同居中")
+			PRINTFORMW 「%CNAME("弗理希艾尔")%にも手伝ってもらったんだけど……どうかな？」
+		ELSE
+			PRINTFORMW 「料理の本を見ながら作ったんだけど……どうかな？」
+		ENDIF
+		PRINTFORMW %CALLNAME:TARGET%の作ってきた便当は、卵焼きやウィンナーといった定番のおかずが入った简约なものだ。
+		PRINTFORMW 見た目はおかしなところもなく、よくできているようにも見える。
+		PRINTFORMW とりあえず、一口、卵焼きを食べてみることにした。
+		PRINTFORMW ……少し癖のある独特の味がするが、結構おいしい。
+		PRINTL
+		CALL EMOTION_PLUS, "重置/笑颜/斜眉/紅潮", TARGET
+		PRINTFORMW 「おいしい？ えへへっ♪ ……よかった」
+		PRINTFORMW 「%CNAME("一人称")%が作るとよく魔界っぽい味付けにしちゃうんだけど、大丈夫みたいだね！」
+		PRINTFORMW 「それなら、いろいろ作ってきて给♪」
+		CALL SET_CEVENT, "初めての便当"
+	ELSEIF RAND:3 == 0
+		PRINTFORMW 今日の便当は……三明治だ！
+		PRINTL
+		CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/对话框開心", TARGET
+		PRINTFORMW 「どうどう？ おしゃれでしょ！」
+		PRINTFORMW 「%CNAME("二人称")%は具は何が好き？」
+		PRINTFORMW 「これ？ んふふー♪ 是、あ～～～ん♪」
+	ELSEIF RAND:2
+		PRINTFORMW 今日の便当は……おかずにコロッケがある！
+		PRINTL
+		CALL EMOTION_PLUS, "重置/憤怒眉", TARGET
+		PRINTFORMW 「全部中身が違うんだよ！」
+		PRINTFORMW 「それがポテトで、こっちがカレー味、これには乳酪が入ってるの♪」
+		PRINTFORMW 「……あれ？ そっちがポテトだっけ？」
+	ELSE
+		PRINTFORMW 今日の便当は……大号的飯団が入っている！
+		PRINTL
+		CALL EMOTION_PLUS, "重置/红晕/对话框開心", TARGET
+		PRINTFORMW 「あははっ、%CNAME("二人称")%、ほっぺたにご飯粒付けてる！」
+		PRINTFORMW 「じっとしててね！ とって给♪」
+		PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:MASTER%の頬に付いたご飯粒を手で摘み、ぱくっと食べてしまった
+	ENDIF
+;同じ部屋にいる他の人がＨを開始した際のセリフです
+CASE "他の人がＨ開始"
+
+ENDSELECT
+
+;文字色を戻す
+CALL CHANGE_OFC, "重置", TARGET
+;-------------------------------------------------
+;メイン画面での台詞。いわゆる一言イベント強化版
+;ちなみに画面随机属性しても同じセリフを喋ります
+;選択肢に挟まれた場所で出力するのでWAITの使用は禁止
+;-------------------------------------------------
+@KOJO_DAILY_K50, ARGS
+#DIM MEMO_LINECOUNT
+#DIM LCOUNT
+#DIM ACTOR
+MEMO_LINECOUNT = LINECOUNT
+
+;文字色変更
+CALL CHANGE_OFC, "セット"
+
+;レイアウトもあるので1～3行くらいで最大5あたり？
+;書き込むならTalk台詞の方を充実の方がいい気がする
+ACTOR = CHARANUM-1
+
+;特殊事件
+;初回台詞
+IF ARGS == "初回台詞"
+	PRINTFORML 「%NAME:TARGET%です！ 今日からよろしくお願いします♪」
+	PRINTFORMDL %CALLNAME:TARGET%は自己紹介をしている
+;新入部員が入った時
+;夜は対応しない……母親とか妹とか的家族が急に生えてくるのでどうしたものか
+ELSEIF STRCOUNT(CSTR:ACTOR:NOW_DEVENT, "初回台詞") && ACTOR != TARGET
+	IF COND("昼")
+		IF COND("教員", ACTOR)
+			PRINTFORML 「%CNAME(@"{ACTOR}")%、よろしくお願いします」
+		ELSE
+			SELECTCASE CSTR:ACTOR:学年
+			CASE "初等部", "中等部", "１年生", "２年生", "３年生"
+				PRINTFORML 「%CNAME(@"{ACTOR}")%、よろしくね♪」
+			CASEELSE
+				IF TALENT:ACTOR:外見年齢 == 3
+					PRINTFORML 「%CNAME(@"{ACTOR}")%、よろしくお願いします」
+				ELSE
+					PRINTFORML 「%CNAME(@"{ACTOR}")%、よろしくね♪」
+				ENDIF
+			ENDSELECT
+		ENDIF
+		PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:ACTOR%に自己紹介をしている
+	;夜の場合
+	ELSE
+	ENDIF
+ELSEIF CEVENT("Ｄイベ：恶作剧成功") && DEVENT("Ｄイベ：恶作剧成功_DAILY") == 0
+	PRINTFORML 「もー！ %CNAME("二人称")%！ さっきのはずるいよー！」
+	CALL SET_DEVENT, "Ｄイベ：恶作剧成功_DAILY"
+ELSEIF DAYEV("万圣节") && COND("夜") && DEVENT("Ｄイベ：万圣节限定") == 0
+	PRINTFORML 「ハッピー万圣节♪」
+	PRINTFORML 「%CNAME("二人称")%、今夜は万圣节のお祭りだよ！」
+	CALL SET_DEVENT, "Ｄイベ：万圣节限定"
+ENDIF
+
+IF LINECOUNT > MEMO_LINECOUNT
+	CALL CHANGE_OFC, "重置"
+	RETURN 1
+ENDIF
+
+SELECTCASE ARGS
+;初回のセリフ
+;CASE "初回台詞"
+;上に移動
+CASE "浑身是汗"
+	IF COND("体育") && COND("昼")
+		PRINTFORML 「体育の授業、はりきり過ぎて汗かいちゃった」
+	ELSE
+		PRINTFORML 「あついねー！」
+	ENDIF
+	PRINTFORMDL %CALLNAME:TARGET%は外衣の%TEXTR("襟/下摆")%をバサバサと煽いでいる
+CASE "刚睡醒"
+	IF CHOSE_DEVENT("睡眠姦Ｖ中出し") >= 3
+		PRINTFORML 「%TEXTR("ん～/ふわぁ～/う～ん")%…… なんだか変な夢見ちゃった」
+	ELSE
+		PRINTFORML 「%TEXTR("ん～/ふわぁ～/う～ん")%…… %TEXTR("まだ眠いよ～/今何時～？")%」
+		PRINTFORMD %CALLNAME:TARGET%は
+		IF RAND:3 == 0
+			PRINTFORMDL まだ困倦ている
+		ELSEIF RAND:2
+			PRINTFORMDL 眠たそうに目をこすっている
+		ELSE
+			PRINTFORMDL 大号的哈欠をしてる
+		ENDIF
+	ENDIF
+CASE "Cosplay中"
+	;PRINTFORML 
+CASE "点心の感想"
+	;做爱房に呼び出しても点心食べるので部室限定にする
+	IF SAVESTR:現在位置 == "部室"
+		;今日の点心を用意したのは自分
+		IF COND("点心当番")
+			IF TEXTS("点心") == "シュー阴蒂ーム"
+				PRINTFORML 「わわっ！阴蒂ームが飛び出ちゃった！ ……ベトベトする」
+				PRINTFORMDL %CALLNAME:TARGET%の口の周りに阴蒂ームが付いている
+			ELSEIF TEXTS("点心") == "冰キャンディー"
+				PRINTFORML 「あーん……ちゅ……んっ……ちゅぱ」
+				CALL OFC_PRINT_STRL, "「んふー_CBBH_ 」"
+				PRINTFORMDL %CALLNAME:TARGET%は%TEXTS("点心")%を頬張っている
+			ENDIF
+		;今日の点心は誰かの亲手自制
+		ELSEIF COND("亲手自制点心")
+			;今日の点心当番の人の亲手自制を初めて食べた
+			IF DEVENT(@"%TEXTS("点心当番")%の亲手自制") == 0
+				;点心当番が[料理擅長]
+				IF COND("点心の作り手が料理擅長")
+					PRINTFORML 「この%TEXTS("点心")%、すっごく美味しい！」
+					PRINTFORML 「%CNAME(@"{FIND_COND("点心当番")}")%、すごいなー……」
+					PRINTFORMDL %CALLNAME:TARGET%は、%TEXTS("点心詳細")%の味に感動している
+				ELSE
+					PRINTFORML 「今日の点心は%CNAME(@"{FIND_COND("点心当番")}")%の亲手自制%TEXTS("点心")%♪」
+					PRINTFORML 「ふむふむ……これは%TEXTR("なかなか癖になる/ちょっと刺激的な/まろやかな/ワイルドな/見た目街道の")%お味」
+					PRINTFORMDL %CALLNAME:TARGET%は、%TEXTS("点心詳細")%をパクパクと食べている
+				ENDIF
+			ELSE
+				IF COND("点心の作り手が料理擅長")
+					PRINTFORML 「んー♪ %CNAME(@"{FIND_COND("点心当番")}")%の亲手自制なら何個でもいけちゃう♪」
+					PRINTFORMDL %CALLNAME:TARGET%は、%TEXTS("点心詳細")%をムシャムシャと食べている
+				ELSE
+					PRINTFORML 「この%TEXTS("点心")%、前よりも美味しくなってる！」
+					PRINTFORML 「%CNAME(@"{FIND_COND("点心当番")}")%も腕を上げたなー……！」
+					PRINTFORMDL %CALLNAME:TARGET%は、%TEXTS("点心詳細")%の味に感心している
+				ENDIF
+			ENDIF
+		;你の用意した点心
+		ELSEIF COND("点心当番", MASTER)
+			SELECTCASE SAVESTR:点心
+			CASE "巧克力点心"
+				PRINTFORML 「今日は%CNAME("二人称")%が点心当番なんだね♪」
+				PRINTFORML 「蘑菇とタケノコどっちにしようかなー？」
+			CASE "粗点心"
+				PRINTFORML 「今日は%CNAME("二人称")%が点心当番なんだね♪」
+				PRINTFORML 「粗点心がいっぱい！ じゃあ、%CNAME("一人称")%は……この黒猫酱のガム！」
+				IF RAND:12
+					PRINTFORML 「あたりはでるかな？ ……落空了ー」
+				ELSE
+					PRINTFORML 「あたりはでるかな？ ……ラッキー！ あたりが出たからもう一個！」
+				ENDIF
+			CASE "奶油点心"
+				PRINTFORML 「んー♪ 美味しいー♪」
+				PRINTFORMDL %CALLNAME:TARGET%は口の周りに阴蒂ームをつけてお菓子を頬張っている。
+			CASE "营养平衡的点心"
+				PRINTFORML 「今日は%CNAME("二人称")%が点心買ってきたんだね♪」
+				PRINTFORML 「うーん……巧克力……やっぱりフルーツ味！」
+			CASE "肉干"
+				PRINTFORML 「もぐもぐもぐもぐ」
+				PRINTFORMDL %CALLNAME:TARGET%は無言でジャーキーを噛んでいる。
+			ENDSELECT
+		;点心が亲手自制でない
+		ELSE
+			PRINTFORML 「この%TEXTS("点心")%、どこで買ったんだろう？」
+			PRINTFORML 「%CNAME(@"{FIND_COND("点心当番")}")%にあとで聞いてみようかな」
+			PRINTFORMDL %CALLNAME:TARGET%は食べかけの%TEXTS("点心")%を眺めている
+		ENDIF
+	ENDIF
+;沉眠著
+CASE "睡眠"
+	;梦话
+	CALL KOJO_SLEEP_K50
+	;梦话用の汎用地の文呼出
+	CALL DAILY_MESSAGE, "梦话"
+ENDSELECT
+
+;何か発言してたらここまで
+IF LINECOUNT > MEMO_LINECOUNT
+	CALL CHANGE_OFC, "重置"
+	RETURN 1
+ENDIF
+
+;前回指令対応台詞
+SELECTCASE CONDS("直前行動")
+CASE "愛の告白"
+	CALL OFC_PRINT_STRL,@"「えへへ♪ %CNAME("二人称")%の彼女なんだね_／／／_」"
+	PRINTFORML 「あっ！ 呼び方とか変えた方がいい？」
+CASE "约会的约定"
+	PRINTFORML 「ねぇねぇ、どこ行こっか♪」
+	PRINTFORMDL %CALLNAME:TARGET%は開心地はしゃいでる
+;これは悪魔や天使や驱魔人のみ
+CASE "契約成立"
+	[IF_DEBUG]
+		;取引不可にしているので出ないはず
+		PRINTFORML KOJO_DAILY_K50, %CSTR:PREV_DAILYCOM%後
+	[ENDIF]
+;你にお願いされて、自分の力で巨根になってあげた(悪魔と天使のみ)
+CASE "巨根化契約成立"
+	PRINTFORML 
+CASE "短小化契約成立"
+	PRINTFORML 
+CASE "摆脱"
+	SELECTCASE SAVESTR:現在位置
+	CASE "情人旅館"
+		PRINTFORML 「%CNAME("二人称")%、ここにはよく来るの？」
+		PRINTFORML 「えー？ ないしょ？ 教えてよー！」
+	CASE "做爱房"
+		PRINTFORML 「ふたりでなにしてあそぼっか♪」
+	CASE "公園"
+		IF COND("昼")
+			PRINTFORML 「いい天気だね！ 便当でも持ってくればよかったかも」
+		ELSE
+			PRINTFORML 「%CNAME("二人称")%、あんまり遠くに行かないでね？」
+		ENDIF
+	CASE "体育倉庫"
+		PRINTFORML 「ねぇねぇ、%CNAME("二人称")%はこの跳び箱跳べる？」
+		PRINTFORMDL %CALLNAME:TARGET%は跳び箱に跨りながら聞いてきた
+	CASE "更衣室"
+		PRINTFORML 「誰也不在かな？」
+		PRINTFORML 「もし誰か来たらどうしよっか？ こっそりロッカーの中に隠れちゃう？」
+	CASE "保健室"
+		PRINTFORML 「んー……っと身高は……この前といっしょだ！」
+		PRINTFORML  身高計は{BASE:身高}cmを指している
+	ENDSELECT
+CASE "主人公的房間に連れ込まれた"
+	IF DEVENT("初連れ込み") == 0
+		PRINTFORML 「%CNAME("二人称")%的房間、きれいに片付いてるね！」
+		PRINTFORML 「ちょっと意外かも？」
+		CALL SET_DEVENT, "初連れ込み"
+	ELSE
+		IF RAND:2
+			PRINTFORML 「えへへっ、おじゃましまーす♪」
+		ELSE
+			PRINTFORML 「んふふー♪ %CNAME("二人称")%の%TEXTS("气味")%だー♪」
+			PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:MASTER%の%NAMES("床")%に寝転がっている
+		ENDIF
+	ENDIF
+CASE "自室に招待"
+	IF FIND_COND("現在存在", "助手")
+		PRINTFORML 「いらっしゃい♪ %CNAME("二人称")%、%CNAME("助手")%」
+	ELSE
+		IF RAND:3 == 0
+			PRINTFORML 「ねっ、なにしよっか？」
+		ELSEIF RAND:2
+			PRINTFORML 「好きなところに座っていいよ！」
+		ELSE
+			PRINTFORML 「お菓子あるから食べよ♪」
+		ENDIF
+		PRINTFORMDL %CALLNAME:TARGET%は自分の%NAMES("床")%に腰かけた
+	ENDIF
+CASE "自室に訪問された"
+	;指导者を伴っている場合
+	;指导者を伴っている場合
+	IF FIND_COND("現在存在", "助手")
+		PRINTFORML 「%CNAME("二人称")%、%CNAME("助手")%、%TEXTR("どうしたの？/何か用？")%」
+	ELSE
+		PRINTFORML 「%CNAME("二人称")%、%TEXTR("どうしたの？/何か用？")%」
+	ENDIF
+	SIF CEVENT("Ｄイベ：帰宅の打招呼") == 0
+		CALL SET_CEVENT, "Ｄイベ：帰宅の打招呼"
+CASE "指导者部屋訪問"
+	PRINTFORML 「%CNAME("助手")%、%TEXTR("お邪魔します")%♪」
+;自宅移動の後に你に連れられて居間に回来了場合など。優先度は低いです
+CASE "帰還"
+	;PRINTFORML
+CASE "オナバレ"
+	;PRINTFORML
+CASE "露脐装超短裙胖次チラ"
+	PRINTFORML 「あははっ、%CNAME("二人称")%、変な顔ー♪」
+	PRINTFORMDL %CALLNAME:TARGET%はクスクス笑着いる
+CASE "低腰臀圍"
+
+CASE "掀起裙子"
+	PRINTFORML 「掀起裙子するなら、もっとこっそりやらないとね！」
+	PRINTFORML 「%CNAME("二人称")%、わるーい顔で近寄ってくるからバレバレだよ♪」
+CASE "检查内褲"
+	IF COND("合意：检查内褲") && EQUIP:胖次
+		PRINTFORML 「%CNAME("二人称")%、嬉しそう♪」
+		PRINTFORML 「いっぱい胖次見ていいからね」
+	ENDIF
+CASE "检查阴部"
+	IF COND("合意：检查阴部")
+		PRINTFORML 「%CNAME("二人称")%に見られてると変な感じがする……♪」
+	ENDIF
+CASE "拜托処理性欲"
+	PRINTFORML 「んふふー、すっきりした？」
+CASE "进行性処理"
+	PRINTFORML 「ふぅ、これくらいにしようっと！」
+	PRINTFORMD %CALLNAME:TARGET%は%SAVESTR:夢中%
+	SELECTCASE SAVESTR:夢中
+	CASE "手机"
+		PRINTFORMD を弄るの
+	CASE "漫画本"
+		PRINTFORMD を読むの
+	CASE "SNS"
+		PRINTFORMD でのやり取り
+	CASE "WEB配信"
+		PRINTFORMD を見るの
+	ENDSELECT
+	PRINTFORMDL をやめたようだ
+CASE "帮忙消除性欲"
+	PRINTFORML 「うーん、気持ち良かったー……♪」
+	PRINTFORMDL %CALLNAME:TARGET%は余韻に浸っている
+CASE "清洁口交"
+	;PRINTFORML 
+CASE "買東西"
+	;買ってきた道具などで分岐
+	;IF COND("巨大振動棒購入")
+
+	;	CALL SET_DEVENT, "巨大振動棒感想"
+	;ELSE
+		;単純にいっぱい買ったかどうかで分岐
+		SELECTCASE COND("買上品数")
+		CASE IS >= 4
+
+		CASEELSE
+
+		ENDSELECT
+	;ENDIF
+CASE "隐秘摄影失敗"
+	PRINTFORML 「あははっ、%CNAME("二人称")%、あまい♪ あまい♪」
+	PRINTFORMDL %CALLNAME:MASTER%の恶作剧に気付き、得意げに笑着いる
+CASE "POSE撮影"
+	;いかくのぽーず！
+	IF CFLAG:POSE结束摄影 == 0
+		FOR LCOUNT, 0, 100
+			IF RAND:5 == 0
+				IF CHECK_TWO_POINTS(4)
+					PRINTFORML 「剪刀手！」
+				ENDIF
+			ELSEIF RAND:4 == 0
+				IF CHECK_TWO_POINTS(3)
+					PRINTFORML 「早く撮ってよー！」
+				ENDIF
+			ELSEIF RAND:3 == 0
+				IF CHECK_TWO_POINTS(2)
+					PRINTFORML 「%CNAME("二人称")%、酱と可愛く撮ってくれた？」
+				ENDIF
+			ELSEIF RAND:2
+				IF CHECK_TWO_POINTS(1)
+					PRINTFORML 「%CNAME("二人称")%、どう？ このポーズ？」
+				ENDIF
+			ELSE
+				IF CHECK_TWO_POINTS(0)
+					PRINTFORML 「んふふー、こう？」
+				ENDIF
+			ENDIF
+			SIF LINECOUNT > MEMO_LINECOUNT
+				BREAK
+		NEXT
+		PRINTFORMDL %CALLNAME:TARGET%は撮影にノリノリだ
+	ENDIF
+CASE "自撮り送信"
+	PRINTFORML 「……じーっ」
+	PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:MASTER%の反応を窺っているようだ
+CASE "变成裸体"
+	;他に人がいる
+	IF CHARA_NUM("室内の邪魔者")
+		;PRINTFORML 
+	;まさかの野外
+	ELSEIF PLACE("野外")
+		;PRINTFORML 
+	;不在個室
+	ELSEIF PLACE("個室") == 0
+		;PRINTFORML 
+	;個室で二人きり
+	ELSE
+		;PRINTFORML 
+	ENDIF
+CASE "Ｈ目的で呼び出された"
+	IF PLACE("情人旅館")
+		IF COND("昼")
+			PRINTFORML 「ねーねー、お休みだし帰りにすこし遊ぼうよ！」
+		ELSE
+			PRINTFORML 「なんだか夜に摆脱のってワクワクするね♪」
+		ENDIF
+	;做爱房
+	ELSE
+		PRINTFORML 「皆にないしょで会うのって、ちょっとワクワクする！」
+	ENDIF
+CASE "Talk", "夸奖", "甜言蜜语"
+	PRINTFORML 「%TEXTR("あははっ/うんうん/そうそう")%、%TEXTR("それでね♪/惊嚇だよね！/まさかねー/ヤバイよねー")%」
+	PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:MASTER%と話している
+CASE "膝枕", "膝枕"
+	PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:MASTER%の膝の上でゴロゴロしている
+ENDSELECT
+
+;何か発言してたらここまで
+IF LINECOUNT > MEMO_LINECOUNT
+	CALL CHANGE_OFC, "重置"
+	RETURN 1
+ENDIF
+
+;標語の反応。書いたらコメントアウトを外してください
+IF CFLAG:標語実践
+	IF STRCOUNT(SAVESTR:標語, "注意口渴")
+		;IF DEVENT("標語茶") == 0
+		;	PRINTFORML 
+		;	CALL SET_DEVENT, "標語茶"
+		;ENDIF
+	ELSEIF STRCOUNT(SAVESTR:標語, "体操服")
+		SELECTCASE SAVESTR:標語
+		CASE "体操服はやっぱり布鲁马"
+			;IF DEVENT("標語布鲁马") == 0
+			;	PRINTFORML 
+			;	CALL SET_DEVENT, "標語布鲁马"
+			;ENDIF
+		CASE "体操服はやっぱり运动短褲"
+
+		CASE "体操服はやっぱり紧身短褲"
+
+		CASE "体操服はやっぱり运动衫"
+		;各分岐を細かく埋めずに、上の分岐を消して望みの体操服に着替えてやったぞ発言をここに書くのも良いと思います
+		CASEELSE
+
+		ENDSELECT
+	ELSEIF STRCOUNT(SAVESTR:標語, "学生服")
+		SELECTCASE SAVESTR:標語
+		CASE "学生服は露脐装超短裙に限る"
+			;IF DEVENT("標語露脐装超短裙") == 0
+			;	PRINTFORML 
+			;	CALL SET_DEVENT, "標語露脐装超短裙"
+			;ENDIF
+		CASE "学生服は超短迷你に限る"
+		;各分岐を細かく埋めずに、上の分岐を消して望みの学生服に着替えてやったぞ発言をここに書くのも良いと思います
+		CASEELSE
+
+		ENDSELECT
+	ENDIF
+ENDIF
+
+;何か発言してたらここまで
+IF LINECOUNT > MEMO_LINECOUNT
+	CALL CHANGE_OFC, "重置"
+	RETURN 1
+ENDIF
+
+;表情変化
+;酔っぱらった状態などでイベント台詞言わせたくなかったので場所移動
+IF STATE("酔酒")
+	;お酒を飲まない設定にする予定
+	CALL OFC_PRINT_STRL,@"「あははっ、%CNAME("二人称")%_CBBH_ 」"
+ELSEIF CFLAG:害羞
+	PRINTFORMDL %CALLNAME:TARGET%の頬は赤く染まっている
+ENDIF
+
+;何か発言してたらここまで
+IF LINECOUNT > MEMO_LINECOUNT
+	CALL CHANGE_OFC, "重置"
+	RETURN 1
+ENDIF
+
+;イベント台詞。CFLAG:日常事件回数が10増えるたびに一つ叫醒ぐらいで良いでしょう
+
+IF CFLAG:日常事件回数 >= 5 && DEVENT("質問１") == 0
+	PRINTFORML 「入部の理由？ ここの部活って皆のお願いを叶えてくれるんだよね？」
+	PRINTFORML 「だから、ここに入れば%CNAME("一人称")%にも叶えられるお願いが見つかるかもって思ったの！」
+	CALL SET_DEVENT, "質問１"
+ELSEIF CFLAG:日常事件回数 >= 15 && DEVENT("質問２") == 0
+	PRINTFORML 「%CNAME("弗理希艾尔")%、すごいよね！なんでも出来ちゃうんだもん！」
+	PRINTFORML 「%CNAME("一人称")%も早くいろいろ出来るようになりたいなー……」
+	CALL SET_DEVENT, "質問２"
+ELSEIF CFLAG:日常事件回数 >= 25 && DEVENT("質問３") == 0
+	IF FIND_COND("兄弟")
+		PRINTFORML 「%CNAME("二人称")%達、きょうだいの仲いいよね！」
+		PRINTFORML 「%CNAME("一人称")%は一人っ子だから、ちょっとだけ羨ましいな」
+	ELSE
+		PRINTFORML 「%CNAME("二人称")%って、きょうだいいる？」
+		PRINTFORML 「%CNAME("一人称")%は一人っ子だから、きょうだいがいるのって憧れるな」
+	ENDIF
+	CALL SET_DEVENT, "質問３"
+ENDIF
+
+;何か発言してたらここまで
+IF LINECOUNT > MEMO_LINECOUNT
+	CALL CHANGE_OFC, "重置"
+	RETURN 1
+ENDIF
+
+;他の人といちゃついた後にpartner変更
+;ちょっと条件を変更
+ACTOR = FIND_COND("Ｈ的いちゃつき中", "直前行動")
+
+IF ACTOR
+	IF CFLAG:ACTOR:PREV_DAILYCATE == 6
+		IF COND("欲求不満") >= 2 && COND("干劲性処理") && TALENT:淫乱
+			PRINTFORML 「……%CNAME("二人称", "かな")%、%CNAME("一人称")%もしたいな？」
+		ELSE
+			CALL OFC_PRINT_STRL,@"「わぁー_CBBH_ %CNAME("二人称")%、%TEXTR("いっぱい/たく桑")%出したね_CBBH_ 」"
+		ENDIF
+		PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:MASTER%と%CALLNAME:ACTOR%の行為を見ていたようだ
+	ELSE
+		PRINTFORML 「%CNAME("二人称")%、楽しそう♪」
+		PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:MASTER%と%CALLNAME:ACTOR%のやりとりを眺めている
+	ENDIF
+ENDIF
+
+;何か発言してたらここまで
+IF LINECOUNT > MEMO_LINECOUNT
+	CALL CHANGE_OFC, "重置"
+	RETURN 1
+ENDIF
+
+FOR LCOUNT, 0, 100
+	;以下は随机台詞など
+	;ここは闲を持て余す感じ
+	;時間帯と場所と関係で変化有些
+	IF PLACE("Ｈ目的") || PLACE("野外")
+		;抜け出した場合
+		IF RAND:5 == 0
+			IF CHECK_TWO_POINTS(4)
+				PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:MASTER%の様子を窺っている
+			ENDIF
+		ELSEIF RAND:4 == 0
+			IF CHECK_TWO_POINTS(3)
+				PRINTFORMDL %CALLNAME:TARGET%は%CALLNAME:MASTER%の顔を覗き込んでいる
+			ENDIF
+		ELSEIF RAND:3 == 0
+			IF CHECK_TWO_POINTS(2)
+				PRINTFORMDL %CALLNAME:TARGET%は髪の毛を触っている
+			ENDIF
+		ELSEIF RAND:2
+			IF CHECK_TWO_POINTS(1)
+				PRINTFORMDL %CALLNAME:TARGET%は脚をもじもじさせている
+			ENDIF
+		ELSE
+			IF CHECK_TWO_POINTS(0)
+				PRINTFORMDL いつもより%CALLNAME:MASTER%との距離が近い……
+			ENDIF
+		ENDIF
+	ELSE
+		IF RAND:10 == 0 && (COND("身嗜み：Ｖ拡張")  + COND("身嗜み：Ａ拡張")) == 0 && (FIND_COND("身嗜み：Ｖ拡張", "現在存在") + FIND_COND("身嗜み：Ａ拡張", "現在存在"))
+			IF CHECK_TWO_POINTS(9)
+				PRINTFORML 「……なにか変な音がする？ 気のせいかな？」
+				PRINTFORML %CALLNAME:TARGET%はキョロキョロと周りを見渡している
+			ENDIF
+		ELSEIF RAND:9 == 0 && CFLAG:茶
+			IF CHECK_TWO_POINTS(8)
+				PRINTFORML 「ふぅー……」
+				PRINTFORMDL %CALLNAME:TARGET%は茶を飲みながら一息ついている
+			ENDIF
+		ELSEIF RAND:8 == 0
+			IF CHECK_TWO_POINTS(7)
+				IF COND("夜")
+					PRINTFORML 「うーん…… 最近、ちょっと食べすぎかも……」
+					PRINTFORMDL %CALLNAME:TARGET%は肚子周围を気にしている
+				ELSE
+					IF TEXTS("曜日") == "日"
+						PRINTFORML 「お休みもあと半分かー……」
+					ELSE
+						PRINTFORML 「今日は作業多いなー……」
+					ENDIF
+					PRINTFORMDL %CALLNAME:TARGET%はぼやいている
+				ENDIF
+			ENDIF
+		ELSEIF RAND:7 == 0
+			IF CHECK_TWO_POINTS(6)
+				IF COND("夜")
+					PRINTFORML 「明日は何しようかな？」
+				ELSE
+					IF COND("约会的约定") && TEXTS("曜日") != "日"
+						PRINTFORML 「约会楽しみー♪」
+					ELSE
+						PRINTFORML 「\@ TEXTS("曜日") != "日" ? 帰りに #  \@どこか行こうかな？」
+					ENDIF
+					PRINTFORMDL %CALLNAME:TARGET%は予定を立てているようだ
+				ENDIF
+			ENDIF
+		ELSEIF RAND:6 == 0
+			IF CHECK_TWO_POINTS(5)
+				PRINTFORML 「%TEXTR("あっ/あー/わー")%！ %TEXTR("忘れて/そうだっ")%た！」
+				PRINTFORMDL %CALLNAME:TARGET%は何かを思い出したようだ
+			ENDIF
+		ELSEIF RAND:5 == 0
+			IF CHECK_TWO_POINTS(4)
+				PRINTFORML 「ふぁ……」
+				PRINTFORMDL %CALLNAME:TARGET%は哈欠を噛み殺している
+			ENDIF
+		ELSEIF RAND:4 == 0
+			IF CHECK_TWO_POINTS(3)
+				PRINTFORML 「%TEXTR("ん/んん")%ー──っ！ ……%TEXTR("はぁ/ふぅ")%～」
+				PRINTFORMDL %CALLNAME:TARGET%は背伸びをしている
+			ENDIF
+		ELSEIF RAND:3 == 0
+			IF CHECK_TWO_POINTS(2)
+				PRINTFORML 「……%TEXTR("ん/あれ")%～？」
+				PRINTFORMDL %CALLNAME:TARGET%は小首をかしげている
+			ENDIF
+		ELSEIF RAND:2
+			IF CHECK_TWO_POINTS(1)
+				PRINTFORMDL %CALLNAME:TARGET%は腰の羽を啪嗒啪嗒させている
+			ENDIF
+		ELSE
+			IF CHECK_TWO_POINTS(0)
+				PRINTFORML 「ふんふんふ～ん♪」
+				PRINTFORMDL %CALLNAME:TARGET%は鼻歌を歌っている
+			ENDIF
+		ENDIF
+	ENDIF
+	SIF LINECOUNT > MEMO_LINECOUNT
+		BREAK
+NEXT
+
+;文字色を戻す
+CALL CHANGE_OFC, "重置"
+;-------------------------------------------------
+;梦话。随意むにゃむにゃ言わせてください
+;-------------------------------------------------
+@KOJO_SLEEP_K50
+#DIM MEMO_LINECOUNT
+#DIM LCOUNT
+MEMO_LINECOUNT = LINECOUNT
+
+;文字色変更
+CALL CHANGE_OFC, "セット"
+
+IF STR:日常イベント名 == "睡眠姦接吻"	
+	FOR LCOUNT, 0, 100
+		IF RAND:5 == 0
+			IF CHECK_TWO_POINTS(3)
+				CALL EMOTION_PLUS, "重置/闭眼/△/对话框睡眠"
+				PRINTFORML 「%TEXTAN("ちゅう……/ちゅっ……/ちゅる……")%」
+			ENDIF
+		ELSEIF RAND:4 == 0
+			IF CHECK_TWO_POINTS(3)
+				CALL EMOTION_PLUS, "重置/闭眼/△/对话框睡眠"
+				PRINTFORML 「%TEXTAN("ちゅっ……/ちゅぱ……/ん……")%」
+			ENDIF
+		ELSEIF RAND:3 == 0
+			IF CHECK_TWO_POINTS(2)
+				CALL EMOTION_PLUS, "重置/闭眼/△/对话框睡眠"
+				PRINTFORML 「%TEXTAN("んむっ……/んー……/すー……")%」
+			ENDIF
+		ELSEIF RAND:2
+			IF CHECK_TWO_POINTS(1)
+				CALL EMOTION_PLUS, "重置/闭眼/△/对话框睡眠"
+				PRINTFORML 「%TEXTAN("ちぅ……/じゅる……/ちゅっ……")%」
+			ENDIF
+		ELSE
+			IF CHECK_TWO_POINTS(0)
+				CALL EMOTION_PLUS, "重置/闭眼/△/对话框睡眠"
+				PRINTFORML 「%TEXTAN("ちゅっ……/んぅ……/んむっ……")%」
+			ENDIF
+		ENDIF
+		SIF LINECOUNT > MEMO_LINECOUNT
+			BREAK
+	NEXT
+ELSEIF STR:日常イベント名 == "睡眠姦口交"
+	FOR LCOUNT, 0, 100
+		IF RAND:5 == 0
+			IF CHECK_TWO_POINTS(4)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/笑顔/紅潮/对话框睡眠"
+				PRINTFORML 「%TEXTAN("んぅ……/んっ……/んぅっ……")%」
+			ENDIF
+		ELSEIF RAND:4 == 0
+			IF CHECK_TWO_POINTS(3)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/笑顔/紅潮/对话框睡眠"
+				PRINTFORML 「%TEXTAN("んぢゅ……/じゅる……/ん……")%」
+			ENDIF
+		ELSEIF RAND:3 == 0
+			IF CHECK_TWO_POINTS(2)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/笑顔/紅潮/对话框睡眠"
+				PRINTFORML 「%TEXTAN("んぐっ……/んっんっ……/うぅ……")%」
+			ENDIF
+		ELSEIF RAND:2
+			IF CHECK_TWO_POINTS(1)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/笑顔/紅潮/对话框睡眠"
+				PRINTFORML 「%TEXTAN("じゅる……/じゅぷっ……/じゅぼ……")%」
+			ENDIF
+		ELSE
+			IF CHECK_TWO_POINTS(0)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/笑顔/紅潮/对话框睡眠"
+				PRINTFORML 「%TEXTAN("んんぅ……/れろ……/じゅるる……")%」
+			ENDIF
+		ENDIF
+		SIF LINECOUNT > MEMO_LINECOUNT
+			BREAK
+	NEXT
+ELSEIF STR:日常イベント名 == "睡眠姦正常位" || STR:日常イベント名 == "睡眠姦寝后背位"
+	FOR LCOUNT, 0, 100
+		IF RAND:5 == 0
+			IF CHECK_TWO_POINTS(4)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/無口系/赤面/对话框睡眠"
+				PRINTFORML 「%TEXTAN("あっ……/ぁ……/ん……")%」
+			ENDIF
+		ELSEIF RAND:4 == 0
+			IF CHECK_TWO_POINTS(3)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/無口系/赤面/对话框睡眠"
+				PRINTFORML 「%TEXTAN("んっ……/んﾞ……/んんっ……")%」
+			ENDIF
+		ELSEIF RAND:3 == 0
+			IF CHECK_TWO_POINTS(2)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/無口系/赤面/对话框睡眠"
+				PRINTFORML 「%TEXTAN("ああ……/んぅ……/やぁ……")%」
+			ENDIF
+		ELSEIF RAND:2
+			IF CHECK_TWO_POINTS(1)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/無口系/赤面/对话框睡眠"
+				PRINTFORML 「%TEXTAN("やっ……/あっあっ……/あっ……")%」
+			ENDIF
+		ELSE
+			IF CHECK_TWO_POINTS(0)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/無口系/赤面/对话框睡眠"
+				PRINTFORML 「%TEXTAN("はぁ……/はっ……/はぁ……")%」
+			ENDIF
+		ENDIF
+		SIF LINECOUNT > MEMO_LINECOUNT
+			BREAK
+	NEXT
+ELSEIF COND("快要醒了")
+	SIF COND("KOJO_DAILY台詞中") == 0
+		CALL EMOTION_PLUS, "重置/闭眼/困扰眉/半開/对话框睡眠"
+	IF RAND:3 == 0
+		PRINTFORML 「嗯……」
+	ELSEIF RAND:2
+		PRINTFORML 「んん……」
+	ELSE
+		PRINTFORML 「う……ん……」
+	ENDIF
+ELSE
+	FOR LCOUNT, 0, 100
+		IF RAND:10 == 0
+			IF CHECK_TWO_POINTS(9)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/ω/对话框睡眠"
+				PRINTFORML 「むにゃむにゃ……」
+			ENDIF
+		ELSEIF RAND:9 == 0
+			IF CHECK_TWO_POINTS(8)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/半開/对话框睡眠"
+				PRINTFORML 「すぴー……」
+			ENDIF
+		ELSEIF RAND:8 == 0
+			IF CHECK_TWO_POINTS(7)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/無口系/对话框睡眠"
+				PRINTFORML 「すー…… すー……」
+			ENDIF
+		ELSEIF RAND:7 == 0
+			IF CHECK_TWO_POINTS(6)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/半開/对话框睡眠"
+				PRINTFORML 「くかー……」
+			ENDIF
+		ELSEIF RAND:6 == 0
+			IF CHECK_TWO_POINTS(5)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/半開/对话框睡眠"
+				PRINTFORML 「ぐー……」
+			ENDIF
+		ELSEIF RAND:5 == 0
+			IF CHECK_TWO_POINTS(4)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/無口系/对话框睡眠"
+				PRINTFORML 「zzz……」
+			ENDIF
+		ELSEIF RAND:4 == 0
+			IF CHECK_TWO_POINTS(3)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/無口系/对话框睡眠"
+				PRINTFORML 「すやすや……」
+			ENDIF
+		ELSEIF RAND:3 == 0
+			IF CHECK_TWO_POINTS(2)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/对话框睡眠"
+				IF STR:日常イベント名 == "整理睡姿" || (COND("いちゃいちゃ") == 3 && COND("KOJO_DAILY台詞中")) 
+					PRINTFORML 「こんにちは…… %CNAME(@"{FIND_COND("部室出現可能")}", "助手", "かな")%……」
+				ELSE
+					PRINTFORML 「んふふー…… %CNAME("二人称", "かな")%……」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:2
+			IF CHECK_TWO_POINTS(1)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/对话框睡眠"
+				IF STR:日常イベント名 == "整理睡姿" || (COND("いちゃいちゃ") == 3 && COND("KOJO_DAILY台詞中")) 
+					PRINTFORML 「%CNAME("弗理希艾尔", "二人称", "かな")%…… 点心……」
+				ELSE
+					PRINTFORML 「むにゃ…… %CNAME("二人称", "かな", "甘え")%…… えろーい……」
+				ENDIF
+			ENDIF
+		ELSE
+			IF CHECK_TWO_POINTS(0)
+				SIF COND("KOJO_DAILY台詞中") == 0
+					CALL EMOTION_PLUS, "重置/闭眼/微笑/红晕/对话框睡眠"
+				IF RAND:5 == 0 && STR:日常イベント名 == "整理睡姿" || (COND("いちゃいちゃ") == 3 && COND("KOJO_DAILY台詞中")) 
+					PRINTFORML 「有がとう…… %CNAME("二人称", "かな")%……」
+				ELSE
+					PRINTFORM 「%CNAME("二人称", "かな", "甘え")%……
+					IF TALENT:恋慕
+						PRINTFORML えへへっ……」
+					ELSE
+						PRINTFORML 」
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+		SIF LINECOUNT > MEMO_LINECOUNT
+			BREAK
+	NEXT
+ENDIF
+
+CALL CHANGE_OFC, "重置"
+;-------------------------------------------------
+;メイン画面で選択肢として独立している日常イベントでのセリフ。WAIT使って大丈夫です
+;こっちはあくまで選択肢で選ばれた場合に限るのに注意。
+;-------------------------------------------------
+@KOJO_DAILYCOM_K50, ARGS
+;打招呼
+#DIMS GREETING
+#DIMS WISH
+#DIMS LUNCH
+#DIM MEMO_LINECOUNT
+#DIM LCOUNT
+MEMO_LINECOUNT = LINECOUNT
+
+;文字色変更
+CALL CHANGE_OFC, "セット"
+
+
+SELECTCASE ARGS
+;通話などでの呼出なので括弧は「」ではなく『』推奨。TFLAG:地の文スキップ = 1とすると地の文をスキップ出来ます
+CASE "Ｈ目的で呼び出された"
+	;台詞を書いたらRETURN 0 を消してください
+	CALL CHANGE_OFC, "重置"
+	RETURN 0
+	IF PLACE("情人旅館")
+		PRINTFORMW 『』
+	;做爱房
+	ELSE
+		PRINTFORMW 『』
+	ENDIF
+CASE "学園での日常"
+
+CASE "お仕事"
+
+CASE "归途"
+
+	;SAVESTR:現在位置 と SAVESTR:归途の行動 を決定する
+	CALL SETFLAG, "遭遇地点"
+	
+	;デバッグ用の归途固定
+	;EVENT_ACADEMY, "归途"
+	[IF_DEBUG]
+		;SAVESTR:現在位置 = 游戏中心
+		;SAVESTR:归途の行動 = 対戦游戏
+	[ENDIF]
+
+	;忘れ物を取りに行く
+	IF SAVESTR:現在位置 != "阵雨" && COND("放課後Ｈ的邀请") == 0  && COND("放課後约会中") == 0 && EXP:Ｈ回数 >= 5 && RAND:10 == 0
+		CALL EMOTION_PLUS, "重置/对话框兴奋"
+		PRINTFORMW 「%REPLACE(REPLACE(CNAME("二人称", "かな"), "おねい", "おねー"), "おにい", "おにー")%！ いまから返回ところ？」
+		PRINTFORMDW 午後の講義を受け終えた%CALLNAME:MASTER%は、%CALLNAME:TARGET%と一緒に帰ろうと誘ったが…
+		PRINTL
+		CALL EMOTION_PLUS, "重置/困扰眉/眯眯眼"
+		PRINTFORMW 「ごめんね！ 部室に忘れ物したから取りに行くところなの」
+		PRINTFORMW 「また今度一緒に帰ろうね」
+		PRINTFORMW 「……え？ %CNAME("二人称")%も一緒についてきてくれるの？」
+		PRINTDL
+		CALL OFC_PRINT_STRW, "DRAWLINE"
+		STR:日常イベント名 = 放課後Ｈ的邀请
+		SAVESTR:現在位置 = 部室
+		SAVESTR:归途の行動 = 忘れ物
+		PRINTFORMDW 放課後の部室は、誰もおらずしんと静まりかえっていた。
+		PRINTFORMDW 窓の外から夕陽が差し込み、あたり一面橘色に染まっている。
+		PRINTFORMDW %CALLNAME:TARGET%はキョロキョロと忘れ物を探していたが、すぐに見つけたようだ。
+		PRINTDL
+		CALL EMOTION_PLUS, "重置/对话框兴奋"
+		PRINTFORMW 「あったー！ よかった！ えへへっ、机の上に置きっぱ无だ」
+		PRINTFORMW 「用事はこれでおしまい♪」
+		PRINTFORMW 「ついてきてくれて有がとね！ %CNAME("二人称")%！」
+		PRINTL
+		PRINTFORMDL 该怎么做呢？
+		CALL OFC_PRINT_SELECT, "せっかく部室来了のでＨしていく/一緒に返回"
+		IF RESULT == 0
+			FLAG:放課後Ｈ = TARGET
+			CSTR:お誘い = %STR:日常イベント名%
+			STR:Ｈする場所 = 放課後の部室
+			PRINTFORMDW %CLO("現在的格好＆の")%%CALLNAME:TARGET%をＨに誘います。
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「うん、帰ろ、帰ろー♪」
+		ENDIF
+		PRINTDL
+		CALL CHANGE_OFC, "重置"
+		RETURN 0
+	ENDIF
+
+	;地の文の前の台詞がある場合はここに書く
+	SELECTCASE SAVESTR:現在位置
+	CASE "阵雨"
+		CALL EMOTION_PLUS, "重置/＞＜/困扰眉/对话框惊讶"
+		PRINTFORMW 「わーっ！ %CNAME("二人称")%、いれていれて！」
+	CASEELSE
+		IF COND("放課後约会中")
+			CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+		ELSEIF STRCOUNT(CSTR:出現場所, SAVESTR:現在位置)
+			PRINTFORMW 「ねっ！ 繞道して帰ろうよ！」
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「あっ！ %CNAME("二人称")%だ！ 一緒に帰ろー♪」
+		ENDIF
+	ENDSELECT
+
+	CALL CHANGE_OFC, "重置"
+	;地の文を出す
+	CALL DAILY_MESSAGE, "归途"
+	CALL CHANGE_OFC, "セット"
+	
+	SELECTCASE SAVESTR:归途の行動
+	CASE "相合傘"
+		IF TALENT:恋慕 && RAND:3 == 0
+			CALL OFC_PRINT_STRW, @"「%CNAME("二人称")%、湿的ちゃうでしょ？ もっとくっつこうよ_CBBH_ 」"
+		ELSEIF RAND:2
+			PRINTFORMW 「助かったー！」
+			PRINTFORMW 「えへへっ、%CNAME("二人称")%、頼りになるね♪」
+		ELSE
+			PRINTFORMW 「くちゅん！」
+			PRINTFORMW 「湿透だよー！ 早くお浴室に入りた～い！」
+		ENDIF
+	CASE "直帰"
+		IF RAND:4 == 0 && COND("放課後Ｈ的邀请") == 0
+			IF COND("同居中")
+				PRINTFORMW 「今日の晩御飯なーni↘かなー♪」
+			ELSE
+				PRINTFORMW 「%REPLACE(REPLACE(CNAME("二人称", "かな"), "おねい", "おねー"), "おにい", "おにー")%！ バイバーイ！ また明日！」
+			ENDIF
+		ELSEIF RAND:3 == 0 && COND("放課後Ｈ的邀请") == 0
+			PRINTFORMW 「今日は楽しみな番組あるから早く帰ろ！」
+		ELSEIF RAND:2
+			PRINTFORMW 「やっと学校終わったー♪」
+			PRINTFORMW 「いっぱい玩遊戲ぞー！」
+		ELSE
+			PRINTFORMW 「見て見て！ 夕陽がきれいだよ！」
+		ENDIF
+	CASE "泳装選び"
+		IF RAND:3 == 0
+			PRINTFORMW 「この色だとどうかな？ んー……ちょっと地味？」
+		ELSEIF RAND:2
+			PRINTFORMW 「あっ、この泳装可爱！」 
+			PRINTFORMW 「えっと値段は……うーん……結構するなー……」
+		ELSE
+			PRINTFORMW 「この泳装すごいね！ %CNAME("一人称")%も似合うようになるかな？」
+		ENDIF
+	CASE "準新作を物色", "物色新作"
+		IF RAND:3 == 0
+			PRINTFORMW 「面白そーなのないかなー？」
+		ELSEIF RAND:2
+			PRINTFORMW 「あー！ 怖いって噂のやつだ！」
+			PRINTFORMW 「ねぇねぇ、%CNAME("二人称")%、これ一緒に観ようよ！」
+		ELSE
+			PRINTFORMW 「このシリーズ面白そうだけど、どれから見ればいいのかな？」
+			PRINTFORMW 「いっぱいあるとわかんないよね」
+		ENDIF
+	CASE "物色游戏"
+		IF RAND:3 == 0
+			PRINTFORMW 「この游戏面白色らしいよ！ やってみようよ！」
+		ELSEIF RAND:2
+			PRINTFORMW 「ねぇ、%CNAME("二人称")%、この游戏で勝負しようよ！」
+			PRINTFORMW 「よーいどん！で初めて一週間後に対決ね！」
+		ELSE
+			PRINTFORMW 「この游戏とっても難しいって噂だよ？ 阴蒂アできる？」
+		ENDIF
+	CASE "站着读书", "检查新刊"
+		IF RAND:3 == 0
+			PRINTFORMW 「んふふー、これ読むの楽しみだったんだ♪」
+		ELSEIF RAND:2
+			PRINTFORMW 「%CNAME("二人称")%はなに読んでるの？」
+			PRINTFORMW 「ふんふん……ちょっと面白そう！」
+		ELSE
+			PRINTFORMW 「この漫画面白色よ！ %CNAME("一人称")%のオススメ！」
+		ENDIF
+	CASE "買食物"
+		IF RAND:3 == 0
+			PRINTFORMW 「%CNAME("二人称")%のおいしそー！」
+			PRINTFORMW 「ねぇねぇ、ちょっとちょーだい♪」
+		ELSEIF RAND:2
+			PRINTFORMW 「新商品だって！ 食べてみようよ！」
+		ELSE
+			PRINTFORMW 「ど・れ・に・し・よ・う・か・な！」
+			PRINTFORMW 「サ・タ・ン・さ・ま・の・い・う・と・お・り！」
+			PRINTFORMW 「よーし！ これに決定♪」
+		ENDIF
+	CASE "玩音游" 
+		IF RAND:3 == 0
+			PRINTFORMW 「やった！ %CNAME("二人称")%、見て見て！」
+			PRINTFORMW 「自己背心更新だって♪」
+		ELSEIF RAND:2
+			PRINTFORMW 「わーっ！ 速すぎてこんなのむりだよー！」
+		ELSE
+			PRINTFORMW 「%CNAME("二人称")%、どの曲で遊ぼっか？」
+		ENDIF
+	CASE "街机游戏"
+		IF RAND:3 == 0
+			PRINTFORMW 「やったー！ あったりー♪」
+			PRINTFORMW 「んふふー、コインもーらい！」
+		ELSEIF RAND:2
+			PRINTFORMW 「あーっ！ おしい！ もう一回！」
+			PRINTFORMW 「次こそ勝つぞー！」
+		ELSE
+			PRINTFORMW 「うーん……ここが引き時かも？」
+			PRINTFORMW 「他の街机游戏やろうよ！」
+		ENDIF
+	CASE "クレーン游戏", 
+		IF RAND:3 == 0
+			PRINTFORMW 「あっ！ いけそう！」
+			PRINTFORMW 「あっ、あっ、あっ！ あー……」
+		ELSEIF RAND:2
+			PRINTFORMW 「えー！ アーム弱いよー……」
+			PRINTFORMW 「こんなの絶対取れないよね！」
+		ELSE
+			PRINTFORMW 「あの景品なんだか取れそうだね」
+			PRINTFORMW 「チャレンジしてみよ！」
+		ENDIF
+	CASE "大頭贴"
+		IF RAND:3 == 0 && TALENT:淫乱
+			PRINTFORMW 「周りに誰也不在よね？」
+			PRINTFORMW 「んふふー、エッチなやつも撮っちゃおっか？」
+		ELSEIF RAND:2
+			PRINTFORMW 「いっしょにポーズ取ろうよ！ なにがいいかな～♪」
+		ELSE
+			PRINTFORMW 「%CNAME("二人称")%の顔に落書きしちゃお♪」
+		ENDIF
+	CASE "対戦游戏"
+		PRINTL
+		PRINTDL ………
+		PRINTDL ……
+		PRINTDL …
+		PRINTL
+		SELECTCASE RAND:10
+		CASE 9
+			PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%をボッコボコにして勝った！
+			PRINTL
+			CALL EMOTION_PLUS, "重置/〇〇/困扰眉/△/对话框惊讶"
+			PRINTFORMW 「わーん！ 負けたー！」
+			PRINTFORMW 「%CNAME("二人称")%、大人げないよー！」
+		CASE 8
+			PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%にボッコボコにされて負けた…
+			PRINTL
+			CALL EMOTION_PLUS, "重置/困扰眉/笑顔/红晕/对话框開心"
+			PRINTFORMW 「%REPLACE(REPLACE(CNAME("二人称", "かな"), "おねい", "おねー"), "おにい", "おにー")%、よわ～い！」
+			PRINTFORMW 「あははっ、また遊んで给ね♪」
+		CASE 4 TO 7
+			PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%に勝利した！
+			PRINTL
+			CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/半開/对话框憤怒"
+			PRINTFORMW 「負けたー！」
+			PRINTFORMW 「むむむー……次は絶対負けないもんね！」
+		CASEELSE
+			PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%に敗北した…
+			PRINTL
+			CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框開心"
+			PRINTFORMW 「%CNAME("一人称")%の勝ちー♪」
+			PRINTFORMW 「%CNAME("二人称")%もなかなかやるね！」
+		ENDSELECT
+	CASE "繞道"
+		SELECTCASE SAVESTR:現在位置
+		CASE "便利店"
+			PRINTFORMW 「なに買おうかなー？」
+		CASE "游戏中心"
+			PRINTFORMW 「遊んでたら疲れちゃった」
+			PRINTFORMW 「ちょっとジュース休憩しよ♪」
+		ENDSELECT
+	CASE "打情骂俏", 
+		;おそらく游戏中心しか出ないはず
+		SELECTCASE SAVESTR:現在位置
+		CASE "游戏中心"
+			PRINTFORMW 「%CNAME("二人称")%、こっちこっち！」
+			CALL OFC_PRINT_STRW,@"「一緒にこれやろうよ_CBBH_ 」"
+		ENDSELECT
+	ENDSELECT
+
+;归途イベントの後になんとなく情人旅館に行こっかとなった際のセリフです
+CASE "放課後Ｈ的邀请"
+	SELECTCASE SAVESTR:現在位置
+	CASE "阵雨"
+		CALL EMOTION_PLUS, "重置/微笑/紅潮"
+		PRINTFORMW 「雨、なかなか止まないね」
+		PRINTFORMW 「ねーねー、どこかで少し休もうよ」
+	CASE "神社"
+		CALL EMOTION_PLUS, "重置/斜眼/ω/紅潮"
+		PRINTFORMW 「%CNAME("二人称")%、胖次のぞいてたでしょ？」
+		PRINTFORMW 「なんだかさっきからソワソワしてるもん！」
+		PRINTFORMW 「んふふー、エッチな気分になっちゃった？」
+		STR:Ｈする場所 = 神社の裏
+	CASE "游戏中心"
+		CALL EMOTION_PLUS, "笑颜/躁动难忍/对话框開心"
+		PRINTFORMW 「あー楽しかった！」
+		PRINTFORMW 「ねっ、次はなにして玩遊戲？」
+		STR:Ｈする場所 = 游戏中心の廁所
+	CASEELSE
+		CALL EMOTION_PLUS, "重置/紅潮"
+		PRINTFORMW 「ねー%CNAME("二人称")%、もうちょっとだけ遊ぼー？」
+	ENDSELECT
+;お浴室に一緒に入ろうと誘われた場合。TFLAG:床イン = 1とすることで強制的にエロにも行ける
+;浴室でスタートする場合には、代わりにTFLAG:お浴室でＨ = 1として下さい
+CASE "一緒にお浴室"
+	PRINTFORMW 
+
+;[999]選択後の台詞。TFLAG:床イン = 1とすることで強制的にエロにも行ける
+;浴室でスタートする場合には、代わりにTFLAG:お浴室でＨ = 1として下さい
+CASE "休憩"
+	;ここ是ろいろ出来るがひとまず無難な奴だけ置いておく
+	;台詞を書いたらRETURN 0を消してください
+	;RETURN 0
+	IF PLACE("自宅")
+		IF COND("夜")
+			;お浴室
+			IF PLACE("居間") || PLACE("partner的房間")
+				CALL EMOTION_PLUS, "重置/無口系"
+				PRINTFORMW 「%CNAME("二人称")%、もう寝ちゃう？」
+				PRINTFORMW 「疲れてるのかな？ 休息ー、%CNAME("二人称")%」
+			ELSE
+				CALL EMOTION_PLUS, "重置/眯眯眼/斜眉/半開/对话框困倦"
+				PRINTFORMW 「ふわぁ…… %CNAME("二人称")%、そろそろ寝るねー」
+				PRINTFORMW 「休息ー、%CNAME("二人称")%」
+			ENDIF
+		ELSE
+			;昼の自宅
+			PRINTFORMW 「お休みだし、お家でゴロゴロしよっ♪」
+		ENDIF
+	;ここは実質昼のみ
+	ELSEIF PLACE("部室")
+		PRINTFORMW 「%CNAME("一人称")%、そろそろ教室に返回ね！」
+		PRINTFORMW 「回頭见ー♪ %CNAME("二人称")%♪」
+	;場所移動後
+	ELSEIF PLACE("野外")
+		;指导者を連れてきた場合
+		IF CHARA_NUM("室内の邪魔者")
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「また三人で玩耍に来ようね？」
+			PRINTFORMDW %CALLNAME:MASTER%達は公園でのんびりすごしました
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜/紅潮/对话框開心"
+			PRINTFORMW 「公園でのんびりするのも悪くないね♪」
+			PRINTFORMDW %CALLNAME:MASTER%和%CALLNAME:TARGET%公園约会を楽しみました
+		ENDIF
+	ELSE
+		CALL CHANGE_OFC, "重置"
+		RETURN 0
+	ENDIF
+
+CASE "清洁口交：お誘い"
+
+CASE "清洁口交：射精後"
+
+CASE "清洁口交：断った"
+
+;NOWEXを分岐に用いることが出来る。また、TFLAG:地の文スキップで地の文を飛ばせる
+CASE "性処理：前"
+	;口上を書いた場合はRETURN 0を消してください
+	CALL CHANGE_OFC, "重置"
+	RETURN 0
+	;避孕套を使う場合
+	IF TEQUIP:PLAYER:避孕套
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "性処理：後"
+	;口上を書いた場合はRETURN 0を消してください
+	CALL CHANGE_OFC, "重置"
+	RETURN 0
+	;避孕套を使う場合
+	IF TEQUIP:PLAYER:避孕套
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;ここには特殊な条件での角色独自のイベントを書く。別に無くても構わない
+;発生領帯ミングは日常イベント選択後の好感度を得た直後
+CASE "特殊事件"
+	CALL CLEAR_MAIDFACE
+	;眠ってる時でも来るので書くことないならRETURN 0してください
+	IF RAND:10 == 0 && CONDS("直前行動") == "睡眠姦接吻" && CEVENT("Ｄイベ：二度寝") == 0
+		CALL OFC_PRINT_STRL, "DRAWLINE"
+		CALL EMOTION_PLUS, "重置/斜眼/斜眉/無口系/对话框困倦"
+		PRINTFORMW 「んー…………」
+		PRINTFORMW 「…………%CNAME("二人称", "かな")%？」
+		PRINTFORMW 「…………」
+		PRINTFORMW 「…………zzz」
+		PRINTFORMDW どうやら%CALLNAME:TARGET%は再び夢の中に落ちていったようだ
+		CALL SET_CEVENT, "Ｄイベ：二度寝"
+	ELSEIF CFLAG:睡眠
+		CALL CHANGE_OFC, "重置"
+		RETURN 0
+	ELSEIF CONDS("直前行動") == "拭汗" && COND("易出汗", MASTER)
+		CALL OFC_PRINT_STRL, "DRAWLINE"
+		CALL EMOTION_PLUS, "重置/微笑"
+		PRINTFORMW 「%CNAME("二人称")%も汗びっしょりだね」
+		PRINTFORMW 「次は%CNAME("一人称")%が拭いて给！」
+		PRINTL
+		PRINTFORMDW %CALLNAME:TARGET%が汗を拭いてくれた
+		CALL SETFLAG_DAILY, "拭汗", MASTER
+	ENDIF
+;場所を変えた際のセリフ。通常は没有で構いません。SAVESTR:現在位置 や @PLACE(ARGS)で場所を条件分けして使ってください
+CASE "場所を変える"
+
+;この角色が点心当番で、その時間帯で部室に最初からいる時のセリフ
+CASE "点心を用意した"
+	;本日の点心はこの角色の亲手自制
+	IF COND("亲手自制点心")
+		;亲手自制无
+	ELSE
+		CALL EMOTION_PLUS, "心情好"
+		IF TEXTS("点心") == "シュー阴蒂ーム"
+			PRINTFORMW 「このお店の%TEXTS("点心")%、大きくて阴蒂ームたっぷりなんだよ！」
+		ELSEIF TEXTS("点心") == "冰キャンディー"
+			PRINTFORMW 「溶けちゃう前に食べちゃおうよ！」
+		ENDIF
+	ENDIF
+;これは昼か夜
+CASE "打招呼"
+	IF COND("夜")
+		GREETING = こんばんは
+	ELSEIF COND("昼")
+		GREETING = こんにちは
+	ELSE
+		GREETING = おはよう
+	ENDIF
+	;你に先に打招呼をされた
+	SELECTCASE STR:日常イベント名
+	CASE "打招呼ハグ"
+		;初めて
+		IF DEVENT(STR:日常イベント名) == 0
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「わっ！ どうしたの？ %CNAME("二人称")%」
+			PRINTFORMW 「あははっ、甘えたいんだ♪ じゃあ、いっぱいぎゅってして给♪」
+			PRINTFORMDW %CALLNAME:TARGET%は笑い的同时、ぎゅーっと抱きしめ返してきた
+		ELSEIF COND("易出汗")
+			CALL EMOTION_PLUS, "重置/無口系/紅潮/对话框汗"
+			PRINTFORMW 「%CNAME("二人称")%、%CNAME("一人称")%、汗臭くない？」
+			PRINTFORMW 「大丈夫？ ほんとー？」
+		ELSE
+			IF TALENT:恋慕
+				CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+			ELSE
+				CALL EMOTION_PLUS, "重置/笑颜"
+			ENDIF
+			;你に先に打招呼をされた
+			IF CFLAG:打招呼した == 0
+				CALL OFC_PRINT_STRW, @"「%GREETING%、%CNAME("二人称")%\@ TALENT:恋慕 ? _CBBH_ # ♪ \@ 」"
+				PRINTFORMDW %CALLNAME:TARGET%はぎゅーっと抱きしめ返してきた
+			ELSE
+				PRINTFORMW 「%CNAME("二人称")%、今日も甘えんぼ桑だね♪」
+				PRINTFORMW 「ぎゅー♪」
+			ENDIF
+		ENDIF
+	CASE "打招呼接吻"
+		;初めて
+		IF DEVENT(STR:日常イベント名) == 0
+			CALL EMOTION_PLUS, "重置/微笑"
+			CALL OFC_PRINT_STRW, @"「んっ……\@ TALENT:恋慕 ? _CBBH_ # ♪ \@ 」"
+			PRINTFORMW 「……打招呼でチューするのって初めてかも！」
+		ELSE
+			IF TALENT:恋慕
+				CALL EMOTION_PLUS, "重置/微笑/紅潮/对话框爱心"
+			ELSE
+				CALL EMOTION_PLUS, "重置/微笑"
+			ENDIF
+			;你に先に打招呼をされた
+			IF CFLAG:打招呼した == 0
+				CALL OFC_PRINT_STRW, @"「んっ……\@ TALENT:恋慕 ? _CBBH_ # ♪ \@ 」"
+				PRINTFORMW 「%GREETING%、%CNAME("二人称")%」
+				PRINTFORMW 「……いきなりされるとちょっと照れちゃうね」
+			ELSE
+				CALL OFC_PRINT_STRW, @"「んっ……\@ TALENT:恋慕 ? _CBBH_ # ♪ \@ 」"
+				PRINTFORMW 「……ねっ、%CNAME("二人称")%、もっとチューしよ？」
+			ENDIF
+		ENDIF
+	CASE "打招呼口交", "打招呼舐陰"
+		IF TALENT:淫乱 == 0
+			CALL EMOTION_PLUS, "重置/困扰眉/半開/紅潮/对话框惊讶"
+			IF DEVENT(STR:日常イベント名) == 0 || COND("合意：检查内褲") == 0
+				PRINTFORMW 「ひゃ……！？」
+				PRINTFORMW 「%CNAME("二人称", "どもり")%、なにしてるの……？」
+				PRINTFORMW 「えー？ これ打招呼？ ほんとー？」
+			ELSE
+				PRINTFORMW 「またやってるー！」
+				PRINTFORMW 「%CNAME("二人称")%、胖次見たいだけじゃない？」
+			ENDIF
+		ELSE
+			IF DEVENT("露出打招呼") == 0
+				CALL EMOTION_PLUS, "重置/斜眼/紅潮"
+				PRINTFORMW 「……%CNAME("二人称")%、 もしかして%CNAME("女性器")%を舐めたいの？」
+				PRINTFORMW 「んふふー、いいよ、その代わりいっぱい気持ちよくしてね？」	
+				PRINTFORMD そう言って%CALLNAME:TARGET%は
+				IF CHECK_BOTTOM("布鲁马")
+					PRINTFORMD 布鲁马\@ EQUIP:胖次 ? と #  \@
+				ELSEIF CHECK_CLO("连褲襪露出")
+					PRINTFORMD 连褲襪\@ EQUIP:胖次 ? と #  \@
+				ELSEIF CHECK_CLO("贴身制服露出") || CHECK_CLO("下衣露出")
+					PRINTFORMD 股布\@ EQUIP:胖次 ? と #  \@
+				ENDIF
+				SIF EQUIP:胖次
+					PRINTFORMD %PANTIES(TARGET, "胖次")%
+				SIF CHECK_CLO("Ｖ露出") == 0
+					PRINTFORMD をずらして
+				PRINTFORMDL 剥き出しの阴部を%CALLNAME:MASTER%の顔に近づけた
+				CALL SET_DEVENT, "露出打招呼"
+			ELSE
+				CALL EMOTION_PLUS, "重置/笑颜/嘲笑/紅潮"
+				PRINTFORMW 「是、%CNAME("二人称")%」
+				PRINTFORMW 「今日もいっぱい%TEXTR("ペロペロし/舐め")%てね♪」
+				PRINTFORMD %CALLNAME:TARGET%は
+				IF CHECK_BOTTOM("布鲁马")
+					PRINTFORMD 布鲁马\@ EQUIP:胖次 ? と #  \@
+				ELSEIF CHECK_CLO("连褲襪露出")
+					PRINTFORMD 连褲襪\@ EQUIP:胖次 ? と #  \@
+				ELSEIF CHECK_CLO("贴身制服露出") || CHECK_CLO("下衣露出")
+					PRINTFORMD 股布\@ EQUIP:胖次 ? と #  \@
+				ENDIF
+				SIF EQUIP:胖次
+					PRINTFORMD %PANTIES(TARGET, "胖次")%
+				SIF CHECK_CLO("Ｖ露出") == 0
+					PRINTFORMD をずらして、
+				PRINTFORMDL 剥き出しの阴部を%CALLNAME:MASTER%の顔に押し当ててきた
+			ENDIF
+		ENDIF
+	CASEELSE
+		;你に先に打招呼をされた
+		IF CFLAG:打招呼した == 0
+			CALL EMOTION_PLUS, "重置/笑颜/对话框兴奋"
+			PRINTFORMW 「%GREETING%♪ %CNAME("二人称")%」
+			PRINTFORMDW %CALLNAME:TARGET%は今日も元気そうだ
+		ELSE
+			;ここは打招呼を済ませている状態
+			IF CHARA_NUM("室内の邪魔者") == 0
+				CALL EMOTION_PLUS, "重置/笑颜/微笑/紅潮"
+				PRINTFORMW 「%CNAME("二人称")%と二人っきりだね♪ なにしよっか？」
+			ELSE
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「%CNAME("二人称")%、今日は何しよっか？」
+			ENDIF
+		ENDIF
+	ENDSELECT
+CASE "叫醒"
+	CALL RESET_STAIN_EX, "整理睡姿", TARGET
+	CALL EMOTION_PLUS, "重置/斜眼/斜眉/ω/对话框困倦"
+	PRINTFORMW 「%TEXTR("ん/あれ")%ー……？  %CNAME("二人称", "かな")%……？」
+	CALL SET_CEVENT, "Ｄイベ：起きた", TARGET
+
+;酔った際に眠くなって自分的房間に返回際のセリフ
+CASE "眠い"
+	[IF_DEBUG]
+		;飲酒拒否なので出ないはず
+		PRINTFORMW KOJO_DAILYCOM_K50, %ARGS%
+	[ENDIF]
+;全裸終了の際のセリフ
+CASE "服を着た"
+	;PRINTFORMW 
+;暑かったり躁动难忍してたり酔っぱらってたりで内衣姿变成了際のセリフ
+CASE "薄着变成了"
+	CALL EMOTION_PLUS, "重置/嘲笑/紅潮"
+	CALL OFC_PRINT_STRW, "「んふふー…… 脱いじゃおーっと_CBBH_ 」"
+;易出汗状態の際に裙の中に扇風機の風を当てた際のセリフ。[粗野]or[開朗]or[小悪魔]限定
+CASE "股間に扇風機"
+	CALL EMOTION_PLUS, "笑颜/大口/躁动难忍/紅潮/对话框開心"
+	PRINTFORMW 「涼しーい♪」
+	CALL OFC_PRINT_STRW, @"「あははっ、%CNAME("二人称")%、えろーい顔になってるよ_CBBH_ 」"
+CASE "Talk"
+	SELECTCASE STR:日常イベント名
+	;これはCSTR:点心 に亲手自制属性のものが設定されている時のみ
+	CASE "夸奖点心"
+		[IF_DEBUG]
+			;亲手自制无
+			PRINTFORMW KOJO_DAILYCOM_K50, %ARGS%, %STR:日常イベント名%
+		[ENDIF]
+	CASE "夸奖"
+		CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框開心"
+		IF RAND:2
+			PRINTFORMW 「あははっ♪ %TEXTR("もっと褒めてもいいよ？ /有がとう、")%%CNAME("二人称")%」
+		ELSE
+			PRINTFORMW 「%TEXTR("やった/わーい")%♪ 褒められちゃった♪」
+		ENDIF
+	CASE "甜言蜜语"
+		IF CALCF("甜言蜜语成功")
+			IF TALENT:恋慕 && RAND:2
+				CALL EMOTION_PLUS, "重置/困扰眉/無口系/紅潮/对话框爱心"
+				CALL OFC_PRINT_STRW,"「…………うん_／／／_」"
+			ELSE
+				CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框爱心"
+				SELECTCASE RAND:3 
+				CASE 1
+					CALL EMOTION_PLUS, "重置/＞＜/红晕/对话框爱心"
+					CALL OFC_PRINT_STRW,"「きゃー_CBBH_ ドキドキしちゃう_CBBH_ 」"
+				CASE 2
+					CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框爱心"
+					PRINTFORMW 「えへへっ♪ 嬉しい！」
+				CASEELSE
+					CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框爱心"
+					PRINTFORMW 「ねっ、ねっ、もう一回言って？」
+				ENDSELECT
+				
+			ENDIF
+			PRINTFORMDW %CALLNAME:TARGET%はとても開心地している
+		ELSE
+			IF RAND:4 == 0
+				CALL EMOTION_PLUS, "重置/困扰眉/眯眯眼/半開"
+				PRINTFORMW 「下心が見え見えー……」
+			ELSEIF RAND:3 == 0
+				CALL EMOTION_PLUS, "重置/ω"
+				PRINTFORMW 「う～ん？ なんかイマイチ……」
+			ELSEIF RAND:2
+				CALL EMOTION_PLUS, "重置/困扰眉/笑颜"
+				PRINTFORMW 「%CNAME("二人称", "どもり")%、何かあったの？」
+			ELSE
+				CALL EMOTION_PLUS, "重置/半開"
+				PRINTFORMW 「…………」
+			ENDIF
+			PRINTFORMDW %CALLNAME:TARGET%の心にはあまり響かなかったようだ……
+		ENDIF
+	CASEELSE
+		CALL WISH_MESSAGE_K50, "おしゃべり" 
+	ENDSELECT
+;TFLAG:取引拒否 = 1とすることで、你のたわごとを却下できます
+CASE "Ｈ的約定"
+	;台詞を書いたら下のRETURN 0を消してください
+	;RETURN 0
+	;この角色自身が前回赤点で、それどころではない（学生以外は、この分岐には来ません）
+	IF COND("成績：赤点")
+		CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/△/对话框憤怒"
+		PRINTFORMW 「こっちがご褒美欲しいくらいだよー！」
+		TFLAG:取引拒否 = 1
+	;以下はご褒美を给事にＯＫして给
+	ELSE
+		;前回既に你が良い点を取っている場合には”学年上位”を要求します
+		IF COND("成績：優秀", MASTER)
+			CALL EMOTION_PLUS, "重置/闭眼"
+			PRINTFORMW 「%CNAME("二人称")%、頭いいからね……ハードル上げちゃお♪」
+		;そうでない場合には平均点を結構上回る程度でＯＫです
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「頑張ってね♪ %CNAME("二人称")%♪」
+		ENDIF
+	ENDIF
+CASE "拭汗"
+	CALL EMOTION_PLUS, "重置"
+	PRINTFORMW 「%CNAME("二人称")%、拭いてくれるの？」
+	PRINTFORMW 「それならお願いしよっかな♪」
+CASE "淋浴独り言"
+	PRINTFORMW 「ふんふんふ～ん♪」
+CASE "淋浴"
+	;実は内衣を漁ったのに気づかれています
+	IF COND("淋浴：内衣漁りバレ")
+		CALL EMOTION_PLUS, "重置/斜眼"
+		PRINTFORMW 「%CNAME("二人称")%、恶作剧したでしょ？」
+		PRINTFORMW 「あははっ、%CNAME("二人称")%、ほんとわかりやすいね♪」
+	ELSE
+		CALL EMOTION_PLUS, "重置/对话框兴奋"
+		PRINTFORMW 「あっ、%CNAME("二人称")%！」
+		PRINTFORMW 「%CNAME("二人称")%も淋浴浴びる？」
+	ENDIF
+CASE "淋浴後换装"
+	CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+	;初めて
+	IF DEVENT(STR:日常イベント名) == 0
+		PRINTFORMW 「んふふー、似合ってる？」
+		PRINTFORMDW %CALLNAME:TARGET%は衣装を見せびらかすようにその場でくるりと回った
+	ELSE
+		PRINTFORMW 「この衣装もなかなかいいかも♪」
+		PRINTFORMD %CALLNAME:TARGET%は
+		IF RAND:2
+			PRINTFORMDW 開心地ポーズをとっている
+		ELSE
+			PRINTFORMDW 衣装を見せびらかすようにその場でくるりと回った
+		ENDIF
+	ENDIF
+
+CASE "淋浴後换装失敗"
+	;初めて
+	;IF DEVENT(STR:日常イベント名) == 0
+		;PRINTFORMW 
+	;ELSE
+		CALL EMOTION_PLUS, "重置/無口系"
+		PRINTFORMW 「どうしたの？ %CNAME("二人称")%？」
+		PRINTFORMW 「あー、あの服、%CNAME("一人称")%には似合わないかも？」
+	;ENDIF
+;睡眠中の悪戯
+CASE "趁睡袭击"
+	;梦话
+	CALL KOJO_SLEEP_K50
+	WAIT
+CASE "互动：地の文前"
+	SELECTCASE STR:日常イベント名
+	CASE "托一托胸部"
+		IF COND("合意：检查内褲") == 0
+			PRINTFORMD %CALLNAME:MASTER%は
+			PRINTFORMDW %TEXTS("行動継続中の")%%CALLNAME:TARGET%の胸を悄悄的撫でた。
+			PRINTL
+			CALL EMOTION_PLUS, "重置/紅潮"
+			PRINTFORMW 「わっ！ %CNAME("二人称")%、大胆だねー！」
+			CALL SETFLAG_DAILY, "害羞"
+			TFLAG:地の文スキップ = 1
+		ENDIF
+	ENDSELECT
+CASE "互动"
+	SELECTCASE STR:日常イベント名
+	CASE "一起学习"
+		IF RAND:4 == 0
+			CALL EMOTION_PLUS, "重置/＞＜/红晕/对话框開心"
+			PRINTFORMW 「ふむふむ、なるほどなるほど」
+			PRINTFORMW 「あー！ なんとなくわかった気がする！」
+		ELSEIF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/眯眯眼/困扰眉/红晕/对话框汗"
+			PRINTFORMW 「ねー、%CNAME("二人称")%、ここ教えて！」
+			PRINTFORMW 「授業で習ったんだけどよくわかんなくって……」
+		ELSE
+			CALL EMOTION_PLUS, "重置/斜眉/半開/对话框惊讶"
+			PRINTFORMW 「うわっ、%CNAME("二人称")%の勉強って難しそー！」
+			PRINTFORMW 「こんなのほんとにわかるの？」
+		ENDIF
+		PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%が分からない所を教えながら隣で勉強をした。
+	CASE "托一托胸部"
+		IF CONDS("直前行動") == STR:日常イベント名
+			FOR LCOUNT, 0, 100
+				IF RAND:5 == 0 && ABL:Ｂ感覚 > 0
+					IF CHECK_TWO_POINTS(4)
+						CALL EMOTION_PLUS, "重置/困扰眉/無口系/赤面/对话框惊讶"
+						PRINTFORMW 「ひぅ…… さ、先っぽはダメ……」
+					ENDIF
+				ELSEIF RAND:4 == 0
+					IF CHECK_TWO_POINTS(3)
+						CALL EMOTION_PLUS, "重置/斜眉/微笑/紅潮"
+						PRINTFORMW 「んふふー、触り心地はどう？」
+					ENDIF
+				ELSEIF RAND:3 == 0
+					IF CHECK_TWO_POINTS(2)
+						CALL EMOTION_PLUS, "重置/笑颜/微笑/紅潮"
+						PRINTFORMW 「どうどう？ 元気出てきた？」
+					ENDIF
+				ELSEIF RAND:2
+					IF CHECK_TWO_POINTS(1)
+						CALL EMOTION_PLUS, "重置/斜眉/紅潮"
+						PRINTFORMW 「%CNAME("二人称")%、ちょっと触りすぎー……」
+						PRINTFORMW 「……変な気分になっちゃう」
+					ENDIF
+				ELSE
+					IF CHECK_TWO_POINTS(0)
+						CALL EMOTION_PLUS, "重置/ω/紅潮"
+						PRINTFORMW 「やぁ…… 指の動きえろいよー……」
+					ENDIF
+				ENDIF
+				SIF LINECOUNT > MEMO_LINECOUNT
+					BREAK
+			NEXT
+			CALL SETFLAG_DAILY, "害羞"
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+			PRINTFORMW 「きゃっ♪ %CNAME("二人称")%、我慢出来なくなっちゃた？」
+			CALL SETFLAG_DAILY, "害羞"
+		ENDIF
+	CASE "按摩"
+		CALL WISH_MESSAGE_K50, "マッサージ"
+	CASE "接吻"
+		CALL WISH_MESSAGE_K50, "チュー"
+	CASE "膝枕"
+		CALL EMOTION_PLUS, "重置/笑颜/对话框開心"
+		PRINTFORMW 「え？ いいの？」
+		PRINTFORMW 「%TEXTR("えへへっ♪/やったー♪/よーし、")% じゃあ、お言葉に甘えて！」
+		PRINTFORMDW %CALLNAME:TARGET%は開心地%CALLNAME:MASTER%の膝の上に頭をのせてきた
+	CASE "泡茶"
+		IF RAND:3
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「%CNAME("二人称")%、有がとー♪」
+			PRINTFORMDW %CALLNAME:TARGET%は茶を受け取ると、フーフーしながら口を付けた。
+		ELSE
+			CALL EMOTION_PLUS, "重置/困扰眉/＞＜/△"
+			PRINTFORMW 「%CNAME("二人称")%、有がとー♪ ……あちちっ」
+			PRINTFORMDW %CALLNAME:TARGET%には少し茶が熱かったようだ…
+		ENDIF
+	;CALL SET_CEVENT, "飲酒拒否"でお酒を飲まないようにできる。
+	;このフラグはCALL DEL_CEVENT, "飲酒拒否"で消すことができる
+	CASE "勸酒"
+		;兒童っぽくしたいので拒否
+		IF CEVENT("飲酒拒否") == 0
+			CALL EMOTION_PLUS, "重置/斜眼/困扰眉/無口系/对话框汗"
+			PRINTFORMW 「お酒ってにがくて嫌い……」
+			CALL SET_CEVENT, "飲酒拒否"
+		ELSE
+			CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/半開/对话框憤怒"
+			PRINTFORMW 「いーらーなーい！」
+		ENDIF
+	;当然だが尾巴がある相手のみ
+	CASE "抚摸尾巴"
+		;初めて
+		IF DEVENT(STR:日常イベント名) == 0
+			CALL EMOTION_PLUS, "重置/＞＜/困扰眉/無口系/赤面/对话框惊讶"
+			CALL OFC_PRINT_STRW,"「ひゃぁ_CBBH_ だ、だめ！ 尾巴は弱いから！ あっあ……_CBBH_ 」"
+		;連続実行
+		ELSEIF CONDS("直前行動") == STR:日常イベント名
+			FOR LCOUNT, 0, 100
+				IF RAND:5 == 0
+					IF CHECK_TWO_POINTS(4)
+						CALL EMOTION_PLUS, "重置/＞＜/困扰眉/無口系/赤面/对话框惊讶"
+						CALL OFC_PRINT_STRW,"「だ、だめ！ 強く握ったりしたら……んんっ_CBBH_ 」"
+					ENDIF
+				ELSEIF RAND:4
+					IF CHECK_TWO_POINTS(3)
+						CALL EMOTION_PLUS, "重置/＞＜/困扰眉/無口系/赤面/对话框惊讶"
+						PRINTFORMW 「……上下にしごいたら……や、やだっ……」
+					ENDIF
+				ELSEIF RAND:3
+					IF CHECK_TWO_POINTS(2)
+						CALL EMOTION_PLUS, "重置/＞＜/困扰眉/無口系/赤面/对话框惊讶"
+						CALL OFC_PRINT_STRW,"「え？ え？ な、舐めたりしちゃ……やぁっ_CBBH_ 」"
+					ENDIF
+				ELSEIF RAND:2
+					IF CHECK_TWO_POINTS(1)
+						CALL EMOTION_PLUS, "重置/＞＜/困扰眉/無口系/赤面/对话框惊讶"
+						CALL OFC_PRINT_STRW,"「あっ……んぅ……いぃ……はぁ……ふぁ……_CBBH_ 」"
+						PRINTFORMDW %CALLNAME:TARGET%はビクビクし的同时、尾巴に触られる感覚を我慢している
+					ENDIF
+				ELSE
+					IF CHECK_TWO_POINTS(0)
+						CALL EMOTION_PLUS, "重置/＞＜/困扰眉/無口系/赤面/对话框惊讶"
+						PRINTFORMW 「%CNAME("二人称", "どもり", "……")%……もう……いぃ……でしょ……」
+					ENDIF
+				ENDIF
+				SIF LINECOUNT > MEMO_LINECOUNT
+					BREAK
+			NEXT
+		;この時間で初実行
+		ELSEIF CHOSE_DEVENT(STR:日常イベント名) == 0 && RAND:2
+			CALL EMOTION_PLUS, "重置/＞＜/困扰眉/無口系/赤面/对话框惊讶"
+			CALL OFC_PRINT_STRW,@"「ふわぁ_CBBH_ %CNAME("二人称", "どもり")%……弱いからだめだって……_CBBH_ 」"
+		ELSE
+			CALL EMOTION_PLUS, "重置/＞＜/困扰眉/無口系/赤面/对话框惊讶"
+			CALL OFC_PRINT_STRW,"「ひゃぁ_CBBH_ ま、またぁ？」"
+		ENDIF
+		CALL SETFLAG_DAILY, "害羞"
+	CASE "摸頭"
+		CALL WISH_MESSAGE_K50, "抚摸"
+	;胸元にチップを差し込まれます。兔女郎制服限定
+	CASE "给小费"
+		CALL EMOTION_PLUS, "重置/＞＜/左吊眼/憤怒眉/嘲笑"
+		PRINTFORMW 「お客桑、有がとー♪」
+		PRINTFORMDW %CALLNAME:TARGET%は%CALLNAME:MASTER%にいたずらっぽくウインクした
+	;汎用もて无枠
+	CASEELSE
+		IF STR:日常イベント名 == "拭汗"
+			CALL KOJO_DAILYCOM_K50, "拭汗"
+		ELSE
+			PRINTFORMW 「えへへっ♪」
+		ENDIF
+	ENDSELECT
+CASE "整理睡姿"
+	;梦话
+	CALL KOJO_SLEEP_K50, 
+	WAIT
+CASE "被拒绝了学习的邀请"
+	CALL EMOTION_PLUS, "重置/〇〇/斜眉/半開/对话框惊讶"
+	PRINTFORMW 「えー！？ なんでー！」
+CASE "勉強前に胖次要求"
+	PRINTFORMW 「もー…… しょうがないなー……」
+CASE "卖个破绽：地の文前"
+	SELECTCASE STR:日常イベント名
+	CASE "卖个破绽"
+		TFLAG:地の文スキップ = 1
+		CALL CHANGE_OFC, "重置"
+		CALL TEXT, "隙を見せていると"
+		CALL CHANGE_OFC, "セット"
+		;おねだりは発生率を上げる
+		IF RAND:5 == 0 && CEVENT("Ｄイベ：マッサージ") == 0
+			PRINTFORMDW %CALLNAME:TARGET%がマッサージを提案してきた。
+			PRINTL
+			CALL EMOTION_PLUS, "重置"
+			PRINTFORMW 「%CNAME("二人称")%、お疲れ様♪」
+			PRINTFORMW 「マッサージしてあげよっか？」
+			CALL OFC_PRINT_SELECT, "いいよ/ダメ"
+			IF RESULT == 0
+				IF RAND:3 == 0
+					CALL EMOTION_PLUS, "重置/笑颜"
+					PRINTFORMW 「これくらい？ どうどう？」
+					PRINTFORMDW %CALLNAME:TARGET%がやさしくマッサージしてくれた
+				ELSEIF RAND:2
+					CALL EMOTION_PLUS, "重置/闭眼"
+					PRINTFORMW 「お客桑、こってますね～」
+					PRINTFORMW 「次はどこを揉みましょうか？」
+				ELSE
+					CALL EMOTION_PLUS, "重置/憤怒眉/＞＜"
+					PRINTFORMW 「もっと強く？ %TEXTR("えーい/やぁー/たぁー")%！」
+					PRINTFORMDW い、痛い……
+				ENDIF
+			ELSE
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「いらないの？ はーい」
+			ENDIF
+			CALL SET_CEVENT, "Ｄイベ：マッサージ", TARGET
+		ELSEIF RAND:4 == 0
+			PRINTFORMDW %CALLNAME:TARGET%が耳元で悄悄的囁いてきた。
+			PRINTL
+			CALL EMOTION_PLUS, "重置/闭眼/紅潮"
+			IF PLACE("部室") && COND("欲求不満") >= 3 && RAND:3 == 0 && CEVENT("調教開始：初調教")
+				CALL OFC_PRINT_STRW,@"「……%CNAME("二人称", "かな")%、ふたりっきりになりたいな_CBBH_」"
+				CALL OFC_PRINT_SELECT, "いいよ/ダメ"
+				IF RESULT == 0
+					CALL MOVE_ROOM, "做爱房"
+				ENDIF
+			ELSEIF COND("欲求不満") >= 2 && RAND:2 == 0 && CEVENT("調教開始：初調教")
+				CALL OFC_PRINT_STRW,"「……躁动难忍してきちゃった_CBBH_ 」"
+			ELSE
+				;	PRINTFORMW 「ちくわ大明神」
+				IF TALENT:相思相愛 && RAND:2
+					CALL OFC_PRINT_STRW,@"「……%CNAME("二人称", "かな")%、好きだよ_CBBH_ 」"
+				ELSE
+					PRINTFORMW 「……%CNAME("二人称", "かな")%、%TEXTR("あそぼー？/ひまだなー")%」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:3 == 0
+			PRINTFORMDW %CALLNAME:TARGET%が腋の下をくすぐってきた。
+			PRINTL
+			CALL EMOTION_PLUS, "重置/＞＜"
+			PRINTFORMW 「こちょこちょこちょこちょー♪」
+		ELSEIF RAND:2
+			PRINTFORMDW %CALLNAME:TARGET%が耳に息を吹きかけてきた。
+			PRINTL
+			CALL EMOTION_PLUS, "重置/闭眼/笑顔"
+			PRINTFORMW 「ふー──♪」
+			PRINTFORMW 「あははっ、%CNAME("二人称")%、%TEXTR("お耳弱いね/可爱/声出ちゃったね")%♪」
+			PRINTFORMDW %CALLNAME:TARGET%は%CALLNAME:MASTER%の反応を見てクスクス笑着いる
+		ELSE
+			PRINTFORMDW %CALLNAME:TARGET%がおねだりしてきた。
+			PRINTL
+			WISH = おしゃべり/マッサージ/抚摸/
+			SIF COND("合意：接吻")
+			WISH += "チュー/"
+			SIF TALENT:相思相愛
+				WISH += "ぎゅって/"
+			WISH = %TEXTR(WISH)%
+
+			CALL EMOTION_PLUS, "重置/对话框兴奋"
+			PRINTFORMW 「ねぇねぇ、%CNAME("二人称")%、%WISH%してよ♪」
+			CALL OFC_PRINT_SELECT, "いいよ/ダメ"
+			IF RESULT == 0
+				SELECTCASE WISH
+				CASE "おしゃべり"
+					PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%と雑談した。
+					PRINTL
+					;挙動が怪しくなるので優先順位が1の時だけ書き換える
+					SIF CFLAG:優先順位 == 1
+						STR:日常イベント名 = Talk
+				CASE "マッサージ"
+					PRINTFORMDW %CALLNAME:MASTER%は%CLO("現在的格好＆の")%%CALLNAME:TARGET%の%TEXTR("体をマッサージ/身体のコリを揉み解")%した。
+					PRINTL
+					SIF CFLAG:優先順位 == 1
+						STR:日常イベント名 = 按摩
+				CASE "抚摸"
+					PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%の頭を撫でた。
+					PRINTL
+					SIF CFLAG:優先順位 == 1
+						STR:日常イベント名 = 摸頭
+				CASE "チュー"
+					PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%に接吻した。
+					PRINTL
+					SIF CFLAG:優先順位 == 1
+						STR:日常イベント名 = 接吻
+				CASE "ぎゅって"
+					PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%抱住た。
+					PRINTL
+					IF RAND:3
+						CALL EMOTION_PLUS, "重置/笑颜/紅潮/对话框爱心"
+						CALL OFC_PRINT_STRW,@"「えへへ…… %CNAME("二人称")%、大好き_CBBH_ 」"
+					ELSEIF RAND:2
+						CALL EMOTION_PLUS, "重置/闭眼/微笑/紅潮/对话框爱心"
+						PRINTFORMW 「……もうちょっとこのまま」
+					ELSE
+						CALL EMOTION_PLUS, "重置/微笑/紅潮/对话框爱心"
+						PRINTFORMW 「んふふー、とっても幸せ♪」
+					ENDIF
+					SIF CFLAG:優先順位 == 1
+						STR:日常イベント名 = 抱上去
+				ENDSELECT
+				CALL WISH_MESSAGE_K50, WISH
+			ELSEIF RESULT == 1
+				PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%のお願いを断った。
+				PRINTL
+				CALL EMOTION_PLUS, "重置/困扰眉/△"
+				PRINTFORMW 「ちぇー……」
+			ENDIF
+		ENDIF
+	ENDSELECT
+CASE "卖个破绽"
+	SELECTCASE STR:日常イベント名
+	CASE "邀请一起入浴"
+		CALL EMOTION_PLUS, "重置/紅潮"
+		PRINTFORMW 「%CNAME("二人称")%も一緒にお浴室入る？」
+	CASE "Ｈ的邀请"
+		SELECTCASE STR:日常イベント選択名
+		CASE "观察股间"
+			CALL EMOTION_PLUS, "重置/困扰眉/嘲笑/紅潮"
+			PRINTFORMW 「%CNAME("一人称")%の%CNAME("女性器")%見て、躁动难忍しちゃった？」
+			PRINTFORMW 「んふふー、%CNAME("二人称")%、エッチしちゃう？」
+		CASE "沉浸在余韻里"
+			CALL EMOTION_PLUS, "重置/赤面"
+			CALL OFC_PRINT_STRW,@"「%CNAME("二人称")%、まだまだおっきいね_CBBH_ 」"
+			PRINTFORMW 「ねぇねぇ、%NAMES("床")%で続きしようよ♪」
+		CASEELSE
+			IF PLACE("Ｈ目的")
+				CALL EMOTION_PLUS, "重置/斜眉/紅潮"
+				PRINTFORMW 「%CNAME("二人称")%、そろそろエッチしよー？」
+			ELSE
+				IF RAND:2 && COND("欲求不満") >= 2
+					CLEARLINE 1 
+					PRINTFORMDW %CALLNAME:TARGET%が耳元で悄悄的囁いてきた。
+					PRINTL
+					CALL EMOTION_PLUS, "重置/斜眉/微笑/紅潮"
+					PRINTFORMDW 「……%CNAME("二人称")%、気持ちいいことしたいな♪」
+				ELSE
+					CALL EMOTION_PLUS, "重置/紅潮"
+					PRINTFORMW 「%CNAME("二人称")%、无聊そうだねー」
+					PRINTFORMW 「%CNAME("一人称")%がお相手してあげよっか？」
+				ENDIF
+			ENDIF
+		ENDSELECT
+	CASE "邀请学习"
+		CALL EMOTION_PLUS, "重置/憤怒眉/＞＜"
+		PRINTFORMW 「よ～し！ ガンバろー！」
+		PRINTL
+		PRINTDL ………
+		PRINTDL ……
+		PRINTDL …
+		PRINTL
+		PRINTFORMDW %CALLNAME:TARGET%と一緒にテスト勉強に励んだ。
+		PRINTL
+		SELECTCASE EXPECTED_SCORE_K50(TARGET)
+		CASE IS >= 80
+			CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/对话框開心"
+			PRINTFORMW 「今度のテストはバッチリだよ！」
+		CASE IS >= 60
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「これぐらい出来れば、テストも平気かも？」
+		CASE IS >= 30
+			CALL EMOTION_PLUS, "重置/眯眯眼"
+			PRINTFORMW 「とりあえず、赤点にはならなさそう……」
+		CASEELSE
+			CALL EMOTION_PLUS, "重置/困扰眉/半開"
+			PRINTFORMW 「うぅっ…… もっと頑張らないとダメかも……」
+		ENDSELECT
+	CASE "推倒"
+		CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/紅潮/对话框兴奋"
+		PRINTFORMW 「%TEXTS("どーん/えーい/それー")%！」
+	CASE "展示内褲"
+		;複数人が並んで你に展示内褲ている場合
+		IF FLAG:対複数
+			PRINTFORMW 「じゃーん！ %CNAME("二人称")%、%CNAME("一人称")%のはどうどう？」
+		ELSE
+			CALL EMOTION_PLUS, "重置/嘲笑/紅潮"
+			CALL OFC_PRINT_STRW,"「…………_CBBH_ 」"
+		ENDIF
+	CASE "清洁口交"
+		CALL EMOTION_PLUS, "重置/微笑/紅潮"
+		CALL OFC_PRINT_STRW,@"「%CNAME("二人称")%の%CNAME("男性器")%、すっごい%TEXTS("气味")%_CBBH_ 」"
+		PRINTFORMW 「んふふー、%CNAME("一人称")%が綺麗にして给♪」
+	CASE "口淫"
+		CALL EMOTION_PLUS, "重置/斜眉/笑顔/紅潮"
+		PRINTFORMW 「あむっ…… れろれろ、じゅる」
+	CASE "亲脸頬"
+		IF TALENT:恋慕
+			CALL EMOTION_PLUS, "重置/闭眼/△/紅潮/对话框爱心"
+		ELSE
+			CALL EMOTION_PLUS, "重置/闭眼/△/紅潮"
+		ENDIF
+		CALL OFC_PRINT_STRW,@"「ちゅ……\@ TALENT:恋慕 ? _CBBH_ # ♪ \@ 」"
+		IF CFLAG:打招呼した == 0
+			PRINTFORMW 「%GREETING%♪ %CNAME("二人称")%」
+			CFLAG:打招呼した = 1
+		ENDIF
+		CALL SETFLAG_DAILY, "害羞"
+	CASE "接吻" 
+		IF TALENT:恋慕
+			CALL EMOTION_PLUS, "重置/闭眼/△/紅潮/对话框爱心"
+		ELSE
+			CALL EMOTION_PLUS, "重置/闭眼/△/紅潮"
+		ENDIF
+		PRINTFORMW 「はむっ%TEXTAN("、ちゅちゅ/、ちゅう/……ちゅる")%」
+		IF CFLAG:打招呼した == 0
+			PRINTFORMW 「%GREETING%♪ %CNAME("二人称")%」
+			CFLAG:打招呼した = 1
+		ENDIF
+		CALL SETFLAG_DAILY, "害羞"
+	CASE "膝枕"
+		IF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/〇〇/憤怒眉/红晕/对话框惊讶"
+			PRINTFORMW 「あー！ 動かないでよー！」
+		ELSEIF RAND:2
+			CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框開心"
+			PRINTFORMW 「あははっ、いい感じ♪」
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜/微笑/红晕/对话框開心"
+			PRINTFORMW 「%CNAME("二人称")%、動かないでねー……！ んふふー♪」
+		ENDIF
+	CASE "抱住", "把胸部压了上去"
+			CALL EMOTION_PLUS, "重置/紅潮"
+			PRINTFORMW 「%CNAME("二人称", "ー")%、%TEXTR("ぎゅー─♪ /なにやってるの？")%」
+		IF TALENT:貧乳 == 0
+				PRINTFORMD 押し付けられる%CALLNAME:TARGET%の
+			IF TALENT:巨乳
+				PRINTFORMD %TALENT_NAME(GETNUM(TALENT, "巨乳"), TALENT:巨乳)%
+			ELSE
+				PRINTFORMD 胸部
+			ENDIF
+			PRINTFORMDW がやわらかい……
+		ENDIF
+	CASE "摩擦股間"
+			CALL EMOTION_PLUS, "重置/ω/紅潮"
+			PRINTFORMW 「ねぇー、%CNAME("二人称", "かな", "ー")%」
+			PRINTFORMW 「あそぼうよー！」
+		CALL SETFLAG_DAILY, "害羞"
+	CASE "抚摸", "膝枕"
+		CALL EMOTION_PLUS, "重置/笑颜/微笑/红晕/对话框開心"
+			PRINTFORM 「
+		SIF RAND:2
+			PRINTFORM %TEXTR("えへへっ♪ /んふふー、/あははっ、")%
+		PRINTFORMW %TEXTR("いーこ、いーこ/よーし、よーし")%♪」
+	CASE "手淫"
+		IF CHOSE_DEVENT(STR:日常イベント名) == 0
+			CALL EMOTION_PLUS, "重置/嘲笑/紅潮"
+			PRINTFORMW 「%CNAME("二人称")%の%CNAME("男性器")%、もうすっかり元気だね」
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+			PRINTFORMW 「%TEXTR("しーこ、しーこ/もみ、もみ/しゅ、しゅ")%」
+		ENDIF
+	CASE "沏茶"
+		;CSTR:茶 を指定してある場合には、SAVESTR:茶 で何を用意したかが判定できる
+		;例）PRINTFORMW 「よければ%SAVESTR:茶%どうぞ」
+		IF RAND:3 == 0 && CEVENT("Ｄイベ：間接接吻") == 0
+			CALL EMOTION_PLUS, "重置/微笑/紅潮"
+			PRINTFORMW 「うん？ %CNAME("二人称")%も飲む？」
+			PRINTFORMW 「是♪」
+			PRINTFORMDW %CALLNAME:TARGET%から飲みかけのペットボトルを渡された
+			SAVESTR:茶 = ジュース
+			CALL SET_CEVENT, "Ｄイベ：間接接吻", TARGET
+		ELSE
+			CALL EMOTION_PLUS, "重置"
+			PRINTFORMW 「是、まだ熱いから気を付けてね？」
+			PRINTFORMDW %CALLNAME:TARGET%が熱々の茶を淹れてくれた
+			SAVESTR:茶 = 茶
+		ENDIF
+	;それ以外
+	CASEELSE
+	ENDSELECT
+;これは素質に[開朗]ないし[粗野]を持っている角色のみです
+CASE "構って欲しい！"
+	CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/紅潮/对话框開心"
+	PRINTFORMW 「%CNAME("二人称")%、つっかまえたー♪」
+CASE "廁所"
+	;廁所で用を済ませた後の台詞
+	IF BASE:尿意 == 0
+		;主人も廁所で済ませてきた
+		;IF BASE:MASTER:尿意 == 0
+		;先に部室に你がもどっているならTARGETから見て状況は一緒な気がする……？
+			;PRINTFORMW 
+		;ELSE
+			CALL EMOTION_PLUS, "重置"
+			PRINTFORMW 「ただいまー♪」
+		;ENDIF
+	;廁所に行く際の台詞
+	ELSE
+		CALL EMOTION_PLUS, "重置"
+		PRINTFORMW 「ちょっと席を取下ね！」
+	ENDIF
+CASE "廁所詮索"
+	CALL EMOTION_PLUS, "重置/微笑/红晕"
+	PRINTFORMW 「んふふー、ないしょ♪」
+;これは你と角色が両方男性の際に限り起きます
+CASE "連れション"
+	;PRINTFORMW 発生せず 
+;これは你と角色が両方男性でない際に限り起きます
+CASE "廁所で井戸端会議"
+	;PRINTFORMW 
+;你に廁所を覗かれた！
+CASE "廁所ハプニング"
+	CALL EMOTION_PLUS, "重置/無口系"
+	PRINTFORMW 「…………え」
+	SIF CEVENT("Ｄイベ：帰宅の打招呼") == 0
+		CALL SET_CEVENT, "Ｄイベ：帰宅の打招呼"
+;廁所ハプニングから派生するＨイベント
+CASE "廁所Ｈ"
+	SELECTCASE STR:日常イベント名
+	CASE "廁所イベント：見せつけくぱぁ"
+		PRINTFORMW 
+	CASE "廁所イベント：相互自慰"
+		PRINTFORMW 
+	CASE "廁所イベント：口交"
+		PRINTFORMW 
+	CASE "廁所イベント：Ｖ性交"
+		PRINTFORMW 
+	CASE "廁所イベント：Ａ性交"
+		PRINTFORMW 
+	ENDSELECT
+CASE "检查阴部"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K50
+		WAIT
+	ELSEIF COND("合意：检查阴部") == 0
+		CALL EMOTION_PLUS, "重置/笑颜/困扰眉/紅潮"
+		PRINTFORMW 「エッチしてる時に見せて给♪」
+	ELSE
+		IF COND("身嗜み：陰毛") || COND("身嗜み：Ｖ拡張") || COND("身嗜み：Ｖ準備") || COND("身嗜み：尿道拡張")
+			CALL EMOTION_PLUS, "重置/斜眉/微笑/紅潮"
+			PRINTFORMW 「酱と%CNAME("二人称")%の言う街道にしてるよ？」
+		ELSEIF CHOSE_DEVENT(STR:日常イベント名) == 0
+			CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+			PRINTFORMW 「是♪ これでいいの？」
+		ELSE
+			IF RAND:3 == 0 && CONDS("陰毛") == "白虎"
+				CALL EMOTION_PLUS, "重置/困扰眉/紅潮"
+				PRINTFORMW 「光滑无毛でしょ？」
+				PRINTFORMW 「まだおけけ生えてこないんだー」
+			ELSEIF RAND:2
+				CALL EMOTION_PLUS, "重置/微笑/紅潮"
+				PRINTFORMW 「%CNAME("二人称")%、見てるだけでいいの？」
+			ELSE
+				CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+				PRINTFORMW 「えへへ、%CNAME("女性器")%がスース―する」
+			ENDIF
+		ENDIF
+	ENDIF
+CASE "检查菊穴"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K50
+		WAIT
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "检查内褲"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K50
+		WAIT
+	ELSEIF COND("合意：检查内褲") == 0
+		IF CHOSE_DEVENT(STR:日常イベント名) == 0
+			CALL EMOTION_PLUS, "重置/紅潮"
+			PRINTFORMW 「近くで見たい？ ちょっとだけだよ？」
+			PRINTFORMW 「好~♪」
+			IF CHECK_CLO("下衣露出") && CHECK_BOTTOM("连褲襪") == 0
+				PRINTFORMD %CALLNAME:TARGET%は%BOTTOM(TARGET, "略")%を下ろして、
+			ELSE
+				PRINTFORMD %CALLNAME:TARGET%は裙をたくし上げ、
+			ENDIF
+			PRINTFORMDW ちょっとだけ胖次を見せてくれた
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜/嘲笑/紅潮"
+			PRINTFORMW 「今日はもうおしまい♪」
+		ENDIF
+	ELSE
+		SELECTCASE CONDS("直前行動")
+		CASE "检查阴部", "检查内褲", "打招呼口交", "打招呼舐陰", "撩起裙子"
+			IF RAND:3 == 0
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/紅潮"
+				PRINTFORMW 「やっ…… %CNAME("二人称")%…… ちょっと激しい……」
+			ELSEIF RAND:2
+				CALL EMOTION_PLUS, "重置/紅潮"
+				PRINTFORM 「
+				SIF RAND:3
+					PRINTFORM %TEXTR("んふふー、/あははっ、")%
+				PRINTFORMW %CNAME("二人称")%、とってもエッチなかおー♪」
+			ELSE
+				CALL EMOTION_PLUS, "重置/無口系/紅潮"
+				PRINTFORMW 「熱心だねー…… そんなにいいの？」
+			ENDIF
+		CASEELSE
+			IF RAND:2 && CHECK_CLO("胖次が見える格好") == 0
+				CALL EMOTION_PLUS, "重置/笑颜/微笑/紅潮/对话框兴奋"
+				IF  EQUIP:裙
+;					PRINTFORMW 「%CNAME("二人称")%、息が荒いよー？」
+;					PRINTFORMW 「お預けされたワン酱みたい♪」
+
+					PRINTFORMW 「見てるだけじゃ我慢できなかった？」
+				ELSE
+					PRINTFORMW 「んふふー、やっぱり胖次が気になるんだ！」
+				ENDIF
+			ELSE
+				CALL EMOTION_PLUS, "重置/困扰眉/嘲笑/紅潮"
+				PRINTFORMW 「%CNAME("二人称")%って、ほんと胖次好きだよね」
+			ENDIF
+			IF EQUIP:裙
+				PRINTFORMDW %CALLNAME:TARGET%は裙を捲り上げ、間近で胖次を見せてくれた
+			ENDIF
+		ENDSELECT
+		CALL SETFLAG_DAILY, "害羞"
+	ENDIF
+CASE "撫摸股間"
+	PRINTFORMW 
+CASE "检查布鲁马", "股間観察"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K50
+		WAIT
+	;じっくり観察
+	ELSEIF CFLAG:股間確認済
+		IF COND("合意：检查内褲") == 0
+			CALL EMOTION_PLUS, "重置/＞＜/困扰眉/紅潮/对话框惊讶"
+			PRINTFORMW 「%CNAME("二人称")%、顔が近いよー！」
+			PRINTFORMDW %CALLNAME:TARGET%は体勢を変えてしまった
+		ELSE
+			IF RAND:2
+				CALL EMOTION_PLUS, "重置/微笑/紅潮"
+				PRINTFORMW 「%CNAME("二人称")%、この格好、好き？」
+			ELSE
+				CALL EMOTION_PLUS, "重置/笑颜/紅潮/对话框兴奋"
+				PRINTFORMW 「あははっ、%CNAME("二人称")%、くすぐったいよ！」
+			ENDIF
+			PRINTL
+			;检查内褲から拝借してそれっぽい地の文をでっちあげておく
+			PRINTFORMD %CALLNAME:MASTER%は
+			IF RAND:2
+				IF BODYS(TARGET, "略") != "贴身制服"
+					PRINTFORMD %BODYS(TARGET, "略")%
+				ELSEIF CHECK_PANTIES("泳装")
+					PRINTFORMD %PANTIES(TARGET, "略")%
+				ELSE
+					PRINTFORMD %BOTTOM(TARGET, "略")%
+				ENDIF
+				PRINTFORMDW に頬擦りをして、布地の感触を楽しんだ
+			ELSE
+				IF BODYS(TARGET, "略") != "贴身制服"
+					PRINTFORMD %BODYS(TARGET, "略")%
+				ELSEIF CHECK_PANTIES("泳装")
+					PRINTFORMD %PANTIES(TARGET, "略")%
+				ELSE
+					PRINTFORMD %BOTTOM(TARGET, "略")%
+				ENDIF
+				PRINTFORMDW の%TEXTS("气味")%を嗅ぎつつ、布地の手触りを確かめた。
+			ENDIF
+			PRINTFORMDW %CALLNAME:TARGET%は特に抵抗事もなく、%CALLNAME:MASTER%に求められるまま体勢でじっとしている…… 
+		ENDIF
+	ELSE
+		CALL EMOTION_PLUS, "重置/微笑/对话框開心"
+		PRINTFORMW 「ふんふんふ～ん♪」
+		PRINTFORMDW %CALLNAME:TARGET%は%CALLNAME:MASTER%が見ている事に気づいていないようだ
+	ENDIF
+CASE "掀起裙子"
+	SELECTCASE STR:日常イベント名
+	CASE "撩起裙子"
+		;初めて
+		IF DEVENT(STR:日常イベント名) == 0
+			CALL EMOTION_PLUS, "重置/笑颜/嘲笑/紅潮/对话框兴奋"
+			PRINTFORMW 「んふふー、%CNAME("二人称")%、見たかったんでしょー？」
+			PRINTFORMW 「えろーい顔になってたからわかるよ！」
+		;胖次チラ直後
+		ELSEIF COND("胖次チラ直後")
+			CALL EMOTION_PLUS, "重置/笑颜/紅潮/对话框兴奋"
+			PRINTFORMW 「%CNAME("二人称")%、さっきからここが気になるんでしょ♪」
+			PRINTFORMW 「あははっ、これでしっかり見えた？」
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜/嘲笑/紅潮/对话框兴奋"
+			PRINTFORMW 「んふふー、%CNAME("二人称")%、えろーい顔してるからすぐわかっちゃう♪」
+			PRINTFORMW 「是、見せて给ね！」
+		ENDIF
+	;掀起裙子
+	CASEELSE
+		;刚睡醒の胡乱な状態を襲う
+		IF CFLAG:刚睡醒
+			CALL EMOTION_PLUS, "重置/＞＜/困扰眉/半開/紅潮/对话框惊讶"
+			CALL OFC_PRINT_STRW,@"「……？ ……え？ わぁ！？ %CNAME("二人称")%_／／／_」"
+			PRINTFORMW 「やられたー！ 刚睡醒は惊嚇するよー！」
+			CFLAG:打招呼した = 1
+			CALL SET_CEVENT, "Ｄイベ：恶作剧成功"
+			CALL SETFLAG_DAILY, "心情差"
+		;睡眠中の悪戯
+		ELSEIF CFLAG:睡眠
+			;梦话
+			CALL KOJO_SLEEP_K50
+			WAIT
+		;初めて
+		ELSEIF DEVENT(STR:日常イベント名) == 0
+			CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+			PRINTFORMW 「あははっ、%CNAME("二人称")%、やんちゃ桑だねー！」
+		;胖次チラ直後
+		ELSEIF COND("胖次チラ直後")
+			CALL EMOTION_PLUS, "重置/紅潮"
+			PRINTFORMW 「どう？ 今度はしっかり見れた？」
+		ELSE
+			;胖次沒穿
+			IF EQUIP:胖次 == 0
+				CALL EMOTION_PLUS, "重置/困扰眉/嘲笑/紅潮"
+				PRINTFORMW 「んふふー、どうしたの？ %CNAME("二人称")%？」
+				SIF COND("打招呼前")
+					CFLAG:打招呼した = 1
+			ELSE
+				IF COND("打招呼前")
+					CALL EMOTION_PLUS, "重置/紅潮"
+					PRINTFORMW 「いきなりだね！ どう？ 今日の胖次」
+					CFLAG:打招呼した = 1
+				ELSE
+					CALL EMOTION_PLUS, "重置/微笑/紅潮"
+					PRINTFORMW 「んふふー、今日の胖次、どうかな？」
+				ENDIF
+				SIF STRCOUNT(PANTIES(TARGET, "種類"), "褶边") || STRCOUNT(PANTIES(TARGET, "種類"), "條紋")
+					PRINTFORMW 「これお気に入りなんだ♪」
+			ENDIF
+		ENDIF
+	ENDSELECT
+CASE "胖次ドーピング"
+	;初回
+	IF DEVENT(ARGS) == 0
+		;自分の胖次
+		IF COND("胖次ドーピング")
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "裙下撮影"
+	SELECTCASE STR:日常イベント名
+	CASE "撮影失敗"
+		;PRINTFORMW 
+	CASEELSE
+		;PRINTFORMW 
+	ENDSELECT
+CASE "股間撮影"
+	SELECTCASE STR:日常イベント名
+	CASE "撮影失敗"
+		;PRINTFORMW 
+	CASE "阴部のチラ見せ撮影"
+		;PRINTFORMW 
+	CASEELSE
+		;PRINTFORMW 
+	ENDSELECT
+CASE "内褲摄影"
+	SELECTCASE STR:日常イベント名
+	CASE "撮影失敗"
+		;PRINTFORMW 
+	CASE "阴部のチラ見せ撮影"
+		;PRINTFORMW 
+	CASEELSE
+		;PRINTFORMW 
+	ENDSELECT
+CASE "阴部摄影"
+	SELECTCASE STR:日常イベント名
+	CASE "撮影失敗"
+		;PRINTFORMW 
+	CASE "阴部の見せつけ撮影"
+		;PRINTFORMW 
+	CASEELSE
+		;PRINTFORMW 
+	ENDSELECT
+CASE "性処理を頼んだ際の反応"
+	;干劲がある場合
+	IF COND("干劲性処理")
+		SELECTCASE STR:PLAY内容
+		CASE "口交"
+
+		CASE "乳交"
+
+		CASE "Ｖ性交"
+
+		CASE "Ａ性交"
+
+		CASE "尿道性交"
+
+		CASE "乳頭奸"
+
+		ENDSELECT
+	;何かしながらで良いならして给よって場合。何をしながらなのかは SAVESTR:夢中 で参照できる。
+	ELSEIF COND("进行性処理")
+		SELECTCASE STR:PLAY内容
+		CASE "手淫"
+
+		CASE "Ｖ性交"
+
+		CASE "Ａ性交"
+
+		CASE "尿道性交"
+
+		ENDSELECT
+	ENDIF
+CASE "見抜きを頼んだ際の反応"
+	SELECTCASE STR:PLAY内容
+	CASE "胖次見抜き"
+		
+	ENDSELECT
+CASE "性処理の内容変更を頼んだ際の反応"
+	IF COND("干劲性処理")
+		SELECTCASE STR:PLAY内容
+		CASE "口交"
+
+		CASE "乳交"
+
+		CASE "Ｖ性交"
+
+		CASE "Ａ性交"
+
+		CASE "尿道性交"
+
+		CASE "乳頭奸"
+
+		ENDSELECT
+	ELSEIF COND("进行性処理")
+		SELECTCASE STR:PLAY内容
+		CASE "手淫"
+
+		CASE "Ｖ性交"
+
+		CASE "Ａ性交"
+
+		CASE "尿道性交"
+
+		ENDSELECT
+	ENDIF
+CASE "拜托処理性欲"
+	SELECTCASE NAMES("性処理")
+	CASE "口交"
+
+	CASE "乳交"
+
+	CASE "Ｖ性交"
+
+	CASE "Ａ性交"
+
+	CASE "尿道性交"
+
+	CASE "乳頭奸"
+
+	ENDSELECT
+CASE "进行性処理"
+	SELECTCASE NAMES("性処理")
+	CASE "胖次見抜き"
+
+	CASE "手淫"
+
+	CASE "Ｖ性交"
+
+	CASE "Ａ性交"
+
+	CASE "尿道性交"
+
+	ENDSELECT
+
+;TFLAG:指令中止 = 1 とすることで口上側から性欲解消を拒否できる
+CASE "性欲解消を申し出た際の反応"
+	SELECTCASE STR:PLAY要望
+	CASE "舐陰"
+
+	CASE "舐陰莖"
+
+	CASE "口交"
+
+	CASE "Ｖ性交"
+		;避孕套没有の生性交を希望
+		IF COND("女性主導生性交")
+
+		ELSE
+
+		ENDIF
+
+	CASE "Ａ性交"
+
+	CASE "尿道性交"
+
+	ENDSELECT
+;STR:PLAY要望 が本来したいPLAY。STR:PLAY内容 が你がやりたいと言って交渉中のPLAY
+;ここの中で STR:PLAY内容 を変更する事で提案を蹴る事も出来る。什麼也不做場合は你の提案が通る
+CASE "性欲解消の内容変更を頼んだ際の反応"
+	SELECTCASE STR:PLAY内容
+	CASE "舐陰"
+
+	CASE "舐陰莖"
+
+	CASE "Ｖ性交"
+		;今日は避孕套没有の生性交がＯＫな日
+		IF COND("女性主導生性交")
+
+		ELSE
+
+		ENDIF
+
+	CASE "Ａ性交"
+
+	CASE "尿道性交"
+
+	ENDSELECT
+;性欲解消PLAY後の台詞
+CASE "帮忙消除性欲"
+	SELECTCASE NAMES("性処理")
+	CASE "舐陰"
+
+	CASE "舐陰莖"
+
+	CASE "口交"
+
+	CASE "Ｖ性交", "Ａ性交", "尿道性交"
+		;挿入行為の後に口交も続けて行った場合
+		IF STR:PLAY要望 == "口交"
+
+		ELSE
+			SELECTCASE NAMES("性処理")
+			CASE "Ｖ性交"
+
+			CASE "Ａ性交"
+
+			CASE "尿道性交"
+
+			ENDSELECT
+		ENDIF
+	ENDSELECT
+;主人公の手机に一緒にお昼食べようよと邀请際に送る連絡文です
+CASE "お昼ご飯のお誘い"
+	CALL CHANGE_OFC, "重置"
+	CALL PRINT_NAME
+	CALL CHANGE_OFC, "セット"
+	CALL OFC_PRINT_STRL, @"『%CNAME("二人称")%_赤_I_太字_!_ 学校食堂でごはん一緒に食べようよ_赤_I_太字_!!_ 』"
+;実際に二人昼食をとっている時です
+CASE "一緒にお昼ご飯：地の文前"
+	TFLAG:地の文スキップ = 1
+	PRINTFORMDW 学校食堂の前で%CALLNAME:TARGET%と待ち合わせ、一緒に中へ入った。
+	SIF CEVENT("初めての学校食堂") == 0
+		PRINTFORMDW 中はお昼目当ての学生達でいっぱいだ！
+	PRINTL
+	CALL EMOTION_PLUS, "重置/对话框兴奋"
+	IF CEVENT("初めての学校食堂", TARGET) == 0
+		PRINTFORMW 「わー……！ すごい人だね！」 
+		PRINTFORMW 「知ってる？ ここの学校食堂、結構美味しいんだよ！」
+		CALL SET_CEVENT, "初めての学校食堂"
+	ENDIF
+	PRINTFORMW 「ねっ！ %CNAMET(TARGET, "二人称")%は何食べるの？」
+	CALL OFC_PRINT_SELECT, "Ａ定食/Ｂ定食",
+	IF RESULT == 0
+		SELECTCASE TEXTS("曜日")
+		CASE "月"
+			LUNCH = ジューシーなからあげ
+		CASE "火"
+			LUNCH = 大号的油油炸がのった烏冬面
+		CASE "水"
+			LUNCH = 肉汁あふれる漢堡肉
+		CASE "木"
+			LUNCH = ビッグなカツのカツ丼
+		CASE "金"
+			LUNCH = ちょっと辛めのビーフカレー
+		CASE "土"
+			LUNCH = 野菜たっぷり焼きそば
+		ENDSELECT
+		PRINTL
+		CALL EMOTION_PLUS, "重置/笑颜"
+		PRINTFORMW 「%CNAME("一人称")%も同じのにしよっと♪」
+		PRINTL
+		PRINTFORMDW 今日のＡ定食は……%LUNCH%だ！
+		PRINTL
+	ELSE
+		SELECTCASE TEXTS("曜日")
+		CASE "月"
+			LUNCH = ふっくら鮭の塩焼き
+		CASE "火"
+			LUNCH = サクサクかき油炸がのったそば
+		CASE "水"
+			LUNCH = 海老が大きいエビフライ
+		CASE "木"
+			LUNCH = ふわとろの親子丼
+		CASE "金"
+			LUNCH = 魚介たっぷりシーフードカレー
+		CASE "土"
+			LUNCH = まろやかな味のナポリタン
+		ENDSELECT
+		PRINTL
+		CALL EMOTION_PLUS, "重置/笑颜"
+		PRINTFORMW 「%CNAME("一人称")%も同じのにしよっと♪」
+		PRINTL
+		PRINTFORMDW 今日のＢ定食は……%LUNCH%だ！
+		PRINTL
+	ENDIF
+	;食べた感想
+	SELECTCASE LUNCH
+	CASE "ジューシーなからあげ"
+		CALL EMOTION_PLUS, "重置/闭眼"
+		PRINTFORMW 「カリっとした衣に、ジュワ―とした肉汁、それにしっかり下味が効いていて……」
+		PRINTFORMW 「んふふー、おいしい！」
+	CASE "大号的油油炸がのった烏冬面"
+		CALL EMOTION_PLUS, "重置",
+		PRINTFORMW 「こういうのを"きつね烏冬面"って言うよね？」
+		PRINTFORMW 「きつねと言えば油あげ……妖狐の人たちも好きだったりするのかな？」
+	CASE "肉汁あふれる漢堡肉"
+		CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框兴奋"
+		PRINTFORMW 「やったー♪ 漢堡肉だー♪」
+		PRINTFORMW 「割るだけですっごい肉汁！ 外はカリっとしてるけど中はふわっとしてとってもおいしい！」
+		PRINTFORMW 「これはまた食べに来ないとねー！」
+	CASE "ビッグなカツのカツ丼"
+		CALL EMOTION_PLUS, "重置/〇〇/憤怒眉/半開/对话框惊讶"
+		PRINTFORMW 「お……おっきい……！」
+		PRINTFORMW 「样本よりも絶対におっきい……！」
+		PRINTFORMW 「が、頑張って食べなきゃ……」
+	CASE "ちょっと辛めのビーフカレー"
+		CALL EMOTION_PLUS, "重置/＞＜/困扰眉/半開/赤面/对话框惊讶"
+		PRINTFORMW 「からーい！」
+		PRINTFORMW 「%CNAME("二人称")%は平気なの？ ほんとにー？」
+		PRINTFORMW 「ひぃー……お水もらってくる……」
+	CASE "野菜たっぷり焼きそば"
+		CALL EMOTION_PLUS, "重置/憤怒眉"
+		PRINTFORMW 「食べなくてもわかる！ ソースが違うね！」
+		PRINTFORMW 「とってもいい%TEXTS("气味")%♪ いっただきまーす！」
+	CASE "ふっくら鮭の塩焼き"
+		CALL EMOTION_PLUS, "重置/憤怒眉"
+		PRINTFORMW 「柔らかい身に脂がのっていて、塩気がしっかり効いてる……」
+		PRINTFORMW 「これはご飯が進むね！」
+	CASE "サクサクかき油炸がのったそば"
+		CALL EMOTION_PLUS, "重置/憤怒眉/眯眯眼/△"
+		PRINTFORMW 「撩刘海っていつ食べるか迷うよね」
+		PRINTFORMW 「%CNAME("二人称")%は最初に食べる？ それともつゆが帯污迹的てから食べる？」
+	CASE "海老が大きいエビフライ"
+		CALL EMOTION_PLUS, "重置/ω"
+		PRINTFORMW 「サクサクとした衣に、おっきいエビがしっかり詰まってる♪」
+		PRINTFORMW 「そういえば、%CNAME("二人称")%は尾巴まで食べるの？」
+	CASE "ふわとろの親子丼"
+		CALL EMOTION_PLUS, "重置/闭眼/困扰眉/紅潮"
+		PRINTFORMW 「とろっとろのタマゴに、甘めのタレがしみこんだ鶏肉……」
+		PRINTFORMW 「んふふー……この組み合わせは絶品だね！」
+	CASE "魚介たっぷりシーフードカレー"
+		CALL EMOTION_PLUS, "重置/憤怒眉/闭眼"
+		PRINTFORMW 「具材がぷりっぷり！ 臭みもなくて、シーフードの風味がしっかり出てる！」
+		PRINTFORMW 「……おかわりって出来るのかな？」
+	CASE "まろやかな味のナポリタン"
+		CALL EMOTION_PLUS, "重置/困扰眉/半開/对话框汗"
+		PRINTFORMW 「ピ、ピーマンが入ってる……」
+		PRINTFORMW 「%CNAMET(TARGET, "二人称")%いらないよね……？ ……うぅ」
+	ENDSELECT
+	PRINTL
+	PRINTFORMDW 二人昼食を楽しんだ
+ENDSELECT
+;文字色を戻す
+CALL CHANGE_OFC, "重置"
+
+@WISH_MESSAGE_K50, ARGS
+#DIM ACTOR
+#DIM MEMO_LINECOUNT
+#DIM LCOUNT
+MEMO_LINECOUNT = LINECOUNT
+
+;调戏に出てくる内容はここに書く
+
+CALL CHANGE_OFC, "セット"
+
+ACTOR = 0
+
+SELECTCASE ARGS
+CASE "おしゃべり"
+;Talkの雑談をする
+	FOR LCOUNT, 0, 100
+		IF RAND:10 == 0
+			IF CHECK_TWO_POINTS(9)
+				IF PLACE("部室")
+					;標語のセリフ
+					IF SAVESTR:標語 != "" && CEVENT("会話標語") == 0
+						CALL EMOTION_PLUS, "重置"
+						PRINTFORMW 「この標語って%CNAME("二人称")%が考えてるの？」
+						PRINTFORMW 「%SAVESTR:標語%……」
+						IF STRCOUNT(SAVESTR:標語, "注意")
+							PRINTFORMW 「うんうん、酱と注意しなきゃね！」
+						ELSE
+							PRINTFORMW 「欲望がだだ漏れだねー！」
+						ENDIF
+						CALL SET_CEVENT, "会話標語"
+					ELSEIF CFLAG:標語実践 == 2
+						CALL EMOTION_PLUS, "重置/笑颜"
+						PRINTFORMW 「ねっ、%CNAME("二人称")%、似合うかな？」
+						PRINTFORMW 「%SAVESTR:標語%って書いてたよね？」
+						PRINTFORMDW %CALLNAME:TARGET%が標語を実践してくれたようだ
+					ELSEIF SAVESTR:標語 == ""
+						CALL EMOTION_PLUS, "重置/微笑"
+						PRINTFORMW 「あの壁のあたり少し寂しいね！」
+						PRINTFORMW 「ポスターでも貼らない？」
+					ELSE
+						CALL EMOTION_PLUS, "重置"
+						PRINTFORMW 「%SAVESTR:標語%……」
+						IF STRCOUNT(SAVESTR:標語, "注意")
+							PRINTFORMW 「%CNAME("二人称")%も何か対策してる？」
+						ELSE
+							PRINTFORMW 「気が向いたらかなー」
+						ENDIF
+					ENDIF
+				ELSE
+					;部室以外での場所
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「%CNAME("二人称")%って何かやりたい事ってある？」
+					PRINTFORMW 「%CNAME("一人称")%はねー……んー……ないしょ♪」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:9 == 0
+			IF CHECK_TWO_POINTS(9)
+				;季節のセリフ
+				SELECTCASE TEXTS("季節詳細")
+				CASE "春"
+					CALL EMOTION_PLUS, "重置/眯眯眼"
+					PRINTFORMW 「今日は天気もいいし、ポカポカして眠くなっちゃうよねー……」
+				CASE "初夏"
+					CALL EMOTION_PLUS, "重置/ω"
+					PRINTFORMW 「だんだん暑くなってきたね」
+					PRINTFORMW 「%CNAME("二人称")%は、皆が薄着になって嬉しいんじゃない？」
+				CASE "夏"
+					CALL EMOTION_PLUS, "重置/困扰眉"
+					PRINTFORMW 「今日も暑いねー……」
+					PRINTFORMW 「もうちょっと手下留情してくれないかなー」
+				CASE "初秋"
+					CALL EMOTION_PLUS, "重置/眯眯眼"
+					PRINTFORMW 「ちょっとずつ涼しくなってきたね」
+					PRINTFORMW 「でも、まだまだ日差しが很强や」
+				CASE "秋"
+					CALL EMOTION_PLUS, "重置/笑颜"
+					PRINTFORMW 「食べ物がおいしい季節♪」
+					PRINTFORMW 「なに食べよっかなー」
+				CASE "晩秋"
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「そろそろ寒くなってきたね」
+					PRINTFORMW 「あったかいものでも食べたいなー」
+				CASEELSE
+					CALL EMOTION_PLUS, "重置/困扰眉"
+					PRINTFORMW 「うー…… 今日も寒いー……」
+					PRINTFORMW 「雪が降ったりするかな？」
+				ENDSELECT
+			ENDIF
+		ELSEIF RAND:8 == 0
+			IF CHECK_TWO_POINTS(7)
+				;授業のセリフ
+				IF RAND:2 && COND("体育")
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「体を動かすのは好きだよ！」
+					PRINTFORMW 「運動神経は……んー……ふつう？」
+				ELSEIF RAND:2 && COND("水泳")
+					CALL EMOTION_PLUS, "重置/眯眯眼"
+					PRINTFORMW 「ふわぁ～……」
+					PRINTFORMW 「水泳の授業の後って眠くなるよねー」
+				ELSE
+					CALL EMOTION_PLUS, "重置/困扰眉/半開"
+					PRINTFORMW 「数学ってにがてー……」
+					PRINTFORMW 「ほんとにこんなの使うの？」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:7 == 0
+			IF CHECK_TWO_POINTS(6)
+				;他の角色について
+				;いない角色について話す。基準は学校の噂かこの角色から見て近くにいそうな存在
+				IF RAND:8 == 0 && FIND_COND("種族：驱魔人") == 0
+					CALL EMOTION_PLUS, "重置/斜眉/無口系"
+					PRINTFORMW 「最近、この辺りで驱魔人の人を見かけるんだって」
+					PRINTFORMW 「襲われたりはしないと思うけど……ちょっと怖いね」
+				ELSEIF RAND:7 == 0 && FIND_COND("綾乃") == 0
+					CALL EMOTION_PLUS, "重置/微笑"
+					PRINTFORMW 「この学校の園芸部って可爱人多いでしょ？」
+					PRINTFORMW 「これには酱と理由があるんだよ♪」
+					PRINTFORMW 「んふふー、知りたい？ 園芸部の人に聞けばわかるかもね！」
+				ELSEIF RAND:6 == 0 && FIND_COND("千紗") == 0
+					CALL EMOTION_PLUS, "重置/困扰眉"
+					PRINTFORMW 「最近、物騒な事件が多いね……」
+					PRINTFORMW 「%CNAME("二人称")%も归途には気を付けてね？」
+					PRINTFORMW 「知らない人にはついて行ったらだめだよ？」
+				ELSEIF RAND:5 == 0 && FIND_COND("琉娜") == 0
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「宿直室にすっごい人が住んでるみたいだね！」
+					PRINTFORMW 「数々の武勇伝持ってるらしいよ！ %CNAME("二人称")%も聞いたことある？」
+					PRINTFORMW 「でも、ひとりで学校に住むのって怖くないのかな……？」
+				ELSEIF RAND:4 == 0 && FIND_COND("乃々") == 0
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「クラスの子が噂してたけど、高等部の生徒会にすっごい綺麗な人がいるってほんと？」
+					PRINTFORMW 「圆圈で天使みたいだと言ってたけど……ほんとに天使だったりしてね！」
+				ELSEIF RAND:3 == 0 && FIND_COND("小菊") == 0
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「美術室の幽霊の話、知ってる？」
+					PRINTFORMW 「夜な夜な和服姿の女の子が出るみたい！」
+					PRINTFORMW 「可爱のかな？」
+				ELSEIF RAND:2 && FIND_COND("六華") == 0
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「白蛇神社って知ってる？」
+					PRINTFORMW 「昔はそれなりに有名だったみたいだけど、今は寂れてボロボロなんだって」
+				ELSE
+					;該当角色が全てに加入済みの場合
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「ねぇ、%CNAME("二人称")%、何か面白色噂知らない？」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:6 == 0
+			IF CHECK_TWO_POINTS(5)
+				;食べ物関連
+				IF RAND:3 == 0
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「あまい食べ物は好き♪」
+					PRINTFORMW 「嫌いなの？ にがいのはちょっと……」
+				ELSEIF RAND:2
+					CALL EMOTION_PLUS, "重置/笑颜"
+					PRINTFORMW 「ねっ、%CNAME("二人称")%、%TEXTR("駅前/近所/学校の近く")%に出来たお店知ってる？」
+					PRINTFORMW 「今度、食べに行こうよ♪」
+				ELSE
+					CALL EMOTION_PLUS, "重置/眯眯眼"
+					PRINTFORMW 「なんだか%TEXTR("拉麵/漢堡肉/パスタ")%食べたいなー……」
+					PRINTFORMW 「%CNAME("二人称")%はどんなやつが好き？」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:5 == 0
+			IF CHECK_TWO_POINTS(4)
+				ACTOR = FIND_COND("恋慕")
+				;コイバナみたいなの
+				IF TALENT:恋慕 && RAND:3 == 0
+					IF TALENT:相思相愛
+						CALL EMOTION_PLUS, "重置/笑颜/紅潮/对话框爱心"
+						PRINTFORMW 「%CNAME("二人称")%、いっしょに恋人っぽいことしたいな♪」
+					ELSE
+						CALL EMOTION_PLUS, "重置/斜眉/無口系/紅潮"
+						PRINTFORMW 「%CNAME("二人称")%、好きな人っている？」
+					ENDIF
+				ELSEIF ACTOR && !TALENT:ACTOR:男性 + TALENT:ACTOR:伪娘 && RAND:2
+					CALL EMOTION_PLUS, "重置/闭眼"
+					PRINTFORMW 「%CNAME(@"{ACTOR}")%、キレイだよね！」
+					PRINTFORMW 「なにか秘訣でもあるのかな？」
+				ELSE
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「%CNAME("二人称")%はどんな人が領帯プ？」
+					PRINTFORMW 「やっぱり%CNAME("弗理希艾尔")%みたいな大姐姐？」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:4 == 0
+			IF CHECK_TWO_POINTS(3)
+				;話題の作品
+				IF RAND:3 == 0
+					CALL EMOTION_PLUS, "重置/笑颜"
+					PRINTFORMW 「えっ！？ %CNAME("二人称")%、あの%TEXTR("新刊/新作")%買ったの！？」
+					PRINTFORMW 「いいなー！今度ちょっとだけ見せて！見せて！」
+				ELSEIF RAND:2
+					CALL EMOTION_PLUS, "重置/〇〇/困扰眉/对话框惊讶"
+					PRINTFORMW 「わーっ！ ダメダメ！ それまだ見てない！」
+					PRINTFORMW 「ネタバレしないでよー！」
+				ELSE
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「%CNAME("二人称")%、あの%TEXTR("映画/番組")%見た？」
+					PRINTFORMW 「結構%TEXTR("面白かった/感動した")%よ♪」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:3 == 0
+			IF CHECK_TWO_POINTS(2)
+				;本人の事
+				IF RAND:3 == 0 && COND("同居中") == 0
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「家族？ 父亲もおかあ桑も魔界にいるよ」
+					PRINTFORMW 「%CNAME("一人称")%は勉強するために人类界に来てるから出口て暮らしてるの」
+				ELSEIF RAND:2
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「魔術？ ちょっとくらいなら使えるよ！」
+					PRINTFORMW 「そんなにすごいことはできないけどねー」
+				ELSE
+					CALL EMOTION_PLUS, "重置/憤怒眉/△/对话框憤怒"
+					PRINTFORMW 「羽は飾りじゃないよー！酱と飛べるよ！」
+				ENDIF
+			ENDIF
+		ELSEIF RAND:2
+			IF CHECK_TWO_POINTS(1)
+				;イベントデーの着替え
+				IF CHECK_SHIRT("女仆装") && DAYEV("女仆の日")
+					CALL EMOTION_PLUS, "重置/闭眼"
+					PRINTFORMW 「今日は女仆桑だよ♪」
+					PRINTFORMW 「主人様、いかがですか？」
+				ELSEIF CHECK_BODYS("兔") && DAYEV("兔女郎の日")
+					CALL EMOTION_PLUS, "重置/笑颜"
+					PRINTFORMW 「あははっ♪ お客桑、楽しんでる？」
+					PRINTFORMW 「いっぱいサービスしなきゃね♪」
+				ELSEIF CHECK_CLO("比基尼姿") && DAYEV("比基尼の日")
+					CALL EMOTION_PLUS, "重置/笑颜/紅潮"
+					PRINTFORMW 「どうかなー？ いつもよりちょっとは大人に見える？」
+				ELSEIF DAYEV("万圣节") && COND("夜")
+					CALL EMOTION_PLUS, "重置/斜眼/憤怒眉/微笑"
+					PRINTFORMW 「どうどう？ この衣装！」
+					PRINTFORMW 「ふふん、すごい悪魔っぽい格好でしょ！」
+				ELSE
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「%CNAME("二人称")%はどんな服が好き？」
+					PRINTFORMW 「%CNAME("一人称")%は大人っぽいおしゃれもしてみたいな！」
+				ENDIF
+			ENDIF
+		ELSE
+			IF CHECK_TWO_POINTS(0)
+				;てっきとー
+				IF RAND:3 == 0  && TALENT:MASTER:謎之魅力
+					CALL EMOTION_PLUS, "重置/笑颜"
+					PRINTFORMW 「%CNAME("二人称")%ってよく見ると、結構\@ TALENT:MASTER:男性 ? かっこいい #キレイだ \@ね」
+					PRINTFORMW 「なんだか不思議な魅力がある気がする♪」
+				ELSEIF RAND:2 && TALENT:MASTER:大力士
+					CALL EMOTION_PLUS, "重置"
+					PRINTFORMW 「%CNAME("二人称")%って見た目よりも力が很强よね！」
+					PRINTFORMW 「もしかして、お姫様抱っこもできるの？」
+				ELSE
+					CALL EMOTION_PLUS, "重置/笑颜"
+					PRINTFORMW 「鼻歌が何の曲か知りたいの？」
+					PRINTFORMW 「えへへっ♪ ないしょ♪」
+				ENDIF
+			ENDIF
+		ENDIF
+		SIF LINECOUNT > MEMO_LINECOUNT
+			BREAK
+	NEXT
+CASE "マッサージ"
+	IF RAND:10 == 0 && PLACE("個室") && CHARA_NUM("室内の邪魔者") == 0 && CEVENT("Ｄイベ：起きた") == 0
+		CALL EMOTION_PLUS, "睡眠"
+		CALL KOJO_SLEEP_K50
+		WAIT
+		PRINTFORMW %CALLNAME:TARGET%は%CALLNAME:MASTER%のマッサージが気持ち良くて眠ってしまったようだ……
+		;通常の睡眠より低い数値が出やすく
+		CFLAG:睡眠 = 4 + RAND:4
+	ELSE
+		FOR LCOUNT, 0, 100
+			IF RAND:5 == 0
+				IF CHECK_TWO_POINTS(4)
+					CALL EMOTION_PLUS, "重置/＞＜/困扰眉/半開/对话框惊讶"
+					PRINTFORMW 「いたたたっ！ %CNAME("二人称", "どもり")%！ そこいたい！」
+					PRINTFORMDW %CALLNAME:MASTER%がツボを刺激すると痛かったようだ……
+				ENDIF
+			ELSEIF RAND:4 == 0
+				IF CHECK_TWO_POINTS(3)
+					CALL EMOTION_PLUS, "重置/闭眼/斜眉/红晕/对话框開心"
+					PRINTFORMW 「はぁー  きもちいいー」
+					PRINTFORMW 「豐腴してると眠っちゃいそう……」
+				ENDIF
+			ELSEIF RAND:3 == 0
+				IF CHECK_TWO_POINTS(2)
+					CALL EMOTION_PLUS, "重置/闭眼/斜眉/赤面"
+					PRINTFORMW 「ううん…… なんだか体がポカポカしてきた」
+					PRINTFORMW 「%CNAME("二人称")%、擅長だねー……」
+				ENDIF
+			ELSEIF RAND:2
+				IF CHECK_TWO_POINTS(1)
+						CALL EMOTION_PLUS, "重置/＞＜/斜眉/紅潮"
+						CALL OFC_PRINT_STRW,@"「%CNAME("二人称")%、揉みかたがなんかやらしー……うひゃあ_／／／_」"
+				ENDIF
+			ELSE
+				IF CHECK_TWO_POINTS(0)
+					CALL EMOTION_PLUS, "重置/眯眯眼"
+					PRINTFORMW 「もうちょっとしたー、そこよりはうえー…… うん、そこそこ！」
+				ENDIF
+			ENDIF
+			SIF LINECOUNT > MEMO_LINECOUNT
+				BREAK
+		NEXT
+	ENDIF
+CASE "チュー"
+	IF TALENT:恋慕
+		CALL EMOTION_PLUS, "重置/闭眼/△/紅潮/对话框爱心"
+	ELSE
+		CALL EMOTION_PLUS, "重置/闭眼/△/紅潮"
+	ENDIF
+	IF CONDS("直前行動") == STR:日常イベント名 
+		IF RAND:3 == 0
+			PRINTFORMW 「ちゅ%TEXTR("……ん/……ちゅちゅ")%%TEXTAN("……もっと/……ちゅぱっ/……ちゅぷ")%」
+		ELSEIF RAND:2
+			PRINTFORMW 「あむ……%TEXTAN("ちゅう……/れろぉ、れろれろ……/ちゅぱ……")%」
+		ELSE
+			PRINTFORMW 「%TEXTAN("ちゅ……/ちゅぷ……/んん……")%ちゅぅぅ……ぷはっ」
+			PRINTFORMW 「えへへっ♪」
+		ENDIF
+	ELSE
+		IF RAND:4 == 0 && COND("点心有")
+			PRINTFORMW 「んぅ、%TEXTAN("ちゅう……/ちゅ……/ん……")%ぷはぁ」
+			PRINTFORMW 「んー…… %TEXTS("点心")%の味がするね！」
+		ELSEIF RAND:3 == 0
+			PRINTFORMW 「んむ%TEXTAN("……ちゅぷ/、ちゅぱ/……ちゅ")%……」
+			PRINTFORMW 「%CNAME("二人称")%の唇、やわらかいね♪」
+		ELSEIF RAND:2
+			PRINTFORMW 「%TEXTAN("ちゅ……/ちゅ、/ん……")%あーむっ……んふふー♪」
+			PRINTFORMDW %CALLNAME:TARGET%は%CALLNAME:MASTER%の下唇を轻轻地噛んできた
+		ELSE
+			PRINTFORMW 「あむ……%TEXTAN("ちゅ……/ちゅう……/ちゅっ……")%」
+			PRINTFORMW 「……おしまい？」
+		ENDIF
+	ENDIF
+	CALL SETFLAG_DAILY, "害羞"
+CASE "抚摸"
+	FOR LCOUNT, 0, 100
+		IF RAND:5 == 0
+			IF CHECK_TWO_POINTS(4)
+				CALL EMOTION_PLUS, "重置/笑颜/左吊眼/斜眉/紅潮/对话框爱心"
+				CALL OFC_PRINT_STRW,"「…………えへへ_／／／_」"
+			ENDIF
+		ELSEIF RAND:4 == 0
+			IF CHECK_TWO_POINTS(3)
+				CALL EMOTION_PLUS, "重置/＞＜/红晕/对话框兴奋"
+				PRINTFORMW 「あははっ、そこはちょっとくすぐったい！」
+			ENDIF
+		ELSEIF RAND:3 == 0
+			IF CHECK_TWO_POINTS(2)
+				CALL EMOTION_PLUS, "重置/闭眼/困扰眉/楕円"
+				PRINTFORMW 「はぁー…… 落ち着くー……」
+				PRINTFORMW 「%CNAME("二人称")%の抚摸気持ちいいね」
+			ENDIF
+		ELSEIF RAND:2 == 0
+			IF CHECK_TWO_POINTS(1)
+				CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框開心"
+				PRINTFORMW 「やさしくなでられるのって、なんだか嬉しい♪」
+			ENDIF
+		ELSE
+			IF CHECK_TWO_POINTS(0)
+				CALL EMOTION_PLUS, "重置/眯眯眼/憤怒眉/红晕"
+				PRINTFORMW 「んふふー、遠慮せずにいっぱいなでていいよ？ %CNAME("二人称")%」
+			ENDIF
+		ENDIF
+		SIF LINECOUNT > MEMO_LINECOUNT
+			BREAK
+	NEXT
+ENDSELECT
+CALL CHANGE_OFC, "重置"
+;-------------------------------------------------
+;自撮りにメッセージを添えます　一言くらい
+;加筆の際には RETURN 0 を消去し、MAIL_BODY を埋めて使ってください
+;地の文も必要であれば適宜変更してください
+;-------------------------------------------------
+@SELFY_MAIL_K50, ARGS
+#DIMS MAIL_BODY
+
+MAIL_BODY =
+;メッセージ本文
+SELECTCASE ARGS
+CASE "ヌード自撮り"
+	;RETURN 0
+	IF RAND:3 == 0
+		MAIL_BODY = 躁动难忍しちゃった_赤_太字_? 
+	ELSEIF RAND:2
+		MAIL_BODY = エッチに撮れてる_赤_太字_? 
+	ELSE
+		MAIL_BODY = お着替え中_赤_I_太字_! 
+	ENDIF
+CASE "阴部自撮り", "阴茎自撮り"
+	;RETURN 0
+	IF COND("身嗜み：Ｖ独占") && RAND:3 == 0
+		MAIL_BODY = %CNAME("二人称")%専用だからね_CBBH_ 
+	ELSEIF PENIS(TARGET) == 0 && RAND:2
+		MAIL_BODY = くぱぁ_CBBH_ 
+	ELSE
+		MAIL_BODY = 特別だよ_CBBH_ 
+	ENDIF
+CASE "阴茎自撮り"
+	RETURN 0
+CASE "胸部自撮り", "胸罩自撮り"
+	;RETURN 0
+	IF RAND:3 == 0
+		MAIL_BODY = %CNAME("二人称")%の大好きな胸部だよ_CBBH_
+	ELSEIF RAND:2
+		MAIL_BODY = これ見て元気になってね_CBBH_ 
+	ELSE
+		MAIL_BODY = ちょっとおっきくなったかも_赤_太字_?? 
+	ENDIF
+CASE "今年の泳装自撮り"
+	;RETURN 0
+	IF RAND:3 == 0
+		MAIL_BODY = どうどう_赤_太字_?? 
+	ELSEIF RAND:2
+		MAIL_BODY = 泳ぎに行こーよ_赤_I_太字_!!! 
+	ELSE
+		MAIL_BODY = 今年の泳装～_赤_I_太字_! 
+	ENDIF
+CASE "学校指定の泳装自撮り"
+	;RETURN 0
+	IF RAND:3 == 0
+		MAIL_BODY = どっちが長く潜れるか勝負しようよ_赤_I_太字_! 
+	ELSEIF RAND:2
+		MAIL_BODY = %CNAME("二人称")%と泳ぎたいな♪
+	ELSE
+		MAIL_BODY = 泳池気持ち良かった～ 
+	ENDIF
+CASE "体操服自撮り"
+	;RETURN 0
+	IF RAND:3 == 0
+		MAIL_BODY = 一緒に運動しよ_赤_I_太字_! 
+	ELSEIF RAND:2
+		MAIL_BODY = 体育の授業がんばったよ♪
+	ELSE
+		MAIL_BODY = 今日は%TEXTR("バスケ/バレー/マラソン/サッカー")%をしたよ_赤_I_太字_! 
+	ENDIF
+CASE "胖次自撮り"
+	;RETURN 0
+	IF RAND:3 == 0 && COND("現在存在")
+		MAIL_BODY = 惊嚇した_赤_太字_?
+	ELSEIF RAND:2
+		MAIL_BODY = この胖次いいでしょ_赤_太字_!
+	ELSE
+		MAIL_BODY = 今履いてる胖次だよ_CBBH_ 
+	ENDIF
+CASEELSE
+	RETURN 0
+	MAIL_BODY =
+ENDSELECT
+
+;地の文
+CALL OFC_PRINT_STRW, @"R_写真には「%MAIL_BODY%_R_」というメッセージが添えられている…"
+
+CALL CHANGE_OFC, "重置"
+;-------------------------------------------------
+;约会の際のセリフ
+;システム側の地の文や反応を出力させたくない場合には TFLAG:地の文スキップ = 1 としてください
+;约会回数は EXP:约会経験 が+1ずつされます。初回のセリフは IF EXP:约会経験 == 0 で分岐するのが良いでしょう
+;素質で分岐させる場合にはTALENT:恋慕での分岐がおすすめです
+;-------------------------------------------------
+@KOJO_DATE_K50, ARGS
+#DIMS PRESENT
+
+;文字色変更
+CALL CHANGE_OFC, "セット"
+SELECTCASE ARGS
+;你を週末约会に誘った
+CASE "约会のお誘い"
+	CALL EMOTION_PLUS, "重置"
+	PRINTFORMW 「%CNAME("二人称")%、今度の周日日ひま？」
+	PRINTFORMW 「ひまならどこか玩耍に行こうよ！」
+CASE "约会のお誘い：結果"
+	;约会決定！
+	;自発的に约会の做便当给よ！って場合はCALL SET_CEVENT, "约会の便当"としてください。
+	IF COND("约会的约定")
+		CALL EMOTION_PLUS, "重置/＞＜/红晕/对话框開心"
+		PRINTFORMW 「やったー♪ えへへっ、楽しみ♪」
+	;你に保留されてしまった
+	ELSE
+		CALL EMOTION_PLUS, "重置"
+		PRINTFORMW 「はーい、返事は早くちょうだいね？」
+	ENDIF
+;你から週末约会に誘われた
+;自発的に约会の做便当给よ！って場合はCALL SET_CEVENT, "约会の便当"としてください。
+CASE "约会に誘われた"
+	CALL EMOTION_PLUS, "心情好"
+	PRINTFORMW 「今度の周日日？ んふふー、いいよ！」
+;你に便当を作ってきてと頼まれた
+CASE "便当を頼まれた"
+	CALL EMOTION_PLUS, "重置/笑颜/微笑/红晕/对话框開心"
+	PRINTFORMW 「便当？ 作ってきて给！」
+	;これのコメントアウトを取下と、便当を作ってあげません
+	;CALL DEL_CEVENT, "约会の便当"
+;你から约会当日にいきなり誘われた
+;自発的に约会の做便当给よ！って場合はCALL SET_CEVENT, "约会の便当"としてください。
+CASE "邀请去约会"
+	;同居していない相手を誘った時
+	IF COND("同居中") == 0
+		CALL CHANGE_OFC, "重置"
+		CUSTOMDRAWLINE ━
+		CALL PRINT_NAME
+		CALL CHANGE_OFC, "セット"
+		CALL OFC_PRINT_STRL, @"『うん_赤_I_太字_!_ 今日は闲だし行く_赤_I_太字_!_ 』"
+		CALL OFC_PRINT_STRL, @"『待ち合わせ場所で会おうね_黄色_太字_♪_』"
+				CALL CHANGE_OFC, "重置"
+		CUSTOMDRAWLINE ━
+		CALL CHANGE_OFC, "セット"
+	ELSE
+		CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框開心"
+		PRINTFORMW 「出かけるの？ やったー♪」
+		PRINTFORMW 「すぐ準備するね！」
+	ENDIF
+
+;约会するにあたり、特殊な条件で着替えたりしたい時に使ってください。台詞没有で換装操作のみするのが推奨です
+CASE "约会衣装に更衣"
+	;着替えたらコメントアウトを外してください
+	;TFLAG:约会衣装に着替えた = 1
+
+;地の文はpartnerが遅れて現れる展開になっています
+;地の文が用意されているので、轻轻地１行程度の反応で良いと思います
+CASE "待ち合わせ"
+	IF COND("同居中") == 0
+		CALL EMOTION_PLUS, "重置/笑颜"
+		PRINTFORMW 「こんにちは、%CNAME("二人称")%」
+		PRINTFORMW 「待たせちゃった？」
+	ELSE
+		CALL EMOTION_PLUS, "重置/笑颜"
+		PRINTFORMW 「さ、行こっ！ %CNAME("二人称")%」
+	ENDIF
+	;地の文を自己書きたい場合にはコメントアウトを外してください
+	;TFLAG:地の文スキップ = 1
+
+;地の文が用意されているので、轻轻地１行程度の反応で良いと思います
+CASE "约会本番"
+	SELECTCASE SAVESTR:约会
+	CASE "去买泳衣"
+		PRINTFORMW 
+	CASE "散歩"
+		IF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/笑颜/对话框兴奋"
+			PRINTFORMW 「あーっ！ ネコ酱だ！」
+			PRINTFORMW 「こっちだよー！ おいでおいで♪」
+		ELSEIF RAND:2 == 0
+			CALL EMOTION_PLUS, "重置/憤怒眉"
+			PRINTFORMW 「%CNAME("二人称")%！ そこの曲がり角までかけっこしよ！」
+		ELSE
+			CALL EMOTION_PLUS, "重置"
+			PRINTFORMW 「探検にしゅっぱーつ！」
+		ENDIF
+	CASE "尋訪美食"
+		IF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「ここのお店、とってもおいしいんだって！」
+			PRINTFORMW 「どんな味かな？ たのしみー♪」
+		ELSEIF RAND:2
+			CALL EMOTION_PLUS, "重置/＞＜"
+			PRINTFORMW 「おいしそーな%TEXTS("气味")%がするー！」
+			PRINTFORMW 「早く行こっ！ お腹ペッコペコ！」
+		ELSE
+			CALL EMOTION_PLUS, "重置/闭眼/憤怒眉"
+			CALL OFC_PRINT_STRW, "「さっきの料理は文句无！ _黄色_★★★_っと……」"
+			PRINTFORMW 「うんうん……次の料理は……」
+		ENDIF
+	CASE "逛街"
+		IF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/眯眯眼"
+			PRINTFORMW 「うーん……じっと見てたらなんだか欲しくなってきちゃった」
+			PRINTFORMW 「どうしよっかなー？」
+		ELSEIF RAND:2
+			CALL EMOTION_PLUS, "重置/笑颜"
+			PRINTFORMW 「%CNAME("二人称")%、次はあのお店ね！」
+			PRINTFORMW 「ゴー！ ゴー！」
+		ELSE
+			CALL EMOTION_PLUS, "重置/困扰眉/＞＜/大口"
+			PRINTFORMW 「わーん！ 買いすぎちゃった！」
+			PRINTFORMW 「%CNAME("二人称")%、これ持ってー！」
+		ENDIF
+		;先に地の文を出してしまう
+		TFLAG:地の文スキップ = 1
+		CALL CHANGE_OFC, "重置"
+		CALL DAILY_MESSAGE, ARGS
+		CALL CHANGE_OFC, "セット"
+		PRINTL
+
+		;購入できる物の一覧作成
+		PRESENT = ジュース$10/%TEXTR("新刊の漫画$100/新作の游戏$500")%
+		SIF CEVENT("購入：おっきなくまの玩偶") == 0
+			PRESENT = %PRESENT%/おっきなくまの玩偶$500
+		SIF CEVENT("購入：儿童胖次") == 0
+			PRESENT = %PRESENT%/儿童胖次$500
+		SIF CEVENT("購入：和装内衣セット") == 0
+			PRESENT = %PRESENT%/和装内衣セット$1000
+		SIF CEVENT("購入：だてめがね") == 0
+			PRESENT = %PRESENT%/だてめがね$1000
+		SIF CEVENT("購入：哥特連衣裙") == 0
+			PRESENT = %PRESENT%/哥特連衣裙$5000
+
+		PRINTFORMDW …%CALLNAME:TARGET%になにか送禮を買ってあげますか？
+		CALL OFC_PRINT_SELECT, "是/否"
+		IF RESULT == 0
+			CALL CHANGE_OFC, "重置"
+			CALL MYSHOP_SHOWCASE, PRESENT
+			CALL CHANGE_OFC, "セット"
+			SELECTCASE STR:購入道具
+			CASE ""
+				;何も買わなかった場合
+			CASE "ジュース"
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「あーっ！ %STR:購入道具%だ！」
+				PRINTFORMW 「%CNAME("二人称")%のおごり？ やったー！」
+				PRINTL
+				CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框兴奋"
+				IF COND("冬")
+					PRINTFORMW 「んー♪ あったかくておいしー♪」
+				ELSE
+					PRINTFORMW 「んー♪ 冷たくておいしー♪」
+				ENDIF
+				BASE:尿意 += 1500
+			CASE "新刊の漫画", "新作の游戏"
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「送禮くれるの！？ やったぁ！」
+				PRINTFORMW 「なにかなー？ ねっ、あけてみてもいい？」
+				PRINTL
+				CALL EMOTION_PLUS, "重置/笑颜"
+				PRINTFORMW 「%STR:購入道具%だ！ %CNAME("一人称")%、これ欲しかったの！」
+				PRINTFORMW 「さっすがー！ 有がとう！ %CNAME("二人称")%！」
+				FLAG:情緒 += 30
+			CASE "おっきなくまの玩偶"
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「送禮くれるの！？ やったぁ！」
+				PRINTFORMW 「なにかなー？ ねっ、あけてみてもいい？」
+				PRINTL
+				CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框爱心"
+				PRINTFORMW 「わぁ、%STR:購入道具%だ！ ふかふか！」
+				PRINTFORMW 「どこに飾ろっかなー？ 大切にするね！ %CNAME("二人称")%！」
+				CALL SET_CEVENT, @"購入：%STR:購入道具%"
+			CASE "儿童胖次"
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「送禮くれるの！？ やったぁ！」
+				PRINTFORMW 「なにかなー？ ねっ、あけてみてもいい？」
+				PRINTL
+				CALL EMOTION_PLUS, "困扰眉/躁动难忍/紅潮"
+				PRINTFORMW 「胖次だ！ 可爱けどちょっと兒童っぽいかも……」
+				PRINTFORMW 「%CNAME("二人称")%、こういうのが好きなの？ ふーん……？」
+				PRINTFORMW 「あははっ、じゃあ今度履いてみよっかな♪」
+				PRINTL
+				CALL PRINT_STRW, @"_%CALLNAME:TARGET%に_黄色_「%STR:購入道具%」_を送禮しました！"
+				CALL PRINT_STRW, @"_%CALLNAME:TARGET%がたまに_黄色_「%STR:購入道具%」_を身につけるようになります。"
+				CALL SET_CEVENT, @"購入：%STR:購入道具%"
+			CASE "和装内衣セット"
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「送禮くれるの！？ やったぁ！」
+				PRINTFORMW 「なにかなー？ ねっ、あけてみてもいい？」
+				PRINTL
+				CALL EMOTION_PLUS, "重置/〇〇"
+				PRINTFORMW 「えーっと？ 内衣？」
+				PRINTFORMW 「%CNAME("二人称")%、これ、どうやって着ればいいのかわかんないよー！」
+				PRINTL
+				PRINTFORMDW %CALLNAME:MASTER%は%CALLNAME:TARGET%にお店でもらった説明書きを渡した。
+				PRINTL
+				PRINTFORMW 「よ、用意いいね……せっかくだから今度チャレンジしてみようかな？」
+				PRINTL
+				CALL PRINT_STRW, @"_%CALLNAME:TARGET%に_黄色_「%STR:購入道具%」_を送禮しました！"
+				CALL PRINT_STRW, @"_%CALLNAME:TARGET%がたまに_黄色_「兜襠布と裹胸布」_を身につけるようになります。"
+				CALL SET_CEVENT, @"購入：%STR:購入道具%"
+			CASE "だてめがね"
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「送禮くれるの！？ やったぁ！」
+				PRINTFORMW 「なにかなー？ ねっ、あけてみてもいい？」
+				PRINTL
+				CALL EMOTION_PLUS, "重置/＞＜/红晕/对话框開心"
+				PRINTFORMW 「おーっ！ おしゃれ用の眼鏡だ！」
+				PRINTFORMW 「ちょっと掛けてみよっと！」
+				CALL SET_OTHER, "眼鏡"
+				PRINTL
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「どうどう？ 似合ってる？」
+				PRINTFORMW 「大切にするね！ 有がとー♪」
+				PRINTL
+				CALL PRINT_STRW, @"_%CALLNAME:TARGET%に_黄色_「%STR:購入道具%」_を送禮しました！"
+				CALL PRINT_STRW, @"_%CALLNAME:TARGET%のお願いに_黄色_「眼鏡をかけて欲しい」_が追加されます。"
+				CALL SET_CEVENT, @"購入：%STR:購入道具%"
+			CASE "哥特連衣裙"
+				CALL EMOTION_PLUS, "重置"
+				PRINTFORMW 「送禮くれるの！？ やったぁ！」
+				PRINTFORMW 「なにかなー？ ねっ、あけてみてもいい？」
+				PRINTL
+				CALL EMOTION_PLUS, "重置/〇〇/△/红晕/对话框惊讶"
+				PRINTFORMW 「わっ！ すごい、お洋服だ！ しかも、なんだか高そうなやつ！」
+				PRINTFORMW 「ほんとにいいの？ えへへっ、似合うといいなー！  有がとー♪」
+				PRINTL
+				CALL PRINT_STRW, @"_%CALLNAME:TARGET%に_黄色_「%STR:購入道具%」_を送禮しました！"
+				CALL PRINT_STRW, @"_%CALLNAME:TARGET%の便装に_黄色_「%STR:購入道具%」_が追加されます。"
+				CALL SET_CEVENT, @"購入：%STR:購入道具%"
+			ENDSELECT
+		ENDIF
+	CASE "去水族馆"
+		IF RAND:3 == 0
+			CALL EMOTION_PLUS, "重置/＞＜/憤怒眉/红晕/对话框兴奋"
+			PRINTFORMW 「イルカショーすごかったね！」
+			PRINTFORMW 「ジャンプしたら水がザッ布ン！」
+		ELSEIF RAND:2
+			CALL EMOTION_PLUS, "重置/眯眯眼"
+			PRINTFORMW 「水族館のおさかなも食べたらおいしいのかなー？」
+		ELSE
+			CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框開心"
+			PRINTFORMW 「ほら、%CNAME("二人称")%、見て見て！」
+			PRINTFORMW 「あははっ、ちんあなごだって！ へんなのー！」
+		ENDIF
+	CASE "去游乐园"
+		PRINTFORMW 
+	CASE "去电影院"
+		PRINTFORMW 
+	CASE "去图书馆"
+		PRINTFORMW 
+	CASE "赏花"
+		PRINTFORMW 
+	CASE "去游泳"
+		PRINTFORMW 
+	CASE "爬山"
+		PRINTFORMW 
+	CASE "赏红叶"
+		PRINTFORMW 
+	CASE "滑雪"
+		PRINTFORMW 
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+
+	;地の文を自己書きたい場合にはコメントアウトを外してください
+	;TFLAG:地の文スキップ = 1
+
+CASE "手をつなぐ"
+	CALL EMOTION_PLUS, "重置/笑颜/微笑/紅潮/对话框開心"
+	CALL OFC_PRINT_STRW,@"「…………_CBBH_ 」"
+CASE "手をつながない"
+	;PRINTFORMW 
+;泳装を買いに行った時です
+CASE "泳装選び開始"
+	;Micro比基尼とかもＯＫ
+	IF COND("Ｈ的泳装選択可能") && RAND:2
+		PRINTFORMW 
+	ELSEIF RAND:2
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;泳装を買いに行って、結果的に選んだ泳装に対するセリフです
+;もしも去年も泳装を選んでいたなら、CSTR:今年の泳装 に記録されているので比較する事が出来る
+CASE "泳装決定"
+	SELECTCASE SWIM(STR:選んだ泳装, "種類")
+	CASE "Micro比基尼"
+		PRINTFORMW 
+	CASE "比基尼"
+		PRINTFORMW 
+	CASE "競泳泳装"
+		PRINTFORMW 
+	CASE "高開衩連衣裙"
+		PRINTFORMW 
+	CASE "連体泳装"
+		PRINTFORMW 
+	;其他はだいたいエロ泳装です
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+
+;泳池などで泳装姿に着替え、待ち合わせ場所に集合した時です
+CASE "泳装に着替えた"
+	;どの泳装に着替えたか？
+	SELECTCASE SWIM(CSTR:今年の泳装, "種類")
+	CASE "比基尼"
+		PRINTFORMW 
+	CASE "Micro比基尼"
+		PRINTFORMW 
+	CASE "連体泳装"
+		PRINTFORMW 
+	CASE "競泳泳装"
+		PRINTFORMW 
+	;其他はだいたいエロ泳装です
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+
+;草丛口交です。地の文が用意されているので、轻轻地１行程度の反応でも良いと思います
+CASE "到暗处去……"
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	;地の文を自己書きたい場合にはコメントアウトを外してください
+	;TFLAG:地の文スキップ = 1
+
+;映画館などで横並びに座った状態での手交です。地の文が用意されているので、轻轻地１行程度の反応でも良いと思います
+CASE "请求偷偷手交"
+
+CASE "接吻"
+
+CASE "摸屁股"
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;你が草丛口交や接吻や性騷擾をしない紳士な場合はここに来ます
+;ちょっと保留
+CASE "专心看电影"
+	;CALL EMOTION_PLUS, "躁动难忍/微笑"
+	;地の文を自己書きたい場合にはコメントアウトを外してください
+	;TFLAG:地の文スキップ = 1
+CASE "下次去哪里呢？询问"
+	;CALL EMOTION_PLUS, "心情好"
+;帰り際のセリフです。不动声色地エッチに邀请のもいいでしょう
+;STR:Ｈする場所 で場所を情人旅館以外にする事も出来ます。（例 STR:Ｈする場所 = 部室
+CASE "帰り際"
+	IF TALENT:恋慕
+		CALL EMOTION_PLUS, "重置/困扰眉/△"
+		PRINTFORMW 「えー……？ もう帰っちゃうの？」
+	ELSE
+		CALL EMOTION_PLUS, "重置/笑颜/红晕/对话框開心"
+		PRINTFORMW 「楽しかったね、%CNAME("二人称")%」
+	ENDIF
+CASE "约会終了"
+	;エッチをする場合
+	IF TFLAG:床イン
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ELSE
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+ENDSELECT
+;文字色重置
+CALL CHANGE_OFC, "重置"
+

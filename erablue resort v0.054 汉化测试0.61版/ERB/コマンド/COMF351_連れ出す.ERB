@@ -1,0 +1,116 @@
+﻿
+@COMNAME351
+#FUNCTIONS
+TSTR:コマンド名受渡 = 邀请同行
+IF CFLAG:TARGET:同行
+	IF TALENT:TARGET:恋慕
+		TSTR:コマンド名受渡 = 恋人牵手
+	ELSE
+		TSTR:コマンド名受渡 = 牵手
+	ENDIF
+ENDIF
+
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_351
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+
+@COM_TOOLTIP_351
+LOCALS = <br>■邀请同行<br>
+LOCALS += "邀请好感度达到阈值以上的对象同行的指令。<br>最多可同时携带两名同行者。<br>基础同行时长为60分钟，隐匿状态或嘿咻期间同行状态不会解除。<br>同行期间可执行[牵手]指令，若存在爱慕关系则升级为[恋人牵手]。"
+LOCALS += "<br>指令类型：日常互动<br>获取来源：无"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM351
+#DIM 同行者保存
+#DIM 同行数値記録
+#DIM 連れ出し時間
+同行者保存 = 0
+同行数値記録 = 0
+
+CALLFORMF COMNAME351
+SELECTCOM_NAME '= TSTR:コマンド名受渡
+
+IF CFLAG:TARGET:デート && CFLAG:TARGET:デート != MASTER + 100
+	PRINTFORMW %CALLNAME:TARGET%今日正与%CALLNAME:(ABS(CFLAG:TARGET:デート) - 100)%约会，无法同行
+	RETURN -1
+ENDIF
+
+IF CFLAG:TARGET:同行
+	RFLAG:コマンド結果受渡し変数 = 1
+	IF TALENT:TARGET:恋慕
+		PRINTFORMW 与%CALLNAME:TARGET%以恋人牵手方式同行。
+	ELSE
+		PRINTFORMW 与%CALLNAME:TARGET%普通牵手方式同行。
+	ENDIF
+ELSE
+	PRINTFORMW 成功邀请%CALLNAME:TARGET%同行。
+ENDIF
+;一度に連れ歩けるのは二人まで,八面六臂があれば無視
+IF !あなた特殊能力:八面六臂
+	FOR LOCAL,1,CHARANUM
+		SIF TARGET:LOCAL < 1
+			BREAK
+		;TARGETに関してカウントする必要なし
+		SIF TARGET:LOCAL == TARGET
+			CONTINUE
+		IF CFLAG:(TARGET:LOCAL):同行
+			IF 同行数値記録
+				;既に同行者が2人いるパターン
+				IF 同行数値記録 > CFLAG:(TARGET:LOCAL):同行
+					CALL 同行解除処理(TARGET:LOCAL)
+					CFLAG:(TARGET:LOCAL):デート = 0
+				ELSE
+					CALL 同行解除処理(同行者保存)
+					CFLAG:同行者保存:デート = 0
+					同行数値記録 = CFLAG:(TARGET:LOCAL):同行
+					同行者保存 = TARGET:LOCAL
+				ENDIF
+			ELSE
+				同行数値記録 = CFLAG:(TARGET:LOCAL):同行
+				同行者保存 = TARGET:LOCAL
+			ENDIF
+		ENDIF
+	NEXT
+ENDIF
+連れ出し時間 = 60 + (CFLAG:好感度レベル - 関係閾値:2) * 5
+SIF CFLAG:TARGET:同行 < 連れ出し時間
+	CFLAG:TARGET:同行 = 連れ出し時間
+TFLAG:TARGET変更用 = TARGET
+TIME += 1
+
+;SOURCEまで回さないのでここで口上を表示させる
+RESULT = 0
+RESULTS =
+IF FLAG:口上表示切り替えオプション > 0
+	TRYCALLFORM KOJO_COM_{NO:TARGET}_351(TARGET)
+ENDIF
+
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE351
+;邀请同行実行判定
+SIF SAVESTR:ゲームフェイズ管理 != "通常モード"
+	RETURN 0
+;一括管理
+SIF GLOBAL_COMABLE(351)
+	RETURN RESULT
+;TARGETの好感度レベル
+SIF CFLAG:好感度レベル < 1 + 関係閾値:2
+	RETURN 0
+;他人とデート中はダメ
+SIF CFLAG:TARGET:デート && CFLAG:TARGET:デート != MASTER + 100 && TCVAR:TARGET:デートちょっかい値 <= 0
+	RETURN 0
+SIF CFLAG:PLAYER:デート
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------

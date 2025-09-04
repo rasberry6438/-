@@ -1,0 +1,232 @@
+﻿;-------------------------------------------------
+;角色ARGに裙ARGSを着せる。ARGS == ""なら脱がす
+;-------------------------------------------------
+@SET_SKIRT, ARGS, ARG
+#DIMS MEMO_CLO
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+MEMO_CLO = %CSTR:ARG:裙%
+CALL PALAM_SKIRT, ARGS, ARG
+
+EQUIP:ARG:裙 = STRLENS(CSTR:ARG:裙)
+;ワンピは裙脱いだら服も脱掉
+SIF CHECK_SHIRT("連衣裙", ARG) && (EQUIP:ARG:裙 == 0 || CHECK_SKIRT("連衣裙", ARG) == 0)
+	CALL SET_SHIRT, "", ARG
+;休闲褲不可なら脱掉
+SIF CHECK_SKIRT("休闲褲不可", ARG) && CHECK_BOTTOM("休闲褲", ARG)
+	CALL SET_BOTTOM, "", ARG
+
+SIF MEMO_CLO != CSTR:ARG:裙
+	TFLAG:着替えた = 1
+
+;-------------------------------------------------
+;ARGの裙の名前。ARGSに"略"と入れると略称になる
+;-------------------------------------------------
+@SKIRT(ARG, ARGS)
+#FUNCTIONS
+#DIMS CIPTYPE
+#DIMS SKIRT_TYPE
+#DIMS COLOR_TYPE
+
+VARSET LOCALS
+SELECTCASE ARGS
+CASE "CIP正面"
+	;ワンピ
+	IF CHECK_SKIRT("連衣裙", ARG)
+		IF CHECK_SKIRT("旗袍", ARG)
+			LOCALS = 旗袍
+		ELSEIF CHECK_SKIRT("圣诞", ARG)
+			LOCALS = 圣诞裙
+		ELSEIF CHECK_SKIRT("围裙", ARG)
+			LOCALS = 围裙
+		ELSEIF CHECK_SKIRT("白色和金色装饰的民族衣装", ARG)
+			LOCALS = 白色和金色装饰的民族衣装
+			SIF CHECK_SKIRT("夏服", ARG)
+				LOCALS += "夏服"
+		ELSEIF CHECK_SKIRT("弄脏的裙", ARG)
+			LOCALS = 弄脏的裙
+		ELSEIF CHECK_SKIRT("Ｔ恤", ARG)
+			LOCALS = 宽大的Ｔ恤
+		ELSEIF CHECK_SKIRT("長連帽風衣", ARG)
+			IF CHECK_SKIRT("红黑色无袖連帽風衣", ARG)
+				LOCALS = 红黑色无袖連帽風衣
+			ELSE
+				LOCALS = 長連帽風衣
+			ENDIF
+		ELSEIF CHECK_SKIRT("毛衣", ARG)
+			LOCALS = 连体毛衣
+		ELSE
+			RETURNF ""
+		ENDIF
+	ELSEIF CHECK_SKIRT("裙", ARG)
+		IF CHECK_SKIRT("百褶", ARG)
+			LOCALS = 百褶裙
+		ELSEIF CHECK_SKIRT("格子", ARG)
+			LOCALS = 格子裙
+		ELSEIF CHECK_SKIRT("紧身", ARG)
+			LOCALS = 紧身裙
+		ELSE
+			RETURNF ""
+		ENDIF
+		IF CHECK_SKIRT("Micro", ARG)
+			LOCALS = Micro%LOCALS%
+		ELSEIF CHECK_SKIRT("迷你", ARG)
+			LOCALS = 迷你%LOCALS%
+		ENDIF
+	ELSEIF CHECK_SKIRT("荷葉邊", ARG)
+		IF CHECK_SKIRT("花柄", ARG)
+			LOCALS = 花柄荷葉邊
+		ELSE
+			LOCALS = 荷葉邊
+		ENDIF
+	ELSE
+		RETURNF ""
+	ENDIF
+	SIF LOCALS != ""
+		RETURNF @"正面%LOCALS%"
+CASE "CIP背面"
+	;ワンピ
+	IF CHECK_SKIRT("連衣裙", ARG)
+		IF CHECK_SKIRT("毛衣", ARG)
+			RETURNF "背面露背针织毛衣"
+		ENDIF
+	ELSE
+		RETURNF ""
+	ENDIF
+CASE "CIP淚珠泳衣"
+	IF CHECK_SKIRT("荷葉邊", ARG)
+		SIF CHECK_SKIRT("花柄", ARG)
+			RETURNF "淚珠泳衣花柄荷葉邊"
+		RETURNF "淚珠泳衣荷葉邊"
+	ELSE
+		RETURNF ""
+	ENDIF
+CASE "CIP正面カラー", "CIP背面カラー", "CIP淚珠泳衣カラー"
+	CIPTYPE = %REPLACE(ARGS, "カラー", "")%
+
+	SKIRT_TYPE = %REPLACE(SKIRT(ARG, CIPTYPE), "正面", "")%
+	SKIRT_TYPE = %REPLACE(SKIRT_TYPE, "背面", "")%
+	SKIRT_TYPE = %REPLACE(SKIRT_TYPE, "淚珠泳衣", "")%
+
+	COLOR_TYPE = %CLOCOLOR_MAIDFACE(SKIRT_TYPE, CHECK_CLOCOLOR(CSTR:ARG:裙), ARG)%
+
+	SIF COLOR_TYPE == "" && CHECK_SKIRT("連衣裙", ARG)
+		COLOR_TYPE = %CLOCOLOR_MAIDFACE(SHIRT(ARG, "種類"), CHECK_CLOCOLOR(CSTR:ARG:服), ARG)%
+	RETURNF COLOR_TYPE
+
+CASE "略"
+	IF CHECK_SKIRT("鎧", ARG)
+		LOCALS = 垂れ
+	ELSEIF CHECK_SKIRT("荷葉邊", ARG)
+		LOCALS = 荷葉邊
+	ELSEIF CHECK_SKIRT("情趣内衣", ARG)
+		LOCALS = 下摆
+	ELSEIF CHECK_SKIRT("恤", ARG)
+		LOCALS = 下摆
+	ELSEIF CHECK_SKIRT("袴", ARG)
+		LOCALS = 袴
+	ELSEIF CHECK_SKIRT("和服", ARG) || CHECK_SKIRT("振袖", ARG) || CHECK_SKIRT("和服", ARG) || CHECK_SKIRT("浴衣", ARG)
+		LOCALS = 下摆
+	ELSEIF CHECK_SKIRT("巻き裙", ARG)
+		LOCALS = 腰布
+	ELSEIF CHECK_SKIRT("下摆", ARG)
+		LOCALS = 下摆
+	ELSEIF CHECK_SKIRT("前垂", ARG)
+		LOCALS = 前垂
+	ELSE
+		LOCALS = 裙
+	ENDIF
+CASE "", "種類"
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:裙, "/", LOCALS
+ENDSELECT
+RETURNF LOCALS
+
+;-------------------------------------------------
+;ARG番の裙の名称(基本的には用いない)
+;-------------------------------------------------
+@NAME_SKIRT(ARG)
+#FUNCTIONS
+
+RETURNF LOCALS
+
+;-------------------------------------------------
+;角色ARGに裙ARGSを着せた場合のCSTR処理
+;-------------------------------------------------
+@PALAM_SKIRT, ARGS, ARG
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+STR_ADD = %EXTSTR(ARGS, "/")%
+ARGS = %EXTSTR(ARGS, "", "/")%
+
+SELECTCASE ARGS
+CASE "", "没有"
+	CSTR:ARG:裙 = 
+CASE "帯裙撑的蓬蓬裙"
+	CSTR:ARG:裙 = 帯裙撑的蓬蓬裙/褶边/
+CASE "花柄荷葉邊"
+	CSTR:ARG:裙 = 花柄荷葉邊/泳装/花柄/
+CASE "荷葉邊"
+	CSTR:ARG:裙 = 荷葉邊/泳装/
+CASE "紧身裙", "長紧身裙", "迷你紧身裙", "Micro紧身裙"
+	CSTR:ARG:裙 = %ARGS%/收下摆/
+
+CASE "百褶裙"
+	CSTR:ARG:裙 = 百褶裙/
+CASE "迷你百褶裙"
+	CSTR:ARG:裙 = 迷你百褶裙/
+CASE "Micro百褶裙"
+	CSTR:ARG:裙 = Micro百褶裙/
+
+CASE "格子裙"
+	CSTR:ARG:裙 = 格子裙/
+CASE "迷你格子裙"
+	CSTR:ARG:裙 = 迷你格子裙/
+CASE "Micro格子裙"
+	CSTR:ARG:裙 = Micro格子裙/
+
+CASE "緋袴"
+	CSTR:ARG:裙 = 緋袴/赤/
+CASE "露脐装超短裙袴"
+	CSTR:ARG:裙 = 露脐装超短裙袴/赤/
+CASE "超短迷你袴"
+	CSTR:ARG:裙 = 超短迷你袴/赤/
+CASEELSE
+	CSTR:ARG:裙 = %ARGS%\/
+ENDSELECT
+
+CSTR:ARG:裙 = %MERGE_STR(CSTR:ARG:裙, STR_ADD)%
+
+;-------------------------------------------------
+;ARGの裙が条件ARGSを満たすか確認する
+;-------------------------------------------------
+@CHECK_SKIRT(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+SIF EQUIP:ARG:裙 == 0
+	RETURNF 0
+
+SELECTCASE ARGS
+CASE "恤"
+	SIF STRCOUNT(CSTR:ARG:裙, "恤") && STRCOUNT(CSTR:ARG:裙, "收下摆") == 0
+		RETURNF 1
+CASE "休闲褲不可"
+	SIF STRCOUNTS(CSTR:ARG:裙, "休闲褲不可", "紧身")
+		RETURNF 1
+CASE "超短迷你", "Micro"
+	SIF STRCOUNTS(CSTR:ARG:裙, "超短迷你", "Micro")
+		RETURNF 1
+CASE "迷你"
+	SIF STRCOUNTS(CSTR:ARG:裙, "迷你", "Micro")
+		RETURNF 1
+CASEELSE
+	SIF STRCOUNT(CSTR:ARG:裙, ARGS)
+		RETURNF 1
+ENDSELECT
+RETURNF 0
+

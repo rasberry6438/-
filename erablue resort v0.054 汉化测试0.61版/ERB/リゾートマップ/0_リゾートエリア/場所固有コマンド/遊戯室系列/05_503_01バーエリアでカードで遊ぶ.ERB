@@ -1,0 +1,156 @@
+﻿
+;-------------------------------------------------
+;05_503_01バーエリアで进行卡牌游戏
+;-------------------------------------------------
+
+@COMNAME_PLACE_380_0_503
+#FUNCTION
+IF 施設改造度:5:0 == 0
+	TSTR:コマンド名受渡 = 
+	RETURNF 0
+ENDIF
+TSTR:コマンド名受渡 = 进行卡牌游戏
+RETURNF 1
+;===================================================
+;コマンドタイプ
+;===================================================
+@COMTYPE_380_0_503
+#FUNCTION
+TFLAG:コマンドタイプ受渡 = COMTYPE("日常")
+
+@COM_TOOLTIP_380_0_503
+LOCALS = <br>■打扑克<br>
+LOCALS += "与对方进行简易扑克游戏的指令。触发迷你游戏『简易扑克』<br>有一定概率进行惩罚游戏或用卢比赌博"
+LOCALS += "<br>COM类型：日常<br>获取来源：欢乐・征服(特定条件)"
+LOCALS += "<br>专属经验值：无<br>"
+TSTR:ツールチップ受渡 = %LOCALS%
+
+@COM380_0_503
+
+RFLAG:コマンド結果受渡し変数３ = 0
+
+;賭けるかの判定
+LOCAL = RAND:100
+IF TALENT:ギャンブラー < 0
+	;賭け事嫌いだと絶対にギャンブルしない
+	RFLAG:コマンド結果受渡し変数 = 0
+ELSEIF LOCAL < 25
+	;1/4で賭けに誘ってくる
+	RFLAG:コマンド結果受渡し変数 = 1
+ELSEIF TALENT:ギャンブラー || あなた特殊能力:ギャンブラー
+	;ギャンブラーだと確実に誘ってくる
+	RFLAG:コマンド結果受渡し変数 = 1
+ELSE
+	RFLAG:コマンド結果受渡し変数 = 0
+ENDIF
+
+;賭け内容の決定
+IF RFLAG:コマンド結果受渡し変数
+	PRINTFORML %CALLNAME:TARGET%提议进行赌注
+	PRINTBUTTON "[0]赌注1000卢比", 0
+	PRINTL 
+	PRINTBUTTON "[1]设置惩罚游戏", 1
+	PRINTL 
+	PRINTBUTTON "[9]放弃赌注", 9
+	PRINTL 
+	INPUT
+
+	SELECTCASE RESULT
+		CASE 0
+			RFLAG:コマンド結果受渡し変数３ = 1
+			PRINTFORML %CALLNAME:PLAYER%与%CALLNAME:TARGET%决定进行卢比赌局
+			EXP:PLAYER:ギャンブル経験 += 1
+		CASE 1
+			RFLAG:コマンド結果受渡し変数３ = 2
+			PRINTFORML %CALLNAME:PLAYER%与%CALLNAME:TARGET%决定进行卢比赌局
+			EXP:PLAYER:ギャンブル経験 += 2
+		CASEELSE
+			RFLAG:コマンド結果受渡し変数３ = 0
+			RFLAG:コマンド結果受渡し変数 = 0
+			PRINTFORML %CALLNAME:TARGET%略显遗憾地收回了赌注
+	ENDSELECT
+ENDIF
+
+
+
+;歓楽強度
+LOCAL:0 = 500
+;征服強度
+LOCAL:1 = 300
+;賭けてる時は歓楽・征服共に増加
+IF RFLAG:コマンド結果受渡し変数
+	LOCAL:0 += 500
+	LOCAL:1 += 300
+ENDIF
+
+;勝敗決定
+CALL 簡易ポーカー(TARGET)
+;あなた勝利ならRESULTに１が、敗北なら-１が返ってくる
+
+RFLAG:コマンド結果受渡し変数３ = RFLAG:コマンド結果受渡し変数３ * RESULT
+
+;基本歓楽のみで、相手が勝った時のみ征服が増加
+CALL SOURCE_CALC_歓楽(TARGET, PLAYER, LOCAL:0)
+CALL SOURCE_CALC_好感度要素_友情度UP(TARGET, PLAYER, LOCAL:0 / 2)
+SIF RESULT == -1
+	CALL SOURCE_CALC_征服(TARGET, PLAYER, LOCAL:1)
+
+
+TIME += 30
+RETURN 1
+
+;-------------------------------------------------
+;実行判定
+;-------------------------------------------------
+@COM_ABLE380_0_503
+;条件に合う場合0（不許可）を返す
+;どの条件にも引っかからないなら1（許可）を返す
+;一括管理
+SIF GLOBAL_COMABLE(380)
+	RETURN RESULT
+;睡眠中
+SIF CFLAG:睡眠
+	RETURN 0
+;隠密中はダメ
+SIF CFLAG:PLAYER:隠密
+	RETURN 0
+RETURN 1
+
+;-------------------------------------------------
+;実行時メッセージ
+;-------------------------------------------------
+@MESSAGE_COM380_0_503
+
+PRINTFORML %CALLNAME:PLAYER%与%CALLNAME:TARGET%进行了一局卡牌对决
+
+TRYCCALLFORM KOJO_EVENT_カード勝負_{NO:TARGET}(TARGET)
+	PRINTL
+CATCH
+ENDCATCH
+
+;賭け事処理
+;口上などの表示順のためここで処理
+;0:引き分け　1:ルピ賭け勝利　-1:ルピ賭け敗北　2:罰ゲーム賭け勝利　-2:罰ゲーム賭け敗北
+IF RFLAG:コマンド結果受渡し変数
+	SELECTCASE RFLAG:コマンド結果受渡し変数３
+		CASE 0
+			;引き分け時は何もなし
+			PRINTFORML 赌局以平手收场…
+		CASE 1
+			;ルピ増加
+			PRINTFORML 赢得赌注，从%CALLNAME:TARGET%处获得1000卢比
+			MONEY += 1000
+		CASE -1
+			;ルピ減少
+			PRINTFORML 赌注失败，向%CALLNAME:TARGET%支付了1000卢比…
+			MONEY -= 1000
+		CASE 2
+			;罰ゲーム処理を呼ぶ
+			PRINTFORML 赢得赌注，获得对%CALLNAME:TARGET%实施惩罚的权利
+			CALL 罰ゲーム(TARGET, "勝利")
+		CASE -2
+			;罰ゲーム処理を呼ぶ
+			PRINTFORML 赌注失败，必须接受%CALLNAME:TARGET%的惩罚游戏…
+			CALL 罰ゲーム(TARGET, "敗北")
+	ENDSELECT
+ENDIF

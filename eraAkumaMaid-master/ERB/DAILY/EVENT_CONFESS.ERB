@@ -1,0 +1,1030 @@
+﻿; 使用的事件：
+; CEVENT("忏悔之窗:已解锁",MASTER)
+; CEVENT("欲望之间:已解锁",MASTER)
+; CEVENT("迷途之室:已解锁",MASTER)
+
+; CEVENT("同行中", MASTER)
+; CEVENT("清洁神术", MASTER)
+; CEVENT("未接待",TARGET)
+; CEVENT("忏悔之窗:使用中",TARGET)
+; CEVENT("欲望之间:使用中",TARGET)
+; CEVENT("欲望之间:使用中",MASTER)
+; CEVENT("迷途之室:使用中",TARGET)
+; CEVENT("迷途之室:使用中(特殊)",TARGET)
+; CEVENT("当前信徒未服务",TARGET)
+; CEVENT("已服务信徒:忏悔之窗",TARGET)
+; CEVENT("已服务信徒:欲望之间",TARGET)
+; CEVENT("已服务信徒:迷途之室",TARGET)
+; CEVENT("透明神术",TARGET)
+
+@EVENT_CONFESS
+	;开始忏悔室事件的准备工作
+	;忏悔室事件
+	IF TCVAR:MASTER:忏悔室建造中
+		PRINTFORMW 忏悔室建造中....
+		PRINTFORMW 看起来大概明天就能建好
+		RETURN
+	ENDIF
+	IF CEVENT("忏悔室活动参加",MASTER) 
+		PRINTFORMW 今天已经参加过特别忏悔室的活动了、明天再来吧
+		RETURN 1
+	ENDIF
+	CALL EVENT_CONFESS_MAIN
+	CALL SET_CEVENT("忏悔室活动参加",MASTER)
+	;结束忏悔室事件的收尾工作
+
+@EVENT_CONFESS_MAIN
+	#DIM LCOUNT ;用户在界面操作循环的次数
+	;BELIEVER
+	#DIM BELIEVER, 6; [SIZE, FORESKIN, FEELING_MAX, FEELING, VOLUME_MAX, VOLUME]
+	#DIM CURRENT_TIME
+	#DIM CURRENT_PEOPLE
+	#DIM CONFESS_VOLUME ;忏悔室精液量
+	;#DIM SIZE ;大小	( 0: 短小, 1: 普通, 2: 巨根, 3: 馬根, 4: 腕粗, 5: 规格外 )
+	;#DIM FORESKIN ;包茎	( 0: 无包茎, 1: 假性包茎, 2: 真性包茎)
+	;#DIM FEELING_MAX ;极限射精感
+	;#DIM FEELING ;射精感
+	;#DIM VOLUME_MAX ;极限精液量
+	;#DIM VOLUME ;精液量
+	#DIM STATUS ;[0:未接待, 1:忏悔之窗, 2:欲望之间, 3:双人欲望之间, 4:迷途之室, 5:特殊迷途之室, 6:...]
+
+	;开始忏悔室事件时target处于未接待状态
+	;CALL CHANGE_STATUS, "未接待"
+	STATUS = 0
+	;初始化忏悔室精液量、接待次数、接待人数
+	CONFESS_VOLUME = 0
+	CURRENT_TIME = 0
+	CURRENT_PEOPLE = 0 ;已废弃
+	;开始时创建一个信徒
+	CALL NEW_BELIEVER
+	;SIZE = RESULT:0
+	;FORESKIN = RESULT:1
+	;FEELING_MAX = RESULT:2
+	;FEELING = RESULT:3
+	;VOLUME_MAX = RESULT:4
+	;VOLUME = RESULT:5
+	BELIEVER:0 = RESULT:6
+	BELIEVER:1 = RESULT:1
+	BELIEVER:2 = RESULT:2
+	BELIEVER:3 = RESULT:3
+	BELIEVER:4 = RESULT:4
+	BELIEVER:5 = RESULT:5
+	;PRINTFORML [{SIZE}/{FORESKIN}/{FEELING_MAX}/{FEELING}/{VOLUME_MAX}/{VOLUME}]
+	CALL SET_CEVENT("忏悔之窗:已解锁",MASTER)
+	FOR LCOUNT, 0, 999
+		;忏悔室的顶端显示
+		CALL EVENT_CONFESS_TOP, CONFESS_VOLUME, CURRENT_TIME, CURRENT_PEOPLE, STATUS
+		;信徒信息显示
+		; CALL PRINT_BELIEVER, SIZE, FORESKIN, FEELING_MAX, FEELING, VOLUME_MAX, VOLUME
+		CALL PRINT_BELIEVER, BELIEVER:0, BELIEVER:1, BELIEVER:2, BELIEVER:3, BELIEVER:4, BELIEVER:5, STATUS
+
+		CALL PRINT_TARGET
+		;忏悔室的选项显示
+		CALL EVENT_CONFESS_BOTTOM, STATUS
+		;检查用户输入
+		INPUT
+		
+		SELECTCASE RESULT
+			CASE 6 ;未接待 - 切换下一位信徒
+				PRINTFORMW 号牌跳过了这位信徒
+				SIF !CEVENT("当前信徒未服务",TARGET)
+					CFLAG:MASTER:忏悔室服务总人数 += 1
+				; 创建一个新的信徒
+				CALL NEW_BELIEVER
+				BELIEVER:0 = RESULT:6	;大小	( 0: 短小, 1: 普通, 2: 巨根, 3: 馬根, 4: 腕粗, 5: 规格外 )
+				BELIEVER:1 = RESULT:1	;包茎	( 0: 无包茎, 1: 假性包茎, 2: 真性包茎)
+				BELIEVER:2 = RESULT:2	;极限射精感
+				BELIEVER:3 = RESULT:3	;射精感
+				BELIEVER:4 = RESULT:4	;极限精液量
+				BELIEVER:5 = RESULT:5	;精液量
+				;CALL CHANGE_STATUS, "未接待"
+				STATUS = 0
+			CASE 21 ;忏悔之窗 - 切换下一位信徒
+				PRINTFORMW 忏悔室墙壁的灯光闪烁起来、宣布这位信徒的时间已经结束了
+				SIF !CEVENT("当前信徒未服务",TARGET)
+					;CURRENT_PEOPLE += 1
+					CFLAG:MASTER:忏悔室服务总人数 += 1
+				; 创建一个新的信徒
+				CALL NEW_BELIEVER
+				BELIEVER:0 = RESULT:6	;大小	( 0: 短小, 1: 普通, 2: 巨根, 3: 馬根, 4: 腕粗, 5: 规格外 )
+				BELIEVER:1 = RESULT:1	;包茎	( 0: 无包茎, 1: 假性包茎, 2: 真性包茎)
+				BELIEVER:2 = RESULT:2	;极限射精感
+				BELIEVER:3 = RESULT:3	;射精感
+				BELIEVER:4 = RESULT:4	;极限精液量
+				BELIEVER:5 = RESULT:5	;精液量
+				;CALL CHANGE_STATUS, "未接待"
+				STATUS = 0
+			CASE 95 ;离开
+				PRINTFORMW
+				PRINTFORMW 你带着%CALLNAME:TARGET%一起离开了忏悔室
+				BREAK
+			CASE 96 ;独自离开
+				CALL CONFESS_KOJO("独自离开",BELIEVER:0,BELIEVER:1,BELIEVER:3,BELIEVER:2,BELIEVER:4,BELIEVER:5,STATUS)
+		ENDSELECT
+		; 完成选择的行动
+		CALL CONFESS_EVENT, BELIEVER:3, BELIEVER:5, RESULT, CONFESS_VOLUME, CURRENT_TIME, CURRENT_PEOPLE, STATUS, BELIEVER:2,BELIEVER:0,BELIEVER:1,BELIEVER:4
+		IF CEVENT("NTRS_发生")
+			CALL NTRS_EXP_SUMMARY(RAND:3)
+		ENDIF
+		; 更新行动后信徒以及忏悔室精液量的状态
+		BELIEVER:3 = RESULT:6
+		BELIEVER:5 = RESULT:1
+		CONFESS_VOLUME = RESULT:2
+		CURRENT_TIME = RESULT:3
+		CURRENT_PEOPLE = RESULT:4
+		STATUS = RESULT:5
+		; 开启清洁神术时忏悔室精液量归零
+		SIF CEVENT("清洁神术", MASTER)
+			; CONFESS_VOLUME = 0
+			TCVAR:571 = 0
+			TCVAR:572 = 0
+			TCVAR:573 = 0
+			CALL RESET_STAIN_EX, "全部", TARGET
+		; 信徒精力(精液量)耗尽时自动切换信徒
+		IF BELIEVER:5 <= 0
+			SIF !CEVENT("当前信徒未服务",TARGET)
+				;CURRENT_PEOPLE += 1
+				CFLAG:MASTER:忏悔室服务总人数 += 1
+			CALL NEW_BELIEVER
+			BELIEVER:0 = RESULT:6	;大小	( 0: 短小, 1: 普通, 2: 巨根, 3: 馬根, 4: 腕粗, 5: 规格外 )
+			BELIEVER:1 = RESULT:1	;包茎	( 0: 无包茎, 1: 假性包茎, 2: 真性包茎)
+			BELIEVER:2 = RESULT:2	;极限射精感
+			BELIEVER:3 = RESULT:3	;射精感
+			BELIEVER:4 = RESULT:4	;极限精液量
+			BELIEVER:5 = RESULT:5	;精液量
+			;CALL CHANGE_STATUS, "未接待"
+			PRINTFORMW 信徒精力耗尽
+			STATUS = 0
+		ENDIF
+	NEXT
+	PRINTFORMW 
+	PRINTFORMW 今天的忏悔室活动就进行到这里吧...
+	CALL DEL_ALL_EVENT
+	;SAVESTR:現在位置 = 部室
+	PRINTFORMW 
+	PRINTFORMW 
+
+@CONFESS_EVENT, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5, ARG:6, ARG:7, ARG:8 ,ARG:9 ,ARG:10
+	;ARG[0-5] = BELIEVER
+	;ARG[6] = CHOICE
+	;BELIEVER = [SIZE, FORESKIN, FEELING_MAX, FEELING, VOLUME_MAX, VOLUME]
+	#DIM SIZE ;大小	( 0: 短小, 1: 普通, 2: 巨根, 3: 馬根, 4: 腕粗, 5: 规格外 )
+	#DIM FORESKIN ;包茎	( 0: 无包茎, 1: 假性包茎, 2: 真性包茎)
+	#DIM FEELING_MAX ;极限射精感
+	#DIM FEELING ;射精感、精力
+	#DIM VOLUME_MAX ;极限精液量
+	#DIM VOLUME ;精液量
+	#DIM CHOICE ;选择
+	#DIM CONFESS_VOLUME ;忏悔室精液量
+	#DIM CURRENT_TIME ;当前次数
+	#DIM CURRENT_PEOPLE ;当前人数
+	#DIM STATUS ;[0:未接待, 1:忏悔之窗, 2:欲望之间, 3:双人欲望之间, 4:迷途之室, 5:特殊迷途之室, 6:...]
+
+	SIZE = ARG:8
+	FORESKIN = ARG:9
+	;FEELING_MAX = ARG:2
+	;FEELING = ARG:3
+	VOLUME_MAX = ARG:10
+	;VOLUME = ARG:5
+	;CHOICE = ARG:6
+	;CONFESS_VOLUME = ARG:7
+	;CURRENT_TIME = ARG:8
+	;CURRENT_PEOPLE = ARG:9
+	FEELING_MAX = ARG:7		;精力上限
+	FEELING = ARG:0			;射精感、
+	VOLUME = ARG:1			;精液量、精力
+	CHOICE = ARG:2			;
+	CONFESS_VOLUME = ARG:3	;忏悔室精液量
+	CURRENT_TIME = ARG:4	;当前次数
+	CURRENT_PEOPLE = ARG:5	;当前人数
+	STATUS = ARG:6
+	
+	
+	; 未接待状态
+	IF STATUS == 0 
+		SELECTCASE CHOICE
+			CASE 1 ; 接待信徒
+				PRINTFORMW 伴随着%TEXTR("木门[吱呀]打开的声响/鞋底踩过木地板的脚步声/忏悔室墙壁上方感应神术的光芒亮起")%
+				PRINTFORMW %TEXTR("一位信徒进入了对面的隔间当中/黑布遮盖的窗口对面迎来了一位新的客人")%
+				;CALL CHANGE_STATUS, "忏悔之窗"
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				CALL CONFESS_KOJO("接待信徒",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				STATUS = 1
+			CASE 2 ; 进入迷途之室
+				PRINTFORMW 未接待 - 进入迷途之室
+				;CALL CHANGE_STATUS, "特殊迷途之室"
+				STATUS = 5
+			CASE 3 ; 与同伴聊天
+				CALL CONFESS_KOJO("聊天",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 4 ; 与同伴接吻
+				CALL CONFESS_KOJO("接吻",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 5 ; 拍照
+				PRINTFORMW 未接待 - 拍照
+		ENDSELECT
+	ENDIF
+	; 使用忏悔之窗
+	IF STATUS == 1
+		SELECTCASE CHOICE
+			CASE 11 ; 亲吻阴茎
+				CALL CONFESS_KOJO("亲吻阴茎",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_ADD, FEELING, 1, FEELING_MAX + 1
+				FEELING = RESULT
+				;射精
+				IF FEELING > FEELING_MAX
+					PRINTFORMW 射精！
+					TCVAR:571 += 1
+					FEELING = 0
+					CALL LIMIT_SUB, VOLUME, 1
+					VOLUME = RESULT
+				ENDIF
+				;----
+				CALL SET_CEVENT("已服务信徒:忏悔之窗",TARGET)
+			CASE 12 ; 手交
+				CALL CONFESS_KOJO("手交",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_ADD, FEELING, 1, FEELING_MAX + 1
+				FEELING = RESULT
+				;射精
+				IF FEELING > FEELING_MAX
+					; CONFESS_VOLUME += 1
+					TCVAR:571 += 1
+					FEELING = 0
+					CALL LIMIT_SUB, VOLUME, 1
+					VOLUME = RESULT
+				ENDIF
+				;----
+				CALL SET_CEVENT("已服务信徒:忏悔之窗",TARGET)
+			CASE 13 ; 乳交
+				CALL CONFESS_KOJO("乳交",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_ADD, FEELING, 1, FEELING_MAX + 1
+				FEELING = RESULT
+				;射精
+				IF FEELING > FEELING_MAX
+					; CONFESS_VOLUME += 1
+					TCVAR:571 += 1
+					FEELING = 0
+					CALL LIMIT_SUB, VOLUME, 1
+					VOLUME = RESULT
+				ENDIF
+				;----
+				CALL SET_CEVENT("已服务信徒:忏悔之窗",TARGET)
+			CASE 14 ; 口交
+				CALL CONFESS_KOJO("口交",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_ADD, FEELING, 1, FEELING_MAX + 1
+				FEELING = RESULT
+				;射精
+				IF FEELING > FEELING_MAX
+					; CONFESS_VOLUME += 1
+					TCVAR:571 += 1
+					FEELING = 0
+					CALL LIMIT_SUB, VOLUME, 1
+					VOLUME = RESULT
+				ENDIF
+				;----
+				CALL SET_CEVENT("已服务信徒:忏悔之窗",TARGET)
+			CASE 15 ; 深喉口交
+				CALL CONFESS_KOJO("深喉口交",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_ADD, FEELING, 1, FEELING_MAX + 1
+				FEELING = RESULT
+				;射精
+				IF FEELING > FEELING_MAX
+					; CONFESS_VOLUME += 1
+					TCVAR:571 += 1
+					FEELING = 0
+					CALL LIMIT_SUB, VOLUME, 1
+					VOLUME = RESULT
+				ENDIF
+				;----
+				CALL SET_CEVENT("已服务信徒:忏悔之窗",TARGET)
+			CASE 22 ;展示胸部
+				CALL CONFESS_KOJO("展示胸部",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 16 ; 欲望之间
+				IF CEVENT("欲望之间:已解锁",MASTER) && TCVAR:MASTER:欲望之间建造中 == 0
+					CALL CONFESS_KOJO("切换至欲望之间",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+					;CALL CHANGE_STATUS, "欲望之间"
+					STATUS = RESULT:1
+				ELSEIF CEVENT("欲望之间:已解锁",MASTER) && TCVAR:MASTER:欲望之间建造中
+					PRINTFORMW 欲望之间建造中
+				ELSE
+					PRINTFORMW 欲望之间未解锁
+				ENDIF
+			CASE 17 ; 迷途之室
+				IF CEVENT("迷途之室:已解锁",MASTER) && TCVAR:MASTER:迷途之室建造中 == 0
+					CFLAG:MASTER:迷途之室服务次数 += 1
+					CALL CONFESS_KOJO("切换至迷途之室",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+					;CALL CHANGE_STATUS, "迷途之室"
+					STATUS = 4
+				ELSEIF CEVENT("迷途之室:已解锁",MASTER) && TCVAR:MASTER:迷途之室建造中
+					PRINTFORMW 迷途之室建造中
+				ELSE
+					PRINTFORMW 迷途之室未解锁
+				ENDIF
+			CASE 18 ; 与同伴聊天
+				CALL CONFESS_KOJO("聊天",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 19 ; 与同伴接吻
+				CALL CONFESS_KOJO("接吻",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 20 ; 拍照
+				CALL CONFESS_KOJO("拍照",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+		ENDSELECT
+	ENDIF
+	; 使用欲望之间
+	IF STATUS == 2
+		SELECTCASE CHOICE
+		; target 单独使用欲望之间
+			CASE 31 ; 原地等待
+				CALL CONFESS_KOJO("打发时间",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;不在一起时、每回合直接扣减客人精力
+				CALL LIMIT_SUB, VOLUME, 1
+				VOLUME = RESULT
+				TCVAR:572 += (1+RAND:2)
+				;----
+				CALL SET_CEVENT("已服务信徒:欲望之间",TARGET)
+			CASE 32 ; 偷窥
+				CALL CONFESS_KOJO("偷窥",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_SUB, VOLUME, 1
+				VOLUME = RESULT
+				TCVAR:572 += (1+RAND:2)
+				;----
+				CALL SET_CEVENT("已服务信徒:欲望之间",TARGET)
+				;CALL CHANGE_STATUS, "忏悔之窗"
+				; STATUS = 1
+			CASE 33 ; 跳过
+				PRINTFORMW 跳过事件.....
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_ADD, FEELING, 1, FEELING_MAX + 1
+				FEELING = RESULT
+				TCVAR:572 += (3 + RAND:2)
+				;射精
+				IF FEELING > FEELING_MAX
+					; CONFESS_VOLUME += 1
+					FEELING = 0
+					CALL LIMIT_SUB, VOLUME, 1
+					VOLUME = RESULT
+				ENDIF
+				;----
+				CALL SET_CEVENT("已服务信徒:欲望之间",TARGET)
+				;CALL CHANGE_STATUS, "忏悔之窗"
+				STATUS = 1
+		ENDSELECT
+	ENDIF
+	; target && master 共同使用欲望之间
+	IF STATUS == 3
+		SELECTCASE CHOICE
+			CASE 35 ; 原地等待
+				CALL CONFESS_KOJO("打发时间",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_SUB, VOLUME, 1
+				FEELING = RESULT
+				TCVAR:572 += (1+RAND:2)
+				;----
+				CALL SET_CEVENT("已服务信徒:欲望之间",TARGET)
+				;CALL CHANGE_STATUS, "忏悔之窗"
+				STATUS = 1
+			CASE 36 ; 请求同伴帮你手交
+				TCVAR:572 += (1+RAND:2)
+				CALL LIMIT_SUB, VOLUME, 1
+				CALL CONFESS_KOJO("帮你手交",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 37 ; 请求同伴帮你素股
+				TCVAR:572 += RAND:2
+				CALL LIMIT_SUB, VOLUME, 1
+				CALL CONFESS_KOJO("帮你素股",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 38 ; 与同伴接吻
+				TCVAR:572 += (1+RAND:2)
+				CALL LIMIT_SUB, VOLUME, 1
+				CALL CONFESS_KOJO("接吻",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 39 ; 跳过
+				PRINTFORMW 跳过事件.....
+				CURRENT_TIME += 1
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				CALL LIMIT_ADD, FEELING, 1, FEELING_MAX + 1
+				FEELING = RESULT
+				TCVAR:572 += (3 + RAND:2)
+				;----
+				CALL SET_CEVENT("已服务信徒:欲望之间",TARGET)
+				;CALL CHANGE_STATUS, "忏悔之窗"
+				STATUS = 1
+		ENDSELECT
+	ENDIF
+	; 使用迷途之室
+	IF STATUS == 4
+		SELECTCASE CHOICE
+			CASE 41 ; 原地等待
+				CALL CONFESS_KOJO("打发时间",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CURRENT_TIME += 1
+				TCVAR:573 += (1+RAND:2)
+				CALL DEL_CEVENT("当前信徒未服务",TARGET)
+				;-----
+				; CALL LIMIT_ADD, FEELING, 1, FEELING_MAX + 1
+				CALL LIMIT_SUB, VOLUME, 1
+				FEELING = RESULT
+				CALL SET_CEVENT("已服务信徒:迷途之室",TARGET)
+				;CALL CHANGE_STATUS, "忏悔之窗"
+				STATUS = 1
+			CASE 42 ; 激活透明神术
+				CALL CONFESS_KOJO("激活透明神术",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+				CALL SET_CEVENT("透明神术",TARGET)
+				CALL LIMIT_SUB, VOLUME, 1
+				TCVAR:573 += (1+RAND:2)
+			CASE 43 ; 拍照
+				PRINTFORMW 迷途之室 - 未实装
+		ENDSELECT
+	ENDIF
+	; 使用迷途之室(特殊)
+	IF STATUS == 5
+		SELECTCASE CHOICE
+			CASE 45 ; 与同伴聊天
+				CALL CONFESS_KOJO("聊天",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 46 ; 与同伴接吻
+				CALL CONFESS_KOJO("接吻",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+			CASE 47 ; 离开迷途之室
+				PRINTFORMW 你带着%CALLNAME:TARGET%离开了迷途之室
+				;CALL CHANGE_STATUS, "忏悔之窗"
+				STATUS = 1
+		ENDSELECT
+	ENDIF
+
+	;DEBUG && 固定选择支
+	IF 0
+		SELECTCASE CHOICE
+		; DEBUG
+			CASE 80 ; 增加精液数量
+				CONFESS_VOLUME += 1
+			CASE 81 ; 解锁忏悔之窗
+				PRINTFORMW 弃用 - 解锁忏悔之窗
+				;CALL SET_CEVENT("忏悔之窗:已解锁",MASTER)
+			CASE 82 ; 解锁欲望之间
+				PRINTFORMW 解锁欲望之间
+				CALL SET_CEVENT("欲望之间:已解锁",MASTER)
+			CASE 83 ; 解锁迷途之室
+				PRINTFORMW 解锁迷途之室
+				CALL SET_CEVENT("迷途之室:已解锁",MASTER)
+			CASE 84 ; 锁定忏悔之窗
+				PRINTFORMW 弃用 - 锁定忏悔之窗
+				;CALL DEL_CEVENT("忏悔之窗:已解锁",MASTER)
+			CASE 85 ; 锁定欲望之间
+				PRINTFORMW 锁定欲望之间
+				CALL DEL_CEVENT("欲望之间:已解锁",MASTER)
+			CASE 86 ; 锁定迷途之室
+				PRINTFORMW 锁定迷途之室
+				CALL DEL_CEVENT("迷途之室:已解锁",MASTER)
+			CASE 87 ; 开启迷途之室特殊
+				PRINTFORMW 开启迷途之室特殊
+				CALL SET_CEVENT("迷途之室:使用中(特殊)",TARGET)
+			CASE 88 ; 关闭迷途之室特殊
+				PRINTFORMW 关闭迷途之室特殊
+				CALL SET_CEVENT("迷途之室:使用中(特殊)",TARGET)
+			CASE 89 ; 两人欲望之间
+				PRINTFORMW 两人欲望之间
+				;CALL CHANGE_STATUS, "双人欲望之间"
+				STATUS = 3
+		ENDSELECT
+	ENDIF
+	; 固定选择支
+	SELECTCASE CHOICE
+		CASE 91 ; 查看忏悔之窗
+			CALL CONFESS_KOJO("查看忏悔之窗",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+		CASE 92 ; 查看欲望之间
+			CALL CONFESS_KOJO("查看欲望之间",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+		CASE 93 ; 查看迷途之室
+			CALL CONFESS_KOJO("查看迷途之室",SIZE,FORESKIN,FEELING,FEELING_MAX,VOLUME_MAX,VOLUME,STATUS)
+		CASE 94 ; 清洁神术
+			PRINTFORMW 清洁神术
+			IF CEVENT("清洁神术", MASTER)
+				CALL DEL_CEVENT("清洁神术", MASTER)
+			ELSE
+				CALL SET_CEVENT("清洁神术", MASTER)
+			ENDIF
+		;CASE 95 ; 离开
+		;CASE 96 ; 独自离开
+		CASE 100 ; 升级特别忏悔室
+			PRINTFORMW 升级特别忏悔室
+			CALL IMPROVE_CONFESS
+		CASEELSE
+			; PRINTFORML 未实现
+	ENDSELECT
+
+	;RESULT:0 = SIZE
+	;RESULT:1 = FORESKIN
+	;RESULT:2 = FEELING_MAX
+	;RESULT:3 = FEELING
+	;RESULT:4 = VOLUME_MAX
+	;RESULT:5 = VOLUME
+	;RESULT:6 = CONFESS_VOLUME
+	;RESULT:7 = CURRENT_TIME
+	;RESULT:8 = CURRENT_PEOPLE
+	;RESULT:9 = STATUS
+	RESULT:1 = VOLUME
+	;RESULT:2 = CHOICE
+	RESULT:2 = CONFESS_VOLUME
+	RESULT:3 = CURRENT_TIME
+	RESULT:4 = CURRENT_PEOPLE
+	RESULT:5 = STATUS
+	RESULT:6 = FEELING
+
+	RETURN RESULT
+
+@CHANGE_STATUS, ARGS
+	CALL DEL_CEVENT("未接待",TARGET)
+	CALL DEL_CEVENT("忏悔之窗:使用中",TARGET)
+	CALL DEL_CEVENT("欲望之间:使用中",TARGET)
+	CALL DEL_CEVENT("欲望之间:使用中",MASTER)
+	CALL DEL_CEVENT("迷途之室:使用中",TARGET)
+	CALL DEL_CEVENT("迷途之室:使用中(特殊)",TARGET)
+	SELECTCASE ARGS
+		CASE "未接待"
+			CALL SET_CEVENT("未接待",TARGET)
+		CASE "忏悔之窗"
+			CALL SET_CEVENT("忏悔之窗:使用中",TARGET)
+		CASE "欲望之间"
+			CALL SET_CEVENT("欲望之间:使用中",TARGET)
+		CASE "双人欲望之间"
+			CALL SET_CEVENT("欲望之间:使用中",TARGET)
+			CALL SET_CEVENT("欲望之间:使用中",MASTER)
+		CASE "迷途之室"
+			CALL SET_CEVENT("迷途之室:使用中",TARGET)
+		CASE "特殊迷途之室"
+			CALL SET_CEVENT("迷途之室:使用中(特殊)",TARGET)
+		CASEELSE
+			PRINTFORMW 未定义输入，切换“未接待”状态
+			CALL SET_CEVENT("未接待",TARGET)
+	ENDSELECT
+
+@EVENT_CONFESS_TOP, ARG:0, ARG:1, ARG:2, ARG:3
+	#DIM CONFESS_VOLUME
+	#DIM CURRENT_TIME
+	#DIM CURRENT_PEOPLE ;已废弃
+	#DIM STATUS ;[0:未接待, 1:忏悔之窗, 2:欲望之间, 3:双人欲望之间, 4:迷途之室, 5:特殊迷途之室, 6:...]
+	CONFESS_VOLUME = ARG:0
+	CURRENT_TIME = ARG:1
+	CURRENT_PEOPLE = ARG:2
+	STATUS = ARG:3
+
+	PRINTFORML
+	DRAWLINE
+	DRAWLINE
+	PRINTFORML
+	PRINTFORML
+	PRINTFORM %TEXTS("日期表示")% 
+	PRINTFORML %TEXTS("現在位置")%
+	PRINTFORML -特别忏悔室-
+	PRINTFORML
+	PRINTFORM %TEXT_LJ("特殊指令：", 15)%	
+	IF CEVENT("清洁神术", TARGET)
+		PRINTFORML 清洁神术(开)
+	ELSE
+		PRINTFORML 清洁神术(关)
+	ENDIF
+	PRINTFORM %TEXT_LJ("忏悔之窗", 15)%
+	PRINTFORM %TEXT_LJ("欲望之间", 15)%
+	PRINTFORML %TEXT_LJ("迷途之室", 15)%
+	IF CEVENT("忏悔之窗:已解锁",MASTER)
+		;PRINTFORM  %TEXT_LJ("已解锁", 15)%
+		;IF CEVENT("忏悔之窗:使用中",TARGET)
+		IF STATUS == 1
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINTFORM  %TEXT_LJ("使用中", 15)%
+			RESETCOLOR
+		ELSE
+			PRINTFORM  %TEXT_LJ("未使用", 15)%
+		ENDIF
+	ELSE
+		IF STATUS == 1
+			SETCOLOR DEF_COLOR("黄色")
+			PRINTFORM %TEXT_LJ("未解锁使用，BUG", 15)%
+			RESETCOLOR
+		ELSE
+			SETCOLOR DEF_COLOR("灰色")
+			PRINTFORM %TEXT_LJ("未解锁", 15)%
+			RESETCOLOR
+		ENDIF
+	ENDIF
+	IF CEVENT("欲望之间:已解锁",MASTER)
+		;PRINTFORM %TEXT_LJ("已解锁", 15)%
+		;IF CEVENT("欲望之间:使用中",TARGET)
+		IF STATUS == 2 || STATUS == 3
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINTFORM  %TEXT_LJ("使用中", 15)%
+			RESETCOLOR
+		ELSE
+			PRINTFORM  %TEXT_LJ("未使用", 15)%
+		ENDIF
+	ELSE
+		IF STATUS == 2 || STATUS == 3
+			SETCOLOR DEF_COLOR("黄色")
+			PRINTFORM %TEXT_LJ("未解锁使用，BUG", 15)%
+			RESETCOLOR
+		ELSE
+			SETCOLOR DEF_COLOR("灰色")
+			PRINTFORM %TEXT_LJ("未解锁", 15)%
+			RESETCOLOR
+		ENDIF
+	ENDIF
+	IF CEVENT("迷途之室:已解锁",MASTER)
+		;IF CEVENT("迷途之室:使用中",TARGET)
+		IF STATUS == 4 || STATUS == 5
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINTFORML  %TEXT_LJ("使用中", 15)%
+			RESETCOLOR
+		ELSE
+			PRINTFORML  %TEXT_LJ("未使用", 15)%
+		ENDIF
+	ELSE
+		IF STATUS == 4 || STATUS == 5
+			SETCOLOR DEF_COLOR("黄色")
+			PRINTFORM %TEXT_LJ("未解锁使用，BUG", 15)%
+			RESETCOLOR
+		ELSE
+			SETCOLOR DEF_COLOR("灰色")
+			PRINTFORML %TEXT_LJ("未解锁", 15)%
+			RESETCOLOR
+		ENDIF
+	ENDIF
+
+	;PRINTFORML 精液量(大)
+	PRINTFORML 精液量({TCVAR:571})\t 精液量({TCVAR:572}) \t 精液量({TCVAR:573})
+
+	PRINTFORML
+	PRINTFORML %TEXT_RJ("本次接待回数：", 12)%{CURRENT_TIME}回
+	PRINTFORML %TEXT_RJ("接待总人数：", 12)%{CFLAG:MASTER:忏悔室服务总人数}人
+	DRAWLINE 
+
+@EVENT_CONFESS_BOTTOM, ARG
+	#DIM LCOUNT
+	#DIM NEXT_LINE
+	#DIM STATUS ;[0:未接待, 1:忏悔之窗, 2:欲望之间, 3:双人欲望之间, 4:迷途之室, 5:特殊迷途之室, 6:...]
+	STATUS = ARG
+	STR:選択肢 = 
+
+	;未接待状态下选择支
+	;IF CEVENT("未接待",TARGET)
+	IF STATUS == 0
+		STR:選択肢 += "[1]接待信徒/"
+		IF CEVENT("已服务信徒:迷途之室",TARGET) && CEVENT("当前信徒未服务",TARGET) && !CEVENT("清洁神术", MASTER)
+			STR:選択肢 += "爱心粉紅/[2]进入迷途之室/改行/"
+		ELSE
+			STR:選択肢 += "改行/"
+		ENDIF
+		STR:選択肢 += "[3]与同伴聊天/[4]与同伴接吻/[5]拍照/[6]切换下一位信徒/DRAWLINE/"
+	ENDIF
+
+	;使用忏悔之窗选择支
+	;IF CEVENT("忏悔之窗:使用中",TARGET)
+	IF STATUS == 1
+		STR:選択肢 += "[11]亲吻阴茎/[12]手交/[13]乳交/[14]口交/改行/"
+		STR:選択肢 += "[15]深喉口交/"
+		IF TCVAR:忏悔室上回H行为 == 13
+			STR:選択肢 += "爱心粉紅/[22]展示胸部/"
+		ENDIF 
+		SIF !CEVENT("欲望之间:已解锁",MASTER)
+			STR:選択肢 += "灰色/"
+		STR:選択肢 += "[16]欲望之间/"
+		SIF !CEVENT("迷途之室:已解锁",MASTER)
+			STR:選択肢 += "灰色/"
+		STR:選択肢 += "[17]迷途之室/"
+		STR:選択肢 += "改行/"
+		STR:選択肢 += "[18]与同伴聊天/[19]与同伴接吻/[20]拍照/[21]切换下一位信徒/DRAWLINE/"
+	ENDIF
+
+	;target 单独使用欲望之间选择支
+	;IF CEVENT("欲望之间:使用中",TARGET) && !CEVENT("欲望之间:使用中",MASTER)
+	IF STATUS == 2
+		STR:選択肢 += "[31]原地等待/[32]偷窥/[33]跳过/DRAWLINE/"
+	ENDIF
+
+	;target && master 共同使用欲望之间选择支
+	;IF CEVENT("欲望之间:使用中",TARGET) && CEVENT("欲望之间:使用中",MASTER)
+	IF STATUS == 3
+		STR:選択肢 += "[35]原地等待/[36]请求同伴帮你手交/[37]请求同伴帮你素股/改行/"
+		STR:選択肢 += "[38]与同伴接吻/[39]跳过/DRAWLINE/"
+	ENDIF
+
+	;使用迷途之室选择支
+	;IF CEVENT("迷途之室:使用中",TARGET)
+	IF STATUS == 4
+		STR:選択肢 += "[41]原地等待/[42]激活透明神术/"
+		SIF CEVENT("透明神术",TARGET)
+			STR:選択肢 += "[43]拍照/"
+		STR:選択肢 += "DRAWLINE/"
+	ENDIF
+	;SIF CEVENT("迷途之室:使用中(特殊)",TARGET)
+	SIF STATUS == 5
+		STR:選択肢 += "[45]与同伴聊天/[46]与同伴接吻/[47]离开迷途之室/DRAWLINE/"
+
+	;固定选择支
+	STR:選択肢 += "[91]查看忏悔之窗/[92]查看欲望之间/[93]查看迷途之室/改行/"
+	STR:選択肢 += "[94]清洁神术/[95]离开/[96]独自离开/DRAWLINE/"
+	SIF CFLAG:MASTER:忏悔室服务总人数 >10
+		STR:選択肢 += "[100]升级特别忏悔室/DRAWLINE/"
+
+	;DEBUF
+	IF 0
+		STR:選択肢 += "[81]解锁忏悔之窗/[82]解锁欲望之间/[83]解锁迷途之室/[87]开启迷途之室特殊/改行/"
+		STR:選択肢 += "[84]锁定忏悔之窗/[85]锁定欲望之间/[86]锁定迷途之室/[88]关闭迷途之室特殊/改行/[89]两人欲望之间/[80]增加精液数量/DRAWLINE/"
+	ENDIF
+
+	DRAWLINE
+	CALL SELECT_BAN
+	VARSET LOCALS
+	SPLIT STR:選択肢, "/", LOCALS
+	NEXT_LINE = 0
+	FOR LCOUNT, 0, 100
+		;まずは色だけチェック
+		SELECTCASE LOCALS:LCOUNT
+		CASE "灰色", "水色", "爱心粉紅", "青", "緑", "緑色", "黄色"
+			;すでに指定色になっている場合は色変換を止める
+			IF GETCOLOR() != DEF_COLOR(LOCALS:LCOUNT)
+				SETCOLOR DEF_COLOR(LOCALS:LCOUNT)
+				CONTINUE
+			ENDIF
+		ENDSELECT
+
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASE "太字"
+			FONTSTYLE 1
+			CONTINUE
+		CASE "改行"
+			SIF NEXT_LINE%5
+				PRINTL 
+			NEXT_LINE = 0
+			CONTINUE
+		CASE "DRAWLINE"
+			IF NEXT_LINE%5
+				NEXT_LINE = 0
+				PRINTL 
+			ENDIF
+			DRAWLINE
+			CONTINUE
+		ENDSELECT
+
+		;太字にした？
+		IF GETBIT(GETSTYLE(), 0)
+			SELECTCASE LOCALS:LCOUNT
+			CASE "NOBUTTON"
+				PRINTPLAINFORM %TEXT_LJ("", 21)%
+			CASEELSE
+				PRINTFORM %TEXT_LJ(LOCALS:LCOUNT, 21)%
+			ENDSELECT
+		ELSE
+			SELECTCASE LOCALS:LCOUNT
+			CASE "NOBUTTON"
+				PRINTPLAINFORM %TEXT_LJ("", 24)%
+			CASEELSE
+				PRINTFORM %TEXT_LJ(LOCALS:LCOUNT, 24)%
+			ENDSELECT
+		ENDIF
+		FONTREGULAR
+		RESETCOLOR
+
+		NEXT_LINE += 1
+		SIF NEXT_LINE%5 == 0
+			PRINTL 
+	NEXT
+
+@PRINT_TARGET(ARG:0)
+#DIM STATUS
+
+STATUS = ARG:0
+
+PRINTFORML 
+PRINTFORML <%CALLNAME:TARGET%>
+IF STATUS == 1 || STATUS == 0
+	IF TCVAR:忏悔室上回H行为 == 1 || TCVAR:忏悔室上回H行为 == 2 || TCVAR:忏悔室上回H行为 == 3 || TCVAR:忏悔室上回H行为 == 4 || TCVAR:忏悔室上回H行为 == 5
+		CALL ONSAN_FACE(11+RAND:3)
+		PRINTFORML %CALLNAME:TARGET%正在侍奉信徒中...
+		PRINTFORML 
+		PRINTFORML 
+	ELSE
+		CALL SET_COORDINATE, "修女服"
+		CALL PRINT_MAIDFACE, TARGET
+	ENDIF
+ELSEIF STATUS == 2
+	PRINTFORML %CALLNAME:TARGET%正在欲望之间中...
+	PRINTFORML 
+	PRINTFORML 
+ELSEIF STATUS == 3
+	CALL SET_COORDINATE, ""
+	CALL SET_SHIRT, ""
+	CALL PRINT_MAIDFACE, TARGET
+ELSEIF STATUS == 4
+	PRINTFORML %CALLNAME:TARGET%正在迷途之室中...
+	PRINTFORML 
+	PRINTFORML 
+ELSE
+	PRINTFORML %CALLNAME:TARGET%忙碌中...
+	PRINTFORML 
+	PRINTFORML 
+ENDIF
+
+@PRINT_BELIEVER, ARG:0, ARG:1, ARG:2, ARG:3, ARG:4, ARG:5 ,ARG:6
+	;ARG = [SIZE, FORESKIN, FEELING_MAX, FEELING, VOLUME_MAX, VOLUME]
+	#DIM SIZE ;大小	( 0: 短小, 1: 普通, 2: 巨根, 3: 馬根, 4: 腕粗, 5: 规格外 )
+	#DIM FORESKIN ;包茎	( 0: 无包茎, 1: 假性包茎, 2: 真性包茎)
+	#DIM FEELING_MAX ;极限射精感
+	#DIM FEELING ;射精感
+	#DIM VOLUME_MAX ;极限精液量
+	#DIM VOLUME ;精液量
+	#DIM STATUS
+
+	#DIMS SIZE_TEXT
+	#DIMS FORESKIN_TEXT
+
+	SIZE = ARG:0
+	FORESKIN = ARG:1
+	FEELING_MAX = ARG:2
+	FEELING = ARG:3
+	VOLUME_MAX = ARG:4
+	VOLUME = ARG:5
+	STATUS = ARG:6
+
+
+	SIZE_TEXT = 未定义大小
+	SELECTCASE SIZE
+		CASE 0
+			SIZE_TEXT = 短小
+		CASE 1
+			SIZE_TEXT = 普通
+		CASE 2
+			SIZE_TEXT = 巨根
+		CASE 3
+			SIZE_TEXT = 馬根
+		CASE 4
+			SIZE_TEXT = 腕粗
+		CASE 5
+			SIZE_TEXT = 规格外
+	ENDSELECT
+
+	FORESKIN_TEXT = 未定义包茎
+	SELECTCASE FORESKIN
+		CASE 0
+			FORESKIN_TEXT = 无包茎
+		CASE 1
+			FORESKIN_TEXT = 假性包茎
+		CASE 2
+			FORESKIN_TEXT = 真性包茎
+	ENDSELECT
+	IF !CEVENT("当前信徒未服务",TARGET)
+		PRINTFORML 信徒 %TEXT_RJ(SIZE_TEXT, 12)% %TEXT_RJ(FORESKIN_TEXT, 12)% 
+		IF CEVENT("同行中", MASTER) || STATUS == 1
+			PRINTFORM 射精感
+			CALL PRINT_BAR, "溜めゲージ", FEELING, FEELING_MAX, 45
+			PRINTFORML [{FEELING}/{FEELING_MAX}]
+		ENDIF
+		PRINTFORM 精液量
+		CALL PRINT_BAR, "減少ゲージ", VOLUME, VOLUME_MAX, 45
+		PRINTFORML [{VOLUME}/{VOLUME_MAX}]
+	ENDIF
+	PRINTFORML
+	PRINTFORML
+
+@NEW_BELIEVER
+	;RESULT = [SIZE, FORESKIN, FEELING_MAX, FEELING, VOLUME_MAX, VOLUME]
+	#DIM SIZE ;大小	( 0: 短小, 1: 普通, 2: 巨根, 3: 馬根, 4: 腕粗, 5: 规格外 )
+	#DIM FORESKIN ;包茎	( 0: 无包茎, 1: 假性包茎, 2: 真性包茎)
+	#DIM FEELING_MAX ;极限射精感
+	#DIM FEELING ;射精感
+	#DIM VOLUME_MAX ;极限精液量
+	#DIM VOLUME ;精液量
+
+	;SIZE = RAND:6
+	IF RAND:3 == 0
+		SIZE = 1
+	ELSEIF RAND:2 == 0
+		IF RAND:2 == 0
+			SIZE = 0
+		ELSE
+			SIZE = 2
+		ENDIF
+	ELSEIF RAND:2 == 0
+		IF RAND:3 == 0
+			SIZE = 4
+		ELSE
+			SIZE = 3
+		ENDIF
+	ELSE
+		SIZE = 5
+	ENDIF
+	FORESKIN = RAND:3
+	FEELING_MAX = 2 + RAND:3
+	FEELING = 0
+	VOLUME_MAX = 1 + SIZE + RAND:(8 - SIZE)
+	VOLUME = VOLUME_MAX
+	;PRINTFORML [{SIZE}/{FORESKIN}/{FEELING_MAX}/{FEELING}/{VOLUME_MAX}/{VOLUME}]
+	RESULT:6 = SIZE
+	RESULT:1 = FORESKIN
+	RESULT:2 = FEELING_MAX
+	RESULT:3 = FEELING
+	RESULT:4 = VOLUME_MAX
+	RESULT:5 = VOLUME
+	CALL SET_CEVENT("当前信徒未服务",TARGET)
+	CALL DEL_CEVENT("忏悔室_嘴中精液",TARGET)
+	RETURN RESULT
+
+@IMPROVE_CONFESS
+#DIMS SELECT_STR
+
+SELECT_STR = "欲望之间/迷途之室"
+	DRAWLINE
+	CALL PRINT_SELECT, SELECT_STR
+	IF RESULT == 0
+		PRINTFORML 欲望之间:
+		PRINTFORML 在特别忏悔室改建后新增的设施
+		PRINTFORML 位于忏悔之窗的右侧靠墙的位置、构造类似于换衣间
+		PRINTFORML 三面为墙、靠窗这一侧则设有黑色的帘子、固化神术也与忏悔之窗相同
+		PRINTFORML 当然、忏悔室的另一侧也是相同的构造、两边互相连通、忏悔者可以在此与修女进行更加深入的交流
+		PRINTFORML
+		IF CFLAG:MASTER:忏悔室服务总人数 > 20 && CEVENT("欲望之间:已解锁",MASTER) == 0
+			CALL PRINT_SELECT, "[建造]/[取消]"
+			IF RESULT == 0
+				PRINTFORMW 欲望之间 - 建造成功
+				CALL SET_CEVENT("欲望之间:已解锁",MASTER)
+				TCVAR:MASTER:欲望之间建造中 = 1
+			ELSE
+				PRINTFORMW 欲望之间 - 取消建造
+			ENDIF
+		ENDIF
+	ELSEIF RESULT == 1
+		PRINTFORML 迷途之室:
+		PRINTFORML 在特别忏悔室改建后新增的设施
+		PRINTFORML 位于忏悔之窗的左侧靠墙的位置、构造类似于小型的客厅
+		PRINTFORML 房间的中间置有一张三人沙发、宽大的构造可以让人轻易地躺在上面
+		PRINTFORML 黑色皮革材质、便于清洗、不会被打湿
+		PRINTFORML 忏悔者可以在此与修女进行最为深入的交流
+		PRINTFORML
+		IF CFLAG:MASTER:忏悔室服务总人数 > 20 && CEVENT("迷途之室:已解锁",MASTER) == 0
+			CALL PRINT_SELECT, "[建造]/[取消]"
+			IF RESULT == 0
+				PRINTFORMW 迷途之室 - 建造成功
+				CALL SET_CEVENT("迷途之室:已解锁",MASTER)
+				TCVAR:MASTER:迷途之室建造中 = 1
+			ELSE
+				PRINTFORMW 迷途之室 - 取消建造
+			ENDIF
+		ELSEIF CEVENT("迷途之室:已解锁",MASTER)
+			PRINTFORML 已建造
+		ELSE
+			PRINTFORMW 忏悔室服务人数需超过20才可以进行此项升级
+			PRINTFORML 当前服务人数 {CFLAG:MASTER:忏悔室服务总人数}人
+		ENDIF
+	ELSE
+		PRINTFORMW 非法输入
+	ENDIF
+	DRAWLINE
+
+@DEL_ALL_EVENT
+	CALL DEL_CEVENT("同行中", MASTER)
+	CALL DEL_CEVENT("清洁神术", MASTER)
+	;CALL DEL_CEVENT("未接待",TARGET)
+	;CALL DEL_CEVENT("忏悔之窗:使用中",TARGET)
+	;CALL DEL_CEVENT("欲望之间:使用中",TARGET)
+	;CALL DEL_CEVENT("欲望之间:使用中",MASTER)
+	;CALL DEL_CEVENT("迷途之室:使用中",TARGET)
+	;CALL DEL_CEVENT("迷途之室:使用中(特殊)",TARGET)
+	;CALL DEL_CEVENT("当前信徒未服务",TARGET)
+	CALL DEL_CEVENT("已服务信徒:忏悔之窗",TARGET)
+	CALL DEL_CEVENT("已服务信徒:欲望之间",TARGET)
+	CALL DEL_CEVENT("已服务信徒:迷途之室",TARGET)
+	CALL DEL_CEVENT("透明神术",TARGET)
+
+; 防止 A + B > A_MAX
+@LIMIT_ADD, ARG:0, ARG:1, ARG:2
+
+	RESULT = ARG:0 + ARG:1
+	SIF RESULT > ARG:2
+		RESULT = ARG:2
+	
+	RETURN RESULT
+
+; 防止 A - B < 0
+@LIMIT_SUB, ARG:0, ARG:1
+
+	RESULT = ARG:0 - ARG:1
+	SIF RESULT < -1
+		RESULT = -1
+	
+	RETURN RESULT

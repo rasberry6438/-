@@ -1,0 +1,252 @@
+﻿;-------------------------------------------------
+;260～279番,消耗品指令
+;-------------------------------------------------
+@COM_ABLE260
+;潤滑液実行判定
+SIF COMABLE_DEF(260)
+	RETURN 0
+;道具を持っていないとダメ
+SIF ITEM:潤滑液 == 0
+	RETURN 0
+RETURN 1
+
+@COM_ABLE261
+;媚薬実行判定
+SIF COMABLE_DEF(261)
+	RETURN 0
+;道具を持ってないとダメ
+SIF ITEM:媚薬 == 0
+	RETURN 0
+;被逆推ている
+IF TEQUIP:推倒
+	RETURN 0
+	;PLAYERかTARGETに効く状態じゃないとダメ
+	;SIF TEQUIP:媚薬 && TEQUIP:PLAYER:媚薬
+	;	RETURN 0
+	;技巧3LVか錬金術が無いとダメ
+	;SIF ABL:技巧 < 3 && TALENT:錬金術 == 0
+	;	RETURN 0
+ELSE
+	;TARGETに効く状態じゃないとダメ
+	SIF TEQUIP:媚薬
+		RETURN 0
+ENDIF
+RETURN 1
+
+@COM_ABLE262
+RETURN 0
+;利尿剤実行判定
+SIF COMABLE_DEF(262)
+	RETURN 0
+;道具を持ってないとダメ
+;SIF ITEM:利尿剤 == 0
+;	RETURN 0
+;重ねての使用はダメ
+SIF TEQUIP:利尿剤
+	RETURN 0
+RETURN 1
+
+@COM_ABLE263
+;創口貼実行判定
+SIF COMABLE_DEF(263)
+	RETURN 0
+;解除是つでも可能
+SIF TEQUIP:創口貼
+	RETURN 1
+;道具を持っていないとダメ
+SIF ITEM:創口貼 == 0
+	RETURN 0
+;阴部使用判定
+SIF USE_V(TARGET) == 0
+	RETURN 0
+;尿道を使用中だとダメ
+SIF TEQUIP:尿道振動棒 || TEQUIP:导管
+	RETURN 0
+;胎内に精液が無いとダメ
+SIF COND("胎内の精液量") == 0
+	RETURN 0
+;常時Ｖ振動棒、尿道振動棒中はダメ
+SIF TALENT:常時Ｖ振動棒 || TALENT:常時尿道塞
+	RETURN 0
+SIF COND("合意：危険日生性交") == 0 && COND("避妊不要") == 0 && CONFIG("胎内精子で妊娠")
+	RETURN 0
+RETURN 1
+
+@COM_ABLE264
+RETURN 0
+;排卵誘発剤実行判定
+SIF COMABLE_DEF(264)
+	RETURN 0
+;道具を持っていないとダメ
+;SIF ITEM:排卵誘発剤 == 0
+;	RETURN 0
+SIF COND("排卵誘発剤", TARGET) + COND("排卵誘発剤", PLAYER) == 0
+	RETURN 0
+RETURN 1
+
+@COM_ABLE265
+;芳香醚実行判定
+SIF COMABLE_DEF(265)
+	RETURN 0
+;道具を持ってないとダメ
+SIF ITEM:芳香醚 == 0
+	RETURN 0
+;使用済みだとダメ
+SIF TEQUIP:MASTER:芳香醚
+	RETURN 0
+;被逆推ている
+SIF TEQUIP:推倒
+	RETURN 0
+RETURN 1
+
+@COM_ABLE266
+RETURN 0
+
+@COM_ABLE267
+RETURN 0
+;筋弛緩剤実行判定
+SIF COMABLE_DEF(267)
+	RETURN 0
+;道具を持っていないとダメ
+;SIF ITEM:筋弛緩剤 == 0
+;	RETURN 0
+;用法用量は的確に
+SIF TEQUIP:筋弛緩剤
+	RETURN 0
+RETURN 1
+
+@COM_ABLE268
+RETURN 0
+
+@COM_ABLE269
+RETURN 0
+
+@COM_ABLE270
+RETURN 0
+
+@COM_ABLE271
+RETURN 0
+
+@COM_ABLE272
+RETURN 0
+
+
+;-------------------------------------------------
+;280～299番,特殊調教指令
+;-------------------------------------------------
+@COM_ABLE280
+;挣扎実行判定
+SIF COMABLE_DEF(280)
+	RETURN 0
+;被逆推ていないとダメ
+SIF TEQUIP:推倒 == 0
+	RETURN 0
+;恍惚状態だとだめ
+SIF STATE("恍惚", PLAYER)
+	RETURN 0
+RETURN 1
+
+@COM_ABLE281
+;顺其自然実行判定
+SIF COMABLE_DEF(281)
+	RETURN 0
+;被逆推ていないとダメ
+SIF TEQUIP:推倒 == 0
+	RETURN 0
+RETURN 1
+
+@COM_ABLE282
+;自慰実行判定
+SIF COMABLE_DEF(282)
+	RETURN 0
+;恍惚状態だとだめ…な気もするができても良い多分
+;SIF STATE("恍惚", PLAYER)
+;	RETURN 0
+;你以外だと自慰中毒必要
+SIF PLAYER != MASTER && ABL:PLAYER:自慰中毒 == 0
+	RETURN 0
+;縄・拘束中で手が使えない時はダメ
+SIF GETBIT(TEQUIP:PLAYER:拘束, 20) || STATE("バインド：手", PLAYER)
+	RETURN 0
+;誰かに挿入している時に始めるのは流石に失礼だな
+SIF INSERT("挿入中", PLAYER)
+	RETURN 0
+;特定指令の次のターン、ないし特定の状況化じゃないとダメということにしておく
+SELECTCASE PREVCOM
+;舐陰, 自慰, 舐陰莖, 舐肛, 扒開阴道, 扒開菊穴
+CASE 1, 3, 4, 9, 13, 14, 282
+	RETURN 1
+CASEELSE
+	SIF TEQUIP:面部騎乗 || TEQUIP:自慰
+		RETURN 1
+ENDSELECT
+;仲直りックス
+SIF CFLAG:喧嘩中
+	RETURN 1
+RETURN 0
+
+@COM_ABLE283
+;甜言蜜语実行判定
+SIF COMABLE_DEF(283)
+	RETURN 0
+SIF COND("前Ｔと同ペア") == 0 && NUM("回合数")
+	RETURN 0
+;重ねがけは原則禁止
+SELECTCASE TEQUIP:甜言蜜语
+CASE 0
+	RETURN 1
+CASE IS >= 5
+	RETURN 0
+CASEELSE
+	;TEQUIP:甜言蜜语 < 5＆夸奖場合は例外的に許可
+	SIF CHECK_COM("夸奖", TNUM("甜言蜜语") )
+		RETURN 1
+	RETURN 0
+ENDSELECT
+RETURN 1
+
+@COM_ABLE284
+RETURN 0
+
+@COM_ABLE285
+;抱上去実行判定
+SIF COMABLE_DEF(285)
+	RETURN 0
+;連続実行は出来ない
+SIF PREVCOM == 285
+	RETURN 0
+RETURN 1
+
+@COM_ABLE286
+;委身于對方実行判定
+SIF COMABLE_DEF(286)
+	RETURN 0
+;被逆推ていないとダメ
+SIF TEQUIP:推倒 == 0
+	RETURN 0
+;相手が疲れてるとダメ
+SIF COND("疲労")
+	RETURN 0
+RETURN 1
+
+@COM_ABLE290
+SIF COMABLE_DEF(290)
+	RETURN 0
+;Configで部員間ＨOKじゃないとダメ
+SIF CONFIG("部員間Ｈ") == 0
+	RETURN 0
+;お相手がいないとダメ
+SIF CFLAG:お相手 == 0
+	RETURN 0
+;Ｈをしていないとダメ
+SIF CFLAG:交流Ｈ回数 == 0
+	RETURN 0
+;現状诺伊君は話される側なのでダメです
+SIF CALLNAME:TARGET == "诺伊"
+	RETURN 0
+RETURN 1
+
+@COM_ABLE511
+SIF COND("挿入前暴発フラグ", PLAYER)
+	RETURN 1
+RETURN 0

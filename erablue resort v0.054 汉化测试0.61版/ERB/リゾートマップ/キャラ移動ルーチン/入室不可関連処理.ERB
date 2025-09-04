@@ -1,0 +1,500 @@
+﻿
+@入室不可処理(移動先マップ種別, 移動先位置, 自動移動フラグ = 0)
+#DIM ループ用
+#DIM 部屋人数
+#DIM 部屋主配列, 100
+#DIM 在宅配列, 100
+#DIM 在宅者数
+#DIM うふふ相手
+#DIM 移動先位置
+#DIM 移動先マップ種別
+#DIM 自動移動フラグ
+#DIM ROOMSEX数値
+
+ROOMSEX数値 = ROOM_SEX(移動先マップ種別, 移動先位置)
+IF フィールド展開:可进入异性设施 == 0 && ROOMSEX数値
+	VARSET LOCAL
+	VARSET LOCALS
+	SIF TALENT:MASTER:性別 != ROOMSEX数値 && (TALENT:MASTER:性別 != 0 && TALENT:MASTER:性別 != 3)
+		LOCAL:1 = 1
+	FOR LOCAL,1,CHARANUM
+		SIF TARGET:LOCAL <= 0
+			BREAK
+		IF !陥落チェック(TARGET:LOCAL) && (CFLAG:(TARGET:LOCAL):同行 || CFLAG:(TARGET:LOCAL):デート残り時間)
+			SIF LOCALS != ""
+				LOCALS +=  "、"
+			LOCALS += CALLNAME:(TARGET:LOCAL)
+			LOCAL:2 = CFLAG:(TARGET:LOCAL):現在マップ種別
+			LOCAL:3 = CFLAG:(TARGET:LOCAL):現在位置
+		ENDIF
+		SIF TALENT:(TARGET:LOCAL):性別 != ROOMSEX数値 && (TALENT:(TARGET:LOCAL):性別 != 0 && TALENT:(TARGET:LOCAL):性別 != 3)
+			LOCAL:1 = 1
+	NEXT
+	IF LOCAL:1 && LOCALS != ""
+		IF 自動移動フラグ
+			DRAWLINE
+			PRINTFORMW 被阻止前往%LOCALS%的%GETPLACENAME(移動先マップ種別, 移動先位置)%了……
+			あなた追跡キャラ = 0
+			IF 移動先マップ種別 == 0
+				SELECTCASE 移動先位置
+					;女湯
+					CASE 11, 12, 801 TO 809
+						CFLAG:PLAYER:現在マップ種別 = 0
+						CFLAG:PLAYER:現在位置 = 6
+					CASEELSE
+						CFLAG:PLAYER:現在マップ種別 = LOCAL:2
+						CFLAG:PLAYER:現在位置 = LOCAL:3
+				ENDSELECT
+			ELSE
+				CFLAG:PLAYER:現在マップ種別 = LOCAL:2
+				CFLAG:PLAYER:現在位置 = LOCAL:3
+			ENDIF
+		ENDIF
+		RETURN 1
+	ENDIF
+ENDIF
+SELECTCASE 移動先マップ種別
+	CASE 999
+		IF 移動先位置 < 1000
+			LOCAL = 移動先位置
+			IF 滞在者部屋割り配列:LOCAL > 0
+				;睡眠時
+				IF CFLAG:(滞在者部屋割り配列:LOCAL):現在マップ種別 == 999 && CFLAG:(滞在者部屋割り配列:LOCAL):現在位置 == LOCAL
+					IF CFLAG:(滞在者部屋割り配列:LOCAL):睡眠 && 陥落チェック(滞在者部屋割り配列:LOCAL) == 0
+						あなた追跡キャラ = 0
+						PRINTFORML %CALLNAME:(滞在者部屋割り配列:LOCAL)%的房间已上锁
+						CALL 睡眠時表示文章(滞在者部屋割り配列:LOCAL)
+						IF 自動移動フラグ
+							CFLAG:PLAYER:現在マップ種別 = 0
+							CFLAG:PLAYER:現在位置 = 1
+						ENDIF
+						RETURN 1
+					ELSEIF CFLAG:(滞在者部屋割り配列:LOCAL):キャラ同士うふふ
+						;相手を探す
+						うふふ相手 = ABS(CFLAG:(滞在者部屋割り配列:LOCAL):デート) - 100
+						IF うふふ相手 >= 0 && CFLAG:うふふ相手:現在マップ種別 == 999 && CFLAG:うふふ相手:現在位置 == LOCAL
+							あなた追跡キャラ = 0
+							PRINTFORML %CALLNAME:(滞在者部屋割り配列:LOCAL)%的房间已上锁
+							CALL キャラ同士うふふ時表示文章(滞在者部屋割り配列:LOCAL, うふふ相手)
+							SIF RESULT
+								RETURN 0
+							IF 自動移動フラグ
+								CFLAG:PLAYER:現在マップ種別 = 0
+								CFLAG:PLAYER:現在位置 = 1
+							ENDIF
+							RETURN 1
+						ENDIF
+					ENDIF
+				ENDIF
+			ENDIF
+		ELSEIF 移動先位置 >= 1000 && 移動先位置 < 2000
+			LOCAL = 移動先位置 - 1000
+			IF 従業員部屋割り配列:LOCAL > 0
+				;睡眠時
+				IF CFLAG:(従業員部屋割り配列:LOCAL):現在マップ種別 == 999 && CFLAG:(従業員部屋割り配列:LOCAL):現在位置 == LOCAL
+					IF CFLAG:(従業員部屋割り配列:LOCAL):睡眠 && 陥落チェック(従業員部屋割り配列:LOCAL) == 0
+						あなた追跡キャラ = 0
+						PRINTFORML %CALLNAME:(従業員部屋割り配列:LOCAL)%的房间已上锁
+						CALL 睡眠時表示文章(従業員部屋割り配列:LOCAL)
+						IF 自動移動フラグ
+							CFLAG:PLAYER:現在マップ種別 = 0
+							CFLAG:PLAYER:現在位置 = 1
+						ENDIF
+						RETURN 1
+					ELSEIF CFLAG:(従業員部屋割り配列:LOCAL):キャラ同士うふふ
+						;相手を探す
+						うふふ相手 = ABS(CFLAG:(従業員部屋割り配列:LOCAL):デート) - 100
+						IF うふふ相手 >= 0 && CFLAG:うふふ相手:現在マップ種別 == 999 && CFLAG:うふふ相手:現在位置 == LOCAL
+							あなた追跡キャラ = 0
+							PRINTFORML %CALLNAME:(従業員部屋割り配列:LOCAL)%的房间已上锁
+							CALL キャラ同士うふふ時表示文章(従業員部屋割り配列:LOCAL, うふふ相手)
+							SIF RESULT
+								RETURN 0
+							IF 自動移動フラグ
+								CFLAG:PLAYER:現在マップ種別 = 0
+								CFLAG:PLAYER:現在位置 = 1
+							ENDIF
+							RETURN 1
+						ENDIF
+					ENDIF
+				ENDIF
+			ENDIF
+		ELSEIF 移動先位置 >= 2000 && 移動先位置 < 3000
+			LOCAL = 移動先位置 - 2000
+			;部屋の居住者を配列化
+			VARSET 部屋主配列
+			VARSET RESULTS
+			SPLIT スイートルーム部屋割り配列:LOCAL, "_", RESULTS
+			部屋人数 = 0
+			FOR ループ用, 1, RESULT
+				SIF RESULTS:ループ用 == ""
+					BREAK
+				部屋主配列:部屋人数 = TOINT(RESULTS:ループ用)
+				部屋人数 ++
+			NEXT
+			IF 部屋人数 > 0
+				;睡眠時
+				LOCAL:2 = 0
+				VARSET 在宅配列
+				在宅者数 = 0
+				FOR ループ用, 0, 部屋人数
+					SIF 部屋主配列:ループ用 < 1
+						BREAK
+					IF CFLAG:(部屋主配列:ループ用):現在マップ種別 == 999 && CFLAG:(部屋主配列:ループ用):現在位置 == LOCAL + 2000
+						;うふふが見つかってない時は睡眠をチェックしておく
+						IF CFLAG:(部屋主配列:ループ用):キャラ同士うふふ
+							;相手を探す
+							うふふ相手 = ABS(CFLAG:(部屋主配列:ループ用):デート) - 100
+							IF うふふ相手 >= 0 && CFLAG:うふふ相手:現在マップ種別 == 999 && CFLAG:うふふ相手:現在位置 == LOCAL + 2000
+								LOCAL:2 = 2
+								VARSET 在宅配列
+								在宅配列:0 = 部屋主配列:ループ用
+								在宅配列:1 = うふふ相手
+								BREAK
+							ENDIF
+						ELSEIF CFLAG:(部屋主配列:ループ用):睡眠 && 陥落チェック(部屋主配列:ループ用) == 0 && LOCAL:2 >= 0
+							;非陥落の睡眠が一人でもいると入れない
+							LOCAL:2 = 1
+						ELSEIF !CFLAG:(部屋主配列:ループ用):睡眠
+							;一人でも起きてたら入れる
+							LOCAL:2 = -1
+						ENDIF
+						在宅配列:在宅者数 = 部屋主配列:ループ用
+						在宅者数 ++
+					ENDIF
+				NEXT
+				IF LOCAL:2 > 0
+					あなた追跡キャラ = 0
+					IF 部屋人数 > 1
+						PRINTFORML %NAME表示((部屋主配列:0))%等人的房间已上锁
+					ELSE
+						PRINTFORML %NAME表示((部屋主配列:0))%的房间已上锁
+					ENDIF
+					IF LOCAL:2 == 1
+						;寝てるキャラからランダムで選ぶ
+						CALL 睡眠時表示文章(在宅配列:(RAND:在宅者数))
+					ELSEIF LOCAL:2 == 2
+						CALL キャラ同士うふふ時表示文章(在宅配列:0, 在宅配列:1)
+						SIF RESULT
+							RETURN 0
+					ENDIF
+					IF 自動移動フラグ
+						CFLAG:PLAYER:現在マップ種別 = 0
+						CFLAG:PLAYER:現在位置 = 1
+					ENDIF
+					RETURN 1
+				ENDIF
+			ENDIF
+		ENDIF
+	CASE 1
+		IF 移動先位置 >= 1000
+			LOCAL = 移動先位置 - 1000
+			;部屋の居住者を配列化
+			VARSET 部屋主配列
+			VARSET RESULTS
+			SPLIT 商業区店割り配列:LOCAL:店員配列, "_", RESULTS
+			FOR ループ用, 0, RESULT
+				SIF RESULTS:ループ用 == ""
+					BREAK
+				部屋主配列:ループ用 = TOINT(RESULTS:ループ用)
+			NEXT
+			IF 部屋主配列:0 > 0
+				;不在時
+				LOCAL:2 = 0
+				FOR ループ用, 0, 10
+					SIF 部屋主配列:ループ用 < 1
+						BREAK
+					IF CFLAG:(部屋主配列:ループ用):現在マップ種別 == 1 && CFLAG:(部屋主配列:ループ用):現在位置 == LOCAL + 1000
+						LOCAL:2 = 1
+					ELSEIF 追従中キャラ(部屋主配列:ループ用)
+						LOCAL:2 = 1
+					ENDIF
+				NEXT
+				IF LOCAL:2 == 0
+					あなた追跡キャラ = 0
+					PRINTL 商铺已打烊
+					PRINTW 似乎空无一人…
+					RETURN 1
+				ENDIF
+			ELSEIF 部屋主配列:0 < 0
+				IF TIME < 540 || TIME > 1200 || 定休日判定(LOCAL)
+					あなた追跡キャラ = 0
+					PRINTL 商铺已打烊
+					PRINTW 似乎空无一人…
+					RETURN 1
+				ENDIF
+			ENDIF
+		ENDIF
+	CASE 2
+		IF 移動先位置 >= 1000 && 移動先位置 <= 6000
+			LOCAL = 移動先位置 - 1000
+			;部屋の居住者を配列化
+			VARSET 部屋主配列
+			VARSET RESULTS
+			SPLIT 定住者部屋割り配列:LOCAL, "_", RESULTS
+			FOR ループ用, 0, RESULT
+				SIF RESULTS:ループ用 == ""
+					BREAK
+				部屋主配列:ループ用 = TOINT(RESULTS:ループ用)
+			NEXT
+			IF 部屋主配列:0 > 0
+				;睡眠時
+				LOCAL:2 = 0
+				VARSET 在宅配列
+				在宅者数 = 0
+				FOR ループ用, 0, 10
+					SIF 部屋主配列:ループ用 < 1
+						BREAK
+					IF CFLAG:(部屋主配列:ループ用):現在マップ種別 == 2 && CFLAG:(部屋主配列:ループ用):現在位置 == LOCAL + 1000
+						;在宅状況チェック
+						IF CFLAG:(部屋主配列:ループ用):キャラ同士うふふ
+							;相手を探す
+							うふふ相手 = ABS(CFLAG:(部屋主配列:ループ用):デート) - 100
+							IF うふふ相手 >= 0 && CFLAG:うふふ相手:現在マップ種別 == 2 && CFLAG:うふふ相手:現在位置 == LOCAL + 1000
+								LOCAL:2 = 2
+								VARSET 在宅配列
+								在宅配列:0 = 部屋主配列:ループ用
+								在宅配列:1 = うふふ相手
+								BREAK
+							ENDIF
+						ELSEIF CFLAG:(部屋主配列:ループ用):睡眠 && 陥落チェック(部屋主配列:ループ用) == 0 && LOCAL:2 >= 0
+							;非陥落の睡眠が一人でもいると入れない
+							LOCAL:2 = 1
+						ELSEIF !CFLAG:(部屋主配列:ループ用):睡眠
+							;一人でも起きてたら入れる
+							LOCAL:2 = -1
+						ENDIF
+						在宅配列:在宅者数 = 部屋主配列:ループ用
+						在宅者数 ++
+					ENDIF
+				NEXT
+				IF LOCAL:2 > 0
+					あなた追跡キャラ = 0
+					CALLF GETPLACENAME_2_10(移動先位置)
+					IF LOCAL:2 == 1
+						PRINTFORML %TSTR:場所名受渡%的住所已上锁
+						;寝てるキャラからランダムで選ぶ
+						CALL 睡眠時表示文章(在宅配列:(RAND:在宅者数))
+					ELSEIF LOCAL:2 == 2
+						PRINTFORML %TSTR:場所名受渡%的住所已上锁
+						CALL キャラ同士うふふ時表示文章(在宅配列:0, 在宅配列:1)
+						SIF RESULT
+							RETURN 0
+					ENDIF
+					IF 自動移動フラグ
+						CFLAG:PLAYER:現在マップ種別 = 2
+						CFLAG:PLAYER:現在位置 = 1
+					ENDIF
+					RETURN 1
+				ENDIF
+				;全員外出時
+				LOCAL:2 = 0
+				FOR ループ用, 0, 10
+					SIF 部屋主配列:ループ用 < 1
+						BREAK
+					IF CFLAG:(部屋主配列:ループ用):現在マップ種別 == 2 && CFLAG:(部屋主配列:ループ用):現在位置 == LOCAL + 1000
+						LOCAL:2 = 1
+					ELSEIF 追従中キャラ(部屋主配列:ループ用)
+						LOCAL:2 = 1
+					ENDIF
+				NEXT
+				IF LOCAL:2 == 0
+					あなた追跡キャラ = 0
+					CALLF GETPLACENAME_2_10(移動先位置)
+					PRINTFORML %TSTR:場所名受渡%的住所已上锁
+					PRINTW 看来家中无人…
+					IF 自動移動フラグ
+						CFLAG:PLAYER:現在マップ種別 = 2
+						CFLAG:PLAYER:現在位置 = 1
+					ENDIF
+					RETURN 1
+				ENDIF
+			ENDIF
+		ENDIF
+ENDSELECT
+
+RETURN 0
+
+
+@睡眠時表示文章(睡眠キャラ)
+#DIM 睡眠キャラ
+
+;キャラが寝てて施錠されてる時の表示文章を制御する
+;どっちにしろデフォルトメッセージは表示する
+PRINTW 似乎正在酣睡…
+
+TRYCALLFORM 部屋施錠時_睡眠口上_{NO:睡眠キャラ}(睡眠キャラ)
+
+
+@キャラ同士うふふ時表示文章(対象キャラ１, 対象キャラ２)
+#DIM 対象キャラ１
+#DIM 対象キャラ２
+#DIM 攻めキャラ
+#DIM 受けキャラ
+#DIM 対象キャラ１判定値
+#DIM 対象キャラ２判定値
+#DIM 配列番号
+#DIMS モード名
+#DIM 表示フラグ
+
+;キャラがうふふ中で施錠されてる時の表示文章を制御する
+;以下、受け攻めの設定を見て口上などを呼び出す
+CALL 受け攻め関係性算出(対象キャラ１, 対象キャラ２)
+IF RESULT >= 0
+	攻めキャラ = RESULT:10
+	受けキャラ = RESULT:11
+
+	;攻め受けが決定したのでそれに応じたメッセージ
+	PRINTFORML 房内传来%CALLNAME:攻めキャラ%的话声与%CALLNAME:受けキャラ%的喘息……
+	PRINTFORMW 看来二人正在享受私密时光…
+ELSE
+	;多分存在しないはずなんだけど、関係性がない二人の場合はシンプルメッセージ
+	PRINTFORMW 房内传出%CALLNAME:対象キャラ１%与%CALLNAME:対象キャラ２%的娇喘……似乎正沉浸欢愉…
+ENDIF
+
+;一定条件で乱入可能
+IF あなた単独() == 0
+	;誰かを連れてる時は無理
+	PRINTL 
+	PRINTFORML 要窥视房内情形吗？
+	PRINTBUTTONLC "[2] 确定", 2
+	PRINTBUTTONLC "[1] 取消", 1
+	BINPUT
+ELSEIF (TALENT:対象キャラ１:恋慕 && TALENT:対象キャラ２:恋慕) || (TALENT:対象キャラ１:セフレ || TALENT:対象キャラ２:セフレ)
+	PRINTL 
+	PRINTFORML 要闯入吗？
+	PRINTBUTTONLC "[0] 确定", 0
+	PRINTBUTTONLC "[1] 取消", 1
+	PRINTBUTTONLC "[2] 窥视房内情形", 2
+	BINPUT
+	IF RESULT == 0
+		PRINTFORMW %CALLNAME:PLAYER%用备用钥匙打开房门，闯入%CALLNAME:対象キャラ１%与%CALLNAME:対象キャラ２%的亲密时刻
+		CALL うふふ開始キャラ処理(対象キャラ１, "キャラ同士うふふ乱入")
+		CALL うふふ開始キャラ処理(対象キャラ２, "キャラ同士うふふ乱入")
+		;愛撫系モードは消す
+		CALL MODE_DELETE_ターゲット側("愛撫系", 対象キャラ１)
+		CALL MODE_DELETE_ターゲット側("愛撫系", 対象キャラ２)
+
+		;先に同室フラグを建てることで発覚口上をスキップする
+		CFLAG:対象キャラ１:同室 = 1
+		CFLAG:対象キャラ２:同室 = 1
+		CFLAG:PLAYER:うふふ = 1
+		RETURN 1
+	ENDIF
+ELSE
+	PRINTL 
+	PRINTFORML 要窥视房内情形吗？
+	PRINTBUTTONLC "[2] 确定", 2
+	PRINTBUTTONLC "[1] 取消", 1
+	BINPUT
+ENDIF
+
+IF RESULT == 2
+	表示フラグ = 0
+	VARSET RESULT
+	IF DT_SELECT("体位モードデータベース", @"対象キャラ = {受けキャラ}")
+		FOR 配列番号, 1, RESULT + 1
+			モード名 '= DT_CELL_GETS("体位モードデータベース", RESULT:配列番号, "モード名", 1)
+			IF モード名 == "キス"
+				PRINTFORML %CALLNAME:攻めキャラ%与%CALLNAME:受けキャラ%正热烈拥吻……
+				表示フラグ ++
+			ELSEIF モード名 == "ディープキス"
+				PRINTFORML %CALLNAME:攻めキャラ%与%CALLNAME:受けキャラ%忘情交缠着品尝彼此……
+				表示フラグ ++
+			ELSEIF 系統リスト_アイテム系(モード名)
+				PRINTFORML %モード名%正机械式地挑逗着%CALLNAME:受けキャラ%……
+				表示フラグ ++
+			ELSEIF 系統リスト_愛撫系(モード名)
+				PRINTFORM %CALLNAME:攻めキャラ%正%TEXTR("细致/温柔/激烈/放肆")%地把玩%CALLNAME:受けキャラ%的
+				IF モード名 == "Ｃ愛撫"
+					IF GETBIT(TALENT:受けキャラ:性別, 1)
+						PRINT 阴茎
+					ELSE
+						PRINT 阴蒂
+					ENDIF
+				ELSEIF モード名 == "Ｖ愛撫"
+						PRINT 阴道口
+				ELSEIF モード名 == "Ａ愛撫"
+						PRINT 肛门
+				ELSEIF モード名 == "Ｂ愛撫"
+						PRINT 乳头
+				ENDIF
+				PRINTL ，惹出阵阵嘤咛……
+				表示フラグ ++
+			ELSEIF 系統リスト_自慰系(モード名)
+				PRINTFORM %CALLNAME:受けキャラ%正抚弄自己的
+				IF 系統リスト_Ｃ自慰系(モード名)
+					IF GETBIT(TALENT:受けキャラ:性別, 1)
+						PRINT 阴茎
+					ELSE
+						PRINT 阴蒂
+					ENDIF
+				ELSEIF 系統リスト_Ｖ自慰系(モード名)
+						PRINT 阴道口
+				ELSEIF 系統リスト_Ａ自慰系(モード名)
+						PRINT 肛门
+				ELSEIF 系統リスト_Ｂ自慰系(モード名)
+						PRINT 乳头
+				ENDIF
+				PRINTL ，沉溺于快感之中……
+				表示フラグ ++
+			ELSEIF 系統リスト_Ｖ挿入系(モード名)
+				PRINTFORML %CALLNAME:攻めキャラ%正在插入%CALLNAME:受けキャラ%的蜜穴，彼此渴求的身影映入眼帘……
+				表示フラグ ++
+			ELSEIF 系統リスト_Ａ挿入系(モード名)
+				PRINTFORML %CALLNAME:攻めキャラ%正在深入%CALLNAME:受けキャラ%的后庭，缠绵交织的身姿隐约可见……
+				表示フラグ ++
+			ENDIF
+		NEXT
+	ENDIF
+	IF DT_SELECT("体位モードデータベース", @"対象キャラ = {攻めキャラ}")
+		FOR 配列番号, 1, RESULT + 1
+			モード名 '= DT_CELL_GETS("体位モードデータベース", RESULT:配列番号, "モード名", 1)
+			IF 系統リスト_アイテム系(モード名)
+				PRINTFORML %モード名%正机械式地挑逗着%CALLNAME:攻めキャラ%……
+				表示フラグ ++
+			ELSEIF 系統リスト_愛撫系(モード名)
+				PRINTFORM %CALLNAME:受けキャラ%正%TEXTR("细致/温柔/激烈/放肆")%地侍奉着%CALLNAME:攻めキャラ%的
+				IF モード名 == "Ｃ愛撫"
+					IF GETBIT(TALENT:攻めキャラ:性別, 1)
+						PRINT 阴茎
+					ELSE
+						PRINT 阴蒂
+					ENDIF
+				ELSEIF モード名 == "Ｖ愛撫"
+						PRINT 阴道口
+				ELSEIF モード名 == "Ａ愛撫"
+						PRINT 肛门
+				ELSEIF モード名 == "Ｂ愛撫"
+						PRINT 乳头
+				ENDIF
+				PRINTL ，尽显殷勤之态……
+				表示フラグ ++
+			ELSEIF 系統リスト_自慰系(モード名)
+				PRINTFORM %CALLNAME:攻めキャラ%正抚弄自己的
+				IF 系統リスト_Ｃ自慰系(モード名)
+					IF GETBIT(TALENT:攻めキャラ:性別, 1)
+						PRINT 阴茎
+					ELSE
+						PRINT 阴蒂
+					ENDIF
+				ELSEIF 系統リスト_Ｖ自慰系(モード名)
+						PRINT 阴道口
+				ELSEIF 系統リスト_Ａ自慰系(モード名)
+						PRINT 肛门
+				ELSEIF 系統リスト_Ｂ自慰系(モード名)
+						PRINT 乳头
+				ENDIF
+				PRINTL ，沉溺于快感之中……
+				表示フラグ ++
+			ENDIF
+		NEXT
+	ENDIF
+	IF 表示フラグ
+		WAIT
+	ELSE
+		PRINTFORMW %CALLNAME:攻めキャラ%与%CALLNAME:受けキャラ%在床榻上耳鬓厮磨的身影若隐若现……
+	ENDIF
+ENDIF
+
+
