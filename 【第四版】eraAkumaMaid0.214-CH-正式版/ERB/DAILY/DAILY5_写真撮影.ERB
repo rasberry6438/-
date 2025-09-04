@@ -1,0 +1,552 @@
+﻿;-------------------------------------------------
+;写真撮影
+;製作者:hexagon
+;写真の内容はSTR:写真とSTR:補足に格納し、実際には二つをくっつけた文字列が記録される
+;例)		STR:写真 = 画面いっぱいに特写镜頭された比基尼胖次越しの濡烏の君の股間
+;			STR:補足 = _特写镜頭_泳装
+; 実際に保存される文字列 = 画面いっぱいに特写镜頭された比基尼胖次越しの濡烏の君の股間_特写镜頭_泳装
+;追記:ブリート
+;一部写真にデータを記録して画像を出力するようにしました
+;そのため、STR:写真とSTR:補足の間に画像用の文字列が一部追加されます
+;処理の関係により"STR:写真"と"STR:補足"内での"/","_","#"の文字の使用は注意してください
+;-------------------------------------------------
+@MESSAGE_DAILY_SELECT5
+#DIM LCOUNT
+#DIM EMPTY_MEMORY
+#DIM NUM_MEMORY
+#DIM MEMO_LINECOUNT
+
+
+VARSET LOCALS
+VARSET EMPTY_MEMORY
+VARSET NUM_MEMORY
+
+;メモリに余裕がない場合にはアルバム整理画面へ
+IF NUM("写真") >= 300
+	PRINTFORML 尽管还想再拍、但是已经存不下了。
+	PRINTFORMW 请删掉不需要的写真閲覧画面。
+	CALL VIEW_PHOTO
+	RETURN 0
+ENDIF
+
+MEMO_LINECOUNT = LINECOUNT
+STR:日常イベント名 = %DAILYCOMNAME(5)%
+
+;起きている場合は変化することがある
+IF CFLAG:睡眠 == 0
+	SELECTCASE DAILYCOMNAME(5)
+	CASE "已没收的胖次撮影"
+
+	CASE "裙下撮影"
+
+	CASE "股間撮影"
+
+	CASE "内褲摄影"
+
+	CASE "阴部摄影"
+
+	CASE "肛門摄影"
+
+	CASEELSE
+		IF DEVENT("初回台詞") == 0
+		ELSEIF COND("出浴") && CHOSE_DEVENT(STR:日常イベント名) == 0
+		;たまに気づいてリアクションをとる
+		ELSEIF COND("隐秘摄影可能") && (CFLAG:刚睡醒 || RAND:5 || CHOSE_DEVENT(STR:日常イベント名) == 0)
+			IF RAND:10 == 0 || RAND:(CHOSE_DEVENT(STR:日常イベント名) + 1)
+				STR:日常イベント名 = 隐秘摄影失敗
+			ELSEIF RAND:2 && CFLAG:行動参加中 && CONDS("直前行動") != ""
+				STR:日常イベント名 = 隐秘摄影失敗
+			ENDIF
+		ELSEIF COND("合意：摆POSE") && CFLAG:POSE结束摄影 == 0 && CFLAG:喧嘩中 == 0
+			STR:日常イベント名 = POSE撮影
+		ENDIF
+	ENDSELECT
+ENDIF
+DAILY_大項目 = %STR:日常イベント名%
+
+;-------------------------------------------------
+;ここにはセリフのみを置く
+;-------------------------------------------------
+@MESSAGE_DAILY5
+SIF TFLAG:地の文スキップ
+	RETURN 0
+STR:写真 = 
+STR:補足 = 
+SAVESTR:写真 = 
+
+SELECTCASE STR:日常イベント名
+CASE "已没收的胖次撮影"
+	PRINTFORMW %CALLNAME:MASTER%把从%CALLNAME:TARGET%没收得到的%PANTIES(TARGET, "胖次")%放在%NAMES("床")%上铺開。
+	SWAP CSTR:胖次, CSTR:没収済胖次
+	IF CHECK_PANTIES("前貼") || CHECK_PANTIES("Ｃ胖次")
+		STR:写真 += @"貼在%CALLNAME:TARGET%身上的%PANTIES(TARGET)%"
+	ELSE
+		STR:写真 += @"%CALLNAME:TARGET%穿着の%PANTIES(TARGET)%"
+	ENDIF
+	SWAP CSTR:胖次, CSTR:没収済胖次
+
+	STR:補足 += "_胖次"
+CASE "裙下撮影"
+	SELECTCASE CONDS("直前行動")
+	CASE "掀起裙子"
+		PRINTFORMW %CALLNAME:MASTER%把%CALLNAME:TARGET%的%CLO("掀起裙子")%掀起、拿出手机拍照。
+		STR:写真 += @"%SKIRT(TARGET, "略")%被掀起、"
+	CASE "撩起裙子"
+		PRINTFORMW 在%CALLNAME:MASTER%的指示下、%CALLNAME:TARGET%自己用手撩起%CLO("掀起裙子")%准备拍摄照片。
+		STR:写真 += @"%SKIRT(TARGET, "略")%被撩起、"
+	ENDSELECT
+
+	IF CHECK_CLO("胖次視認可能") == 0
+		IF CHECK_CLO("贴身制服露出")
+			STR:写真 += @"%CLO("股間")%紧密贴合着の股間"
+		ELSE
+			STR:写真 += @"%CLO("股間")%"
+		ENDIF
+		STR:補足 = _%SAVE_GRAPHICSDATE( CUTIN("見たまま正面", TARGET, 0) )%%STR:補足%
+	ELSE
+		;连褲襪描写
+		SIF CHECK_CLO("连褲襪露出")
+			STR:写真 += @"透过%BOTTOM(TARGET)%能看到"
+		IF EQUIP:胖次 == 0
+			IF COND("身嗜み：Ｖ拡張")
+				STR:写真 += "拡張用振動棒挿入的"
+			ELSEIF CHECK_CLO("Ｖ露出")
+				STR:写真 += "赤裸的"
+			ENDIF
+			IF PENIS(TARGET)
+				STR:写真 += "阴茎"
+			ELSE
+				STR:写真 += "阴部"
+			ENDIF
+		ELSEIF CHECK_PANTIES("Ｔ字褲")
+			STR:写真 += @"被%PANTIES(TARGET)%勒进去\@ TALENT:巨尻 ? 巨大的 # \@臀部"
+			STR:補足 += "_胖次"
+			STR:補足 = _%SAVE_GRAPHICSDATE( CUTIN("見たまま正面", TARGET, 0) )%%STR:補足%
+		ELSE
+			STR:写真 += @"%PANTIES(TARGET)%"
+			STR:補足 += "_胖次"
+			STR:補足 = _%SAVE_GRAPHICSDATE( CUTIN("見たまま正面", TARGET, 0) )%%STR:補足%
+		ENDIF
+	ENDIF
+	STR:写真 += @"\@ CONDS("直前行動") == "掀起裙子" ? 暴露 # 被展示 \@出来の%PHOTO_COSTUME(TARGET)%%CALLNAME:TARGET%"
+
+CASE "股間撮影"
+	PRINTFORM %CALLNAME:MASTER%
+	IF CFLAG:睡眠
+		PRINTFORMW 拿出手机靠近無防備地沉眠著の%CALLNAME:TARGET%の股間。
+	ELSE
+		PRINTFORMW 轻轻地把%CALLNAME:TARGET%的脚打開、拿出手机对准股间。
+	ENDIF
+	IF CHECK_CLO("连褲襪露出")
+		IF EQUIP:胖次 && CHECK_PANTIES("開洞")
+			STR:写真 += @"透过%BOTTOM(TARGET)%露出%PANTIES(TARGET)%の%CALLNAME:TARGET%的特写镜頭"
+			STR:補足 += "_胖次_特写镜頭"
+			STR:補足 = _%SAVE_GRAPHICSDATE( CUTIN("見たまま正面", TARGET, 0) )%%STR:補足%
+		ELSE
+			STR:写真 += @"隔著%BOTTOM(TARGET)%露出%CALLNAME:TARGET%の"
+			IF PENIS(TARGET)
+				STR:写真 += "阴茎"
+				STR:補足 += "_阴茎"
+			ELSE
+				STR:写真 += "阴部"
+				STR:補足 += "_阴部"
+			ENDIF
+		ENDIF
+	;サービス
+	ELSEIF COND("阴部のチラ見せ撮影可能") && CHECK_CLO("めくり可能") && (CHOSE_DEVENT(STR:日常イベント名) || RAND:3 == 0)
+		STR:写真 += @"错開视线、主动翻開%CLO("股間")%展示阴部の%CALLNAME:TARGET%"
+		STR:補足 += "_阴部"
+		STR:日常イベント名 = 阴部のチラ見せ撮影
+	ELSE
+		STR:写真 += @"充满画面的特写镜頭：%CLO("股間")%"
+		IF CLO("股間") != ""
+			IF CHECK_CLO("勒紧的")
+				STR:写真 += @"%CALLNAME:TARGET%深陷の股間"
+			ELSE
+				IF PENIS(TARGET)
+					STR:写真 += @"穿着の%CALLNAME:TARGET%坚硬の股間"
+				ELSE
+					STR:写真 += @"穿着の%CALLNAME:TARGET%の股間"
+				ENDIF
+			ENDIF
+		ELSE
+			STR:写真 += @"%CALLNAME:TARGET%の%TEXTS("割れ目")%"
+		ENDIF
+		STR:補足 += "_特写镜頭"
+		STR:補足 = _%SAVE_GRAPHICSDATE( CUTIN("見たまま正面", TARGET, 0) )%%STR:補足%
+	ENDIF
+
+CASE "内褲摄影"
+	PRINTFORM %CALLNAME:MASTER%
+	IF CFLAG:睡眠
+		PRINTFORMW 拿出手机靠近無防備地沉眠著の%CALLNAME:TARGET%の股間。
+	ELSE
+		PRINTFORMW 以像是把脸埋进%CALLNAME:TARGET%股間的姿势取出了手机。
+	ENDIF
+	CALL PHOTO_PANTIES
+
+CASE "肛門摄影"
+	PRINTFORM %CALLNAME:MASTER%
+	IF CFLAG:睡眠
+		PRINTFORMW 拿出手机靠近無防備沉眠著%CONDS("間柄")%的、裸露的菊門。
+	ELSE
+		PRINTFORMW 拿出手机靠近暴露在眼前的、%CALLNAME:TARGET%の裸露的菊門。
+	ENDIF
+	CALL PHOTO_ANAL
+
+CASE "阴部摄影"
+	PRINTFORM %CALLNAME:MASTER%
+	IF CFLAG:睡眠
+		PRINTFORMW 拿出手机靠近無防備沉眠著%CONDS("間柄")%的、裸露的股間。
+	ELSE
+		PRINTFORMW 拿出手机对准在眼前暴露出的、%CALLNAME:TARGET%的裸露的股間。
+	ENDIF
+	CALL PHOTO_PUSSY
+
+CASE "隐秘摄影失敗"
+	PRINTFORMW %CALLNAME:MASTER%拿出手机、准备偷拍%CALLNAME:TARGET%。
+	PRINTFORMW ……在撮影之前被%CALLNAME:TARGET%发现了！
+	IF TALENT:叛逆
+		STR:写真 += "神情愤怒の"
+	ELSEIF TALENT:害羞 || TALENT:内気
+		STR:写真 += "用手捂住脸の"
+	ELSEIF TALENT:開朗 || TALENT:喜歡引人注目
+		STR:写真 += "正在微笑の"
+	ELSEIF TALENT:感情缺乏
+		STR:写真 += "呆然若失の"
+	ELSE
+		STR:写真 += @"%TEXTR("呆呆笑着/面无表情")%の"
+	ENDIF
+	;服装と名前
+	STR:写真 += @"%PHOTO_COSTUME(TARGET)%%CALLNAME:TARGET%"
+CASE "POSE撮影"
+	CALL PHOTO_POSING
+CASEELSE
+	;检查内褲系以外の寝てる時は寝顔を頂きます
+	IF CFLAG:睡眠
+		PRINTFORMW %CALLNAME:MASTER%用手机对准無防備沉眠著の%CALLNAME:TARGET%。
+		IF PREVEX("口内射精")
+			STR:写真 += @"从嘴角流下精液沉眠著の%CALLNAME:TARGET%"
+		ELSEIF EXP_GAIN("睡眠姦経験")
+			STR:写真 += @"%TEXTR("脸颊微微泛红/无意识地握着毛毯边缘/衣服被弄乱")%沉眠著の%CALLNAME:TARGET%"
+		ELSEIF CONDS("直前行動") == "睡眠姦顔射"
+			STR:写真 += @"被你的精液%TEXTR("变成白色/黏糊糊付着")%の%CALLNAME:TARGET%の寝顔"
+		ELSE
+			IF COND("快要醒了")
+				STR:写真 += "稍微皱眉の"
+			ELSE
+				STR:写真 += @"%TEXTR("安静の/看起来很幸福の/可愛の")%"
+			ENDIF
+			STR:写真 += @"%CALLNAME:TARGET%の寝顔"
+		ENDIF
+	;ここから普通の写真
+	ELSE
+		PRINTFORMW %CALLNAME:MASTER%拿出手机、准备偷拍%CALLNAME:TARGET%。
+		;最初の打招呼の時
+		IF DEVENT("初回台詞") == 0
+			STR:写真 += "正在作自我介绍の"
+		;照れてる
+		ELSEIF CONDS("直前行動") == "甜言蜜语"
+			IF TALENT:恋慕
+				STR:写真 += @"%TEXTR("兴奋得脸红/烧红了脸颊/着迷")%の"
+			ELSE
+				STR:写真 += @"%TEXTR("有些动摇/害羞地低着頭/看起来有些不满")%の"
+			ENDIF
+		;色々買ってきた
+		ELSEIF CONDS("直前行動") == "買東西"
+			STR:写真 += "将購入的"
+			IF STRCOUNTS(CSTR:SHOP_BUY履歴, "避孕套") && (TALENT:好色 || TALENT:淫乱) && RANDIF(STRCOUNTS(CSTR:SHOP_BUY履歴, "振動棒"), 1)
+				STR:写真 += "避孕套口叼在嘴里盯着这边の"
+			ELSEIF STRCOUNTS(CSTR:SHOP_BUY履歴, "振動棒")
+				IF ABL:受虐属性 >= 3 && STRCOUNTS(CSTR:SHOP_BUY履歴, "極太", "腕型", "馬型") && RAND:2
+					STR:写真 +=  "凶悪大小的震动棒凝视着脸頬上泛着紅潮の"
+				ELSEIF (TALENT:好色 || TALENT:淫乱) && RAND:2
+					STR:写真 += "震动棒用舌頭缠住摆出挑衅动作の"
+				ELSE
+					STR:写真 += @"震动棒%TEXTR("用手指抚摸着/興味深地盯着/拿起来観察")%の"
+				ENDIF
+			ELSE
+				STR:写真 += "商品饶有興味地打量着の"
+			ENDIF
+		;眠い
+		ELSEIF CFLAG:刚睡醒
+			IF TALENT:粗野 && RAND:3 == 0
+				STR:写真 += "一边伸懒腰一边打哈欠の"
+			ELSEIF TALENT:高贵 && RAND:3 == 0
+				STR:写真 += "用手捂着嘴打哈欠の"
+			ELSE
+				STR:写真 += @"%TEXTR("刚起床就在发呆/还很困/无精打采")%の"
+			ENDIF
+		;暑い！
+		ELSEIF COND("易出汗") && (COND("透け胸罩撮影可能") || CFLAG:PREV_DAILYCATE == 6 || RAND:3 == 0)
+			IF COND("胸罩透け") && COND("透け胸罩撮影可能")
+				;性処理直後
+				SIF CFLAG:PREV_DAILYCATE == 6
+					STR:写真 += @"%TEXTR("刚流下来的/完成工作后渗出来的")%の"
+				IF EQUIP:胸罩 && CHECK_BRA("乳頭露出") == 0
+					STR:写真 += @"汗水浸湿能看到%BRA(TARGET)%の"
+				ELSE
+					;乳頭が露出している胸罩
+					IF EQUIP:胸罩
+						STR:写真 += @"汗湿的%BRA(TARGET)%和"
+					ELSE
+						STR:写真 += "汗湿的"
+					ENDIF
+					IF TALENT:乳环 && RAND:2
+						STR:写真 += @"%TEXTR("穿環反光的/穿環装饰着的")%乳頭"
+					ELSEIF COND("巨乳輪") && RAND:2
+						STR:写真 += @"%TEXTR("立派的/大号的")%乳輪"
+					ELSEIF COND("乳頭肥大")
+						STR:写真 += @"%TEXTR("大号/肥大的/立派的")%乳頭"
+					ELSE
+						STR:写真 += "乳頭"
+					ENDIF
+					STR:写真 += "隐约透露出来の"
+				ENDIF
+			ELSE
+				;性処理直後
+				SIF CFLAG:PREV_DAILYCATE == 6
+					STR:写真 += @"%TEXTR("性処理完成/工作结束后/在努力的进行Ｈ的運動之后")%"
+				IF COND("浑身是汗")
+					STR:写真 += "全身是汗の"
+				ELSE
+					STR:写真 += "流了少量汗の"
+				ENDIF
+			ENDIF
+		;淋浴で暖呼呼
+		ELSEIF COND("出浴")
+			STR:写真 += @"出浴后%TEXTR("頭发潮湿/脸上微微泛红/露出清爽表情")%の"
+		;ポ萝莉
+		ELSEIF CHECK_BRA("Micro") && EQUIP:服 == 0 && COND("巨乳輪") && RAND:4 == 0
+			STR:写真 += "由于胸罩过小而露出大乳輪の"
+		;超短迷你だと胖次チラも撮れる
+		ELSEIF CHECK_SKIRT("超短迷你") && CHECK_CLO("胖次露出") && CONDS("直前行動") != "露脐装超短裙胖次チラ" && RAND:3 == 0
+			STR:写真 += @"%SKIRT(TARGET, "略")%太短"
+			IF EQUIP:胖次 == 0 || CHECK_PANTIES("前貼") || CHECK_PANTIES("Micro")
+				STR:写真 += "屁股的一半"
+				CALL SETFLAG_DAILY, "胖次おぼろげ確認"
+			ELSE
+				STR:写真 += @"%PANTIES(TARGET)%也"
+				STR:補足 += "_胖次"
+			ENDIF
+			STR:写真 += "暴露出来の"
+		;茶は機会多いので随机でスルー
+		ELSEIF CFLAG:茶 && RAND:3 == 0
+			IF RAND:2
+				STR:写真 += @"%TEXTR("正在伸手拿/正在吃")%茶菓子の"
+			ELSE
+				STR:写真 += @"%TEXTR("一只手拿着茶杯/将茶杯放在一旁/将茶杯放到嘴边")%の"
+			ENDIF
+		;よっぱらい
+		ELSEIF STATE("酔酒", TARGET) && RAND:2
+			STR:写真 += @"醉得%TEXTR("眼睛发晕/脸颊泛红")%の"
+		;做爱房とか情人旅館とか
+		ELSEIF PLACE("出先")
+			IF TALENT:好色 || TALENT:小悪魔 || TALENT:不知羞恥
+				STR:写真 += "笑的很開心の"
+			ELSEIF TALENT:感情缺乏 || TALENT:好奇心
+				STR:写真 += "东张西望の"
+			ELSE
+				STR:写真 += "显得有些紧张の"
+			ENDIF
+		;おうちでゆっくり
+		ELSEIF PLACE("自宅")
+			SELECTCASE NO:TARGET
+			;家事をする人たち。他にもいるかな？
+			CASE 1, 20
+				STR:写真 += @"%TEXTR("忙来忙去/干脆利落做着家务")%の"
+			CASEELSE
+				STR:写真 += @"%TEXTR("十分舒畅/不知为何看了过来/看上去有些懈怠")%の"
+			ENDSELECT
+		;部室でダラダラ
+		ELSEIF PLACE("部室")
+			STR:写真 += @"%TEXTR("在教室聊天/不知为何看了过来/正在打发时间")%の"
+		ELSE
+			
+		ENDIF
+		;服装と名前
+		STR:写真 += @"%PHOTO_COSTUME(TARGET)%%CALLNAME:TARGET%"
+	ENDIF
+ENDSELECT
+
+STR:補足 += @"_%CALLNAME:TARGET%"
+SIF CHECK_CLO("泳装姿")
+	STR:補足 += "_泳装"
+SIF CHECK_CLO("体操服姿")
+	STR:補足 += "_体操服"
+SIF CHECK_CLO("学生服姿")
+	STR:補足 += "_学生服"
+SIF CFLAG:睡眠
+	STR:補足 += "_睡眠中"
+
+;日期の記録
+STR:補足 += @"_日期%TOSTR(DAY*10 + TIME)%"
+
+
+;起きている場合の撮影失敗判定
+IF CFLAG:睡眠 == 0
+	SELECTCASE DAILYCOMNAME(5)
+	CASE "裙下撮影"
+		IF CHECK_CLO("Ｖ露出")
+			SIF COND("合意：Ｈ的写真") == 0
+				STR:日常イベント名 = 撮影失敗
+		ELSE
+			SIF COND("合意：内衣写真") == 0
+				STR:日常イベント名 = 撮影失敗
+		ENDIF
+	CASE "股間撮影"
+		SIF COND("合意：内衣写真") == 0 && TALENT:不知羞恥 == 0
+			STR:日常イベント名 = 撮影失敗
+	CASE "内褲摄影"
+		SIF COND("合意：内衣写真") == 0
+			STR:日常イベント名 = 撮影失敗
+	CASE "阴部摄影", "肛門摄影"
+		SIF COND("合意：Ｈ的写真") == 0
+			STR:日常イベント名 = 撮影失敗
+	ENDSELECT
+ENDIF
+
+;撮影失敗ならここまで
+SIF STR:日常イベント名 == "撮影失敗"
+	RETURN 0
+
+;補足次第でフラグ建て
+SIF STRCOUNT(STR:補足, "胖次")
+	CALL SETFLAG_DAILY, "胖次形状確認"
+
+SAVESTR:PREV_PHOTO += @"\/%STR:日常イベント名%"
+
+SAVESTR:写真 = %STR:写真%
+
+SIF TFLAG:撮影おしまい == 0
+	CALL SAVE_PHOTO, @"%STR:写真%%STR:補足%"
+
+;相手に気づかれていない場合には時間経過が起きない
+IF COND("気付いていない")
+	PRINTFORML 咔嚓（攝像聲）
+	PRINTFORML %CALLNAME:MASTER%は『%SAVESTR:写真%』を写真に収めた。
+
+	;画像タグが埋め込んであったら画像を表示する
+	SIF STRCOUNT(STR:補足, "GFX：")
+		CALL LOAD_GRAPHICSDATE, EXTSTR(STR:補足, "GFX：", "_")
+
+	WAIT
+	;履歴には残す
+	CSTR:DAILYCOM履歴 = %CSTR:DAILYCOM履歴%＠%STR:日常イベント選択名%\/
+	STR:日常イベント名 = 
+ENDIF
+
+
+;-------------------------------------------------
+;写真撮影後に何かイベントを起こしたい場合はここに書いても良い
+;-------------------------------------------------
+@AFTERMESSAGE_DAILY5
+SELECTCASE STR:日常イベント名
+CASE "撮影失敗"
+	PRINTFORM ……%CALLNAME:TARGET%似乎对
+	SELECTCASE DAILYCOMNAME(5)
+	CASE "裙下撮影"
+		IF CHECK_SKIRT("裙")
+			PRINTFORM 裙下
+		ELSEIF CHECK_CLO("Ｖ露出")
+			PRINTFORM 重要地方的
+		ELSE
+			PRINTFORM 这种状态的
+		ENDIF
+	CASE "股間撮影"
+		SIF CHECK_CLO("下身衣装露出") || CHECK_CLO("贴身制服露出") || EQUIP:胖次
+			PRINTFORM 穿着%CLO("股間")%、
+		PRINTFORM 股间的
+	CASE "内褲摄影"
+		PRINTFORM 内衣的
+	CASE "肛門摄影"
+		PRINTFORM 肛門的
+	CASE "阴部摄影"
+		PRINTFORM 重要地方的
+	ENDSELECT
+	PRINTFORMW 摄影有抵抗情绪。
+	PRINTFORMW %CALLNAME:MASTER%的写真摄影失败了。
+CASE "隐秘摄影失敗"
+	PRINTFORML 咔嚓（攝像聲）
+	PRINTFORMW %CALLNAME:MASTER%保存了『%SAVESTR:写真%』的照片！
+	;PRINTFORMW ……この時間帯で%CALLNAME:TARGET%を隐秘摄影するのは、もう無理そうだ。
+CASE "阴部のチラ見せ撮影"
+	PRINTFORM 察觉到自己正在被摄影的%CALLNAME:TARGET%%PHOTO_SHOWING()%将手指伸向镜頭所指的位置、
+	SELECTCASE DAILYCOMNAME(5)
+	CASE "股間撮影"
+		PRINTFORM 移開布料
+	CASE "内褲摄影"
+		PRINTFORM 翻開布料
+	ENDSELECT
+	PRINTFORMW 将%TEXTS("割れ目")%暴露在镜頭前。
+	PRINTL 
+	PRINTFORML 咔嚓（攝像聲）
+	PRINTFORMW %CALLNAME:MASTER%保存了『%SAVESTR:写真%』的照片！
+CASE "肛門の見せつけ撮影"
+	IF COND("身嗜み：Ａ拡張") && STRCOUNT(STR:補足, "肛門")
+		PRINTFORM 察觉到自己的尻穴正在被摄影的%CALLNAME:TARGET%%PHOTO_SHOWING()%将塞住肛門的
+		SELECTCASE COND("身嗜み：Ａ拡張")
+		CASE IS >= 4
+			PRINTFORM 特大号肛塞一口气
+		CASE 3
+			PRINTFORM 极粗的肛塞一口气
+		CASEELSE
+			PRINTFORM 肛門塞子一口气
+		ENDSELECT
+		PRINTFORMW 拔出、%TEXTR("松弛了的/鬆弛下來的/大開的")%肛門在%CALLNAME:MASTER%面前暴露出来。
+	ELSE
+		PRINTFORM 察觉到自己的尻穴正在被摄影的%CALLNAME:TARGET%%PHOTO_SHOWING()%把手伸向臀部、
+		PRINTFORMW %TEXTR("一下子/快速地/刷的一下")%把肛門推到镜頭面前。
+	ENDIF
+	PRINTL 
+	PRINTFORML 咔嚓（攝像聲）
+	PRINTFORMW %CALLNAME:MASTER%保存了『%SAVESTR:写真%』的照片！
+CASE "阴部の見せつけ撮影"
+	IF COND("身嗜み：Ｖ拡張") && STRCOUNT(STR:補足, "膣")
+		PRINTFORM 察觉到自己的阴部正在被摄影的%CALLNAME:TARGET%%PHOTO_SHOWING()%将膣内埋藏的
+		SELECTCASE COND("身嗜み：Ｖ拡張")
+		CASE IS >= 4
+			PRINTFORM %TEXTR("笨重的玩具/大约和手臂一样粗的振動棒/20cm以上的極太振動棒")%一口气
+		CASE 3
+			PRINTFORM %TEXTR("拡張用玩具/極太振動棒/略小于20cm的極太振動棒")%一口气
+		CASE 2
+			PRINTFORM %TEXTR("巨根模型玩具/大号的振動棒/15cm程度的大型振動棒")%一口气
+		CASEELSE
+			PRINTFORM %TEXTR("拡張用玩具/相当于男性器大小的振動棒/振動棒")%一口气
+		ENDSELECT
+		PRINTFORM 抜出、%TEXTR("累积的爱液/原先被阻挡住的愛液/高粘度的愛液")%%TEXTR("不斷垂落/大量溢出/全部漏出")%
+		PRINTFORMW %TEXTR("松弛了的/鬆弛下來的/大開的")%膣口在%CALLNAME:MASTER%面前暴露出来。
+	ELSE
+		PRINTFORM 察觉到自己的股間正在被摄影的%CALLNAME:TARGET%%PHOTO_SHOWING()%将手指伸入%TEXTS("割れ目")%、
+		PRINTFORMW %TEXTR("将外側的褶皱和/轻轻地将/一下子把")%内部的粘膜推開展示在镜頭前。
+	ENDIF
+	PRINTL 
+	PRINTFORML 咔嚓（攝像聲）
+	PRINTFORMW %CALLNAME:MASTER%保存了『%SAVESTR:写真%』的照片！
+CASE "POSE撮影"
+	IF TFLAG:撮影おしまい
+		PRINTFORMW %CALLNAME:TARGET%用夸张的調子摆出『结束』的手势……撮影很成功的样子。
+		CFLAG:POSE结束摄影 = 1
+	ELSE
+		PRINTFORML 咔嚓（攝像聲）
+		PRINTFORML %CALLNAME:MASTER%は『%SAVESTR:写真%』を写真に収めた。
+
+		;画像タグが埋め込んであったら画像を表示する
+		SIF STRCOUNT(STR:補足, "GFX：")
+		CALL LOAD_GRAPHICSDATE, EXTSTR(STR:補足, "GFX：", "_")
+
+		WAIT
+	ENDIF
+CASEELSE
+	PRINTFORML 咔嚓（攝像聲）
+	PRINTFORML %CALLNAME:MASTER%は『%SAVESTR:写真%』を写真に収めた。
+
+	;画像タグが埋め込んであったら画像を表示する
+	SIF STRCOUNT(STR:補足, "GFX：")
+		CALL LOAD_GRAPHICSDATE, EXTSTR(STR:補足, "GFX：", "_")
+
+	WAIT
+ENDSELECT
+
+
+

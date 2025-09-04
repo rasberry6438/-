@@ -1,0 +1,5801 @@
+﻿;-------------------------------------------------
+;口上テンプレート
+;風鳴格蕾丝口上_****_**_**（角色クターの名前を入れる、下にコンセプトなど一言あれば入れる）
+;製作者　***
+;-------------------------------------------------
+;-------------------------------------------------
+;角色追加の手順（必読！）
+;１：EVENT_K37_名前.ERBとEVENT_K37_SHOP.ERBとEVENT_K37_DAILY.ERBとCHARA37.csvのファイル名と内部の37を角色番号に変更し、名前部分を角色名にする
+
+;２：変更後のERBファイルをEVENT_Kフォルダに、CHARA37.csvをCSVフォルダに入れる
+
+;３：他の角色を参考にCHARA37.csv内部の初期設定を記述する
+;番号,名前,呼び名,基礎は必ず全部埋めましょう。CSTRも可能な限り埋めた方が良いです
+;CSTR,胖次～飾品は初期衣装なので書かないと初期が全裸です
+
+;４：このファイル内にある、@EVENT_PROFILE_K37を記述する
+;CASE "勧誘直後"は別に無くても構いません
+;CASE "勧誘前"と"紹介文"は有った方が良いです
+
+;５：CALL_NAME.ERB内の
+;CASE 37
+;	STR:基本呼び名 = %CNAME_K37(ARGS)%
+;の２行先頭の ; を削除する。
+
+;６：以上で角色追加の準備が整います
+;本編の日替わり領帯ミングでこんな人が居ますよ～って紹介するイベントが有些ますが、それを見ないでもメイン画面[301]で勧誘できます
+
+;７：あとはERBファイルに書けば書くだけ喋るようになります
+
+;-------------------------------------------------
+;呼び名の設定。"_"の右にふりがなを書く。
+;-------------------------------------------------
+@CNAME_K37, ARGS
+#FUNCTIONS
+
+VARSET LOCALS
+
+SELECTCASE ARGS
+CASE "一人称"
+	LOCALS = 我_我
+CASE "二人称"
+	;相手が主人
+	IF PLAYER == MASTER
+		IF TALENT:MASTER:男性
+			LOCALS = 你_你
+		ELSE
+			LOCALS = 你_你
+		ENDIF
+	;相手が主人ではない
+	ELSE
+		SELECTCASE CSTR:PLAYER:学年
+			CASE "初等部", "中等部", "１年生", "２年生", "３年生", "研究生"
+				LOCALS = %CALLNAME:PLAYER%同学_%CALLNAME:PLAYER%同学
+			CASEELSE
+				IF COND("教員", ASSI)
+					LOCALS = %CALLNAME:PLAYER%老师_%CSTR:PLAYER:ふりがな%老师
+				ELSE
+					IF TALENT:男性
+						LOCALS = 你_你
+					ELSE
+						LOCALS = 你_你
+					ENDIF
+				ENDIF
+			ENDSELECT
+	ENDIF
+CASE "主人"
+	LOCALS = 主人_主人大人
+CASE "助手"
+	SELECTCASE CSTR:PLAYER:学年
+		CASE "初等部", "中等部", "１年生", "２年生", "３年生", "研究生"
+			LOCALS = %CALLNAME:ASSI%同学_%CSTR:ASSI:ふりがな%同学
+		CASEELSE
+			IF COND("教員", ASSI)
+				LOCALS = %CALLNAME:ASSI%老师_%CSTR:ASSI:ふりがな%老师
+			ELSE
+				IF TALENT:男性
+					LOCALS = 你_你
+				ELSE
+					LOCALS = 你_你
+				ENDIF
+			ENDIF
+	ENDSELECT
+ENDSELECT
+RETURNF LOCALS
+
+;-------------------------------------------------
+;勧誘イベントのセリフや紹介文
+;-------------------------------------------------
+@EVENT_PROFILE_K37, ARGS
+
+SELECTCASE ARGS
+CASE "紹介文"
+	STR:1 = 被编入%CALLNAME:MASTER%隔壁班级的学生，是个身体里寄宿着风精灵之力的少女。
+	STR:2 = 
+	STR:3 = 光泽艳丽的华美秀发如雪一般洁白的肌肤，端正的身材和美丽的容貌吸引着人们的目光，其最大的特点变是满溢着自信的大小姐风范的独特语气，以及无时不刻高涨的情绪。
+	STR:4 = 
+	STR:5 = 与外表正相反，有着活泼開朗的性格和格外广阔的胸怀。偶尔会做出的奇妙言行也迷之有人气…的样子。
+
+;ここの中に限り、CFLAG,BASE,TALENT,ABL,EXP,CSTRをCSVに書いたものから変更させることが出来ます
+;例えばBASE:体力を2000にしたいなら BASE:0:体力 = 2000 、強気にさせたいなら TALENT:0:強気 = 1 として下さい
+;また、ABL:信頼を+2させたい場合には ABL:0:信頼 = ABL:信頼 + 2 と書いてください
+CASE "勧誘"
+	;PRINTFORML - %NAME:TARGET% -
+	PRINTFORMW 「啊啦、%CNAME("二人称")%是隔壁班的那个…让你久等了不好意思」
+	PRINTFORMW 「所以？找%CNAME("一人称")%有什么事？」
+	PRINTFORMW 被叫到部室来的%CALLNAME:TARGET%歪着脑袋，露出了毫无心机的笑容。
+	PRINTFORML %CALLNAME:MASTER%坦白了自己的特殊体质，以及自己已经知道了%CALLNAME:TARGET%的真实身份这两件事。
+	PRINTFORMW 「失去了魂也可以再生的体质！？…果然那个传言是真的啊！」
+	PRINTFORMW 「而且还知道了%CNAME("一人称")%的真实身份…%CNAME("二人称")%，不是泛泛之辈哇…！」
+	PRINTFORMW 「嗯，嗯，不用大家说%CNAME("一人称")%也知道哇！」
+	PRINTFORMW 「这样超棒超有趣的事情，怎么能够放着不管呢？！」
+	PRINTFORMW 「好的哇！虽然不知道在打什么算盘，但是就由%CALLNAME:TARGET%，来奉陪到底哇！」
+	PRINTFORMW 「综上所述，今后就请多多関照了哇！！」
+	PRINTFORMW …在话还没说完之前%CALLNAME:TARGET%就自己突然变得情绪高涨起来，然后随意地就接受了的样子…。
+	PRINTFORMW 笑容满面的%CALLNAME:TARGET%用光洁的双手用力地握住了%CALLNAME:MASTER%的手使劲地上下摇晃…。
+;これは別になくても構いません
+CASE "勧誘直後"
+	;PRINTFORML - %NAME:TARGET% -
+	PRINTFORMW 「说起来、这里是做什么的呢？」
+	PRINTFORMW 「游戏大会？茶会？不管是什么都好放马过来吧！」
+	PRINTFORMW 「欸っ？zuoai？…也就是说…是性活动社团…的意思？」
+	PRINTFORMW 「这…这……这………这还真是………」
+	PRINTFORMW 「感觉好有意思啊！！」
+	PRINTFORMW 「也就是说可以看到%CNAME("二人称")%和可爱的女孩子这样那样的样子吗！」
+	PRINTFORMW 「而且%CNAME("一人称")%也会被做这样那样的事情…咿呀ーッ！真是不知羞耻哇——！」
+	PRINTFORMW 一边偷瞄着有些无语的%CALLNAME:MASTER%，%CALLNAME:TARGET%用手遮住了微微泛红的脸颊独自一人难为情着…。
+;これも別になくても構いません。特殊な条件がある場合などにどうぞ
+CASE "出現条件"
+	;PRINTFORMW %NAME:TARGET%%CALLNAME:MASTER%的"%CSTR:関係%"、会在中午出现在社团活动室。
+CASE "自室描写"
+	PRINTFORML 在为%CALLNAME:TARGET%提供的房间里、她放置了许多特意从老家带过来的家具。
+	PRINTFORML 其中，保养良好的茶具和收纳有银制餐具的橱架最为引人注目。
+	PRINTFORML 似乎是%CALLNAME:TARGET%能力的缘故，虽然是在室内却一直有舒适的清风在轻轻地吹拂着。
+ENDSELECT
+
+;-------------------------------------------------
+;この角色が拒否している指令のフラグ立てや其他色々なフラグを開始前に設定できる
+;partnerは勿論、指导者の時でも読み込む
+;-------------------------------------------------
+@SETFLAG_BEFORE_TRAIN_K37
+
+
+;-------------------------------------------------
+;調教開始時のセリフ
+;-------------------------------------------------
+@EVENTTRAIN
+SIF NO:TARGET != 37
+	RETURN 1
+
+DRAWLINE
+;-------------------------------------------------
+;初調教時
+;-------------------------------------------------
+IF CEVENT("調教開始：初調教") == 0
+	PRINTFORMW 「最终连%CNAME("一人称")%也没有逃出%CNAME("二人称")%的魔掌呢…」
+	PRINTFORMW 「啊啊～…肯定会被做很多那～样的事情和，这～样的事情吧…」
+	PRINTFORMW 「讨厌呀～♪真不害臊哇♪」
+	PRINTFORMW 你看着被狂风暴雨般汹涌的妄想侵袭，一边害羞地用手遮住了脸一边轻扭着身体的%CALLNAME:TARGET%
+	PRINTFORMW 虽然感觉有些頭疼，但%CALLNAME:MASTER%为了得到她那足以令男人痴狂的身体，还是将她推倒在了床上…。
+	PRINTFORMW 「啊——，忘记说了，%CNAME("一人称")%还是处女所以…请对我温柔一些♪」
+	CALL SET_CEVENT, "調教開始：初調教"
+;-------------------------------------------------
+;調教開始時（一回のみ）
+;-------------------------------------------------
+;今はただのフレーバー　ここで愛撫、奉仕系強化の新しい建议を追加したいけど保留中
+ELSEIF ABL:TARGET:技巧 >= 3 && CEVENT("調教開始：技巧ＬＶ３以上") == 0
+	PRINTFORMW 「啊——，%CNAME("二人称")%！到了今天的幽会时间了吗？」
+	PRINTFORMW 「正好哇，我有个东西想试一下，请把衣服脱掉吧。来、快点！」
+	PRINTFORMW 被强硬的语气催促在露了出来的%CALLNAME:MASTER%的性器，和%CALLNAME:TARGET%认真的面庞相对着。
+	PRINTFORMW %CALLNAME:TARGET%保持着若即若离的距离，当你思考着要不要主动把性器靠近她的嘴边时，%CALLNAME:TARGET%呼——地吹了一口气。
+	PRINTFORMW 于是，轻柔的吐息让%CALLNAME:MASTER%的整个股胯之间都開始好像被羽毛触摸着一般！
+	PRINTFORMW 意料之外的快感让%CALLNAME:MASTER%从口中漏出了小小的喘息声，%CALLNAME:TARGET%摆出了一副得意的微笑。
+	PRINTFORMW 「唔呼呼っ、很舒服对吧？不回答也没関系、你的表情让人看了就一目了然呢」
+	PRINTFORMW 「以%CNAME("二人称")%教给我的东西为基础，按照%CNAME("一人称")%自己的方式练习了一下哟♪」
+	PRINTFORMW 「现在開始会比之前还要棒！我会让你好好的舒服起来哟！」
+	CALL SET_CEVENT, "調教開始：技巧ＬＶ３以上"
+;屈服刻印Lv1
+;ELSEIF MARK:屈服刻印 == 1 && TALENT:恋慕 == 0 && CEVENT("調教開始：屈服刻印ＬＶ１") == 0
+	;PRINTFORMW 
+	;CALL SET_CEVENT, "調教開始：屈服刻印ＬＶ１"
+;屈服刻印Lv2
+;ELSEIF MARK:屈服刻印 == 2 && TALENT:恋慕 == 0 && CEVENT("調教開始：屈服刻印ＬＶ２") == 0
+	;PRINTFORMW 
+	;CALL SET_CEVENT, "調教開始：屈服刻印ＬＶ２"
+;屈服刻印Lv3
+ELSEIF MARK:屈服刻印 == 3 && TALENT:恋慕 == 0 && CEVENT("調教開始：屈服刻印ＬＶ３") == 0
+	PRINTFORMW 「…哈啊…」
+	PRINTFORMW …试着邀请%CALLNAME:TARGET%去床上，却发现她有些心不在焉。
+	PRINTFORMW 仅仅是被%CALLNAME:MASTER%轻轻的晃了晃肩，%CALLNAME:TARGET%却好像被吓了一大跳一样，肩膀剧烈地震了一下的同时唤出一阵极强的风吹向了你…。
+	PRINTFORMW 「咿呀！？十，十分抱歉！啊！是要幽会了吗？！」
+	PRINTFORMW 「没、没関系的哇、只是在想一些事情…现在马上就过去——！」
+	PRINTFORMW 这样说着便有些欢欣雀跃地跑向床的%CALLNAME:TARGET%看起来比平时更有少女的感觉…。
+	PRINTFORMW 
+	PRINTFORMW （…哈啊，%CNAME("一人称")%，究竟是怎么了呢…）
+	PRINTFORMW （只要一想到%CALLNAME:MASTER%，只要一看见那张脸的话我的身体…还有心里都会变得好热好热…）
+	CALL SET_CEVENT, "調教開始：屈服刻印ＬＶ３"
+;恋慕
+ELSEIF TALENT:恋慕 && CEVENT("調教開始：恋慕") == 0
+	PRINTFORMW 「我说啊，%CNAME("二人称")%…可以占用你一些时间吗？」
+	PRINTFORMW 像往常一样被邀请去幽会的%CALLNAME:TARGET%，用一种前所未有过的认真神色向着%CALLNAME:MASTER%搭了话。
+	PRINTFORMW 等%CALLNAME:MASTER%一转过身来、%CALLNAME:TARGET%便向下定了什么决心似的開了口。
+	PRINTFORMW 「%CNAME("一人称")%…好像喜欢上%CNAME("二人称")%了」
+	PRINTFORMW 「嗯——，不是作为朋友而是异性间的喜欢…作为一名女性爱上了%CNAME("二人称")%」
+	PRINTFORMW 看着被突然的告白给惊呆的%CALLNAME:MASTER%，%CALLNAME:TARGET%自嘲似的笑了笑。
+	PRINTFORMW 「…我明白的哇，突然被说了这种话肯定只会让人不知所措的吧」
+	PRINTFORMW 「但是，%CNAME("一人称")%想好好整理一下自己的内心和感情…仅此而已啊」
+	PRINTFORMW 「真想立刻马上成为%CNAME("二人称")%的所有物什么的…又或是不可以爱着%CNAME("一人称")%之外的人什么的，我不会说这种话」
+	PRINTFORMW 「但是…但是如果有一天%CNAME("二人称")%也真心深爱着%CNAME("一人称")%的话、那个时候…」
+	PRINTFORMW 话说到这里就停住了，%CALLNAME:TARGET%在短暂地沉默过后，好像放下了心事似的向你露出了平时那副快活開朗的笑颜。
+	PRINTFORMW 「好啦、沉重的话题就到此为止哇！来吧来吧，这次也请好好地疼爱%CNAME("一人称")%哦♪」
+	CALL SET_CEVENT, "調教開始：恋慕"
+;相思相愛
+ELSEIF TALENT:相思相愛 && CEVENT("調教開始：相思相愛") == 0
+	PRINTFORMW 
+	CALL SET_CEVENT, "調教開始：相思相愛"
+;助手の有無を格子（いない場合は二回目以降へ飛ぶ）
+ELSEIF ASSI <= 0
+	CALL K37_KOJO2
+
+;-------------------------------------------------
+;助手との掛け合い(YYを助手の角色番号に置換、ＸＸを助手の角色番号に対応した名前に変更する) 
+;掛け合いをする增加角色場合は、コピー＆ペーストをして増やす
+;-------------------------------------------------
+;助手
+;ELSEIF NO:ASSI == YY
+	;初めて
+;	IF CEVENT("助手会話：ＸＸ") == 0
+		;恋慕＋恋慕時初口上（陥落イベント）が発生済み
+;		IF CEVENT("調教開始：恋慕")
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;		CALL SET_CEVENT, "助手会話：ＸＸ"
+	;二回目以降
+;	ELSE
+		;恋慕
+;		IF TALENT:恋慕
+;			PRINTFORMW 
+		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;	ENDIF
+;口上のある助手が居ない場合は、通常の二回目以降の口上へ飛ぶ
+ELSE
+	CALL K37_KOJO2
+ENDIF
+
+RETURN 1
+
+
+;-------------------------------------------------
+;調教開始時（2回目以降）
+;-------------------------------------------------
+@K37_KOJO2
+;恋慕
+;IF TALENT:恋慕 && RAND:2
+	;IF RAND:3 == 0
+		;PRINTFORMW 
+		;PRINTFORMW 
+	;ELSEIF RAND:2
+		;PRINTFORMW 
+		;PRINTFORMW 
+	;ELSE
+		;PRINTFORMW 
+		;PRINTFORMW 
+	;ENDIF
+;ELSE
+IF COND("约会中")
+	IF RAND:2
+		PRINTFORMW 「呀啊♪明明还没洗澡呢，真拿你没办法…♪」
+		PRINTFORMW 「不过，要说已经等不及的话%CNAME("一人称")%其实也一样哇…唔呼呼♪」
+		PRINTFORMW 被推倒在床上的%CALLNAME:TARGET%一边小声偷笑着一边紧紧抱住了%CALLNAME:MASTER%…。
+	ELSE
+		PRINTFORMW 「在和平常不一样的地方幽会…唔呵呵，感觉比平时更加小鹿乱撞呢」
+		PRINTFORMW 被昏暗的光笼罩着，向着%CALLNAME:MASTER%伸開了双臂的%CALLNAME:TARGET%，营造出来一种比平时更加妖媚的氛围…。
+		PRINTFORMW 「来，比平常%CNAME("一人称")%更加激烈地宠爱我吧，%CNAME("二人称")%♪」
+	ENDIF
+ELSE
+	IF RAND:3 == 0
+		PRINTFORMW 「啊呀、要抱我吗？请等一下哦♪」
+		PRINTFORMW %CALLNAME:TARGET%在床上跪坐着，深深地低下了頭，对你行了一个跪坐最敬礼。
+		PRINTFORMW 「咳咳…这次您也指名了%CNAME("一人称")%，真是不胜感激」
+		IF CEVENT("調教開始：技巧ＬＶ３以上") == 0
+			PRINTFORMW 「虽然我的技巧还很笨拙…但还请允许我诚心诚意地侍奉您哇」
+			PRINTFORMW 「…所以，如果能教我各种东西的话我会很高兴的哇♪」
+		ELSE
+			PRINTFORMW 「寄宿着风精灵之力的手技…还请尽情享受」
+			PRINTFORMW 「…所以，会让你变得舒服起来的哟っ♪」
+		ENDIF
+	ELSEIF RAND:2
+		PRINTFORMW 「唔呼呼、这样子被老师您所渴求着…真的很高兴哇♪」
+		PRINTFORMW 「今天也，还有以后也要教我各种各样的事情啊…请继续把%CNAME("一人称")%束缚在您的手掌心之中吧♪」
+		PRINTFORMW 你缓缓地把展露出毫无顾虑的微笑的%CALLNAME:TARGET%推倒在床上…。
+	ELSE
+		PRINTFORMW 「嗯…到了幽会的时间了吗…？」
+		PRINTFORML 被%CALLNAME:MASTER%诱到床上，%CALLNAME:TARGET%一边娇媚的轻喘着，一边缓缓地褪下了衣物。
+		PRINTFORMW 那和平时不同的，满目春情之中略带忧郁的眼神让你不由得吞了下口水…。
+		PRINTFORMW 「唔呼呼…在因为%CNAME("一人称")%而心跳不已呢…♪真高兴哇♪」
+		PRINTFORMW 高兴地笑着的%CALLNAME:TARGET%，把湿润的嘴唇轻柔的贴在了%CALLNAME:MASTER%的脸颊上…。
+	ENDIF
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;調教終了時のセリフ
+;-------------------------------------------------
+@EVENTEND
+SIF NO:TARGET != 37
+	RETURN 1
+
+DRAWLINE
+;-------------------------------------------------
+;※精力限界値を超えた場合の終了口上
+;-------------------------------------------------
+;調教強制終了時の口上
+IF STATE("撃沈", MASTER)
+	;恋慕
+	;IF TALENT:恋慕
+		;PRINTFORMW 
+	;其他
+	;ELSE
+		PRINTFORMW 「啊啦…怎么了吗？脸色看着很差哦？」
+		PRINTFORMW 「大腿借给你，稍微枕在上面休息会儿吧」
+	;ENDIF
+;partnerが体力or精力尽きた場合
+ELSEIF STATE("撃沈")
+	IF RAND:2
+		PRINTFORMW 「嗯っ咕…呼啊啊——，哈啊…」
+		PRINTFORMW 「被疼爱到感觉自己都要坏掉了什么的…♪」
+	ELSE
+		PRINTFORMW 「哈嗯…已经…已经不行了哇…」
+		PRINTFORMW 「再做下去地话%CNAME("一人称")%，就要变成白痴了呜…」
+	ENDIF
+;恋慕＋満足
+;ELSEIF TALENT:恋慕 && COND("満足")
+	;PRINTFORMW 
+;恋慕
+;ELSEIF TALENT:恋慕
+	;PRINTFORMW 
+ELSEIF COND("満足")
+	IF RAND:2
+		PRINTFORMW 「被做了好多好多舒服的事情…%CNAME("二人称")%都要变成你的俘虏了呢♪」
+		PRINTFORMW 「下次也请你多多関照哇っ♪」
+	ELSE
+		PRINTFORMW 「这次就到这里吗？辛苦了哇」
+		PRINTFORMW 「下次也请好好地疼爱我呀♪」
+	ENDIF
+ELSE
+	IF RAND:2
+		PRINTFORMW 「啊啦？已经结束了吗？…是%CNAME("一人称")%为了照顾我的体力吗？」
+		PRINTFORMW 「如果是这样的话其实不必多虑。再稍微激烈一些也是可以的哟」
+	ELSE
+		PRINTFORMW 「这次就到此为止吗」
+		PRINTFORMW 「嗯～、下次请更多更多地疼爱我哦」
+	ENDIF
+ENDIF
+RETURN 1
+
+;-------------------------------------------------
+;指令実行時のセリフ
+;-------------------------------------------------
+@KOJO_MESSAGE_COM_K37
+;助手が調教した時に口上をスキップする（好みに応じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSIPLAY
+;	RETURN 0
+
+;-------------------------------------------------
+;愛撫
+;-------------------------------------------------
+IF SELECTCOM == 0
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 「唔呵呵，这还是第一次被您用这么色情的手法抚摸着哟？」
+		PRINTFORMW 「请温柔一些哇…嗯——♪」
+	;二回目以降
+	ELSE
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			IF RAND:3 == 0
+				PRINTFORMW 「%CNAME("二人称")%还真是非常认真地抚弄着%CNAME("一人称")%的肌肤呢？」
+				PRINTFORMW 「之后我会好好回报的，会让%CNAME("二人称")%也变得舒服起来哇♪」
+			ELSEIF RAND:2
+				PRINTFORMW 「嗯——、呃啊…现在被弄得痒痒的部位那里、好舒服哇…♪」
+				PRINTFORMW %CALLNAME:TARGET%闭上了双眼、乖乖地把自己的身体交给%CALLNAME:PLAYER%的手。
+			ELSE
+				PRINTFORMW 「唔呵呵、%CNAME("一人称")%摸起来的感觉怎么样啊？」
+				PRINTFORMW 「这是每天都有好好精心护理的结果哟♪」
+			ENDIF
+		;ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-;-------------------------------------------------
+;舐陰　面部騎乗(被逆推ているとき)
+;-------------------------------------------------
+IF SELECTCOM == 1
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 「骑舔？…是什么意思？」
+		;被逆推ているとき
+		IF TEQUIP:推倒
+			PRINTFORMW 「…嗯～嗯～，跨在%CNAME("二人称")%的脸上…把腰沉下去…是这样吗—呜呜呜——？！」
+			PRINTFORMW 秘处被舔着的%CALLNAME:TARGET%发出了近乎癫狂的悲鸣的同时把屁股重重贴在了你的脸上…。
+			PRINTFORMW 「啊呀，对，对不起！被吓了一跳所以脚没使上力气…您的鼻子没事吧？」
+		;それ以外
+		ELSE
+			PRINTFORMW 「…那个，如果把腿张開写能更尽兴的话咿呀啊啊っ？！」
+			PRINTFORMW 「咿呃っ、你在，在舔哪里啊，酥酥麻麻的呜啊——っ！？」
+			PRINTFORMW 你死死按住了因为初次品尝到的快感而挣扎着的%CALLNAME:TARGET%，向她灌输着舔阴的快乐…。
+		ENDIF
+	;二回目以降
+	;清洁舔阴
+	ELSEIF COND("清洁舔阴フラグ", PLAYER)
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			IF RAND:2
+				PRINTFORMW 「帮我清理干净了啊？非常感谢♪」
+			ELSE
+				PRINTFORMW 「居然是用舌頭帮我进行清扫处理…总觉得很抱歉呢…」
+			ENDIF
+		;ENDIF
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;IF ABL:Ｃ感覚 >= 3
+			;IF RAND:3 == 0
+				;PRINTFORMW 
+			;ELSEIF RAND:2
+				;PRINTFORMW 
+			;ELSE
+				;PRINTFORMW 
+			;ENDIF
+		;ELSE
+			;IF RAND:3 == 0
+				;PRINTFORMW 
+			;ELSEIF RAND:2
+				;PRINTFORMW 
+			;ELSE
+				;PRINTFORMW 
+			;ENDIF
+		;ENDIF
+	;それ以外
+	ELSE
+		IF ABL:Ｃ感覚 >= 3
+			PRINTFORMW 「%TEXTR("呼呜呜，啊っ，咿っ，噫咿っ/啊呃呃っ…嗯っ，咻っ/嗯嗯っ…啊っ…那、那里咿")%♪」
+			IF RAND:4 == 0
+				PRINTFORMW 「真是的，像那样用舌頭掘弄%TEXTR("入口/穴口/里面")%的话…不一会儿就会去了哇っ♪」
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 「小腹和内心深处都啾——啾——地抽动着，♪%TEXTR("色情的汁液/下流的汁液/爱液")%流得停不下来哇っ♪」
+			ELSEIF RAND:2
+				PRINTFORMW 「脑袋%TEXTR("晕乎乎的/轻飘飘的")%…感觉和被舔着的%TEXTR("那里/小穴")%一样都要溶化了呢♪」
+			ELSE
+				PRINTFORMW 「请再继续，请多舔一舔…%TEXTR("小豆豆/阴蒂/我的裂缝/小穴的入口")%吧♪」
+			ENDIF
+		ELSE
+			IF RAND:3 == 0
+				PRINTFORMW 「…%TEXTR("呃噫っ/咿呀っ/啊呃")%♪」
+				PRINTFORMW 「现，现在，感觉肚子里面啾啾的…！」
+			ELSEIF RAND:2
+				PRINTFORMW 「嗯…虽然没有讨厌的感觉…但还是感觉怪怪的呢…」
+				PRINTFORMW 「%TEXTR("我倒是很在意那附近会不会有什么味道哇/这样，真的会变得舒服吗…？")%」
+			ELSE
+				PRINTFORMW 「唔呼，呼咿っ，%TEXTR("呼，呼吸打在那里/sh，舌，舌頭进去了")%——感觉痒痒的哇…ッ」
+				PRINTFORMW 看来想用这种方法把%CALLNAME:TARGET%的快感引出来还需要很久…。
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;肛門愛撫
+;-------------------------------------------------
+IF SELECTCOM == 2
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;気持ちいい
+		IF CHECK("Ａ指挿入")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;気持ちいい
+		ELSEIF CHECK("Ａ指挿入")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;自慰
+;-------------------------------------------------
+IF SELECTCOM == 3
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 「自己摸？…啊啊，您是说自慰吧！」
+		PRINTFORMW 「居然说像平常自慰的时候一样就好…%CNAME("一人称")%，看起来是那么下流的女孩子吗…♪」
+		PRINTFORMW %CALLNAME:TARGET%在故作抱怨的同时却看着很開心地開始爱抚起自己的身体来…。
+	;二回目以降
+	ELSE
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			IF RAND:3
+				PRINTFORMW 「难得让您看我做着这种事的样子…请再仔细多看一会儿啊♪」
+				PRINTFORMW （我说完之后就死死地盯着看…%CNAME("二人称")%还真是可爱呢♪）
+			ELSEIF RAND:2
+				PRINTFORMW 「…问我平时会用什么作为自慰的配菜吗？」
+				PRINTFORMW 「我想想哦…%TEXTR(@"会想着在街上见过的看起来很强壮很棒的男生/会想着%CNAME("二人称")%的事情/会看着比较色情的男性向杂志")%之类的…」
+			ELSE
+				PRINTFORMW 「呜嗯っ…唔嘿嘿，这样看着的话，%TEXTR("我最敏感的部位/会让我变得很敏感的爱抚方法")%，都会被%CNAME("二人称")%给记住了哇…♪」
+			ENDIF
+		;ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;舐陰莖(扶她/男性のみ)
+;-------------------------------------------------
+IF SELECTCOM == 4
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;胸愛撫
+;-------------------------------------------------
+IF SELECTCOM == 5
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 「啊啦…我的胸，很在意吗？」
+		SIF TALENT:PLAYER:男性
+			PRINTFORMW 「果然您很喜欢胸部呢♪」
+		PRINTFORMW 「欸嘿嘿，请随你喜欢来摸吧♪」
+	;二回目以降
+	ELSE
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			IF CHECK_COM("舔乳頭")
+				IF RAND:2
+					PRINTFORMW 「真是的，居然舔得那么仔细…♪」
+					PRINTFORMW 「好ー乖乖乖ー…好像一个小宝宝一样呢♪」
+				ELSE
+					PRINTFORMW 「呜嗯っ♪不、不光舔着居然还轻轻咬住…ッ♪」
+					PRINTFORMW 「讨厌哇、乳頭渐渐開始勃起了♪」
+				ENDIF
+			ELSE
+				LOCALS = %TEXTR("胸/胸部")%
+				IF RAND:3 == 0
+					PRINTFORMW 「唔～，虽然%TEXTR("触摸着/当成玩具一样玩弄着")%%CNAME("一人称")%的%LOCALS%很快乐但也不要像捏果冻一样把它弄得一弹一弹的呀♪」
+					PRINTFORMW 「%CNAME("一人称")%，胸口烫烫的…感觉变得舒服起来了♪」
+				ELSEIF RAND:2
+					PRINTFORMW 「%TEXTR("胸/胸部")%被男生揉的话会越揉越大的，听说是这样哇」
+					PRINTFORMW 「如果是真的话，那%CNAME("一人称")%的%TEXTR("胸/胸部")%变得更大的话就都怪%CNAME("二人称")%哦♪」
+				ELSE
+					PRINTFORMW 「欸嘿嘿っ…在用明明不小但却很温柔的力度抓揉着呢…♪感觉真棒哇♪」
+					PRINTFORMW 「如果没有和%CNAME("二人称")%相识的话，%LOCALS%也可以变得这么有快感什么的我肯定不会知道呢…♪」
+				ENDIF
+			ENDIF
+		;ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;接吻
+;-------------------------------------------------
+IF SELECTCOM == 6
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 「哎嘿っ…哎嘿嘿嘿っ…♪不会让你逃掉哟…！」
+			PRINTFORMW 「来吧，%CNAME("一人称")%的初吻，请好好收下吧ー♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「啾ー………哈啊，%CNAME("一人称" ,"どもり")%的初吻…」
+			PRINTFORMW 「这，这样…只能让%CNAME("二人称")%对我负起责任来了哇ッ♪」
+			PRINTFORMW 「所以就来多亲几次吧！啾ー～～～ッ♪」
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;それ以外
+	ELSE
+		;テンダー接吻
+		IF CHECK_COM("テンダー接吻")
+			IF RAND:2
+				PRINTFORMW 「用亲，亲吻作为開始的信号什么的…这样心会嘣嘣跳地停不下来哇♪」
+			ELSE
+				PRINTFORMW 「呜呵呵…感觉气氛被调起来了，心情高涨呢…♪真不愧是%CNAME("二人称")%呢♪」
+			ENDIF
+		;恋慕
+		;ELSEIF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		ELSE
+			IF RAND:3 == 0
+				PRINTFORMW 「%KOJO_RAND_K37("接吻")%」
+				PRINTFORMW 「…呀呃、不会让你逃掉的哦…%KOJO_RAND_K37("接吻")%」
+			ELSEIF RAND:2
+				PRINTFORMW 「呜哈啊，哈啊，哈啊…好舒服…%TEXTR("嘴唇轻飘飘的/脑袋麻麻的")%哇…♪」
+				PRINTFORMW 「还真是个♪%CNAME("二人称")%との接吻以外知りませんけど♪」
+			ELSE
+				PRINTFORMW 「唔嘿嘿、没想到仅仅是接吻就会让我的心悸动得如此强烈…还真是意料之外哇♪」
+				PRINTFORMW 「还想要…♪还想继续做下去…%CNAME("二人称")%♪」
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;阴部愛撫
+;阴蒂の場合にはCHECK_COM("陰核愛撫"), 阴部の場合にはCHECK_COM("阴部愛撫"), 恥丘ならCHECK_COM("恥丘愛撫")がONになる
+;-------------------------------------------------
+IF SELECTCOM == 7
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 「嗯っ…咿っ…♪」
+		IF TALENT:PLAYER:男性
+			PRINTFORM 「男，男孩子有力的手指
+		ELSE
+			PRINTFORM 「女，女孩子纤细的手指
+		ENDIF
+		PRINTFORMW …把%CNAME("一人称")%的那里，当成玩具一样玩弄着…♪」
+	;二回目以降
+	;中出し後にお掃除
+	ELSEIF CHECK_COM("擦拭")
+		PRINTFORMW 「要为我做中出后的清理吗？真開心哇♪」
+		PRINTFORMW 「——啊不过，现在那里还很敏感所以请温柔一点哦？」
+	;それ以外
+	ELSE
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			IF CHECK_COM("陰核愛撫")
+				IF RAND:3 == 0
+					PRINTFORMW 「啊っ啊っ，%TEXTR("阴，阴蒂那里/小，小豆豆")%被揉，揉捏着哇ッ」
+					PRINTFORMW 「那、那样拉扯的话%CNAME("一人称")%，要变得奇怪了…嗯咿咿咿啊————っ♪」
+				ELSEIF RAND:2
+					PRINTFORMW 「嗯呀っ！噫っ、嘎っ、啊呜…♪」
+					PRINTFORMW 「居然用手指去弹%TEXTR("阴，阴蒂/小，小豆豆")%那里…刺激感强过頭了哇っ」
+				ELSE
+					PRINTFORMW 「咿唔っ♪呜，噫，呃那っ♪那里，腰っ♪腰不由自主地弓起来了哇っ♪」
+					PRINTFORMW 「那，那个地方呜♪不要那样%TEXTR("咕哩咕哩地/咯哩咯哩地/揉搓着")%玩弄那里哇ぃっ♪」
+				ENDIF
+			ELSE
+				IF RAND:3 == 0
+					PRINTFORMW 「光，光是一直咝啦咝啦地玩弄着缝隙附近…让人心焦难耐哇…」
+					PRINTFORMW （什么时候才会開始进攻小穴呢，好期待啊♪）
+				ELSEIF RAND:2
+					PRINTFORMW 「啊，啊啊…入口附近浅浅的地方…被欺负着哇♪」
+					PRINTFORMW 「被那样不停搅弄着子宫会想要地很难受哇…♪」
+				ELSE
+					PRINTFORMW 「啊っ…嗯，呃っ…♪」
+					PRINTFORMW 「这，这种让人心焦的爱抚方式…真是坏心眼哇…♪」
+				ENDIF
+			ENDIF
+		;ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;指挿入
+;CHECK_COM("玩弄Ｇ点")とTEQUIP:振動棒で大きく分岐する
+;-------------------------------------------------
+IF SELECTCOM == 8
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;振動棒挿入中
+		IF TEQUIP:振動棒
+			PRINTFORMW 「啊啊…呜硬硬的振动棒在小穴里面滋噜滋噜的…♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「呜呃っ…%CNAME("二人称")%的手指，在我肚子里的感觉好明显哇…♪」
+		ENDIF
+		PRINTFORMW 「只是塞进去就会这么舒服…动起来的话会变成什么样呢♪」
+	;二回目以降
+	;Gスポット刺激
+	ELSEIF CHECK_COM("玩弄Ｇ点")
+		IF CHECK("指挿入")
+			IF RAND:3 == 0
+				PRINTFORMW 「咿呀呜呜ぅ唔呜っ♪那里ぉ♪现在碰着的那个地方好舒服哇っ♪」
+				PRINTFORMW 「好厉害っ、好棒呜ぃっ♪只是碰了下就感觉整个脑袋都冒着金星咿咿っ♪」
+			ELSEIF RAND:2
+				PRINTFORMW 「嗯呜，啊嗯゛啊呜♪不要っ，手、手指把小穴汁都挖出来了咿呜っ♪」
+				PRINTFORMW 「不っ不对っ、不对呜哇っ♪感っ、感觉要喷出…咿呀呀呀啊啊っっ♪」
+			ELSE
+				PRINTFORMW 「呼咿っ、咿゛咿っ…♪啊、咿咿っ，要、要去っ一直不停地去呜っ，已经、已经不っ、不行っ…」
+				PRINTFORMW 「哈啊っ、咕唔…哈っ…咕哈っ、哈啊…♪好、好腻害っ…则的好噫害哇啊…♪」
+			ENDIF
+		ELSE
+			IF RAND:2
+				PRINTFORMW 「咿咿…ッ！？怎、怎么回事，这种…？」
+			ELSE
+				PRINTFORMW 「呜呃ッ♪有、有点太舒服了哇」
+			ENDIF
+		ENDIF
+	;振動棒挿入中
+	ELSEIF TEQUIP:振動棒
+		IF CHECK("振動棒")
+			PRINTFORMW 「%TEXTR("呃啊啊゛っ？！啊゛哇啊゛啊啊啊っ/哦呜呜゛嗯っ♪哦っ啊゛っ啊゛っ啊゛っ/好激咿っ♪咿、啊゛啊゛啊啊啊啊")%♪」
+			IF RAND:4 == 0
+				PRINTFORMW 「好っ、好っ硬的东西ぁ♪在我的里面滋噜滋噜地刮着ぇ♪脑袋都变得不清醒了呜っ♪」
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 「哧っ♪超咿害っ♪在我的肚子里咕噜咕噜动得好腻害呜哦哦っ♪」
+			ELSEIF RAND:2
+				PRINTFORMW 「大鸡巴♪明明还想要%CNAME("二人称")%的大鸡巴的っ♪却被玩具给弄得好満足哇っ♪」
+			ELSE
+				PRINTFORMW 「不可以ー那样顶着子宮ッ♪太深了っ♪深、深过涂噜呜哇哇ぉぉぉ♪」
+			ENDIF
+		ELSE
+			IF RAND:2
+				PRINTFORMW 「咿…ッ，请、请再稍微温柔一些哇」
+			ELSE
+				PRINTFORMW 「呜咕…还、还是有些太激烈，了呢…ッ」
+			ENDIF
+		ENDIF
+	;それ以外
+	ELSE
+		IF ABL:Ｖ感覚 >= 3
+			PRINTFORMW 「%TEXTR("哇啊…呃咕、咕呜っ/啊啊っ、那里、那里好爽啊っ/咿呀呀呃っ♪呃呼、呼哈っ")%♪」
+			IF RAND:3 == 0
+				PRINTFORMW 「请不要那么っ♪%TEXTR("啵唧啵唧/呼啦呼啦")%地欺负着小穴♪」
+			ELSEIF RAND:2
+				PRINTFORMW 「明明真的好想要大鸡鸡♪结果被手指给好好地满足了一番ぉっ♪」
+			ELSE
+				PRINTFORMW 「啪啾啪啾，咕啾咕啾的，色情的声音♪在脑袋里不停回荡着哇…♪」
+			ENDIF
+		ELSE
+			IF RAND:2
+				PRINTFORMW 「咿…ッ，请、请再稍微温柔一些哇」
+			ELSE
+				PRINTFORMW 「呜咕…还、还是有些太激烈，了呢…ッ」
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;舐肛　Ａ面部騎乗(被逆推ているとき)
+;-------------------------------------------------
+;舐肛
+IF SELECTCOM == 9
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;给对方手交
+;-------------------------------------------------
+IF SELECTCOM == 10
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;给对方乳交
+;-------------------------------------------------
+IF SELECTCOM == 11
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;给对方足交
+;-------------------------------------------------
+IF SELECTCOM == 12
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;扒開阴道
+;-------------------------------------------------
+IF SELECTCOM == 13
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		IF TALENT:処女
+			PRINTFORMW 「啊啦…想检查%CNAME("一人称")%保持着纯洁的证明…您是这么要求的吧？」
+		ELSE
+			PRINTFORMW 「唔呼呼，想看一看，已经变成女人的%CNAME("一人称")%的那个地方吗…」
+		ENDIF
+		PRINTFORMW 「当然好哟っ♪来，%CNAME("一人称")%的蜜穴内部…请您仔细观赏吧♪」
+	;二回目以降
+	ELSE
+		IF TALENT:処女
+			IF RAND:3 == 0
+				PRINTFORMW 「%CNAME("一人称")%还没被使用过的蜜穴…很漂亮吧？」
+				PRINTFORMW 「想听一听您仔细看过之后的感想呢っ♪如何啊，如何啊♪」
+			ELSEIF RAND:2
+				PRINTFORMW 「嗯っ…♪啊…只是被看着就变得湿乎乎什么的我也知道哇…♪」
+				PRINTFORMW 「一定是太想要从少女变成女人了所以才%TEXTR("这样子流着口水/变得湿乎乎的")%，还真是个下流的小骚穴呢…要不要惩罚一下呀？」
+			ELSE
+				PRINTFORMW 「唔呵呵…就是这样，处女膜还健在哟」
+				PRINTFORMW 「啊ー啊，不知道会不会有哪里的好心人愿意把%CNAME("一人称")%%TEXTR("变成大人/的处女取走")%呢…？」(ﾁﾗｯﾁﾗｯ)
+			ENDIF
+		ELSE
+			IF PREVEX("Ｖ中出し")
+				IF RAND:3 == 0 && ABL:精液中毒 >= 3
+					PRINTFORMW 「啊啦…都溢出来了呢…嗯、啾、啾噜啾噜…」
+					PRINTFORMW 「…咕啾、咕嗯…♪唔嘿嘿，%TEXTR("因为放着的话就太可惜了，多谢您美味的款待/精液和爱液混合起来的果汁，真是美味")%哇♪」
+				ELSEIF RAND:2
+					PRINTFORMW 「讨厌っ♪%TEXTR("这么多施舍给我的/多到喝不完的/咽下去会感觉很美味的")%精液就这么漏出来了…♪」
+					PRINTFORMW 「我的小穴这么下流真是抱歉呢♪作为惩罚请往里面射到小穴喝不下为止吧♪」
+				ELSE
+					PRINTFORMW 「嗯っ…啊嗯、啊哈啊…♪射精射得多到不停向外溢…っ…♪」
+					PRINTFORMW 「…不过，总觉得还是不满足哇…请再多射一些出来给我吧？」
+				ENDIF
+			ELSE
+				IF RAND:3 == 0
+					PRINTFORMW 「感觉如何呢，%CNAME("一人称")%的小穴里面…？」
+					IF PENIS(PLAYER)
+						PRINTFORMW 「…唔呵呵，就算不说我也能知道呢♪大肉棒硬硬地勃起来了哦♪」
+					ELSE
+						PRINTFORMW 「洞口就这样张開着不觉得很寂寞吗？好像要一些能把它填住的东西哇…♪」
+					ENDIF
+				ELSEIF RAND:2
+					PRINTFORMW 「嗯っ…♪啊…只是被看着就变得湿乎乎什么的我也知道哇…♪」
+					PRINTFORMW 「一定是太想被贯穿了才会%TEXTR("这样子流着口水/变得湿乎乎的")%，还真是个下流的小骚穴呢…要不要惩罚一下呀？」
+				ELSE
+					PRINTFORMW 「啊啦，只是看着就好了吗？」
+					IF PENIS(PLAYER)
+						PRINTFORMW 「%TEXTR(@"可是%CNAME("二人称")%的大肉棒看起来已经干劲满满了呢…您不想做点什么吗/现在马上就把那个硬梆梆的大肉棒噗嗞噗嗞的插进去也是可以的哟")%♪」
+					ELSE
+						PRINTFORMW 「能忍住只看着的话就先看着却什么都不做…这种让人特别焦躁的play偶尔也不错呢♪」
+					ENDIF
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;扒開菊穴
+;-------------------------------------------------
+IF SELECTCOM == 14
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;尿道指挿入
+;-------------------------------------------------
+IF SELECTCOM == 15
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;痛くない
+		IF CHECK("尿道PLAY")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;痛くない
+		IF CHECK("尿道PLAY")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;跳蛋
+;-------------------------------------------------
+IF SELECTCOM == 30
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;振動棒
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 31
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;余裕有
+		IF CHECK("振動棒")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;脱着時(使用していた振動棒の尺寸はCHECK("Ｖ最新受け入れサイズ")で判定)
+	ELSEIF TEQUIP:振動棒 == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;余裕有
+		IF CHECK("振動棒")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;肛用振動棒
+;-------------------------------------------------
+;開始時
+IF SELECTCOM == 33
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;余裕有
+		IF CHECK("Ａ振動棒")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;脱着時(使用していた振動棒の尺寸はCHECK("Ａ最新受け入れサイズ")で判定)
+	ELSEIF TEQUIP:肛用振動棒 == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;余裕有
+		IF CHECK("Ａ振動棒")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;飛機杯
+;-------------------------------------------------
+IF SELECTCOM == 37
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;Ｖ挿入系初選択
+;-------------------------------------------------
+IF SELECTCOM >= 60 && SELECTCOM <= 69 && FIRSTCOMS("Ｖ挿入") == 0
+	;処女
+	IF TALENT:処女
+		PRINTFORMW 「嗯噫咿ぃっ…！啊゛啊っ！咿咿゛ッ呜啊啊咿呜゛っ～～～ッ…！」
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 「哈啊っ、哈咕っ、哈っ、哈啊——…终～于…终～～于——啊♪最终终于♪终于等到了♪」
+			PRINTFORMW 「是要把%CNAME("一人称")%的处女取走吧♪已经等得急不可耐了哇っ♪」
+			PRINTFORMW 「这种痛感，这种圧迫感，肉棒的热度…我肯定，不，绝对不会忘记的♪」
+			PRINTFORMW 「请让我变成你的女人吧…%CNAME("一人称")%，会非常非常幸福的哇♪」
+		;それ以外
+		ELSE
+			PRINTFORMW 「咕、呜呜っ、哈啊哈啊…最、最開始还是相～当、相当痛的呢…」
+			PRINTFORMW 「这种痛楚、我一生都不会忘记呢…总之、谢谢您愿意做我第一次的对象」
+			PRINTFORMW 「还有就是…疼痛过去之后就会变得很舒服…不一会儿就湿了呢♪」
+		ENDIF
+	;非処女
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+;-------------------------------------------------
+;調教ごとの初Ｖ挿入
+;-------------------------------------------------
+ELSEIF SELECTCOM >= 60 && SELECTCOM <= 69 && CHOSECOMS("Ｖ挿入") == 0 && FIRSTCOM(SELECTCOM) && RAND:3 == 0
+	;巨根
+	IF SIZE("阴茎", PLAYER) >= 2 && RANDIF(1, TALENT:恋慕)
+		IF RAND:3 == 0
+			PRINTFORMW 「啊——、这么大的…感觉会被撑得满满的…」
+			PRINTFORMW 「这次也准备就这样把%CNAME("一人称")%弄到哭出来吗？真是过分的人呢♪」
+		ELSEIF RAND:2
+			PRINTFORMW 「连血管都这么粗大、吧唧吧唧的感觉好厉害…唔呼呼、都和%CNAME("一人称")%的脸差不多大了呢♪」
+			PRINTFORMW 「被这么强壮粗大的给塞进去的话…肯定变成它的俘虏的♪」
+		ELSE
+			PRINTFORMW 「哈啊啊…真的好大——、好棒的大鸡巴…♪」
+			PRINTFORMW 「这样一来肚子里都会被撑成%CNAME("二人称")%的形状…会习惯的呢…♪」
+		ENDIF
+	ELSE
+		SELECTCASE SELECTCOM
+		;騎乗位
+		CASE 65
+			IF RAND:2
+				PRINTFORMW 「这次由%CNAME("一人称")%来先行进攻呢！」
+				PRINTFORMW 「唔呵呵——、我会努力榨取出来的哇♪」
+			ELSE
+				PRINTFORMW 「真是的，居然想让%CNAME("一人称")%主动晃腰什么的…居然这么平静地说出这么羞耻的话哇♪」
+				PRINTFORMW 「但是既然被你拜托了…嗯っ、啊っ♪…就没办法了呢♪」
+			ENDIF
+		;背面座位
+		CASE 64
+			IF RAND:2
+				PRINTFORMW 「呜ー嗯，果然这个体位的话就没法看见%TEXTR(@"%CNAME("二人称")%洋溢着快感的脸/%CNAME("一人称")%沉溺于快感的脸")%了呢…」
+				PRINTFORMW 「但・是・呢♪相应的能感受到更多的快感所以也很OK哇っ♪」
+			ELSE
+				PRINTFORMW 「这、这个体位…感，感觉很危险哇っ」
+				PRINTFORMW 「为什么这么说？…不只是小穴就连%TEXTR(@"阴蒂/小豆豆")%和%TEXTR(@"乳頭/胸部")%也可以欺负到，感觉会让人发疯呢…♪」
+			ENDIF
+		;屈曲位
+		CASE 62
+			IF RAND:2
+				PRINTFORMW 「嗯嗯っ…这个姿势，不管什么时候都感觉很不自在呢」
+				PRINTFORMW 「而且%CNAME("二人称")%和%CNAME("一人称")%连在一起的样子会在眼前被看得一清二楚…真是羞人哇…♪」
+			ELSE
+				PRINTFORMW 「啊啊っ…♪这个、这个呜，到最里面为止都被滋卟滋卟地弄着…♪」
+				PRINTFORMW 「被这样压着，完全逃不掉的样子…只能乖乖地被做着各种事情哇…♪」
+			ENDIF
+		;後背位
+		CASE 61
+			IF RAND:2
+				PRINTFORMW 「咿呀っ♪不要只顾着摸我的屁股…请把肉棒也塞进来吧♪」
+				PRINTFORMW 「快点、快点呜～♪…嗯哈っ、啊啊啊呃っ♪」
+			ELSE
+				PRINTFORMW 「突然就从后面什么的…禽兽っ、真是禽兽哇♪」
+				PRINTFORMW 「讨厌♪被袭击了呀♪被强制交尾了呢っ♪」
+			ENDIF
+		;それ以外
+		CASEELSE
+			IF RAND:2
+				PRINTFORMW 「快点っ♪快来把%CNAME("一人称")%贯穿吧っ♪」
+				PRINTFORMW 「呀嗯っ、把我弄得这么急不可耐什么的，请快些对%CNAME("二人称")%使坏吧…啊っ啊啊呃っ♪」
+			ELSE
+				PRINTFORMW 「呜嗯ぅ、啊っ啊嗯っ♪%TEXTR("滋卟滋卟/啾噗啾噗")%地进来了哇♪」
+				PRINTFORMW 「这次也%TEXTR("让小穴里像要被溶化掉一样/被大鸡鸡弄得不断淫叫着")%呢…♪」
+			ENDIF
+		ENDSELECT
+	ENDIF
+	RETURN 1
+;-------------------------------------------------
+;全Ｖ挿入共通の随机文
+;ここに力を入れると毎回異なる反応をするようになるのでおすすめ
+;-------------------------------------------------
+ELSEIF SELECTCOM >= 60 && SELECTCOM <= 69 && CHOSECOM(SELECTCOM) && RAND:4 == 0
+	;要去了なのに焦らされている
+	IF TEQUIP:手下留情 && NOWEX:Ｖ绝顶前骤停 && RAND:2
+		IF RAND:3 == 0
+			PRINTFORMW 「快っ♪大鸡鸡快点っ♪想要高潮想要变得奇怪呀っ♪」
+		ELSEIF RAND:2
+			PRINTFORMW 「讨厌呀っ♪不要再让我这么焦急了ー♪用大鸡鸡狠狠地捅进来，给我致命一击吧っ♪」
+		ELSE
+			PRINTFORMW 「为什么っ♪为什么停下来了啊ぉっ♪欺负人っ、欺负人——っ♪」
+		ENDIF
+	;喜欢的体位
+	ELSEIF COND("喜欢的体位中") && SELECTCOM == INSERT("Ｖ対応指令") && RAND:3 == 0
+		IF RAND:2
+			PRINTFORMW 「啊啊ーっ♪对对っ，就是这样哇ぁ♪果然这个体位才是对小穴穴最有用的呢♪」
+		ELSE
+			PRINTFORMW 「这个姿势下被大肉棒%TEXTR("啪唧啪唧/咕啾咕啾/滋啪滋啪")%的搅动着♪真的是超——级舒服哇っ♪」
+		ENDIF
+	ELSEIF PREVEX("Ｖ中出し") && RAND:2
+		IF RAND:3 == 0
+			PRINTFORMW 「啊哈哈っ♪%CNAME("一人称")%的肉穴，被强迫着牢牢记住了%CNAME("二人称")%的大家伙呢っ♪」
+		ELSEIF RAND:2
+			PRINTFORMW 「哈啊っ哈啊っ♪唔呜っ、啊っ、咿呀っ♪啊っ啊っ啊っ…♪」
+		ELSE
+			PRINTFORMW 「小、小穴穴里面っ♪%CNAME("二人称")%的精液和っ♪%CNAME("一人称")%的淫水♪」
+			PRINTFORMW 「搅和着让它发出了淫荡的声音っ♪嗯咿咿呀啊啊啊っ♪就这样被搅弄着呜——ぉ♪」
+		ENDIF
+	ELSE
+		;SELECTCASE CONDS("体位")
+		;CASE "騎乗位"
+			
+		;CASEELSE
+			IF RAND:5 == 0
+				PRINTFORMW 「呃呃っ！没、没関系的哇っ，只是、只是有点舒服过頭了…♪」
+				PRINTFORMW 「所以、所以情继续用大鸡鸡欺负我吧♪」
+			ELSEIF RAND:4 == 0
+				PRINTFORMW 「唔呼呼っ、虽然我也…不清楚算不算厉害…」
+				PRINTFORMW 「不过让%CNAME("一人称")%这么舒服，一定很厉害呢♪」
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 「啊哈哈っ♪%CNAME("一人称")%的肉穴，被强迫着牢牢记住了%CNAME("二人称")%的大家伙呢っ♪」
+			ELSEIF RAND:2
+				PRINTFORMW 「哈啊っ哈啊っ♪唔呜っ、啊っ、咿呀っ♪啊っ啊っ啊っ…♪」
+			ELSE
+				PRINTFORMW 「咿呀～っ、小穴每次被%TEXTR("梆梆梆/啾啵啾啵/滋啪滋啪")%的时候爱液就会控制不住的涌出来哇っ♪」
+			ENDIF
+		;ENDSELECT
+	ENDIF
+	RETURN 1
+;-------------------------------------------------
+;二穴挿入(書く場合には;を消してください)
+;-------------------------------------------------
+;ELSEIF SELECTCOM >= 60 && SELECTCOM <= 79 && COND("３Ｐ")
+;	IF CHECK_COM("两根挿入Ｖ中")
+;		;恋慕
+;		IF TALENT:恋慕
+;			PRINTFORMW 
+;		;余裕有
+;		ELSEIF CHECK("两根挿入Ｖ中")
+;			PRINTFORMW 
+;		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;		RETURN 1
+;	ELSEIF CHECK_COM("两根挿入Ａ中")
+;		;恋慕
+;		IF TALENT:恋慕
+;			PRINTFORMW 
+;		;余裕有
+;		ELSEIF CHECK("两根挿入Ａ中")
+;			PRINTFORMW 
+;		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;		RETURN 1
+;	ELSEIF CHECK_COM("二穴挿入")
+;		;恋慕
+;		IF TALENT:恋慕
+;			PRINTFORMW 
+;		;余裕有
+;		ELSEIF CHECK("二穴挿入")
+;			PRINTFORMW 
+;		;それ以外
+;		ELSE
+;			PRINTFORMW 
+;		ENDIF
+;		RETURN 1
+;	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;正常位
+;-------------------------------------------------
+IF SELECTCOM == 60
+	;初めて
+	;IF FIRSTCOM(SELECTCOM) == 0
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;二回目以降
+	;ELSE
+		;IF COND("危険日") && PENIS(PLAYER) && RAND:2 == 0
+			;IF RAND:3 == 0
+				;PRINTFORMW 
+			;ELSEIF RAND:2
+				;PRINTFORMW 
+			;ELSE
+				;PRINTFORMW 
+			;ENDIF
+		;ELSE
+			IF RAND:4 == 0 && INSERT("Ｖ挿入") == 0
+				PRINTFORML 「んっ…あっ、あっ♪你のがズブズブってっ♪入ってきましたわぁ…っ♪」
+				PRINTFORMW 「唔呼呼、从肚子開始都要变成%CNAME("二人称")%的所有物了…♪」
+			ELSEIF RAND:3 == 0
+				PRINTFORML 「ぅあぁっ♪あひぃっ♪ひぅぅっ♪待ってっ…激しっ、あぁん♪」
+				PRINTFORMW 「激烈过頭了稍微有些害怕呢っ♪手っ…请握住我的手再继续做吧っ♪」
+			ELSEIF RAND:2
+				PRINTFORML 「あぁんっ♪%CNAME("二人称")%のおチンポってばとぉっても元気ですわっ♪」
+				PRINTFORMW 「%CNAME("一人称")%的小肉穴有那么好的话♪就多多插一插吧っ♪让我变得舒服起来っ♪」
+			ELSE
+				PRINTFORML 「んぃいぃぃっ♪んあぁぁ…はひぃっ♪」
+				PRINTFORMW 「%CNAME("二人称")%的大肉棒在ぁ♪咕哩咕哩地进入着っ♪」
+			ENDIF
+		;ENDIF
+	;ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;後背位
+;-------------------------------------------------
+IF SELECTCOM == 61
+	;初めて
+	;IF FIRSTCOM(SELECTCOM) == 0
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;二回目以降
+	;ELSE
+		;IF COND("危険日") && PENIS(PLAYER) && RAND:2 == 0
+			;IF RAND:3 == 0
+				;PRINTFORMW 
+			;ELSEIF RAND:2
+				;PRINTFORMW 
+			;ELSE
+				;PRINTFORMW 
+			;ENDIF
+		;ELSE
+			IF RAND:4 == 0 && INSERT("Ｖ挿入") == 0
+				PRINTFORML 「おぉっ…オマンコをおチンポがかき分けて…ミチミチ言ってますわ…ッ♪」
+				PRINTFORMW 「看っ、看不见的部分、反而感觉更强烈呢…♪」
+			ELSEIF RAND:3 == 0
+				PRINTFORML 「あっ…こんな…从后面将圧し掛かられて…♪」
+				PRINTFORMW 「讨厌っ…这样就逃不掉了哇…♪这样小穴就会被彻底欺负着哇…♪」
+			ELSEIF RAND:2
+				PRINTFORML 「%TEXTR(@"胖次胖次/ぱちゅぱちゅ")%って…こんなえっちな音♪%CNAME("一人称")%からしてるなんてぇ♪」
+				PRINTFORMW 「真是太棒了哇っ♪请更多地奏响我吧っ♪」
+			ELSE
+				PRINTFORML 「こっ…こんなっ♪盛った%TEXTR(@"犬/動物/ケモノ")%みたいな恰好でまぐわうだなんてっ♪」
+				PRINTFORMW 「才不要——♪明明原本觉得不能接受的♪但只要舒服的话怎样都好哇っ♪」
+			ENDIF
+		;ENDIF
+	;ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;屈曲位
+;-------------------------------------------------
+IF SELECTCOM == 62
+	;初めて
+	;IF FIRSTCOM(SELECTCOM) == 0
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;二回目以降
+	;ELSE
+		IF RAND:4 == 0 && INSERT("Ｖ挿入") == 0
+			PRINTFORML 「あっ♪あっ、ぁっ、お、おっ、んおぉ～…ッ♪」
+			PRINTFORMW 「んはぁっ…♪%CNAME("二人称")%のおチンポ、奥までズッポリ来てますわぁ…♪」
+		ELSEIF RAND:3 == 0
+			PRINTFORML 「いやぁん…おチンポが%CNAME("一人称")%のオマンコを…出たり入ったりしてますわ…ッ♪」
+			PRINTFORML 「こんな破廉恥でスケベな所、見せつけないでくださいまし…♪」
+			PRINTFORMW そう言いながらわざとらしく手で顔を覆う%CALLNAME:TARGET%だが、指の間から二人の結合部を見ているのがバレバレだ…。
+		ELSEIF RAND:2
+			PRINTFORML 「ぉうぅっ♪今の%TEXTR(@"ずん/ごり")%ってするのイイ♪良いですわぁ♪」
+			PRINTFORMW 「腰がっ♪良すぎて勝手に腰が浮いちゃいますのぉ♪」
+		ELSE
+			PRINTFORML 「そんなに強く%TEXTR(@"どっちゅんどっちゅん/ぢゅっぽぢゅっぽ")%しなくてもっ♪%CNAME("一人称")%は逃げませんわっ♪」
+			PRINTFORMW 「%CNAME("一人称")%のオマンコが%CNAME("二人称")%のおチンポの形にされて♪逃跑のイヤイヤ、ってなっちゃってますものぉッ♪」
+		ENDIF
+	;ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;対面座位
+;-------------------------------------------------
+IF SELECTCOM == 63
+	;初めて
+	;IF FIRSTCOM(SELECTCOM) == 0
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;二回目以降
+	;ELSE
+		IF RAND:4 == 0 && INSERT("Ｖ挿入") == 0
+			PRINTFORML 「诶嘿嘿…%CNAME("二人称")%のお顔、幸せそう…♪%CNAME("一人称")%のオマンコ、気持ち良いかしら♪」
+			PRINTFORML 「やん、%CNAME("一人称")%の顔はじっくり見ないでくださいまし…♪」
+			PRINTFORMW 「だって今、おチンポがずぷぷ～って来るのが気持ちよくって♪絶対エッチではしたない顔してますもの…♪」
+		ELSEIF RAND:3 == 0
+			PRINTFORML 「おぅ、おっ、ぉッ♪こっ、小刻みに突き上げるの反則っ♪ダメですわッ♪」
+			PRINTFORMW 「すぐに、簡単に要去了になっちゃいますからっ♪おぉンッ♪」
+		ELSEIF RAND:2
+			PRINTFORML 「もう、そんなに%CNAME("一人称")%のお尻をむ抿嘴ぎゅしたら、痕になっちゃいますわ…♪」
+			PRINTFORML 「お返しに%CNAME("一人称")%もギューッ♪ってしてさしあげますわ♪」
+			PRINTFORMW %CALLNAME:TARGET%通过%CALLNAME:PLAYER%の%TEXTR(@"背中に回した腕/腰に絡めた脚")%により力を入れ、密着してきた…。
+		ELSE
+			PRINTFORML 「诶嘿嘿…♪%CNAME("二人称")%の胸がドキドキしてるの、伝わってきますわよ…♪」
+			PRINTFORMW 「%CNAME("一人称")%も、%CNAME("二人称")%のおチンポで突かれるたびにキュン♪ってしちゃうの、伝わってるかしら…♪」
+		ENDIF
+	;ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;背面座位
+;-------------------------------------------------
+;背面座位
+IF SELECTCOM == 64
+	;初めて
+	;IF FIRSTCOM(SELECTCOM) == 0
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;二回目以降
+	;ELSE
+		IF TALENT:母乳体質 && RAND:2 == 0
+			IF RAND:2
+				PRINTFORML 「んうぅ～っ♪オマンコ穿られながら胸部搾られるの♪クセになっちゃいますわっ♪」
+				PRINTFORMW 「でも、勿体ないから後で飲んでくださいませ…ねっ♪」
+			ELSE
+				PRINTFORML 「おぉっ、ぉおんっ♪ミルクっ♪ミルク出ちゃいますのォッ♪」
+				PRINTFORMW %CALLNAME:PLAYER%の突き上げに合わせて%TEXTR(@"ばるんばるんと跳ねる/ダイナミックに上下する")%%CALLNAME:TARGET%の乳から、母乳が撒き散らされる…。
+			ENDIF
+		ELSE
+			IF RAND:4 == 0 && INSERT("Ｖ挿入") == 0
+				PRINTFORML 「あっ、はぁぁぁ～…ッ♪おチンポ奥まで来ましたわぁ…♪」
+				PRINTFORMW 「この体位、胸部も阴部も%CNAME("二人称")%に好き放題されちゃいますわね♪」
+			ELSEIF RAND:3 == 0
+				PRINTFORML 「うぅんっ…やっぱり%CNAME("二人称")%のお顔が見られないのは、ちょっと切ないですわね…」
+				PRINTFORMW 「で・も♪その分た～く桑弄ってくれますわよねっ♪ほらほらっ♪」
+			ELSEIF RAND:2
+				PRINTFORML 「ひゃぅんっ♪そこ良いっ♪そっちはもっと気持ち良いですわっ♪」
+				PRINTFORMW 「こ、これじゃ%CNAME("一人称")%の弱いところっ♪全部%CNAME("二人称")%にバレてしまいますのぉっ♪」
+			ELSE
+				PRINTFORML 「んおぉっ！？お゛ぉっ♪おぅぅっ♪んん゛ぅ～っ♪」
+				PRINTFORML 腰を突き上げながら%CALLNAME:TARGET%の下腹を撫でると、少し汚い喘ぎと共に膣ヒダが強く絡みついてきた…。
+				PRINTFORMW 「お゛ッ、お腹押しながらっ♪%TEXTR(@"おチンポずんずん/腰胖次胖次/オマンコハメハメ")%っ♪ジンジンきますわっ♪」
+			ENDIF
+		ENDIF
+	;ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;騎乗位
+;-------------------------------------------------
+IF SELECTCOM == 65
+	;初めて
+	;IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		;IF TEQUIP:推倒
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;二回目以降
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;それ以外
+	;ELSE
+		;IF COND("危険日") && PENIS(PLAYER) && RAND:2 == 0
+			;IF RAND:3 == 0
+				;PRINTFORMW 
+			;ELSEIF RAND:2
+				;PRINTFORMW 
+			;ELSE
+				;PRINTFORMW 
+			;ENDIF
+		;ELSE
+			IF RAND:4 == 0 && INSERT("Ｖ挿入") == 0
+				PRINTFORML 「んっ、ふっ…ふぅっ、あ、あぁぁぁ…ッ♪はぁっ、入りっ、ましたわ♪」
+				PRINTFORMW 「接下来就该动了…%TEXTR(@"%CNAME("二人称")%只要休息就好了哟/好好用%CNAME("一人称")%的腰来让你尽情享受一番吧")%♪」
+			ELSEIF RAND:3 == 0
+				PRINTFORML 「あぁ…%CNAME("一人称")%のオマンコが%CNAME("二人称")%のおチンポを食べてるところ、見られちゃってますわ…♪」
+				PRINTFORMW 「%CNAME("一人称")%和%CNAME("二人称")%结合在一起的证明…♪请好好用眼睛把它刻在心里吧♪」
+			ELSEIF RAND:2
+				PRINTFORML 「诶嘿嘿…%CNAME("二人称")%は動かなくって良いんんあぁ？！」
+				PRINTFORMW 「真っ、真是的っ、明明说了不要动的♪明明都这么说了♪真是不解风情哇っ♪」
+			ELSE
+				PRINTFORML 「あっ♪おっ♪あぁぁっ♪気持ち良いっ♪きもちいいぃっ♪」
+				PRINTFORMW 「停不下来っ♪跨坐在鸡鸡上っ♪摆动着腰っ♪完全停不下来呢っ♪」
+			ENDIF
+		;ENDIF
+	;ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;挿入刺激Ｇ点
+;-------------------------------------------------
+IF SELECTCOM == 66
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		;IF TEQUIP:推倒
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			PRINTFORML 「んひぃいっ！？ひあああっ！！はっ、ああっ…♪」
+			PRINTFORML 「な、なんですの、今、ビリっとして…それに『見つけた』って…」
+			PRINTFORMW 「咿——っ？！又来っ、又来了哇っ♪これっ、思维要变得奇怪了っ♪」
+		;ENDIF
+	;二回目以降
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;それ以外
+	ELSE
+		IF RAND:4 == 0
+			PRINTFORML 「んぃいぃぃっ♪そこぉ♪こすられるとっ♪頭にビリってきますのぉ♪」
+			PRINTFORMW 「やあぁっ♪頭がばかになっちゃってっ♪腰が勝手に動いちゃいましゅからぁっ♪ぞりぞりしにゃいでぇっ♪」
+		ELSEIF RAND:3 == 0
+			PRINTFORML 「も、もう許してくださいましぇっ♪ごめんにゃさいっ♪オマンコゆるしてぇぇっ♪」
+			PRINTFORMW 「はあぁああぁんッ♪ぃあ゛ぁぁぁあああっーっ♪ひっ、ぅぐぅうぅ～～～ッ♪」
+		ELSEIF RAND:2
+			PRINTFORML 「クるっ♪ん゛っ、これぇ、凄いのキちゃいますのぉっ♪」
+			PRINTFORMW 「もうっ、もうイくっ♪イくイくイ゛くぅ♪イっちゃうぅぅ♪」
+		ELSE
+			PRINTFORML 「ひあ゛っ♪んぁあああぁぁっ♪ダメッ、ダメダメダメぇっ♪ごりごりダメでしゅのぉっ♪」
+			PRINTFORMW 「不幺っ、已经不行了っ、到极限了啊っ、停下っ…～～～～～ッ♪」
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;挿入子宮口玩弄
+;-------------------------------------------------
+IF SELECTCOM == 67
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		;IF TEQUIP:推倒
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			PRINTFORMW 「う゛うっ！かっ、はぁ…お、奥、ni↘、ずん、って…♪」
+			PRINTFORMW 「啊っ、啊っ？这是、这是怎么，感觉有些奇怪哇っ、就、就像某个神经被触动了一样っ、啊っ♪」
+			PRINTFORMW 「呃啊啊啊、哈呃っ♪身体っ♪还有子宮っ♪啾——地一下っ♪好难受哇啊っ♪」
+		;ENDIF
+	;二回目以降
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;それ以外
+	ELSE
+		IF RAND:4 == 0
+			PRINTFORML 「おう゛ぅっ♪ちゅぽちゅぽやめてっ♪やめっ、いやっ、やぁですわぁっ♪」
+			PRINTFORMW 「子宮口把肉棒汁全喝掉了ッ♪好高兴啊っ♪感觉開始任性地还想要更多的啊っ♪」
+		ELSEIF RAND:3 == 0
+			PRINTFORML 「んんーっ♪あひっ、ぃひぅうぅっ♪ふぅっ、あっあっ♪ああーーーーッ♪」
+			PRINTFORMW 「到了这么深的地方っ♪被大肉棒%TEXTR(@"彻底捅穿/肆意胡闹")%什么的ぇっ♪这样的っ撑不下去啊啊呜っ♪」
+		ELSEIF RAND:2
+			PRINTFORML 「こんな激烈地っ♪奥までっ♪活塞運動なんてっ♪ダメですわッ♪」
+			PRINTFORMW 「子宮口被不断%TEXTR(@"撞击/冲撞/顶")%着っ♪已经受不住了っ♪不可能受得住呜哦哦哦～～～っ♪」
+		ELSE
+			PRINTFORML 「あっ、やっ♪奥に%TEXTR(@"ゴツゴツ/こんこん")%って当たってえぇっ♪頭がチカチカしますのぉっ♪」
+			PRINTFORMW 「おチンポと子宮で接吻っ♪有えないぐらい気持ちいいですわぁっ♪」
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;子宮挿入
+;-------------------------------------------------
+IF SELECTCOM == 68
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;Ａ挿入系初選択
+;疼痛が少なく楽しめているかはCHECK("Ａ挿入")で判定
+;-------------------------------------------------
+IF SELECTCOM >= 70 && SELECTCOM <= 79 && FIRSTCOMS("Ａ挿入") == 0
+	;Ａ処女
+	IF TALENT:Ａ処女
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;余裕有
+		ELSEIF CHECK("Ａ挿入")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;余裕有
+		ELSEIF CHECK("Ａ挿入")
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+;-------------------------------------------------
+;調教ごとの初Ａ挿入
+;-------------------------------------------------
+ELSEIF SELECTCOM >= 70 && SELECTCOM <= 79 && CHOSECOMS("Ａ挿入") == 0 && FIRSTCOM(SELECTCOM) && RAND:3 == 0
+	;余裕が無い
+	IF CHECK("Ａ挿入") == 0
+		PRINTFORMW 
+	;巨根
+	ELSEIF SIZE("阴茎", PLAYER) >= 2 && RANDIF(1, TALENT:恋慕)
+		PRINTFORMW 
+	;恋慕
+	ELSEIF TALENT:恋慕
+		SELECTCASE SELECTCOM
+		;騎乗位
+		CASE 75
+			PRINTFORMW 
+		;対面座位
+		CASE 73
+			PRINTFORMW 
+		;それ以外
+		CASEELSE
+			PRINTFORMW 
+		ENDSELECT
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	RETURN 1
+;-------------------------------------------------
+;全Ａ挿入共通の随机文
+;ここに力を入れると毎回異なる反応をするようになるのでおすすめ
+;-------------------------------------------------
+ELSEIF SELECTCOM >= 70 && SELECTCOM <= 79 && CHOSECOM(SELECTCOM) && RAND:3 == 0
+	;要去了なのに焦らされている
+	IF TEQUIP:PLAYER:手下留情 && NOWEX:Ａ绝顶前骤停 && RAND:2
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;余裕が無い
+	ELSEIF CHECK("Ａ挿入") == 0
+		PRINTFORMW 
+	;喜欢的体位
+	ELSEIF COND("喜欢的体位中") && SELECTCOM == INSERT("Ａ対応指令") && RAND:2
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		SELECTCASE CONDS("体位")
+		CASE "正常位", "屈曲位"
+			IF TALENT:恋慕 && RAND:3 == 0
+				PRINTFORMW 
+			ELSEIF MARK:屈服刻印 >= 2 && RAND:2
+				PRINTFORMW 
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		CASEELSE
+			IF RAND:4 == 0
+				PRINTFORMW 
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 
+			ELSEIF RAND:2
+				PRINTFORMW 
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		ENDSELECT
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;肛門性交(初めては上のＡ挿入系初選択などで)
+;-------------------------------------------------
+IF SELECTCOM >= 70 && SELECTCOM <= 74
+	;余裕が無い
+	IF CHECK("Ａ挿入") == 0
+		PRINTFORMW 
+	;恋慕
+	ELSEIF TALENT:恋慕
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;肛門騎乗位
+;-------------------------------------------------
+IF SELECTCOM == 75
+	;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+	RETURN 0
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;貝あわせ
+;-------------------------------------------------
+IF SELECTCOM == 80
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;雙乳間抽插
+;-------------------------------------------------
+IF SELECTCOM == 81
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;奉仕精神Lv3以上
+		ELSEIF ABL:奉仕精神 >= 3
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;乳頭奸
+;-------------------------------------------------
+IF SELECTCOM == 82
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;尿道挿入　尿道騎乗位(被逆推ているとき)
+;-------------------------------------------------
+IF SELECTCOM == 83
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;余裕が無い
+		ELSEIF CHECK("尿道挿入") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;余裕が無い
+		IF CHECK("尿道挿入") == 0
+			PRINTFORMW 
+		;恋慕
+		ELSEIF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;洗面奶手交
+;手淫と洗面奶から派生する
+;-------------------------------------------------
+IF CHECK_COM("洗面奶手交")
+	;恋慕
+	IF TALENT:恋慕
+		IF COND("喝母乳フラグ", PLAYER)
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		IF COND("喝母乳フラグ", PLAYER)
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;手淫
+;-------------------------------------------------
+IF SELECTCOM == 90
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 「あぁ…これが%CNAME("二人称")%のおチンポ…ですのね…」
+		PRINTFORMW 「これを手で握って…？ええ、やってみますわ」
+		PRINTFORMW %CALLNAME:TARGET%通过好奇心や胸の高まりが隠し切れない様子で、眼前の阴茎に滑らかで綺麗な手を伸ばし…
+		PRINTFORML 
+		PRINTFORML ギュウゥゥッ！
+		PRINTFORMW 
+		PRINTFORMW 不意に股間を襲った強烈な握撃に、%CALLNAME:PLAYER%は意識と魂を飛ばしかけながら悶絶している…。
+		PRINTFORML 「きゃあぁっ！ご、ごめんなさい、加減が分からなくて…」
+		PRINTFORMW 申し訳なさそうに頭を下げる%CALLNAME:TARGET%に、まずは力加減から教えることにした…。
+	;二回目以降
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;それ以外
+	ELSE
+		IF CEVENT("調教開始：技巧ＬＶ３以上")
+			IF RAND:3 == 0
+				PRINTFORML 「诶嘿嘿っ♪ちょこっとだけ本気、出しちゃいますわっ♪」
+				PRINTFORMW そう言った%CALLNAME:TARGET%が掌に発生させた風の層で亀頭やカリ、竿全体を撫でられ、%CALLNAME:PLAYER%は思わず腰を浮かせた…。
+			ELSEIF RAND:2
+				PRINTFORML 「もうっ、こんなにお汁流してビクビク暴れて…♪そんなにこれが気持ち良いんですの？」
+				PRINTFORMW 先走りでニチニチと音を立てる淫猥な手とは裏腹の、眩しい微笑みが%CALLNAME:PLAYER%の肉棒をより硬く勃起させる…。
+			ELSE
+				PRINTFORML 「ここをこうすると…ふふっ…♪喜んでますわね♪」
+				PRINTFORML 片手で幹を扱き一边继续、空いた片手で玉袋を轻轻地ふにふにと揉み解す…。
+				PRINTFORMW いたずらっぽく笑う表情とは裏腹に、%CALLNAME:TARGET%の攻めはかなり強気だ…。
+			ENDIF
+		ELSE
+			IF RAND:3 == 0
+				PRINTFORML 「はぁ…熱い…こ、こんな感じでよろしいかしら…？」
+				PRINTFORMW %CALLNAME:TARGET%通过手に伝わる阴茎の熱に浮かされ一边继续、懸命に奉仕している…。
+			ELSEIF RAND:2
+				PRINTFORML 「先端からお汁が…ふふ、気持ち良いんですのね？」
+				PRINTFORMW まだ拙い手交ながらも、先走り汁が絡んだ%CALLNAME:TARGET%のしなやかな指は的確に快感を送り込んでくる…。
+			ELSE
+				PRINTFORML 「ひゃっ…！今凄くビクンって暴れましたわ！」
+				PRINTFORMW 一々大袈裟に惊讶ながらも、%CALLNAME:TARGET%通过熱心に%CALLNAME:PLAYER%の阴茎を扱いている…。
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;口交
+;-------------------------------------------------
+IF SELECTCOM == 91
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORML そろそろ口交を教えるか、と%CALLNAME:PLAYER%が%CALLNAME:TARGET%に阴茎を突きつけると、
+		PRINTFORMW %CALLNAME:TARGET%通过「きゃっ」と惊嚇しながらも、目の前のそれをマジマジと看了过来…。
+		PRINTFORML 「これを舐めたり咥えたり…ですわね？や、やってみますわ…」
+		PRINTFORMW 緊張した面持ちで恐る恐る亀頭に口を付け、鈴口やカリに舌を這わせる%CALLNAME:TARGET%。
+		PRINTFORML 「ん……ちゅ……ちゅっ…れろ……」
+		PRINTFORMW 拙いが献身的なその姿に、%CALLNAME:PLAYER%は股間に血が滾るのを感じた…。
+	;二回目以降
+	ELSEIF CHECK_COM("阴茎接吻")
+		IF RAND:3 == 0
+			PRINTFORML 「んっ、ちゅぅ…♪ちゅるっ、ずちゅっ、じゅぢゅぅぅ～♪」
+			PRINTFORML 「…ぷはっ♪诶嘿嘿っ…♪」
+			PRINTFORMW %CALLNAME:PLAYER%の鈴口と熱いディープ接吻を交わした%CALLNAME:TARGET%通过、期待に満ちた上目遣いで微笑んでいる…。
+		ELSEIF RAND:2
+			PRINTFORML 「ちゅ…♪ちゅっ♪ちゅるっ♪ちゅるるっ♪ちゅうぅ～っ♪」
+			PRINTFORMW %CALLNAME:TARGET%通过亀頭の先端のみならず、エラや裏スジといった竿全体や玉袋にまで接吻の雨を降らせた…。
+		ELSE
+			PRINTFORML 「诶嘿嘿っ、もうヤる気満々のカッコいいおチンポですわねっ♪」
+			PRINTFORMW 「今日もたっぷり%TEXTR(@"ご奉仕して差し上げますわ/%CNAME("一人称")%に快楽を教え込んでくださいまし")%♪ちゅっ♪」
+		ENDIF
+	;みんな大好き清洁口交
+	ELSEIF CHECK_COM("清洁口交")
+		;恥垢もお掃除
+		IF CHECK_COM("恥垢清洁口交")
+			IF RAND:2 == 0 && COND("包茎", PLAYER)
+				IF RAND:3 == 0
+					PRINTFORML 「ふふっ、皮もムキムキして綺麗になるまで舐めて差し上げますわ…♪」
+					PRINTFORML 「ちゅぴ…♪れろ、れろれろ……ちゅくちゅくっ、ゴクン…♪」
+					PRINTFORML %CALLNAME:TARGET%通过舌で掻き出したチンカスを、味わうように唾液と共に口内で転がしては飲み込んでいく…。
+					PRINTFORMW 「んぁ…♪%CNAME("二人称")%のチンカス、臭くてネトネトしてて苦しょっぱくて…美味しいですわ♪」
+				ELSEIF RAND:2
+					PRINTFORML 「もの凄く濃い气味がすると思ったら…皮の中にこんなにカスが溜まって…」
+					PRINTFORML 「酱と綺麗にしないといけないのに…仕方ない人ですわ…♪」
+					PRINTFORMW そう言うと%CALLNAME:TARGET%通过亀頭と皮の間に舌を挿し込み、溜まった恥垢を精心地舐めとっていく…。
+				ELSE
+					PRINTFORML 「%CNAME("二人称")%のおチンポ、皮を被って恥ずかしがり屋桑で可愛いこと♪」
+					PRINTFORML 「んっ…♪れろれろっ、れろぉ…♪じゅるっ、んっ…はぁ…♪」
+					PRINTFORML 皮を剥かれて露出した%CALLNAME:PLAYER%のチンカス塗れの亀頭とカリを、%CALLNAME:TARGET%の舌が何度も舐め回す…。
+					PRINTFORMW 「ぷぁ…诶嘿嘿、これで立派な大人のおチンポですわっ♪」
+				ENDIF
+			ELSE
+				IF RAND:3 == 0
+					PRINTFORML 「もうっ…せっかくのおチンポ、不潔にしてちゃダメですのよ？」
+					PRINTFORML 「仕方ない人ですこと…女の子に嫌われちゃう前に%CNAME("一人称")%が綺麗にして差し上げないと…♪」
+					PRINTFORML 「あー…んっ♪ちゅくっ、ぺちょ…れろ、れろぉ…ゴクッ♪」
+					PRINTFORMW 「んぇ…♪凄く濃くて臭いけど…クセになる味ですわ…♪」
+				ELSEIF RAND:2
+					PRINTFORML 「ずーっと濃ゆーい男の人の气味がすると思ったら…こういうことでしたのね」
+					PRINTFORML 「%CNAME("一人称")%の口で掃除してもらいたかった？%CNAME("二人称")%って人は変態桑ですわ…」
+					PRINTFORML 「ではお望み街道、%CNAME("一人称")%が責任持って綺麗にして差し上げますわね♪」
+					PRINTFORMW %CALLNAME:TARGET%通过そう言うや否や、亀頭のカリや裏スジにその可憐な舌を絡め始めた…。
+				ELSE
+					PRINTFORML 「んぅ…こんなに汚くて臭いの、本当は女の子に嗅がせちゃいけませんのに…」
+					PRINTFORML 「すーっ……んっはぁ～……♪もっと嗅ぎたくなって…味見もしたくなっちゃいますわぁ…♪」
+					PRINTFORML 「んっ…♪ぺろっ、れろぉ…れろろろぉっ♪」
+					PRINTFORMW 「ちゅるるっ、んっ、んっく…ゴクン♪はぁ…♪ぢゅるるる…っ♪」
+				ENDIF
+			ENDIF
+		;奉仕精神Lv3以上
+		ELSEIF ABL:奉仕精神 >= 3 && RAND:2
+			IF RAND:3 == 0
+				PRINTFORML 「%KOJO_RAND_K30("口交")%」
+				PRINTFORML 「ん、はぁ…あっ、ここにもついてますわ…ちゅ、ぺちゃ、ぺちょ…」
+				PRINTFORML 「こんなところにも飛んで…暴れん棒なんですから…もう…♪」
+				PRINTFORMW %CALLNAME:TARGET%の丹念なお掃除は玉袋や陰毛にまで及び、終わる頃には%CALLNAME:PLAYER%の股間は浴室上がりのようにピカピカになっていた…。
+			ELSEIF RAND:2
+				PRINTFORML 「ふふ、お疲れ様♪今綺麗にして差し上げますわね♪」
+				PRINTFORML 「%KOJO_RAND_K30("口交")%」
+				PRINTFORML 「ちゅうぅっ…ん、まだちょっと%TEXTR(@"中/尿道")%に残ってる…♪んぐっ…ゴクン…♪」
+				PRINTFORMW 阴茎を外も中も綺麗にせんと根元まで咥えこみ、吸い上げられる快楽に、%CALLNAME:PLAYER%は思わず尿道内に残った精を迸らせた…。
+			ELSE
+				PRINTFORML 「凄いですわ…おチンポ様がカッコよく役割を果たした証がべったり…♪」
+				PRINTFORML 「あーん…ぢゅるるっ♪んぢゅうぅぅっ、ずぢゅるるるぅ～～～…っ♪」
+				PRINTFORML 「ちゅっ、ぷは…♪凄い…さっきあんなに出したのにもうこんなに元気ですわぁ…♪」
+				PRINTFORMW 熱心なバキューム清洁口交ですっかり元気を取り戻した阴茎に、%CALLNAME:TARGET%通过期待に満ちた眼差しを向けている…。
+			ENDIF
+		ELSE
+			IF RAND:3 == 0
+				PRINTFORML 「このおチンポを舐めて綺麗に…？わ、分かりましたわ…」
+				PRINTFORML 「ん…んくっ…ちょっと…変な味ですわ…」
+				PRINTFORMW 精液塗れの一物から放たれる青臭い臭いに気圧されながらも、%CALLNAME:TARGET%通过懸命に舐め清めてくれた…。
+			ELSEIF RAND:2
+				PRINTFORML 「…終わったらおチンポを口で綺麗にするのがお作法なんですの？」
+				PRINTFORML 「そ、それなら仕方ないですわね…ん、ちゅっ…」
+				PRINTFORMW 一瞬渋るような顔をした%CALLNAME:TARGET%だったが、%CALLNAME:PLAYER%に言い包められ、文句一つ言わず清洁口交した…
+			ELSE
+				PRINTFORML 「れろ…ちゅる…んぇ、ぇほ、けほっ……」
+				PRINTFORML 「あ…し、失礼いたしましたわ…んっ、ちゅ、ちゅっ…」
+				PRINTFORML 精液を舐めとる最中、思わず口を離してえずいてしまった%CALLNAME:TARGET%。
+				PRINTFORMW 催促するようにまだ清められていない部分を頬に押し付けると、少し慌てた様子で掃除を再開した…。
+			ENDIF
+		ENDIF
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;それ以外
+	ELSE
+		IF TEQUIP:深喉
+			IF RAND:2
+				PRINTFORML 「ぉごぉっ♪んぶっ、んごっ、ぉごっ、おォッ…♪」
+				PRINTFORML 「んぶっ、ぶちゅっ、ぢゅちゅっ、ずじゅるるるぅっ♪」
+				PRINTFORMW %CALLNAME:TARGET%通过根元まで飲み込んだ阴茎を、涎が飛び散るのも厭わず一心不乱に口腔全体で扱き上げている…。
+			ELSE
+				PRINTFORML 「%KOJO_RAND_K30("口交")%　じゅるるるぅ～～ッ♪」
+				PRINTFORML （んっ…%CNAME("二人称")%のおチンポ、美味しいですわ…♪）
+				PRINTFORMW %CALLNAME:TARGET%が端整な顔を歪ませ肉棒の根元に強く吸い付く心地に、%CALLNAME:PLAYER%は文字街道魂を持っていかれそうだ…。
+			ENDIF
+		ELSEIF ABL:技巧 >= 3 && ABL:奉仕精神 >= 3
+			IF RAND:3 == 0
+				PRINTFORML 「%KOJO_RAND_K30("口交")%」
+				PRINTFORML 「ぷはっ…ふふっ、こんなに涙を流して喜んで…%CNAME("一人称")%のお口は気持ち良かったかしら♪」
+				PRINTFORML 「これも%CNAME("二人称")%の指導を受けたおかげですわ…♪」
+				PRINTFORMW 種混じりの先走りと涎でてらてらと光る肉棒にれろれろと舌を這い廻らせ、%CALLNAME:TARGET%通过自信満々な目で見つめてきた…。
+			ELSEIF RAND:2
+				PRINTFORML 「ふふふっ…♪熱くて硬くて雄臭い、立派なおチンポ様…♪%CNAME("一人称")%もお腹がキュンってしますわ♪」
+				PRINTFORML 「早く…♪早く%TEXTR(@"精液/子種/精液")%出してスッキリなさってくださいませ♪」
+				PRINTFORMW そう言って蕩けた笑顔で%CALLNAME:PLAYER%の股間に顔を埋めた%CALLNAME:TARGET%通过、熱心で丹念な口奉仕に没頭している…。
+			ELSE
+				PRINTFORML 「%KOJO_RAND_K30("口交")%♪ぢゅううぅぅっ……んぽっ♪」
+				PRINTFORML 「はぁぁ…♪あっ、ちゅぷ、ちゅるるっ…くぽっくぽっくぽくぽっ…♪」
+				PRINTFORMW 奉仕に夢中な%CALLNAME:TARGET%の口は、%CALLNAME:PLAYER%の精液を搾り取るべく亀頭付近を攻め続けている…。
+			ENDIF
+		ELSE
+			IF RAND:3 == 0
+				PRINTFORML 「ちゅぶっ、ちゅっ、んっ…ん、%TEXTR(@"舌を絡めながら/もっと吸い付くように/歯を立てないように")%…？ええ、分かりましたわ」
+				PRINTFORMW %CALLNAME:TARGET%通过%CALLNAME:PLAYER%の指摘事項にも坦率に従い、熱心に口淫へ耽っている…。
+			ELSEIF RAND:2
+				PRINTFORML 「んっ……ん……むぐ……ぉご……」
+				PRINTFORML （%CNAME("一人称")%の口の中で…こんなに熱く…脈打って…）
+				PRINTFORMW 阴茎を咥えて慢慢地頭を前後させる%CALLNAME:TARGET%通过、舌や頬の内側でその感触を確かめている…。
+			ELSE
+				PRINTFORML 「じゅるっ…ぺろっ…ちょっとしょっぱいですわね…」
+				PRINTFORMW %CALLNAME:TARGET%に鈴口から溢れる先走りを舐めとらせ、その味を覚えこませた…。
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;乳交
+;-------------------------------------------------
+IF SELECTCOM == 92
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORML 「こ…これを胸で挟んで擦る、んですの？や、やってみますわ…」
+		PRINTFORMW %CALLNAME:TARGET%通过慣れない手つきで、目の前に差し出された%CALLNAME:PLAYER%の肉棒を胸の谷間に収めた…。
+		PRINTFORML 「んっ…しょ、っと…こ、こんな感じかしら…？というかこれって本当に気持ち良いんですの…？」
+		PRINTFORML 「%CNAME("一人称")%は…おチンポのビクビクが胸に伝わって…なんだか変な心地ですわ…」
+		PRINTFORMW 懸命に胸奉仕しながら阴茎の脈動に生唾を呑む%CALLNAME:TARGET%の姿は、視覚的には十分心地良かった…。
+	;二回目以降
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;それ以外
+	ELSE
+		IF TALENT:母乳体質
+			IF RAND:3 == 0
+				PRINTFORML 「诶嘿嘿…♪母乳まみれの胸部、気持ち良いかしら…♪」
+				PRINTFORML 「それはそうと、%CNAME("一人称")%ばっかりこうやってミルクびゅーびゅーするのは…不公平だと思いませんこと？」
+				PRINTFORMW 「と、いうわけで♪%CNAME("二人称")%も早く真っ白おチンポミルク出してっ♪%CNAME("一人称")%の胸部を染め上げてくださいましっ♪」
+			ELSEIF RAND:2
+				PRINTFORML 「あっ♪んっ♪おチンポに押されて胸部出ちゃいますわっ♪」
+				PRINTFORML 给对方乳交%CALLNAME:TARGET%の乳頭から暖かいミルクが迸り、%CALLNAME:PLAYER%の阴茎にぱたぱたと降り掛かっていく…。
+				PRINTFORMW 「本当は赤酱のものなのni↘♪%CNAME("一人称")%のおチンポに飲ませちゃってますのぉっ♪」
+			ELSE
+				PRINTFORML 「んやぁぁっ♪い、今は%CNAME("一人称")%がご奉仕してますのにぃ♪」
+				PRINTFORML 肉棒を包み込みたぷたぷと晃动的胸の先端を弄ってやると、%CALLNAME:TARGET%通过母乳を噴いて甘イキした…。
+				PRINTFORML 「もうっ♪こんな狼藉許しませんわっ♪覚悟してくださいましっ♪」
+				PRINTFORMW %CALLNAME:TARGET%通过胸を掴み直してググッと乳圧を高め、溢れた母乳を潤滑液代わりに激烈地乳奉仕していく…。
+			ENDIF
+		ELSEIF ABL:技巧 >= 3
+			IF RAND:3 == 0
+				PRINTFORML 「あンっ、もうっ、そんなに暴れないでくださいませ…♪」
+				PRINTFORML 「聞き分けの無い暴れん棒桑は…こうですわっ♪」
+				PRINTFORML %CALLNAME:TARGET%通过柔らかな乳を左右から強く挟み込み、%TEXTR(@"グリグリと互い違いに/上下に大きく振るように")%%CALLNAME:PLAYER%の阴茎を扱き動作著…。
+				IF TALENT:母乳体質
+					PRINTFORMW 「うぅんッ♪%CNAME("二人称")%のムスコ様、%CNAME("一人称")%のミルクと胸部抚摸で大人しくなりましたわね♪」
+				ELSE
+					PRINTFORMW 「诶嘿嘿っ、涙を流して大人しくなりましたわ♪このままビューってしちゃいましょうね♪」
+				ENDIF
+			ELSEIF RAND:2
+				PRINTFORML 乳交奉仕の途中、%CALLNAME:TARGET%通过徐に胸の谷間を広げ、その様子を展示了出来…。
+				PRINTFORML 「んっ、あはぁ…♪%CNAME("一人称")%の胸部、%CNAME("二人称")%の我慢汁でマーキングされてしまいましたわ…♪」
+				PRINTFORMW 「このどろどろ胸部で、たく桑お精子ヌキヌキして差し上げますわね♪」
+			ELSE
+				PRINTFORML 「诶嘿嘿っ、%CNAME("一人称")%のすべすべ胸部マンコ是かがかしら♪」
+				PRINTFORML 「やんっ♪おチンポビクビクさせてお返事だなんて、%CNAME("二人称")%ってば素敵ですわぁ♪」
+				PRINTFORMW %CALLNAME:PLAYER%が思わず竿を跳ねさせると、恍惚とした笑顔と共に%CALLNAME:TARGET%の奉仕にさらに熱が籠る…。
+			ENDIF
+		ELSE
+			IF RAND:3 == 0
+				PRINTFORML 「%TEXTR(@"もっと圧迫しても平気/互い違いに動かすと気持ち良い/もっと激烈地ても大丈夫")%？こ、こうかしら」
+				PRINTFORML 「あっ、ちょっとビクッてしましたわ！この調子でもっと…」
+				PRINTFORMW %CALLNAME:TARGET%通过%CALLNAME:PLAYER%に言われるがまま、乳奉仕に没頭している…。
+			ELSEIF RAND:2
+				PRINTFORML 「んっ♪こうすると乳頭が擦れて…%CNAME("一人称")%も感じちゃいますわ…っ」
+				PRINTFORMW 乳の先付近が%CALLNAME:PLAYER%の一物と擦り合うたびに、%CALLNAME:TARGET%も小さく喘いでいる…。
+			ELSE
+				PRINTFORML %CALLNAME:TARGET%通过目の前の阴茎を胸に挟み、どうすれば良いか試行錯誤している…。
+				PRINTFORMW 「こう…？それともこうやって…うぅん、難しいですわ…」
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;素股
+;-------------------------------------------------
+IF SELECTCOM == 93
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSEIF CHECK_COM("展示肉棒")
+		IF RAND:3 == 0
+			PRINTFORML 
+			PRINTFORMW 
+		ELSEIF RAND:2
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;被逆推ているとき
+	;ELSEIF TEQUIP:推倒
+		;恋慕
+		;IF TALENT:恋慕
+			;PRINTFORMW 
+		;それ以外
+		;ELSE
+			;PRINTFORMW 
+		;ENDIF
+	;それ以外
+	ELSE
+		IF RAND:3 == 0
+			PRINTFORML 
+			PRINTFORMW 
+		ELSEIF RAND:2
+			PRINTFORML 
+			PRINTFORMW 
+		ELSE
+			PRINTFORML 
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;泡泡浴
+;-------------------------------------------------
+IF SELECTCOM == 94
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;足交(PENIS(PLAYER)で調教者のチンコの有無が確認できます)
+;-------------------------------------------------
+IF SELECTCOM == 95
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;肛門奉仕
+;-------------------------------------------------
+IF SELECTCOM == 96
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;内褲冲
+;-------------------------------------------------
+IF SELECTCOM == 97
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;奉仕舐陰
+;-------------------------------------------------
+IF SELECTCOM == 98
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;六九式
+;-------------------------------------------------
+IF SELECTCOM == 99
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;洗面奶
+;-------------------------------------------------
+IF SELECTCOM == 104
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;飞机杯冲
+;-------------------------------------------------
+IF SELECTCOM == 105
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;逆振動棒
+;-------------------------------------------------
+IF SELECTCOM == 106
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;逆Ａ振動棒
+;-------------------------------------------------
+IF SELECTCOM == 107
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;Ｖ逆挿入系初選択
+;-------------------------------------------------
+IF SELECTCOM >= 120 && SELECTCOM <= 124 && FIRSTCOMS("Ｖ逆挿入") == 0
+	;調教者が処女
+	IF TALENT:PLAYER:処女
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;正常位奉仕
+;-------------------------------------------------
+IF SELECTCOM == 120
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;後背位奉仕
+;-------------------------------------------------
+IF SELECTCOM == 121
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;騎乗位侵犯
+;-------------------------------------------------
+IF SELECTCOM == 122
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;Ａ正常位奉仕
+;-------------------------------------------------
+IF SELECTCOM == 125
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;Ａ後背位奉仕
+;-------------------------------------------------
+IF SELECTCOM == 126
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;被逆推ている時
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;被逆推ているとき
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;Ａ騎乗位侵犯
+;-------------------------------------------------
+IF SELECTCOM == 127
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;打屁股
+;あんまり痛くしません。ぴしゃぴしゃ
+;-------------------------------------------------
+IF SELECTCOM == 130
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;眼罩
+;-------------------------------------------------
+IF SELECTCOM == 133
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;終了時
+	ELSEIF TEQUIP:眼罩 == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;拘束
+;-------------------------------------------------
+IF SELECTCOM == 134
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;終了時
+	ELSEIF TEQUIP:拘束 == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;口枷
+;何を付けたかはCOND("口球")、COND("開口口枷")で判定できる
+;付ける前のセリフは@KOJO_MESSAGE_BEFORE_COMに書くのも良いでしょう
+;-------------------------------------------------
+IF SELECTCOM == 135
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;終了時
+	ELSEIF TEQUIP:口枷 == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;浣腸
+;大量的液体を注いだかはCOND("大量浣腸")で判定できます
+;-------------------------------------------------
+IF SELECTCOM == 136
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;排泄
+	ELSEIF TEQUIP:浣腸 == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+
+;-------------------------------------------------
+;让对方浴尿
+;と是えまだ浴尿は出来ません
+;直前に口交系指令なら口内放尿、性交系なら膣内放尿、Ａ性交系なら温泉浣腸となる
+;別の指令が複数つまっているようなものなので正直な所、分岐が多くて煩雑です
+;-------------------------------------------------
+IF SELECTCOM == 138
+	;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+	RETURN 0
+	IF CHECK_COM("口内放尿")
+		;初めて
+		IF EXP:飲尿経験 == 0
+			;PLAYを受け入れていない
+			IF CHECK("口内放尿") == 0
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		;二回目以降
+		ELSE
+			;PLAYを受け入れていない
+			IF CHECK("口内放尿") == 0
+				PRINTFORMW 
+			;恋慕
+			ELSEIF TALENT:恋慕
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		ENDIF
+	ELSEIF CHECK_COM("子宮内放尿")
+		;初めて
+		IF EXP:子宮浴尿経験 == 0
+			;PLAYを受け入れていない
+			IF CHECK("子宮内放尿") == 0
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		;二回目以降
+		ELSE
+			;PLAYを受け入れていない
+			IF CHECK("子宮内放尿") == 0
+				PRINTFORMW 
+			;恋慕
+			ELSEIF TALENT:恋慕
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		ENDIF
+	ELSEIF CHECK_COM("膣内放尿")
+		;初めて
+		IF EXP:膣内浴尿経験 == 0
+			;PLAYを受け入れていない
+			IF CHECK("膣内放尿") == 0
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		;二回目以降
+		ELSE
+			;PLAYを受け入れていない
+			IF CHECK("膣内放尿") == 0
+				PRINTFORMW 
+			;恋慕
+			ELSEIF TALENT:恋慕
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		ENDIF
+	ELSEIF CHECK_COM("温泉浣腸")
+		;初めて
+		IF EXP:温泉浣腸経験 == 0
+			;PLAYを受け入れていない
+			IF CHECK("温泉浣腸") == 0
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		;二回目以降
+		ELSE
+			;PLAYを受け入れていない
+			IF CHECK("温泉浣腸") == 0
+				PRINTFORMW 
+			;恋慕
+			ELSEIF TALENT:恋慕
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		ENDIF
+	ELSEIF CHECK_COM("乳内放尿")
+		;初めて
+		IF EXP:乳内浴尿経験 == 0
+			;PLAYを受け入れていない
+			IF CHECK("乳内放尿") == 0
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		;二回目以降
+		ELSE
+			;PLAYを受け入れていない
+			IF CHECK("乳内放尿") == 0
+				PRINTFORMW 
+			;恋慕
+			ELSEIF TALENT:恋慕
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		ENDIF
+	ELSEIF CHECK_COM("膀胱内放尿")
+		;初めて
+		IF EXP:輸尿経験 == 0
+			;PLAYを受け入れていない
+			IF CHECK("膀胱内放尿") == 0
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		;二回目以降
+		ELSE
+			;PLAYを受け入れていない
+			IF CHECK("膀胱内放尿") == 0
+				PRINTFORMW 
+			;恋慕
+			ELSEIF TALENT:恋慕
+				PRINTFORMW 
+			;それ以外
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;什麼也不做
+;-------------------------------------------------
+IF SELECTCOM == 139
+	;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+	RETURN 0
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;強制口交
+;-------------------------------------------------
+IF SELECTCOM == 140
+	;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+	RETURN 0
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;フィスト系指令
+;-------------------------------------------------
+IF SELECTCOM == 141 || SELECTCOM == 142 || SELECTCOM == 143
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;楽しめる余裕が無い
+		IF CHECK("フィスト") == 0
+			;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+			RETURN 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;楽しめる余裕が無い
+		IF CHECK("フィスト") == 0
+			;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+			RETURN 0
+			PRINTFORMW 
+		;恋慕
+		ELSEIF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;放尿　聖水PLAY(推倒ている時)
+;-------------------------------------------------
+IF SELECTCOM == 144
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;聖水PLAY
+		IF TEQUIP:推倒
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	;聖水PLAY
+	ELSEIF TEQUIP:推倒
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;剃毛
+;-------------------------------------------------
+IF SELECTCOM == 145
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;行為に抵抗有
+		IF CHECK("陰毛管理") == 0
+			;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+			RETURN 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;行為に抵抗有
+		IF CHECK("陰毛管理") == 0
+			;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+			RETURN 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			SELECTCASE CONDS("陰毛")
+			;脱毛した
+			CASE "脱毛処理"
+				PRINTFORMW 
+			;光滑无毛に剃り上げた
+			CASE "光滑无毛"
+				PRINTFORMW 
+			;綺麗に剃り整えた
+			CASEELSE
+				PRINTFORMW 
+			ENDSELECT
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;身嗜管理
+;-------------------------------------------------
+IF SELECTCOM == 146
+	;陰毛の状態を指示
+	IF CHECK_COM("身嗜み：陰毛")
+		SELECTCASE COND("身嗜み：陰毛")
+		;光滑无毛
+		CASE 3
+			PRINTFORMW 
+		;剃り整える
+		CASE 5
+			PRINTFORMW 
+		;从不剃
+		CASE 7
+			PRINTFORMW 
+		ENDSELECT
+	;腋毛の状態を指示
+	ELSEIF CHECK_COM("身嗜み：腋毛")
+		SELECTCASE COND("身嗜み：腋毛")
+		;光滑无毛
+		CASE 3
+			PRINTFORMW 
+		;从不剃
+		CASE 7
+			PRINTFORMW 
+		ENDSELECT
+	;常に膣を拡張しておくように指示
+	ELSEIF CHECK_COM("身嗜み：Ｖ拡張")
+		;尺寸で分岐
+		SELECTCASE COND("身嗜み：Ｖ拡張")
+		;指示解除
+		CASE 0
+			PRINTFORMW 
+		CASEELSE
+			PRINTFORMW 
+		ENDSELECT
+	;常に肛門を拡張しておくように指示
+	ELSEIF CHECK_COM("身嗜み：Ａ拡張")
+		;尺寸で分岐
+		SELECTCASE COND("身嗜み：Ａ拡張")
+		;指示解除
+		CASE 0
+			PRINTFORMW 
+		CASEELSE
+			PRINTFORMW 
+		ENDSELECT
+	;いつでもお尻でエロいことできるように指示
+	ELSEIF CHECK_COM("身嗜み：Ａ準備")
+		;呼ばれたら腸内を綺麗にしておくように指示
+		IF COND("身嗜み：腸洗浄")
+			PRINTFORMW 
+		;潤滑液を用意するように指示
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;それ以外
+	;CHECK_COM("身嗜み：Ｐ準備"), CHECK_COM("身嗜み：Ｖ準備"), CHECK_COM("身嗜み：服装")
+	;CHECK_COM("身嗜み：尿道拡張"), CHECK_COM("身嗜み：性行為の制限"), CHECK_COM("身嗜み：性欲の管理")
+	;などでも分岐可能。
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;喝套内精液
+;-------------------------------------------------
+IF SELECTCOM == 147
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		IF ABL:精液中毒 >= 3
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		IF ABL:精液中毒 >= 3
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;穿环
+;-------------------------------------------------
+IF SELECTCOM == 148
+	;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+	RETURN 0
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;こういうのは好きじゃない
+		IF CHECK("穿环") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;こういうのは好きじゃない
+		IF CHECK("穿环") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			;ＯＮフラグが付けた際のセリフです
+			IF COND("陰蒂環フラグ")
+				IF COND("穿環ＯＮフラグ")
+					PRINTFORMW 
+				ELSE
+					PRINTFORMW 
+				ENDIF
+			ELSEIF COND("陰唇環フラグ")
+				IF COND("穿環ＯＮフラグ")
+					PRINTFORMW 
+				ELSE
+					PRINTFORMW 
+				ENDIF
+			ELSEIF COND("乳环フラグ")
+				IF COND("穿環ＯＮフラグ")
+					PRINTFORMW 
+				ELSE
+					PRINTFORMW 
+				ENDIF
+			ELSEIF COND("肚脐环フラグ")
+				IF COND("穿環ＯＮフラグ")
+					PRINTFORMW 
+				ELSE
+					PRINTFORMW 
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;导管
+;-------------------------------------------------
+IF SELECTCOM == 149
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;痛い！
+		IF CHECK("尿道PLAY") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;痛い！
+		IF CHECK("尿道PLAY") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;深喉
+;-------------------------------------------------
+IF SELECTCOM == 150
+	;口上を書く際には RETURN 0 を削除してください(もともと地の文が長めなので書かなくても問題ないかもしれません)
+	RETURN 0
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;尿道探针
+;-------------------------------------------------
+IF SELECTCOM == 151
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;痛い！
+		IF CHECK("尿道PLAY") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;痛い！
+		IF CHECK("尿道PLAY") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;攝像機使用
+;-------------------------------------------------
+IF SELECTCOM == 170
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;終了時
+	ELSEIF TEQUIP:攝像機 == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;野外PLAY
+;まだ仕様が決まってない
+;-------------------------------------------------
+IF SELECTCOM == 171
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;浴室PLAY
+;-------------------------------------------------
+IF SELECTCOM == 172
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;終了時
+	ELSEIF TEQUIP:浴室PLAY == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;新妻PLAY
+;-------------------------------------------------
+IF SELECTCOM == 173
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;終了時
+	ELSEIF TEQUIP:新妻PLAY == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;室内露出PLAY
+;まだ仕様が決まってない
+;-------------------------------------------------
+IF SELECTCOM == 174
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;換装
+;-------------------------------------------------
+IF SELECTCOM == 175
+	;服、贴身制服、泳装に着替えた時
+	IF CHECK_COM("換装：服を着替えた")
+		IF CHECK_CLO("自分の服")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("衬衫")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("女教師")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("和服")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("女仆装")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("体操服")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("看護婦")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("旗袍")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("水手服")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("巫女")
+			PRINTFORMW 
+		ELSEIF CHECK_SHIRT("情趣内衣")
+			PRINTFORMW 
+		ELSEIF CHECK_CLO("比基尼姿")
+			PRINTFORMW 
+		ELSEIF CHECK_CLO("拘束衣")
+			PRINTFORMW 
+		ELSEIF CHECK_BODYS("兔")
+			PRINTFORMW 
+		;其他
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;胸も股間も丸出し状態变成了時
+	ELSEIF CHECK_COM("換装：裸体变成了")
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;露出癖Lv3
+		ELSEIF ABL:露出癖 >= 3
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;胖次を変えたり脱いだり
+	ELSEIF CHECK_COM("換装：胖次")
+		IF EQUIP:胖次
+			PRINTFORMW 
+		;没穿内褲です
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;以下は面倒ならELSE でひとまとめでも良いでしょう
+	ELSEIF CHECK_COM("換装：下身衣装")
+		PRINTFORMW 
+	ELSEIF CHECK_COM("換装：胸罩")
+		PRINTFORMW 
+	ELSEIF CHECK_COM("換装：手套")
+		PRINTFORMW 
+	ELSEIF CHECK_COM("換装：襪子")
+		PRINTFORMW 
+	ELSEIF CHECK_COM("換装：靴")
+		PRINTFORMW 
+	;飾品の付け替えや其他
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;被逆推
+;-------------------------------------------------
+IF SELECTCOM == 176
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;潤滑液使用
+;-------------------------------------------------
+IF SELECTCOM == 260
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;媚薬使用
+;-------------------------------------------------
+IF SELECTCOM == 261
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;利尿剤
+;-------------------------------------------------
+IF SELECTCOM == 262
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;排卵誘発剤
+;-------------------------------------------------
+IF SELECTCOM == 264
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+;-------------------------------------------------
+;筋弛緩剤
+;-------------------------------------------------
+IF SELECTCOM == 267
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;挣扎
+;-------------------------------------------------
+IF SELECTCOM == 280
+	;成功
+	IF TEQUIP:推倒 == 0
+		PRINTFORMW 
+	;失敗
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;自慰
+;自慰の種類についてはTEQUIP:PLAYER:自慰の値で分岐可能
+;==1舐陰, ==4舐陰莖, ==9舐肛, ==13くぱぁ, ==14Ａくぱぁ など
+;-------------------------------------------------
+IF SELECTCOM == 282
+	;初めて
+	IF FIRSTCOM(SELECTCOM) == 0
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;-------------------------------------------------
+;甜言蜜语
+;-------------------------------------------------
+IF SELECTCOM == 283
+	;口上を書く際には RETURN 0 を削除してください(何も喋らない場合には地の文が強化されます)
+	RETURN 0
+	;成功
+	IF TEQUIP:甜言蜜语
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;失敗
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;--------------------------------------------------
+;調教指令の地の文の前に喋る台詞はここに書く
+;--------------------------------------------------
+@KOJO_MESSAGE_BEFORE_COM_K37
+;口枷着用時には口上をスキップする？
+SIF TEQUIP:口枷 && SELECTCOM != 135
+	RETURN 0
+
+;-------------------------------------------------
+;調教指令終了時に行う共通処理。特になくともよい
+;-------------------------------------------------
+@KOJO_ENDCOM_K37
+
+;-------------------------------------------------
+;パラメータ変動をトリガーにした口上
+;パラメータ変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_PALAMCNG_K37, ARGS
+;助手が調教した時に口上をスキップする（好みに応じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSIPLAY
+;	RETURN 0
+;-------------------------------------------------
+;パラメータ変動時のセリフ
+;-------------------------------------------------
+SELECTCASE ARGS
+;-------------------------------------------------
+;初めてＶ潤がLV3超えた
+;-------------------------------------------------
+CASE "Ｖ潤LV3突破"
+	;初めて
+	IF FIRST_EV("Ｖ潤LV3突破") == 0
+		;潤滑液を使った場合
+		IF SELECTCOM == 260
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;初めて欲情がLV3超えた
+;-------------------------------------------------
+CASE "欲情LV3突破"
+	IF FIRST_EV("欲情LV3突破") == 0
+		;媚薬を使った場合
+		IF SELECTCOM == 261
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;初めて恥情がLV3超えた
+;-------------------------------------------------
+CASE "恥情LV3突破"
+	IF FIRST_EV("恥情LV3突破") == 0
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;初めて恐怖がLV3超えた
+;-------------------------------------------------
+CASE "恐怖LV3突破"
+	IF FIRST_EV("恐怖LV3突破") == 0
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;初めてC絶頂
+;-------------------------------------------------
+CASE "Ｃ絶頂"
+	IF FIRST_EV("Ｃ絶頂") == 0
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;初めてV絶頂
+;-------------------------------------------------
+CASE "Ｖ絶頂"
+	IF FIRST_EV("Ｖ絶頂") == 0
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;初めてA絶頂
+;-------------------------------------------------
+CASE "Ａ絶頂"
+	IF FIRST_EV("Ａ絶頂") == 0
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;初めてB絶頂
+;-------------------------------------------------
+CASE "Ｂ絶頂"
+	IF FIRST_EV("Ｂ絶頂") == 0
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;C挑逗
+;-------------------------------------------------
+CASE "Ｃ挑逗"
+	;初めて
+	IF FIRST_EV("Ｃ挑逗") == 0
+		PRINTFORMW 
+	;２回目以降
+	ELSE
+		;強絶頂Ｃ挑逗
+		IF NOWEX:Ｃ绝顶前骤停 >= 2
+			PRINTFORMW 
+		;絶頂Ｃ挑逗
+		ELSEIF NOWEX:Ｃ绝顶前骤停
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;V挑逗
+;-------------------------------------------------
+CASE "Ｖ挑逗"
+	;初めて
+	IF FIRST_EV("Ｖ挑逗") == 0
+		PRINTFORMW 
+	;２回目以降
+	ELSE
+		;強絶頂Ｖ挑逗
+		IF NOWEX:Ｖ绝顶前骤停 >= 2
+			PRINTFORMW 
+		;絶頂Ｖ挑逗
+		ELSEIF NOWEX:Ｖ绝顶前骤停
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;A挑逗
+;-------------------------------------------------
+CASE "Ａ挑逗"
+	;初めて
+	IF FIRST_EV("Ａ挑逗") == 0
+		PRINTFORMW 
+	;２回目以降
+	ELSE
+		;強絶頂Ａ挑逗
+		IF NOWEX:Ａ绝顶前骤停 >= 2
+			PRINTFORMW 
+		;絶頂Ａ挑逗
+		ELSEIF NOWEX:Ａ绝顶前骤停
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;B挑逗
+;-------------------------------------------------
+CASE "Ｂ挑逗"
+	;初めて
+	IF FIRST_EV("Ｂ挑逗") == 0
+		PRINTFORMW 
+	;２回目以降
+	ELSE
+		;強絶頂Ｂ挑逗
+		IF NOWEX:Ｂ绝顶前骤停 >= 2
+			PRINTFORMW 
+		;絶頂Ｂ挑逗
+		ELSEIF NOWEX:Ｂ绝顶前骤停
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;扶她射精挑逗
+;-------------------------------------------------
+CASE "射精挑逗"
+	;初めて
+	IF FIRST_EV("射精挑逗") == 0
+		PRINTFORMW 
+	;２回目以降
+	ELSE
+		;大量射精挑逗
+		IF NOWEX:射精前骤停 >= 2
+			PRINTFORMW 
+		;射精挑逗
+		ELSEIF NOWEX:射精前骤停
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;処女喪失(処女のみ)
+;-------------------------------------------------
+CASE "処女喪失"
+	IF FIRST_EV("処女喪失") == 0
+		;恋慕
+		IF TALENT:恋慕
+			;主人の性交による処女喪失
+			IF PLAYER == MASTER && INSERT("Ｖ挿入")
+				PRINTFORMW 
+			ELSE
+				PRINTFORMW 
+			ENDIF
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;射精した(扶她/男性のみ)
+;-------------------------------------------------
+CASE "射精した"
+	;初めて
+	IF FIRST_EV("射精した") == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;噴乳した(母乳体質のみ)
+;-------------------------------------------------
+CASE "噴乳した"
+	;初めて
+	IF FIRST_EV("噴乳した") == 0
+		PRINTFORMW 
+	;二回目以降
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;絶頂放尿した
+;-------------------------------------------------
+CASE "絶頂放尿"
+	;初めて
+	IF FIRST_EV("絶頂放尿") == 0
+		;抵抗无
+		IF CHECK_COM("強制放尿") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;抵抗无
+		IF CHECK_COM("強制放尿") == 0
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;Ｃ絶頂20以上
+;-------------------------------------------------
+CASE "Ｃ絶頂20回以上"
+	;初めて
+	IF FIRST_EV("Ｃ絶頂20回以上") == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;Ｖ絶頂20以上
+;-------------------------------------------------
+CASE "Ｖ絶頂20回以上"
+	;初めて
+	IF FIRST_EV("Ｖ絶頂20回以上") == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;Ａ絶頂20以上
+;-------------------------------------------------
+CASE "Ａ絶頂20回以上"
+	;初めて
+	IF FIRST_EV("Ａ絶頂20回以上") == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;-------------------------------------------------
+;Ｂ絶頂20以上
+;-------------------------------------------------
+CASE "Ｂ絶頂20回以上"
+	;初めて
+	IF FIRST_EV("Ｂ絶頂20回以上") == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+ENDSELECT
+
+;-------------------------------------------------
+;刻印変動をトリガーにした口上
+;刻印変動後に口上を発動します
+;-------------------------------------------------
+@KOJO_MESSAGE_MARKCNG_K37, ARGS
+;助手が調教した時に口上をスキップする（好みに応じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSIPLAY
+;	RETURN 0
+
+SELECTCASE ARGS
+;-------------------------------------------------
+;苦痛刻印Lv3取得
+;-------------------------------------------------
+CASE "苦痛刻印Lv3取得"
+	IF FIRST_EV("苦痛刻印Lv3取得") == 0
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;快楽刻印Lv3取得
+;-------------------------------------------------
+CASE "快楽刻印Lv3取得"
+	IF FIRST_EV("快楽刻印Lv3取得") == 0
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;屈服刻印Lv3取得
+;-------------------------------------------------
+CASE "屈服刻印Lv3取得"
+	IF FIRST_EV("屈服刻印Lv3取得") == 0
+		PRINTFORMW 
+	ENDIF
+ENDSELECT
+
+
+;-------------------------------------------------
+;射精先選択時に表示する口上
+;頻繁に表示されるため随机や表示条件の設定推奨です
+;-------------------------------------------------
+@KOJO_MESSAGE_SHOOT_K37
+;初期は表示されないようにしてあるため、書いた後はRETURN 0を消す
+RETURN 0
+
+;恋慕
+IF TALENT:恋慕
+	PRINTFORMW 
+;それ以外
+ELSE
+	PRINTFORMW 
+ENDIF
+
+;-------------------------------------------------
+;PLAYERの射精＆絶頂をトリガーにした口上
+;それぞれの射精分岐内での初めてかどうかの判定は、FIRST_EV(ARGS)で行う
+;例）ELSEIF SHOOT("脚")において初めてかどうかは、FIRST_EV("絶頂：脚")で判定する
+;-------------------------------------------------
+@KOJO_MESSAGE_SAMEN_AND_EXTACY_K37
+;助手が調教した時に口上をスキップする（好みに応じて使う、行頭の;を消すとスキップするようになる）
+;SIF ASSIPLAY
+;	RETURN 0
+
+;-------------------------------------------------
+;髪、顔、股間、腹、尻、くぱぁ、Ａくぱぁへのぶっかけ
+;-------------------------------------------------
+IF SHOOT("ぶっかけ")
+	IF SHOOT("自慰")
+		PRINTFORMW 
+	;超大量射精
+	ELSEIF COND("絶頂", PLAYER) >= 3
+		PRINTFORMW 
+	;大量射精
+	ELSEIF COND("絶頂", PLAYER) == 2
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;自慰で射精された(ぶっかけではなく床などに射精した)
+;-------------------------------------------------
+ELSEIF SHOOT("自慰")
+	PRINTFORMW 
+
+;以下は通常の射精区分。
+;-------------------------------------------------
+;素股、足交や身体で射精させた
+;-------------------------------------------------
+ELSEIF SHOOT("脚")
+	;初めて
+	IF FIRST_EV("絶頂：脚") == 0
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;二回目以降
+	ELSE
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 
+		;それ以外
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+ELSEIF SHOOT("素股")
+	PRINTFORMW 
+;-------------------------------------------------
+;口で射精させた
+;-------------------------------------------------
+ELSEIF SHOOT("口")
+	;初めて
+	IF FIRST_EV("絶頂：口") == 0
+		PRINTFORMW 
+	;精液中毒Lv5
+	ELSEIF ABL:精液中毒 >= 5
+		PRINTFORMW 
+	;精液中毒Lv3
+	ELSEIF ABL:精液中毒 >= 3
+		PRINTFORMW 
+	;奉仕精神Lv3以上
+	ELSEIF ABL:奉仕精神 >= 3
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;胸で射精させた
+;-------------------------------------------------
+ELSEIF SHOOT("胸")
+	;初めて
+	IF FIRST_EV("絶頂：胸") == 0
+		PRINTFORMW 
+	;奉仕精神Lv5
+	ELSEIF ABL:奉仕精神 >= 5
+		PRINTFORMW 
+	;奉仕精神Lv3以上
+	ELSEIF ABL:奉仕精神 >= 3
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;手で射精させた
+;-------------------------------------------------
+ELSEIF SHOOT("手")
+	;初めて
+	IF FIRST_EV("絶頂：手") == 0
+		PRINTFORMW 
+	;奉仕精神Lv5
+	ELSEIF ABL:奉仕精神 >= 5
+		PRINTFORMW 
+	;奉仕精神Lv3
+	ELSEIF ABL:奉仕精神 >= 3
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;性交で射精させた
+;-------------------------------------------------
+ELSEIF SHOOT("Ｖ中出し")
+	;初めて
+	IF FIRST_EV("絶頂：Ｖ中出し") == 0
+		PRINTFORMW 「咿呀啊啊——っ♪好烫啊っ♪肚子里面有烫烫的东西っ♪咻ーっ地进来了呜呜ぉっ♪」
+		PRINTFORMW 「哈啊啊～…这、这就是…这就是膣内射精…就是中出吗…ッ♪」
+	ELSEIF COND("危険日")
+		IF RAND:3 == 0
+			PRINTFORMW 「啊嗷っ♪呜っ、啊啊啊っ♪噗噜噗噜地——搏动着哇ッ…♪」
+			PRINTFORM 「被如此浓厚的精液、注入到子宫里的话…
+			IF TEQUIP:PLAYER:避孕套
+				PRINTFORMW 肯定会怀孕的吧…♪」
+			ELSE
+				PRINTFORMW 绝对会怀孕没错呢…♪」
+			ENDIF
+		ELSEIF RAND:2
+			PRINTFORMW 「咿啊啊～～～っ♪来了啊——っ♪精子进来了哇ぁっ♪」
+			IF TEQUIP:PLAYER:避孕套
+				PRINTFORMW 「但是真遗憾呢っ♪还有一个避孕套っ♪让我怀孕的夙愿是没法实现了哟っ♪」
+			ELSE
+				PRINTFORMW 「满心想着让我怀孕的っ♪精力十足的精子ぃっ♪被射进来了哇ぁ～ッ♪」
+			ENDIF
+		ELSE
+			PRINTFORMW 「呃啊啊っ♪好厉害っ、好厉害啊っ♪」
+			PRINTFORM 「热热的新鲜活泼的精液在我的里面横冲直撞っ♪
+			IF TEQUIP:PLAYER:避孕套
+				PRINTFORMW 就算隔着避孕套也能传达出想要让%CNAME("一人称")%怀孕的心情呢っ♪」
+			ELSE
+				PRINTFORMW 这样会让%CNAME("一人称")%怀孕的吧っ♪」
+			ENDIF
+		ENDIF
+	ELSE
+		IF RAND:3 == 0
+			PRINTFORMW 「咿呜呜っ♪啊哈啊…好棒、好棒哇♪」
+			PRINTFORM 「在里面哔啾哔啾的、热乎乎的精液在向四处喷涌着…
+			IF TEQUIP:PLAYER:避孕套
+				PRINTFORMW 避孕套都涨大了，我感觉到了哟♪」
+			ELSE
+				PRINTFORMW 真的好舒服哇♪」
+			ENDIF
+		ELSEIF RAND:2
+			PRINTFORMW 「呃唔っ♪啊っ、呃っ、呃啊啊～～～っ♪」
+			PRINTFORMW 「鸡鸡在在抖动着…呼呼、%CNAME("一人称")%的小穴也在一起喜悦着呢っ♪」
+		ELSE
+			PRINTFORMW 「啊っ♪啊啊っ♪出来了っ、出来了哇ぁっ♪」
+			PRINTFORM 「又热又多的喷射着…
+			IF TEQUIP:PLAYER:避孕套
+				PRINTFORMW 隔着避孕套也能感觉到哇…♪」
+			ELSE
+				PRINTFORMW 还在肚子里面黏糊糊地积攒着呢っ♪」
+			ENDIF
+		ENDIF
+	ENDIF
+ELSEIF SHOOT("Ａ中出し")
+	;初めて
+	IF FIRST_EV("絶頂：Ａ中出し") == 0
+		PRINTFORMW 
+	;恋慕
+	ELSEIF TALENT:恋慕
+		PRINTFORMW 
+	;屈服刻印Lv3
+	ELSEIF MARK:屈服刻印 == 3
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;接吻で射精
+;-------------------------------------------------
+ELSEIF SHOOT("接吻")
+	PRINTFORMW 
+;-------------------------------------------------
+;面部騎乗で射精
+;-------------------------------------------------
+ELSEIF SHOOT("面部騎乗")
+	PRINTFORMW 
+;-------------------------------------------------
+;洗面奶で射精
+;-------------------------------------------------
+ELSEIF SHOOT("洗面奶")
+	PRINTFORMW 
+;-------------------------------------------------
+;逆舐陰で射精
+;-------------------------------------------------
+ELSEIF SHOOT("逆舐陰")
+	PRINTFORMW 
+;-------------------------------------------------
+;逆肛交、逆強姦で射精
+;-------------------------------------------------
+ELSEIF SHOOT("逆強姦") || SHOOT("逆肛交") || SHOOT("肛門奉仕")
+	PRINTFORMW 
+;-------------------------------------------------
+;PLAYERが女で、イってしまった…
+;-------------------------------------------------
+ELSEIF SHOOT("調教者が女性")
+	;強絶頂
+	IF COND("絶頂", PLAYER) >= 2
+		PRINTFORMW 
+	;絶頂
+	ELSEIF COND("絶頂", PLAYER) == 1
+		PRINTFORMW 
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;角色が調教中に調教者を攻める際などの口上
+;-------------------------------------------------
+@KOJO_COUNTER_K37, ARGS
+SELECTCASE ARGS
+CASE "恍惚"
+	PRINTFORMW 
+CASE "推倒"
+	PRINTFORMW 
+CASE "強制終了"
+	PRINTFORMW 
+CASE "復活"
+	PRINTFORMW 
+CASE "恍惚から復帰"
+	PRINTFORMW 
+CASE "助手が限界"
+	PRINTFORMW 
+ENDSELECT
+
+RETURN 1
+
+
+;-------------------------------------------------
+;イベント口上集
+;-------------------------------------------------
+@KOJO_EVENT_K37, ARGS
+SELECTCASE ARGS
+;-------------------------------------------------
+;調教終了不可能
+;-------------------------------------------------
+CASE "調教終了不可能"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;避孕套装着
+;-------------------------------------------------
+CASE "Ｖ避孕套装着"
+	;挿入指令
+	IF TRAIN_GENRE("挿入", SELECTCOM)
+		;PLAYヤーは着ける気満々
+		IF TEQUIP:PLAYER:避孕套
+
+		;避孕套が無い
+		ELSEIF ITEM:避孕套 == 0
+
+		;安全日に生希望
+		ELSEIF COND("安全日")
+
+		;安全日じゃないけど避孕套没有を希望
+		ELSE
+
+		ENDIF
+	;PLAYヤーへの挿入指令
+	ELSEIF TRAIN_GENRE("逆挿入", SELECTCOM)
+		;PLAYヤーは着けてもらうの希望
+		IF TEQUIP:避孕套
+
+		;避孕套が無い
+		ELSEIF ITEM:避孕套 == 0
+
+		;安全日に生希望
+		ELSEIF COND("安全日", PLAYER)
+
+		;安全日じゃないけど避孕套没有を希望
+		ELSE
+
+		ENDIF
+	ENDIF
+
+;-------------------------------------------------
+;調教後自慰
+;-------------------------------------------------
+CASE "調教後自慰"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	;自慰中毒Lv3以上
+	ELSEIF ABL:自慰中毒 >= 3
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;レズPLAY
+;-------------------------------------------------
+CASE "調教後レズPLAY"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;調教後性交
+;-------------------------------------------------
+CASE "調教後性交"
+	;V感覚Lv4以上
+	IF ABL:Ｖ感覚 >= 4
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;夜袭騎乗位
+;-------------------------------------------------
+CASE "夜袭騎乗位"
+	;V感覚Lv5以上
+	IF ABL:Ｖ感覚 >= 5
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;夜袭Ａ騎乗位
+;-------------------------------------------------
+CASE "夜袭Ａ騎乗位"
+	;Ａ感覚Lv5以上
+	IF ABL:Ａ感覚 >= 5
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-----------------------------
+;夜袭接吻
+;----------------------------
+CASE "夜袭接吻"
+	;M感覚Lv3以上
+	IF ABL:Ｍ感覚 >= 3
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;添い寝
+;-------------------------------------------------
+CASE "添い寝"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	;それ以外
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+;-------------------------------------------------
+;PLAYERがMASTERとASSI間で交代した際の台詞
+;-------------------------------------------------
+CASE "調教者交代"
+	;PLAYERがASSIに変わった
+	IF PLAYER == ASSI
+		PRINTFORMW 
+	;PLAYERが你に戻った
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;partnerがTARGETとASSI間で交代した際の台詞
+;-------------------------------------------------
+CASE "対象交代"
+	;partnerとしてエッチに誘われた
+	IF COND("第一対象") == TARGET
+		PRINTFORMW 
+	;指导者としてエッチに誘われた
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+;-------------------------------------------------
+;清洁口交
+;-------------------------------------------------
+CASE "清洁口交"
+	SELECTCASE TFLAG:口上分岐
+	;お掃除前
+	CASE 0
+		PRINTFORMW 
+	;お掃除中
+	CASE 1
+		PRINTFORMW 
+	;お掃除で射精しなかった
+	CASE 2
+		PRINTFORMW 
+	;お掃除で射精しそう？
+	CASE 3
+		PRINTFORMW 
+	;射精した
+	CASE 4
+		PRINTFORMW 
+	;お掃除で射精後
+	CASE 5
+		PRINTFORMW 
+	ENDSELECT
+;-------------------------------------------------
+;脱衣
+;-------------------------------------------------
+CASE "自発脱ぎ"
+	;裸体变成了
+	IF CHECK_CLO("裸体")
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;阴部剥きだし
+	ELSEIF CHECK_CLO("Ｖ露出")
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;部分脱ぎ
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;----------------------------------------------------------------
+;妊娠した
+;----------------------------------------------------------------
+CASE "妊娠発覚"
+	;出産経験
+	IF TALENT:出産経験
+		PRINTFORMW 
+	;恋慕
+	ELSEIF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;----------------------------------------------------------------
+;出産した
+;----------------------------------------------------------------
+CASE "出産"
+	;出産経験
+	IF TALENT:出産経験
+		PRINTFORMW 
+	;恋慕
+	ELSEIF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;----------------------------------------------------------------
+;兒童が大きくなった
+;----------------------------------------------------------------
+CASE "子出口"
+	;出産経験
+	IF TALENT:出産経験
+		PRINTFORMW 
+	;恋慕
+	ELSEIF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;----------------------------------------------------------------
+;性交後に抜いた時	
+;----------------------------------------------------------------
+;恥ずかしいところを見せてくれる
+;----------------------------------------------------------------
+CASE "中出し後くぱぁ"
+	;恋慕
+	IF TALENT:恋慕
+		;避孕套有些
+		IF TEQUIP:PLAYER:避孕套
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ELSE
+		;避孕套有些
+		IF TEQUIP:PLAYER:避孕套
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+;----------------------------------------------------------------
+;恥ずかしいところを見せてくれない
+;好感度が高いと起きないので、恋慕で分岐させる意味はない。
+;また、不知羞恥ならば発生しない
+;----------------------------------------------------------------
+CASE "中出し後害羞"
+	PRINTFORMW 
+;----------------------------------------------------------------
+;精液を味わう
+;----------------------------------------------------------------
+CASE "中出し後精液掻き出し"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;----------------------------------------------------------------
+;気持ちよくてぐったり
+;----------------------------------------------------------------
+CASE "中出し後恍惚"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;ビデオ保存
+;-------------------------------------------------
+CASE "ビデオ保存"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;ビデオ売却
+;-------------------------------------------------
+CASE "ビデオ売却"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;-------------------------------------------------
+;ビデオ売却失敗
+;-------------------------------------------------
+CASE "ビデオ売却失敗"
+	;恋慕
+	IF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+;----------------------------------------------------------------
+;塞子をしていない状態での液体浣腸口上
+;----------------------------------------------------------------
+CASE "无塞浣腸事件"
+	;限界値突破時
+	IF BASE:排泄欲 >= 10000
+		;限界値を超えたが漏らせない場合
+		IF INSERT("Ａ挿入") || COND("肛門栓")
+			PRINTFORMW 
+		;漏らす直前
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;漏らした
+	ELSEIF NOWEX:排泄
+		PRINTFORMW 
+	;我慢しているときの口上
+	ELSEIF TEQUIP:浣腸
+		PRINTFORMW 
+	ENDIF
+;----------------------------------------------------------------
+;吸能
+;----------------------------------------------------------------
+CASE "吸能"
+	;初めて
+	IF FIRST_EV(ARGS) == 0
+		PRINTFORMW 
+	ELSEIF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;----------------------------------------------------------------
+;調教者がちんこを挿入する前に射精してしまった！
+;----------------------------------------------------------------
+CASE "挿入前暴発"
+	;初めて
+	IF FIRST_EV(ARGS) == 0
+		PRINTFORMW 
+	ELSEIF TALENT:恋慕
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+;----------------------------------------------------------------
+;特殊な道具を使った際の台詞
+;----------------------------------------------------------------
+CASE "避妊の護符"
+	;初めて
+	IF FIRST_EV(ARGS) == 0
+		PRINTFORMW 
+	ELSEIF TALENT:恋慕
+		;装着
+		IF TALENT:避妊の護符
+			PRINTFORMW 
+		;取り外し
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ELSE
+		IF TALENT:避妊の護符
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+
+CASE "扶她薬"
+	;扶她变成了
+	IF TALENT:扶她
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	RETURN 1
+CASE "黑色ドロップ"
+	;男性变成了
+	IF TALENT:男性
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "巨根薬"
+	;薬を使用した後の状態で分岐
+	SELECTCASE SIZE("阴茎")
+	;並
+	CASE 1
+		PRINTFORMW 
+	;巨根
+	CASE 2
+		PRINTFORMW 
+	;馬根
+	CASE 3
+		PRINTFORMW 
+	CASE 4
+		PRINTFORMW 
+	CASE 5
+		PRINTFORMW 
+	;CASEELSE
+	;	PRINTFORMW 
+	ENDSELECT
+CASE "縮根薬"
+	;薬を使用した後の状態で分岐
+	SELECTCASE SIZE("阴茎")
+	;小
+	CASE 0
+		PRINTFORMW 
+	;並
+	CASE 1
+		PRINTFORMW 
+	;巨根
+	CASE 2
+		PRINTFORMW 
+	ENDSELECT
+CASE "剥皮薬"
+	;薬を使用した後の状態で分岐
+	IF COND("假性包茎")
+		PRINTFORMW 
+	;ずる剥け
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "伸皮薬"
+	;薬を使用した後の状態で分岐
+	IF COND("真性包茎")
+		PRINTFORMW 
+	ELSEIF COND("假性包茎")
+		PRINTFORMW 
+	ENDIF
+CASE "豊胸薬"
+	;薬を使用した後の状態で分岐
+	SELECTCASE TALENT:巨乳
+	;並乳
+	CASE 0
+		PRINTFORMW 
+	;巨乳
+	CASE 1
+		PRINTFORMW 
+	;爆乳
+	CASE 2
+		PRINTFORMW 
+	;超乳
+	CASE IS >= 3
+		PRINTFORMW 
+	ENDSELECT
+CASE "貧乳薬"
+	;薬を使用した後の状態で分岐
+	SELECTCASE TALENT:巨乳
+	;並乳以下
+	CASE 0
+		IF TALENT:貧乳
+			PRINTFORMW 
+		;並乳
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;巨乳
+	CASE 1
+		PRINTFORMW 
+	;爆乳
+	CASE 2
+		PRINTFORMW 
+	ENDSELECT
+CASE "巨人の薬"
+	;薬を使用した後の状態で分岐
+	IF TALENT:高大
+		PRINTFORMW 
+	;普通身高
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "小人の薬"
+	;薬を使用した後の状態で分岐
+	IF TALENT:娇小
+		PRINTFORMW 
+	;普通身高
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "虹の薬"
+	;薬を使用した後の状態で分岐
+	SELECTCASE CONDS("肤色")
+	CASE "褐色肌"
+		PRINTFORMW 
+	CASE "色白"
+		PRINTFORMW 
+	CASE "青肌"
+		PRINTFORMW 
+	;普通
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+CASE "桃尻薬"
+	;薬を使用した後の状態で分岐
+	IF TALENT:巨尻 >= 2
+		PRINTFORMW 
+	ELSEIF TALENT:巨尻
+		PRINTFORMW 
+	;普通の尺寸
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "小尻薬"
+	;薬を使用した後の状態で分岐
+	IF TALENT:巨尻
+		PRINTFORMW 
+	ELSEIF TALENT:小尻
+		PRINTFORMW 
+	;普通の尺寸
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+ENDSELECT
+
+;-------------------------------------------------
+;TARGET以外の立場で呼ばれた時の台詞全般
+;-------------------------------------------------
+@KOJO_GUEST_K37, ARGS
+SELECTCASE ARGS
+CASE "調教相手に選ばれた"
+
+CASE "助手に抜擢"
+	;初めて
+	IF EXP:助手経験 == 0
+
+	ELSE
+
+	ENDIF
+
+CASE "助手：主人に清洁口交"
+
+CASE "助手：partnerに清洁舔阴"
+
+CASE "助手：partnerに清洁舔A"
+
+CASE "助手：主人にＰ恥垢清洁口交"
+
+CASE "助手：撮影開始"
+
+CASE "助手：調教開始前の準備後台詞"
+
+CASE "室内調教：登場台詞"
+
+CASE "室内調教：ギャラリー増加台詞"
+
+CASE "室内調教：感想台詞"
+
+CASE "助手で性処理：おあずけ"
+
+CASE "助手で性処理"
+
+CASE "助手で性処理：事後"
+
+;COND("精液の優勢")で誰の兒童を孕んでしまったかを判定できます
+;名前を出したい時には%COND("精液の優勢")%を用いてください
+CASE "受精確認"
+
+ENDSELECT
+
+;-------------------------------------------------
+;@単体エンディング関係(37を角色番号に置換)
+;通常のエンディング格子の前に個別エンディングを判定
+;-------------------------------------------------
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;★ここから先にはエンディングが記述されています★
+;ネタバレを避けたい方は閲覧不会うにご注意下さい。
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+;
+@IS_SINGLE_ENDING_K37
+;エンディングを書いたら、下のRETURN 1のコメントアウト;を消してください
+RETURN 1
+
+@MENU_SINGLE_ENDING_K37
+;エンディングを書いたら、下のRETURN 0を消してください
+;RETURN 0
+
+;ENDを選択する際の表示。下で満たしたEND条件に応じて全角21文字以内で好きに変えて良い
+STR:ＥＮＤ标题 = 看个人事件
+
+SIF MARK:屈服刻印 >= 2 && EXP:接吻経験 >= 20
+	STR:エンディング += "1_ラブレター/"
+
+RETURN 1
+
+
+;ARGSには@MENU_SINGLE_ENDING_K1で設定したEND名のどれかが入っている
+;見たENDはCEVENTで記録される
+;例）ＥＮＤ名１を閲覧した場合は CEVENT("ＥＮＤ名１") = 1 となる
+@SINGLE_ENDING_K37, ARGS
+SELECTCASE ARGS
+CASE "ラブレター"
+	PRINTFORMW ある周六の放課後。
+	PRINTFORML %CALLNAME:MASTER%が部室で一人のんびりしていると、
+	PRINTFORML 「ふんふーん♪ふんふふーん♪あら、ごきげんよう！%CNAME("二人称")%！」
+	PRINTFORML 「ねぇ%CNAME("二人称")%っ♪これ、見てくださいませ！」
+	PRINTFORML いきなり鼻歌と共にやってきた%CALLNAME:TARGET%が、こちらがどうしたのか聞く前に。手に持った紙切れを自慢げに見せびらかしてきた…。
+	PRINTFORMW 「『また』貰ってしまいましたわ！ラブレター♪」
+	PRINTFORMW 「ふふーん♪これでも%CNAME("一人称")%、色んな殿方におモテになってましてよ？」
+	PRINTFORMW 「%CNAME("二人称")%もあんまりほおっておいたら…誰かに盗られてしまうかもしれませんわよ～♪おほほ♪」
+	PRINTFORMW …あまりにも「男の純情」を軽視した…%CALLNAME:TARGET%に関してはその辺が分かっていない節もある…発言に、%CALLNAME:MASTER%すっくと立ち上がる。
+	PRINTFORML 
+	PRINTFORML 「…？どうしましたの、%CNAME("二人称")%？な、なんだか目が怖…」
+	PRINTFORML 「あぅ…っ！そ、そんなに強く引っ張られたら痛いですわっ！」
+	PRINTFORML %CALLNAME:MASTER%戸惑う%CALLNAME:TARGET%の手首を掴み做爱房へと連れ込むと、後ろ手に部屋のカギをかける。
+	PRINTFORMW 然后わざと乱暴に%CALLNAME:TARGET%の服に手をかけ、女式衬衫のボタンを飛ばし、裙をずり下ろして抱き寄せた…。
+	PRINTFORML 「キャッ！いやっ、乱暴するのはやめてっ…ああっ…！」
+	PRINTFORMW 「ほ、本当にどうしましたのっ、いつもの%CNAME("二人称")%じゃないみたい…」
+	PRINTFORMW 乱れた服を庇うことも出来ず、ただただ顺其自然にされる%CALLNAME:TARGET%に、
+	PRINTFORMW 『…男にも純情ってものがあるから、ラブレターなぞ堂々と見せるものではない。』
+	PRINTFORMW 『それに、安易に他の男と浮気しそうなことも言うものではない。』
+	PRINTFORMW 『こういうことを言われた男がどうするのか、今からそれを教えてやる。』
+	PRINTFORMW と宣言した%CALLNAME:MASTER%、就这様粗暴的唇を奪った…。
+	PRINTFORML 「んぅっ…！ちゅっ、んぶ、ちゅぶっ、ぢゅくっ…！」
+	PRINTFORMW いつもの互いを求めあうような接吻ではなく、刻み付けるように一方的で乱暴な接吻。
+	PRINTFORML 「ぅウんッ？！んぉっ、ぉうっ…んむぅっ、むぅうっ～！」
+	PRINTFORML さらには半脱的服に手が滑り込み、遠慮無く陰核や膣口をまさぐって强行高められる性感。
+	PRINTFORMW さしもの%CALLNAME:TARGET%も、目を瞑って%CALLNAME:MASTER%の蹂躙に耐えるしかない…。
+	PRINTFORML 
+	PRINTFORML 「むぉっ、おっ、おっ、むぅう～っ…！ぷはっ、はーっ…はぁーっ…」
+	PRINTFORMW やがて口を塞がれながらの手マンで腰を震わせてイった%CALLNAME:TARGET%を、%CALLNAME:MASTER%推倒在床上。
+	PRINTFORML 「あっ、ひっ…い、今イったばかりで、やっ、あぁ…」
+	PRINTFORM %CALLNAME:MASTER%問答無用で%CALLNAME:TARGET%の服を剥ぎ取ると自身も服を脱ぎ捨て、
+	IF TALENT:処女
+		PRINTFORMW 背後から手足を押さえつけながら胸と陰唇に手を伸ばした…。
+		PRINTFORML 「ひゃっ、あんッ、また、またイっちゃ…あっ、ああっ！」
+		PRINTFORMW 「はぁっ、はっ…も、もう許して…あぁっ、んぅ～～～っ！」
+		PRINTFORML 
+		CALL PRINT_STR, @"「…あ゛っ、んお゛っ、はあ゛～っ…_H_あ゛ぁぁ～～っ…_H_」_W"
+		CALL PRINT_STR, @"「ごめっ、无ゃ…_H_ごめん、なひゃい゛ぃ～…っ_H_」_W"
+		PRINTFORML 数時間%CALLNAME:MASTER%の手と口で責められ続けた%CALLNAME:TARGET%通过、色んな体液でぐしょ湿的になって床に横たわっていた。
+		PRINTFORMW しゃがれた声で謝罪を繰り返し、腰をビクビクと跳ね上げ、小便を漏らしながら絶頂の沉浸在余韻里%CALLNAME:TARGET%の姿に満足した%CALLNAME:MASTER%。
+		PRINTFORML 
+		PRINTFORML ふと見ると、いつの間にか放り出されていたラブレターが、%CALLNAME:TARGET%のイキ潮とイキション溜まりの中に落ちているのに気づく。
+		PRINTFORMW %CALLNAME:MASTER%もう読めそうにないそれを、%CALLNAME:TARGET%に代わって処分してやった…。
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%を足首を掴みまんぐり返しの体位にさせた…。
+		CALL PRINT_STR, @"「あっ…やっ、挿入って、う゛っ、お゛っ、お゛ぉ～～～っ_H_」_L"
+		PRINTFORML 挿入だけであっさりイってしまった%CALLNAME:TARGET%にお構いなく、%CALLNAME:MASTER%杭を打つように力強く腰を上下させ始める。
+		CALL PRINT_STR, @"「う゛ぉっ_H_ひあ゛っ_H_イぐっ、またイ゛くぅっ_H_う゛ぅ～ッ_H_」_L"
+		PRINTFORMW %CALLNAME:TARGET%との結合部からはぶぢゅっ、ぼぢゅっと下品な水音が鳴り響き、泡立った愛液や本気汁が撒き散らされている…。
+		PRINTFORMW 『膣も子宮も媚びまくりの雑魚マンコ』
+		PRINTFORMW 『射精してやるから子宮と卵子で記憶しろ』
+		PRINTFORMW 『他の男には渡さないが、念のため避妊する』
+		PRINTFORMW %CALLNAME:MASTER%%CALLNAME:TARGET%にそう囁き、腰を密着させて子宮を押し潰しながら射精した…。
+		CALL PRINT_STR, @"「ぅあ゛っ_H_ん゛ぉお゛ぉーーーっ_H_」_L"
+		CALL PRINT_STR, @"「お゛っ…_H_ほっ…_H_は～っ_H_はあぁ～っ…_H_」_L"
+		PRINTFORML 普段の様子からは想像できない獣帯污迹的た声と下品なアへ顔で、しっかり精を受け止める%CALLNAME:TARGET%。
+		PRINTFORMW %CALLNAME:MASTER%の阴茎を膣肉で締め上げ、カクカクと腰を痙攣させていた…。
+		PRINTFORML 
+		PRINTFORMW …そんな有様の%CALLNAME:TARGET%だが、今回の%CALLNAME:MASTER%全く容赦しない。
+		PRINTFORML 
+		PRINTFORML どぢゅんっ！どちゅっ！ばこっばこっばこっ…
+		CALL PRINT_STR, @"「ん゛ぉう゛っ_H_う゛っ_H_ぉう゛っ、お゛っ、ほっ…_H_」_L"
+		PRINTFORML どびゅっ！びゅるるるるっ！どぷっ、どぷっ、どぽっ…
+		CALL PRINT_STR, @"「うぎぃっ_H_ん゛いぃぃーーーーッ_H_ひっ、はひっ、ひぃ～…っ_H_」_L"
+		PRINTFORMW 射精が終わっても萎える气息の無い肉棒で、再び膣奥を犯してまんぐり種付けを繰り返し…。
+		PRINTFORML 
+		PRINTFORML じゅこっばこっじゅぷっ…ぬぽぬぽぬぽぬぽっ…
+		CALL PRINT_STR, @"「お゛へっ_H_お゛っ_H_お゛ほっ_H_ほっ、へっ、んほっ、ぉほっ_H_」_L"
+		PRINTFORML ビュルッ！ビュ～～～ッ、ビュルル～～～ッ…
+		CALL PRINT_STR, @"「お゛っほっ_H_ほへぇ～～～っ_H_はへぇ～～～～…_H_」_L"
+		PRINTFORMW 松葉崩しの体位で片手を繋ぎ、長三股辫を引っ張り一边继续、小刻みに子宮口を穿ってオホ顔とオホ声を引き出させ…。
+		PRINTFORML 
+		PRINTFORML ばちゅっ！ばちゅっ！ばちゅっ！ばちゅっ！！
+		CALL PRINT_STR, @"「あ゛ぉっ_H_おごっ_H_ぉ゛ほっ_H_うぉお゛っ_H_」_L"
+		PRINTFORML どぼっ！びゅぼぼっ！びゅるる…ゴポッ…ゴポッ…
+		CALL PRINT_STR, @"「ん゛おぉッ_H_おぐぅう_H_ぉほ…お～っ…んぉ～っ…_H_」_L"
+		PRINTFORMW 背面座位で羽交い絞めにし一边继续、子宮が胖次胖次に膨れ上がるまで注ぎ込んだ…。
+		PRINTFORML 
+		PRINTFORML 数時間かけて子宮から膣内まで%CALLNAME:MASTER%の精液で満たされた%CALLNAME:TARGET%の腹はポッコリと膨らみ、
+		PRINTFORML 他の男の精が入る隙は一滴たりとも見当たらない…まさしく『避妊』である。
+		CALL PRINT_STR, @"「お゛ぉ～～～～_H_んほぉ゛～～～ッ…_H_へあ゛ぁ～～～…ッ_H_」_L"
+		PRINTFORML %CALLNAME:MASTER%がもたれかかって惚ける%CALLNAME:TARGET%に『他の男の所に行くか？』と聞くと、
+		CALL PRINT_STR, @"「ぃひっ…_H_いかなひっ_H_いかなひれしゅの…ッ_H_」_L"
+		CALL PRINT_STR, @"「ずっとおしょばにおいて…_H_らぶらぶしぇっくしゅ、してくだひゃいまひぇ…_H_」_L"
+		PRINTFORMW と、涙と涎と鼻水でぐしょぐしょの顔を幸せそうに蕩かせ、未だ阴茎を咥えこんだ膣をキュッと締め上げる１００点満点の解答が帰ってきた…。
+		PRINTFORML 満足げに頷いた%CALLNAME:MASTER%が、半勃起的阴茎を角度をつけてカリを膣ヒダに引っかけ一边继续、「ぶぽっ」と音を立てて引き拔出と
+		CALL PRINT_STR, @"最後の一撃に%CALLNAME:TARGET%通过「お゛ん゛っ_H_」と低い声で腰を跳ねさせ、栓が抜けて開ききった膣口からは白濁液がとめどなく溢れ出す。_L"
+		CALL PRINT_STR, @"就这様床の上に潰れた青蛙のように横たわり、「ほっ_H_ほへっ_H_」と舌を突き出して浅い息を吐く%CALLNAME:TARGET%。_L"
+		PRINTFORMW その股間からじょわぁ～…と黄色い小便が漏れ出し、膣口から溢れた白濁液の池と混ざってより卑猥な液体を作り出した…。
+		PRINTFORML 
+		PRINTFORML ふと見ると、いつの間にか放り出されていたラブレターが、その精液と小便の水たまりの中に落ちているのに気づく。
+		PRINTFORMW %CALLNAME:MASTER%もはや何の紙かも分からないほどぐしゃぐしゃ变成了それを、%CALLNAME:TARGET%の代わりに処分してやった…。
+	ENDIF
+	PRINTFORMW 然后翌日が休日であることを思い出すと、頼れる悪魔の女仆に帰りが遅くなることをメールして再び%CALLNAME:TARGET%に手を伸ばした…。
+	PRINTFORML 
+	PRINTFORMW 後日。
+	PRINTFORML 「まぁ、ラブレター…え、えぇ、有がたく頂戴させていただきますわ」
+	PRINTFORML 「是、ええ、ごきげんよう～…」
+	PRINTFORML %CALLNAME:TARGET%通过放課後に顔も名前も知らない男子生徒に体育倉庫裏へ呼び出され、半ば押し付けられるようにラブレターを渡されていた。
+	PRINTFORMW 男子生徒を見送った直後、%CALLNAME:TARGET%通过その足を部室に向ける…。
+	PRINTFORML 
+	PRINTFORML 那之后、%CALLNAME:TARGET%通过做爱房で%CALLNAME:MASTER%と抱き合い、口付け合いながら互相用身体をまさぐっていた。
+	PRINTFORML 「んちゅっ♪ちゅぅっ♪んは、はっ、ごめんなさい、せっかくラブレターくださったのに…」
+	PRINTFORML 「もう%CNAME("一人称")%はこの方のっ♪%CNAME("二人称")%のモノなんですのぉっ♪」
+	PRINTFORML その場にいない男子生徒に謝り一边继续、%CALLNAME:TARGET%通过一層強く%CALLNAME:MASTER%の愛撫を求め、身体をくねらせる。
+	PRINTFORML %CALLNAME:MASTER%その様子にほくそ笑み一边继续、%CALLNAME:TARGET%の阴部を露出させて用陰唇押し開くと
+	PRINTFORMW 激しい手マンで潮を噴かせ、床に放置されたラブレターにぶっかけさせた…。
+	PRINTFORML 
+	PRINTFORMW もはや二人にとって%CALLNAME:TARGET%宛のラブレターは性生活を彩るオカズ…罪悪感と優越感という香料でしかなかった…。
+
+CASE "ＥＮＤ名２"
+	PRINTFORMW ＥＮＤ２
+CASE "ＥＮＤ名３"
+	PRINTFORMW END名3的本文です
+ENDSELECT
+RETURN 1
+
+;-------------------------------------------------
+;口上の随机生成関数
+;eraSQNのクズノハ口上からお借りしています
+;口上作者様、許可出していただき有がとうございます。MAX大感謝！
+;-------------------------------------------------
+@KOJO_RAND_K37(ARGS, ARG)
+#FUNCTIONS
+SIF ARG == 0
+	ARG = 2
+ARG += RAND:2
+LOCALS = 
+FOR LOCAL, 0, ARG
+	SIF LOCAL
+		LOCALS += ""
+	SELECTCASE ARGS
+	CASE "接吻"
+		;欲情Lv7以上or欲情Lv5以上+情緒80以上
+		IF PALAM:欲情 >= PALAMLV:7 || (PALAM:欲情 >= PALAMLV:5 && MOOD_HEART() >= 3)
+			SELECTCASE RAND:42
+			CASE 41
+				LOCALS = %LOCALS%唔……啾……哈呼…
+			CASE 40
+				LOCALS = %LOCALS%哈呜、唔、唔嗯——……
+			CASE 39
+				LOCALS = %LOCALS%唔呼……唔嗯…♪　呼啊…啾——…
+			CASE 38
+				LOCALS = %LOCALS%嗯啾……啪哈、啊……啊唔
+			CASE 37
+				LOCALS = %LOCALS%呜唔…啾…咕啾……
+			CASE 36
+				LOCALS = %LOCALS%哈呜、唔、唔嗯——……
+			CASE 35
+				LOCALS = %LOCALS%んふ……んん…♪　ふぁ…
+			CASE 34
+				LOCALS = %LOCALS%嗯啾……啪哈、啊……
+			CASE 33
+				LOCALS = %LOCALS%嗯啊……啊呜…啾…
+			CASE 32
+				LOCALS = %LOCALS%嗯呼…啾…嗯嗯…、啊呼…
+			CASE 31
+				LOCALS = %LOCALS%啊唔…啾——……、噗哈、啊……啊呜——…
+			CASE 30
+				LOCALS = %LOCALS%嗯啾…啊、呣呜……哈呼、呣啾～～…
+			CASE 29
+				LOCALS = %LOCALS%…唔嗯…啾…哈呜…
+			CASE 28
+				LOCALS = %LOCALS%嗯嗯…啾——…啊呼…
+			CASE 27
+				LOCALS = %LOCALS%啾……嗯、唔嗯……
+			CASE 26
+				LOCALS = %LOCALS%…唔嗯…啾…咕啾…
+			CASE 25
+				LOCALS = %LOCALS%啾…啊呣……嗯嗯♪　啾
+			CASE 24
+				LOCALS = %LOCALS%啊唔…舔……嗯、啾——…
+			CASE 23
+				LOCALS = %LOCALS%啾っ、啾～…啾…
+			CASE 22
+				LOCALS = %LOCALS%啊呜っ♪　哈呼、啾、啾～～
+			CASE 21
+				LOCALS = %LOCALS%唔っ♪啾っ、啾っ、啾
+			CASE 20
+				LOCALS = %LOCALS%啾～～～～～～
+			CASE 19
+				LOCALS = %LOCALS%啾っ♪　啾っ♪　啾……
+			CASE 18
+				LOCALS = %LOCALS%哈呜っ、哈唔っ♪　咕啾っ、啾
+			CASE 17
+				LOCALS = %LOCALS%啾…、舔～舔～、啾
+			CASE 16
+				LOCALS = %LOCALS%嗯っ♪　啾っ、嗞っ、啾…
+			CASE 15
+				LOCALS = %LOCALS%啾っ、啾っ啾噜噜
+			CASE 14
+				LOCALS = %LOCALS%啾っ、啾っ……哈呼
+			CASE 13
+				LOCALS = %LOCALS%啾——、啾——～
+			CASE 12
+				LOCALS = %LOCALS%啾っ、っ啾…咕啾っ、啾
+			CASE 11
+				LOCALS = %LOCALS%唔啾っ♪　啾っ、啾咕啾咕
+			CASE 10
+				LOCALS = %LOCALS%啾っ、啾咕
+			CASE 9
+				LOCALS = %LOCALS%啾っ、啾くっ♪　啾——～
+			CASE 8
+				LOCALS = %LOCALS%嗯っ♪　啾っ、啾～～
+			CASE 7
+				LOCALS = %LOCALS%哈呼っ………嗯呼っ、啾
+			CASE 6
+				LOCALS = %LOCALS%啊呣っ…啾っ、啾ッ…
+			CASE 5
+				LOCALS = %LOCALS%っ啾…啾～～っ、啾っ、啾
+			CASE 4
+				LOCALS = %LOCALS%哈唔っ…ん、啾っ、啾っ
+			CASE 3
+				LOCALS = %LOCALS%啾咕、啾咕…啾噜噜
+			CASE 2
+				LOCALS = %LOCALS%嗯～～っ、嗯っ、啾
+			CASE 1
+				LOCALS = %LOCALS%啾っ、啾——…
+			CASE 0
+				LOCALS = %LOCALS%啊呣……嗯嗯…嗯唔…
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:20
+			CASE 19
+				LOCALS = %LOCALS%呃……啾……
+			CASE 18
+				LOCALS = %LOCALS%哈呜、唔呜……
+			CASE 17
+				LOCALS = %LOCALS%嗯呼……唔嗯……啾……
+			CASE 16
+				LOCALS = %LOCALS%呃………噗哈、啊……
+			CASE 15
+				LOCALS = %LOCALS%呜嗯………啾……
+			CASE 14
+				LOCALS = %LOCALS%哈唔、嗯、嗯嗯……
+			CASE 13
+				LOCALS = %LOCALS%嗯呼……嗯……
+			CASE 12
+				LOCALS = %LOCALS%呃……啾……
+			CASE 11
+				LOCALS = %LOCALS%嗯……啊呜……
+			CASE 10
+				LOCALS = %LOCALS%嗯呼…啾…呃嗯……
+			CASE 9
+				LOCALS = %LOCALS%啊唔…啾——……
+			CASE 8
+				LOCALS = %LOCALS%嗯啾…啊、呣呜……
+			CASE 7
+				LOCALS = %LOCALS%…呜嗯…啾……
+			CASE 6
+				LOCALS = %LOCALS%嗯嗯…啾——……
+			CASE 5
+				LOCALS = %LOCALS%啾……嗯、唔嗯……
+			CASE 4
+				LOCALS = %LOCALS%…呜嗯…啾……
+			CASE 3
+				LOCALS = %LOCALS%啾…嗯、呣……
+			CASE 2
+				LOCALS = %LOCALS%啊呣…舔……
+			CASE 1
+				LOCALS = %LOCALS%啾っ…啾……
+			CASE 0
+				LOCALS = %LOCALS%啊呣……嗯嗯…嗯唔…
+			ENDSELECT
+		ENDIF
+		IF LOCAL < ARG - 1
+			IF (TALENT:恋慕 || TALENT:淫乱)
+				LOCALS = %LOCALS%%TEXTR("＿", "…")%%TEXTR("＿", "、", "っ、", "♪　", "っ♪　")%
+			ELSE
+				LOCALS = %LOCALS%%TEXTR("＿", "…")%%TEXTR("＿", "、", "っ、")%
+			ENDIF
+		ELSE
+			IF (TALENT:恋慕 || TALENT:淫乱) || (PALAM:欲情 >= PALAMLV:7 || (PALAM:欲情 >= PALAMLV:5 && MOOD_HEART() >= 3))
+				LOCALS = %LOCALS%%TEXTR("＿", "…", "っ", "…っ")%♪
+			ELSE
+				LOCALS = %LOCALS%%TEXTR("＿", "…", "っ", "…っ")%！
+			ENDIF
+		ENDIF
+	;ちゅぱ音生成
+	CASE "口交"
+		;欲情Lv7以上or欲情Lv5以上+情緒80以上
+		IF PALAM:欲情 >= PALAMLV:7 || (PALAM:欲情 >= PALAMLV:5 && MOOD_HEART() >= 3)
+			SELECTCASE RAND:52
+			CASE 51
+				LOCALS = %LOCALS%啾————……舔、舔…
+			CASE 50
+				LOCALS = %LOCALS%舔、啾、啾噜噜…
+			CASE 49
+				LOCALS = %LOCALS%啾噜、啾噜噜……噗哈、啾…
+			CASE 48
+				LOCALS = %LOCALS%啾————…啾噜噜…
+			CASE 47
+				LOCALS = %LOCALS%啾——…舔舔…
+			CASE 46
+				LOCALS = %LOCALS%啾——……舔…
+			CASE 45
+				LOCALS = %LOCALS%啾噗、啾噜噜…
+			CASE 44
+				LOCALS = %LOCALS%啾噗、啾噜噜っ…
+			CASE 43
+				LOCALS = %LOCALS%啊呣っ…啾——…
+			CASE 42
+				LOCALS = %LOCALS%啾啪っ……啾啪っ…
+			CASE 41
+				LOCALS = %LOCALS%く啾……啾——…
+			CASE 40
+				LOCALS = %LOCALS%啾っ……咕啾…
+			CASE 39
+				LOCALS = %LOCALS%噼啾……啾——…
+			CASE 38
+				LOCALS = %LOCALS%噼啾…舔…啾っ…
+			CASE 37
+				LOCALS = %LOCALS%ぅん…ちゅ…くちゅ…
+			CASE 36
+				LOCALS = %LOCALS%啾噗、啾噜…啾啵っ
+			CASE 35
+				LOCALS = %LOCALS%舔っ…呼呼…く啾…
+			CASE 34
+				LOCALS = %LOCALS%嗯啾……啪哈、啊…
+			CASE 33
+				LOCALS = %LOCALS%嗯啊……啊呜…啾…
+			CASE 32
+				LOCALS = %LOCALS%嗯呼…啾…呃嗯…
+			CASE 31
+				LOCALS = %LOCALS%啊唔…啾——…
+			CASE 30
+				LOCALS = %LOCALS%啾噗、啾噗…
+			CASE 29
+				LOCALS = %LOCALS%唔嗯…啾…哈呼…
+			CASE 28
+				LOCALS = %LOCALS%嗯嗯…啾——…啊呼…
+			CASE 27
+				LOCALS = %LOCALS%ちゅ……ん、んん…
+			CASE 26
+				LOCALS = %LOCALS%ぅん…ちゅ…くちゅ…
+			CASE 25
+				LOCALS = %LOCALS%啾…啊呣……嗯嗯♪　啾
+			CASE 24
+				LOCALS = %LOCALS%啊唔…舔……嗯、啾——…
+			CASE 23
+				LOCALS = %LOCALS%呼啊……嗯咕ッ……啾
+			CASE 22
+				LOCALS = %LOCALS%啾噗啾噗っ、啾噜
+			CASE 21
+				LOCALS = %LOCALS%嗯っ…呃呣……啾っ、啾…
+			CASE 20
+				LOCALS = %LOCALS%啾噜っ…嗯っ…唔呣…
+			CASE 19
+				LOCALS = %LOCALS%哔啾…啾呣っ…
+			CASE 18
+				LOCALS = %LOCALS%哈呜っ、哈唔っ♪　咕啾っ、啾
+			CASE 17
+				LOCALS = %LOCALS%啾…、舔～舔～、啾
+			CASE 16
+				LOCALS = %LOCALS%嗯っ♪　啾っ、嗞っ、啾…
+			CASE 15
+				LOCALS = %LOCALS%啾っ、啾っ啾噜噜…
+			CASE 14
+				LOCALS = %LOCALS%啾っ、啾っ……哈呼
+			CASE 13
+				LOCALS = %LOCALS%啾…啾啵、啾噜…
+			CASE 12
+				LOCALS = %LOCALS%哔啾…啾呣っ…
+			CASE 11
+				LOCALS = %LOCALS%啾噜っ…嗯っ…呣…
+			CASE 10
+				LOCALS = %LOCALS%啾咕、啾噗啾噗っ、く啾——…
+			CASE 9
+				LOCALS = %LOCALS%啾っ、啾くっ♪　啾——～
+			CASE 8
+				LOCALS = %LOCALS%嗯っ♪　啾っ、啾～～
+			CASE 7
+				LOCALS = %LOCALS%哈呼っ………嗯呼っ、啾
+			CASE 6
+				LOCALS = %LOCALS%啊唔っ…啾っ、啾…
+			CASE 5
+				LOCALS = %LOCALS%啾噗っ、咕啾…啾
+			CASE 4
+				LOCALS = %LOCALS%哈唔っ…嗯、啾っ、啾
+			CASE 3
+				LOCALS = %LOCALS%啾咕、啾咕…啾噜噜
+			CASE 2
+				LOCALS = %LOCALS%啾っ、舔…
+			CASE 1
+				LOCALS = %LOCALS%噗啊……啾噜
+			CASE 0
+				LOCALS = %LOCALS%舔……啊呣、啾…
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:52
+			CASE 51
+				LOCALS = %LOCALS%啾……舔、舔…
+			CASE 50
+				LOCALS = %LOCALS%舔……啾噜…噜…
+			CASE 49
+				LOCALS = %LOCALS%啾噜、啾噜噜……
+			CASE 48
+				LOCALS = %LOCALS%啾……啾噜、噜…
+			CASE 47
+				LOCALS = %LOCALS%啾…舔……
+			CASE 46
+				LOCALS = %LOCALS%啾……舔…
+			CASE 45
+				LOCALS = %LOCALS%啾噗、啾噜…
+			CASE 44
+				LOCALS = %LOCALS%啾噗、啾噜噜っ…
+			CASE 43
+				LOCALS = %LOCALS%呃呣っ…啾……
+			CASE 42
+				LOCALS = %LOCALS%啾啪……啾噗っ…
+			CASE 41
+				LOCALS = %LOCALS%く啾……啾——…
+			CASE 40
+				LOCALS = %LOCALS%啾……咕啾…
+			CASE 39
+				LOCALS = %LOCALS%噼啾……啾……
+			CASE 38
+				LOCALS = %LOCALS%噼啾……啾…
+			CASE 37
+				LOCALS = %LOCALS%唔嗯…啾、咕啾…
+			CASE 36
+				LOCALS = %LOCALS%啾噗、啾噜…啾噗…
+			CASE 35
+				LOCALS = %LOCALS%舔っ……咕啾…
+			CASE 34
+				LOCALS = %LOCALS%嗯啾……啪哈
+			CASE 33
+				LOCALS = %LOCALS%嗯啊……啊呜…啾…
+			CASE 32
+				LOCALS = %LOCALS%嗯…啾……
+			CASE 31
+				LOCALS = %LOCALS%啊呜…啾…
+			CASE 30
+				LOCALS = %LOCALS%啾噗、啾噗…
+			CASE 29
+				LOCALS = %LOCALS%唔嗯……哈呣…
+			CASE 28
+				LOCALS = %LOCALS%嗯嗯…啾……
+			CASE 27
+				LOCALS = %LOCALS%ちゅ……ん、んん…
+			CASE 26
+				LOCALS = %LOCALS%嗯…啾……咕啾…
+			CASE 25
+				LOCALS = %LOCALS%啾…啊呣…嗯嗯…
+			CASE 24
+				LOCALS = %LOCALS%啊唔…舔……呃、啾…
+			CASE 23
+				LOCALS = %LOCALS%呼啊……嗯咕ッ……啾
+			CASE 22
+				LOCALS = %LOCALS%啾噗、啾噜……
+			CASE 21
+				LOCALS = %LOCALS%呃っ…唔呣……啾、啾…
+			CASE 20
+				LOCALS = %LOCALS%啾噜……呃っ…唔呣…
+			CASE 19
+				LOCALS = %LOCALS%哔啾…啾呣っ…
+			CASE 18
+				LOCALS = %LOCALS%唔呣…、咕啾…
+			CASE 17
+				LOCALS = %LOCALS%啾…、啾…
+			CASE 16
+				LOCALS = %LOCALS%呃っ、啾…っ、啾…
+			CASE 15
+				LOCALS = %LOCALS%啾っ、啾…啾噜噜…
+			CASE 14
+				LOCALS = %LOCALS%啾っ、啾っ……唔呣…
+			CASE 13
+				LOCALS = %LOCALS%啾…啾啵、啾噜…
+			CASE 12
+				LOCALS = %LOCALS%哔啾…啾呣っ…
+			CASE 11
+				LOCALS = %LOCALS%啾噜っ……呃っ…呣…
+			CASE 10
+				LOCALS = %LOCALS%啾咕、啾噗…咕啾——…
+			CASE 9
+				LOCALS = %LOCALS%啾っ、啾咕、啾…
+			CASE 8
+				LOCALS = %LOCALS%呃っ、啾…啾…
+			CASE 7
+				LOCALS = %LOCALS%哈呜……嗯呼…、啾
+			CASE 6
+				LOCALS = %LOCALS%啊呣……啾っ、啾…
+			CASE 5
+				LOCALS = %LOCALS%啾噗っ、咕啾…啾
+			CASE 4
+				LOCALS = %LOCALS%哈呣っ…嗯、啾…啾
+			CASE 3
+				LOCALS = %LOCALS%啾咕……啾噜噜
+			CASE 2
+				LOCALS = %LOCALS%啾っ、舔…
+			CASE 1
+				LOCALS = %LOCALS%噗啊……啾噜
+			CASE 0
+				LOCALS = %LOCALS%舔……啊呣、啾…
+			ENDSELECT
+		ENDIF
+		IF LOCAL < ARG - 1
+			IF (TALENT:恋慕 || TALENT:淫乱)
+				LOCALS = %LOCALS%%TEXTR("＿", "…")%%TEXTR("＿", "、", "っ、", "♪　", "っ♪　")%
+			ELSE
+				LOCALS = %LOCALS%%TEXTR("＿", "…")%%TEXTR("＿", "、", "っ、")%
+			ENDIF
+		ELSE
+			IF (TALENT:恋慕 || TALENT:淫乱) || (PALAM:欲情 >= PALAMLV:7 || (PALAM:欲情 >= PALAMLV:5 && MOOD_HEART() >= 3))
+				LOCALS = %LOCALS%%TEXTR("＿", "…", "っ", "…っ")%♪
+			ELSE
+				LOCALS = %LOCALS%%TEXTR("＿", "…", "っ", "…っ")%！
+			ENDIF
+		ENDIF
+	;強制口交音生成
+	CASE "強制口交"
+		SELECTCASE RAND:56
+		CASE 55
+			LOCALS = %LOCALS%呃咳、呃……、咕っ……
+		CASE 54
+			LOCALS = %LOCALS%っ咕、呜卟……嗯、咕…
+		CASE 53
+			LOCALS = %LOCALS%呃噗っ、咕…吭——…
+		CASE 52
+			LOCALS = %LOCALS%呃咕、呃吭……、咕…
+		CASE 51
+			LOCALS = %LOCALS%呃咕————…
+		CASE 50
+			LOCALS = %LOCALS%呃咕っ、咳っ、咳っ…
+		CASE 49
+			LOCALS = %LOCALS%咕っ、嗯、呜咕…
+		CASE 48
+			LOCALS = %LOCALS%呜咳っ、咳咳っ…
+		CASE 47
+			LOCALS = %LOCALS%呃咕っ————…
+		CASE 46
+			LOCALS = %LOCALS%嗯呃っ、咕っ、呃っ
+		CASE 45
+			LOCALS = %LOCALS%啾噗、啾噜噜…
+		CASE 44
+			LOCALS = %LOCALS%啾噗、啾噜噜っ…
+		CASE 43
+			LOCALS = %LOCALS%啾啵っ…嗯、啾吧…
+		CASE 42
+			LOCALS = %LOCALS%哈啊、呃咕…
+		CASE 41
+			LOCALS = %LOCALS%吭っ！　…唔呼っ、呃啊——…
+		CASE 40
+			LOCALS = %LOCALS%嗯……啾噜っ、呃咕——っ…
+		CASE 39
+			LOCALS = %LOCALS%呃咕……啾噜…
+		CASE 38
+			LOCALS = %LOCALS%啾噗っ……舔、舔…
+		CASE 37
+			LOCALS = %LOCALS%嗯、咕——……吭咳っ、呃っ
+		CASE 36
+			LOCALS = %LOCALS%嗯咕——……ッ、咕…
+		CASE 35
+			LOCALS = %LOCALS%呣咕っ、嗯呼、啾啵っ…嗯——、啾噜…
+		CASE 34
+			LOCALS = %LOCALS%嗯咕っ、唔呣——…
+		CASE 33
+			LOCALS = %LOCALS%啾噜っ…呃呃呜っ、啾噜…
+		CASE 32
+			LOCALS = %LOCALS%嗯呃っ、咕っ、嗯、呜咕…
+		CASE 31
+			LOCALS = %LOCALS%呣——、呃っ…吭咳っ…
+		CASE 30
+			LOCALS = %LOCALS%啾噗、啾噗…
+		CASE 29
+			LOCALS = %LOCALS%呣咕！？…嗯呃っ、咕…
+		CASE 28
+			LOCALS = %LOCALS%嗯、呜咕…吭咳っ、呃っ、呃咕っ…
+		CASE 27
+			LOCALS = %LOCALS%嗯呃っ、咕っ、嗯、呜咕…呣——、呃っ…
+		CASE 26
+			LOCALS = %LOCALS%嗯嗯…啾…呃咕っ…
+		CASE 25
+			LOCALS = %LOCALS%嗯呃っ…啊呼、嗯呃っ…
+		CASE 24
+			LOCALS = %LOCALS%舔……啊噗、嗯呃噗…咕呜っ
+		CASE 23
+			LOCALS = %LOCALS%呼啊……嗯咕ッ……
+		CASE 22
+			LOCALS = %LOCALS%啾噗啾噗っ、啾噜っ…
+		CASE 21
+			LOCALS = %LOCALS%呃っ…唔呣……舔…唔呣…
+		CASE 20
+			LOCALS = %LOCALS%啾噜っ…嗯っ…唔呣…
+		CASE 19
+			LOCALS = %LOCALS%啾噗…啾呣っ…
+		CASE 18
+			LOCALS = %LOCALS%呃呣っ、嗯嗯っ…呃噗っ…
+		CASE 17
+			LOCALS = %LOCALS%呃咕呜っ！　呃っ、嗯呃呃っ唔～
+		CASE 16
+			LOCALS = %LOCALS%呣咕っ、呃っ………～～～っ！　噗哈、啊っ…
+		CASE 15
+			LOCALS = %LOCALS%唔呣っ、呃っ……嗯嗯、呃呜呜————～～
+		CASE 14
+			LOCALS = %LOCALS%呃咕っ、呃噗っ…啾啵、啾噗…
+		CASE 13
+			LOCALS = %LOCALS%唔噗っ…啾啵、啾噜…
+		CASE 12
+			LOCALS = %LOCALS%噼啾…啾噜噜っ…
+		CASE 11
+			LOCALS = %LOCALS%啾噜っ…嗯っ…呣…
+		CASE 10
+			LOCALS = %LOCALS%啾咕、啾噗啾噗っ、く啾——…
+		CASE 9
+			LOCALS = %LOCALS%啾——…呃咕、嗯嗯…
+		CASE 8
+			LOCALS = %LOCALS%呣咕っ！？　吭咳っ…唔唉…
+		CASE 7
+			LOCALS = %LOCALS%嗯呃っ……啾噗…
+		CASE 6
+			LOCALS = %LOCALS%呃咕っ……嗯呼っ、啾噗…
+		CASE 5
+			LOCALS = %LOCALS%嗯呃呃っ、啊呼、啊唔っ、嗯呃っ…
+		CASE 4
+			LOCALS = %LOCALS%呃呃唔っ！？　吭咳っ…啊呼、唔唔…呣咕…
+		CASE 3
+			LOCALS = %LOCALS%啾噜…啾噗、啾噗噗…
+		CASE 2
+			LOCALS = %LOCALS%嗯呃っ、啾噜…啾————…
+		CASE 1
+			LOCALS = %LOCALS%噗啊……啾噜……舔…
+		CASE 0
+			LOCALS = %LOCALS%唔咕っ、唔っ…
+		ENDSELECT
+		IF LOCAL < ARG - 1
+			IF (TALENT:恋慕 || TALENT:淫乱)
+				LOCALS = %LOCALS%%TEXTR("＿", "…")%%TEXTR("＿", "、", "っ、", "！　", "っ！　", "♪　", "っ♪　")%
+			ELSE
+				LOCALS = %LOCALS%%TEXTR("＿", "…")%%TEXTR("＿", "、", "っ、", "！　", "っ！　", "！！　", "っ！！　")%
+			ENDIF
+		ELSE
+			LOCALS = %LOCALS%%TEXTR("＿", "…", "っ", "…っ", "ッ", "…ッ")%
+			IF (TALENT:恋慕 || TALENT:淫乱)
+				LOCALS = %LOCALS%%TEXTR("！", "！！", "♪")%
+			ELSE
+				LOCALS = %LOCALS%%TEXTR("！", "！！")%
+			ENDIF
+		ENDIF
+	ENDSELECT
+NEXT
+RETURNF LOCALS
+

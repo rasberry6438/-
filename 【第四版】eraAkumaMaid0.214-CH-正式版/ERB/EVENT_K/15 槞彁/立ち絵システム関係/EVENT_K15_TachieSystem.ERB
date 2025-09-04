@@ -1,0 +1,625 @@
+﻿;他の関数に立ち絵情報を間違えずに渡せるように作った疑似的なクラス型変数
+@TachieClass(TachieType, TachieActive = 1, TachieChange,Size = 100, Xpos = 2250,Ypos = 0)
+	#FUNCTIONS
+	#DIMS DYNAMIC TachieType
+	#DIMS DYNAMIC TachieChange
+	#DIM DYNAMIC Size
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Ypos
+	#DIM DYNAMIC TachieActive
+	
+	;身高差に応じたYposの位置の微修正
+	SELECTCASE TachieType
+		CASE "槞彁"
+			Ypos += 0
+		CASE "イェニェル"
+			Ypos += 300
+		CASEELSE
+			Ypos += 0
+	ENDSELECT
+	
+	;<TSPLIT/>が分解用キーワード、別に一文字である必要性は無いのだ
+	;文字数多ければ多いほど被る可能性は無いわけだしね
+	RETURNF @"%TachieType%<TSPLIT/>{TachieActive}<TSPLIT/>%TachieChange%<TSPLIT/>{Size}<TSPLIT/>{Xpos}<TSPLIT/>{Ypos}"
+
+
+;画面サイズが小さい時に立ち絵が画面をはみ出ないようにする ;いらないかも
+;Sizeは4000を基本として、％表記 110なら4400の尺寸になるよ→なぜ？基準無いと色々面倒だった
+@TachieSize(Size = 100)
+	#FUNCTION
+	#DIM DYNAMIC Size
+	;ウィンドウサイズへの対応と動的対応
+	;1920x1080(以下HD)での最大画面化を最大サイズとする
+	;HD最大画面化時、CLIENTHEIGHT() = 1014 ...上のバーの部分が66pxある？
+	;HD最大画面化時、CLIENTHEIGHT()/GETCONFIG("一行の高さ") = 53行
+	;UUI のヘッダー部分が5行ある
+	;...よって、立ち絵の尺寸は、(画面の行数 - 5)が最大
+	;でも立ち絵の尺寸は最大でも4000くらいがちょうどいい気がする
+	;立ち絵の基本的な尺寸を設定する為の関数があると良いかも
+	
+	Size = BaseTachieSize*Size /100
+	RETURNF Size
+
+;立ち絵を出来るだけ下の行に表示したい時に使う奴
+@Tachie_YposReverse(Ypos,Size,FooterLineCount)
+	#FUNCTION
+	#DIM DYNAMIC Size
+	#DIM DYNAMIC Ypos
+	#DIM DYNAMIC FooterLineCount
+
+	;Sizeを％表記から実数値に切り替える
+	Size = TachieSize(Size) 
+	
+	Ypos = -1*Size+(FooterLineCount*100)+Ypos
+	RETURNF Ypos
+
+;立ち絵描画処理周り
+@PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC TachieClass,6
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC BackGround
+
+	#DIMS DYNAMIC TachieType
+	#DIM DYNAMIC TachieActive
+	#DIMS DYNAMIC TachieChange
+	#DIM DYNAMIC Size
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Ypos
+
+	#DIM DYNAMIC Lcount
+	#DIMS DYNAMIC ResultHtml
+	#DIMS DYNAMIC ActiveCharaHtml
+	#DIMS DYNAMIC DeactiveCharaHtml
+
+	#DIMS DYNAMIC ModalLock
+
+	;非UUI時に使う奴
+	#DIM DYNAMIC MOB
+	#DIMS DYNAMIC LastLine
+
+	FOR Lcount, 0, 9
+		Tachie_OverwriteBackUp:Lcount = %STR:Lcount%
+	NEXT
+
+	;UUIがOFFだった時の処理
+	IF CFLAG:UUI == 0
+		FOR Lcount, 0, 6
+			VARSET LOCALS
+			SPLIT TachieClass:Lcount, "<TSPLIT/>", LOCALS
+			IF TOINT(LOCALS:1) == 2
+				TachieType = %LOCALS:0%
+				TachieChange = %LOCALS:2%
+			ENDIF 
+		NEXT 
+		;HTML_PRINT @"<font color='#FF0000'>Debug801 選択されている角色クター名:%TachieType%</font>"
+		IF PRINT_TUIMaidFace != ""
+			STR:8 = <nonbutton pos='0'>%PRINT_TUIMaidFace%</nonbutton>
+		ELSE
+			SELECTCASE TachieType
+				CASE ""
+					TachieChange = 無人
+				CASE "槞彁"
+					MOB = FINDCHARA(NO, 15)
+				CASEELSE
+					CALL CREATE_MOB(TachieType)
+					MOB = CNUM(TachieType)
+			ENDSELECT
+		ENDIF
+
+		;0番は默认でHTMLなので不要っぽい
+		FOR Lcount, 1, 9
+			STR:Lcount = HTML: %STR:Lcount%
+		NEXT
+		CALL DIALOGUE_FRAME, MOB, TachieChange
+		CALL DEL_MOB
+		RETURN 1
+	ELSEIF CFLAG:UUI == 1
+
+		REDRAW 0
+
+		FOR Lcount,0,10
+			D20XX_OS_WindowInput:Lcount = %STR:Lcount%
+		NEXT
+		;スクロールアップすれば過去ログを読めるように、読みやすくなるように画面の外にも同じウィンドウを生成しておく
+		FOR Lcount,0,12
+			PRINTL
+		NEXT
+		CALL D20XX_OS_WindowSTRFORM(0,33,6000,10,1,,"#505050")
+		;画面に絶対に出ない位置に削除範囲指定符号を記載しておく
+		HTML_PRINT @"<nobr><nonbutton pos='10000000'>【立ち絵Systemログ可読性向上用削除範囲指定ラベル】</nonbutton></nobr>"
+		CALL OVERLAY_GCREATE, 600, @"%BackGround%", MIN(1100,CLIENTWIDTH()), 850
+		CBGSETG 600, 0, 0, 5
+		;HTML_PRINT @"<nobr><nonbutton pos = '{-50}'><img src = '%BackGround%' height = '{(850/GETCONFIG("一行の高さ"))*100}' width = '{1100}'></nonbutton></nobr>"
+
+		;角色の非有効状態のために全体にグレーを掛ける
+		;ResultHtml = <nonbutton pos = '-50'><img src = 'ModalLock' height = '{50*100}' width = '{1100*50}' ypos = '{(44-12-5)*-100+2}'></nonbutton>
+
+		FOR Lcount, 0, 6
+			VARSET LOCALS
+			SPLIT TachieClass:Lcount, "<TSPLIT/>", LOCALS
+			TachieType = %LOCALS:0%
+			SIF TachieType == ""
+				BREAK
+			TachieActive = TOINT(LOCALS:1)
+			TachieChange = %LOCALS:2%
+			Size = TOINT(LOCALS:3)
+			Xpos = TOINT(LOCALS:4)
+			Ypos = TOINT(LOCALS:5)
+			;TRYCALLFORM %TachieType%_TachieGenerate(TachieChange,TachieSize(Size),Xpos,Tachie_YposReverse(Ypos,Size,12))
+			;TRYCALLFORM %TachieType%_TachieGenerate(TachieChange,Size,Xpos,Ypos)
+			IF TachieActive >= 1
+				TRYCALLFORM %TachieType%_TachieGenerate(TachieChange,TachieSize(Size),Xpos,Ypos)
+				;TRYCALLFORM %TachieType%_TachieGenerate(TachieChange,Size,Xpos,Ypos)
+				SIF RESULT == 0
+					CALL Dummy_TachieGenerate(TachieChange,Size,Xpos,Ypos)
+				PRINT 
+				ActiveCharaHtml = %ActiveCharaHtml%%RESULTS%
+			ELSE
+				TRYCALLFORM %TachieType%_TachieGenerate(TachieChange,TachieSize(Size),Xpos,Ypos)
+				;TRYCALLFORM %TachieType%_TachieGenerate(TachieChange,Size,Xpos,Ypos)
+				SIF RESULT == 0
+					CALL Dummy_TachieGenerate(TachieChange,Size,Xpos,Ypos)
+				PRINT 
+				DeactiveCharaHtml = %DeactiveCharaHtml%%RESULTS%
+			ENDIF
+		NEXT
+		;#region Old
+			;FOR Lcount,0,44-12
+			;	;HTML_PRINT @"<nobr>%ModalLock%</nobr>"
+			;	IF Lcount < 6
+			;		HTML_PRINT @"<nobr><nonbutton pos = '{-50}'><img src = 'ModalLock' height = '{110}' width = '{1100*50}'></nonbutton></nobr>"
+			;	ELSEIF Lcount == 6
+			;		HTML_PRINT @"<nobr><nonbutton pos = '{-50}'><img src = 'ModalLock' height = '{50}' width = '{1100*50}'></nonbutton></nobr>"
+			;	ELSE
+			;		PRINTL 
+			;	ENDIF 
+			;NEXT
+			;[IF_DEBUG]
+			;	HTML_PRINT @"<nobr>この行に立ち絵が記述%ResultHtml%<button value='{78256852}' pos='{5500}'><img src='UI切替' srcb='' height='{500}' ypos='{-3150}'></button></nobr>"
+			;[ENDIF]
+			;[IF_NDEBUG]
+			;	HTML_PRINT @"<nobr>%ResultHtml%<button value='{78256852}' pos='{5500}'><img src='UI切替' srcb='' height='{500}' ypos='{-3150}'></button></nobr>"
+			;[ENDIF]
+		;#endregion 
+		FOR Lcount,0,45-12
+			;HTML_PRINT @"<nobr>%ModalLock%</nobr>"
+			IF Lcount == 7
+				LOCALS = 
+				LOCALS += @"<nobr>"
+				LOCALS += @"%DeactiveCharaHtml%"
+				LOCALS += @"<nonbutton pos = '{-50}'><img src = 'ModalLock' height = '{44*110}' width = '{1100*50}'></nonbutton>"
+				LOCALS += @"%ActiveCharaHtml%"
+				LOCALS += @"</nobr>"
+				HTML_PRINT @"%LOCALS%"
+			ELSEIF Lcount < 7
+				HTML_PRINT @"<nobr><nonbutton pos = '{-50}'><img src = 'ModalLock' height = '{110}' width = '{1100*50}'></nonbutton></nobr>"
+			ELSE
+				PRINTL 
+			ENDIF 
+		NEXT
+		[IF_DEBUG]
+			;HTML_PRINT @"<nobr>この行に立ち絵が記述%ResultHtml%<button value='{78256852}' pos='{5500}'><img src='UI切替' srcb='' height='{500}' ypos='{-3150}'></button></nobr>"
+		[ENDIF]
+		[IF_NDEBUG]
+			;HTML_PRINT @"<nobr>%ResultHtml%<button value='{78256852}' pos='{5500}'><img src='UI切替' srcb='' height='{500}' ypos='{-3150}'></button></nobr>"
+		[ENDIF]
+		
+		
+		PRINTL
+		PRINTL
+		FOR Lcount,0,10
+			PRINTL 
+			CALL D20XX_NO_NOBR2(STR:Lcount)
+			D20XX_OS_WindowInput:Lcount = %RESULTS%
+		NEXT
+		PRINTL
+	SIF PRINT_TUIAddDictionary != ""
+		CALL K15_VOCAB_SET(PRINT_TUIAddDictionary)
+		;CALL D20XX_OS_WindowSTRFORM(0,32,6000,11,1,,"#1D1D46")
+		CALL D20XX_OS_WindowSTRFORM(0,33,6000,10,1,,@"%K15_UUI_WindowColor%")
+		VARSET STR, "", 0 , 20
+
+		CALL K15_Tachietica_Overhaul_HeadWindowUI
+	ENDIF
+	SIF PRINT_TUIPopUp:0 != ""
+		CALL PRINT_TUIPopUp
+	
+
+	;IF Cname == ""
+	;	VARSET LOCAL
+	;	FOR Lcount, 0, 6
+	;		VARSET LOCALS
+	;		SPLIT TachieClass:Lcount, "<TSPLIT/>", LOCALS
+	;		IF TOINT(LOCALS:1) > LOCAL
+	;			LOCAL = TOINT(LOCALS:1)
+	;			Cname = %LOCALS:0%
+	;		ENDIF 
+	;	NEXT 
+	;ENDIF
+
+	IF Cname != ""
+	
+		PRINTL
+		D20XX_OS_WindowInput:0 = <b>%Cname%</b>
+		SIF STRLENSH(Cname) <= 24
+			D20XX_OS_WindowInput:0 = <shape type='space' param='{(1100 - (STRLENSH(Cname)*50))/2}'>%D20XX_OS_WindowInput:0%
+
+		
+		IF STRLENSH(Cname)%2 == 1
+			CALL D20XX_OS_Window(0,31,(STRLENSH(Cname)+5)*50,2,0,"#FFFFF",@"%K15_UUI_WindowColor%")
+		ELSE 
+			CALL D20XX_OS_Window(0,31,MAX((STRLENSH(Cname)+4)*50,1200),2,0,"#FFFFF",@"%K15_UUI_WindowColor%")
+		ENDIF
+	ENDIF
+
+@PRINT_TUI_WindowRefresh
+	;100行読めば行けるやろ
+	#DIMS DYNAMIC LogTexts,101
+	#DIM DYNAMIC Lcount
+
+	IF CFLAG:UUI == 1
+		FOR Lcount,0,101
+			LogTexts:Lcount = %HTML_GETPRINTEDSTR(100-Lcount)%
+			CALL D20XX_NO_NOBR2(LogTexts:Lcount)
+			LogTexts:Lcount = %RESULTS%
+		NEXT
+		CLEARLINE 101
+		FOR Lcount, 0, 101
+			SIF STRCOUNT(LogTexts:Lcount,"【立ち絵Systemログ可読性向上用削除範囲指定ラベル】")
+				BREAK
+			HTML_PRINT @"<nobr>%LogTexts:Lcount%</nobr>"
+		NEXT
+	ENDIF 
+	CALL EFFECT_ALLRESET
+	;スクロールアップしたときに過去ログが読みにくくならないように消す
+	VARSET STR
+	VARSET PRINT_TUIButtons
+	VARSET PRINT_TUIPopUp
+	VARSET PRINT_TUIAddDictionary
+	VARSET PRINT_TUIMaidFace
+
+@PRINT_TUI_LogWindowDelete
+	IF CFLAG:UUI == 1
+		CLEARLINE 11 ;上書きするために既に表示されてる直前のログも消す
+	ELSEIF CFLAG:UUI == 0
+		;PRINTFORMW Debug101 NotUUISelectLineCount = {NotUUISelectLineCount}
+		CLEARLINE 10 + NotUUISelectLineCount
+		NotUUISelectLineCount = 0
+	ENDIF
+
+@PRINT_TUI_AddText
+	#DIM DYNAMIC Lcount
+	#DIM DYNAMIC Str_LineCount
+	#DIM DYNAMIC Str_BackUpCount
+	#DIMS DYNAMIC Str_Temp,9
+	Str_LineCount = -1
+
+	;新規に入ってきたテ接吻トの行数をカウント
+	FOR Lcount,0,9
+		Str_Temp:Lcount = %STR:Lcount%
+		SIF STR:Lcount != "" && STR:Lcount != "　"
+			Str_LineCount = Lcount+1
+	NEXT 
+	;既に表示されているテ接吻トの行数をカウント
+	FOR Lcount,0,9
+		SIF Tachie_OverwriteBackUp:Lcount != ""
+			Str_BackUpCount = Lcount+1
+	NEXT 
+
+	IF (Str_LineCount + Str_BackUpCount) <= 9
+		CALL PRINT_TUI_LogWindowDelete
+
+		VARSET STR,"",0,20
+		FOR Lcount,0,9
+			IF Lcount < Str_BackUpCount
+				STR:Lcount = %Tachie_OverwriteBackUp:Lcount%
+			ELSE
+				STR:Lcount = %Str_Temp:(Lcount-Str_BackUpCount)%
+			ENDIF
+		NEXT
+	ELSE
+		FOR Lcount,0,9
+			STR:Lcount = %Str_Temp:Lcount%
+		NEXT
+	ENDIF
+
+
+;PRINT_TUIの後の意味の一覧
+;W:Wait
+;R:Refresh
+;O:OverWrite
+;A:AddText
+;Q:Question
+;P:PopUp
+
+@PRINT_TUIW(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+	
+	;UUIじゃないときに選択肢をOverwriteするための奴をOしない時に誤射不会うにするため必要
+	NotUUISelectLineCount = 0
+
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	WAIT 
+@PRINT_TUIO(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+	
+	;UUIじゃないときに選択肢をOverwriteするための奴をOしない時に誤射不会うにするため必要
+	CALL PRINT_TUI_LogWindowDelete
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+
+@PRINT_TUIWO(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+	
+	;UUIじゃないときに選択肢をOverwriteするための奴をOしない時に誤射不会うにするため必要
+	CALL PRINT_TUI_LogWindowDelete
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	WAIT 
+
+@PRINT_TUIWR(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+	
+	;UUIじゃないときに選択肢をOverwriteするための奴をOしない時に誤射不会うにするため必要
+	NotUUISelectLineCount = 0
+
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	WAIT 
+	CALL PRINT_TUI_WindowRefresh
+
+@PRINT_TUIWRA(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+
+	CALL PRINT_TUI_AddText
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	WAIT 
+	CALL PRINT_TUI_WindowRefresh
+
+@PRINT_TUIWRO(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+	CALL PRINT_TUI_LogWindowDelete
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	WAIT 
+	CALL PRINT_TUI_WindowRefresh
+
+
+@PRINT_TUIQR(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+	#DIM DYNAMIC InputDataBackUp
+	
+	;UUIじゃないときに選択肢をOverwriteするための奴をOしない時に誤射不会うにするため必要
+	NotUUISelectLineCount = 0
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	CALL PRINT_TUISelect
+	InputDataBackUp = RESULT
+	CALL PRINT_TUI_WindowRefresh
+	RETURN InputDataBackUp
+
+@PRINT_TUIQRA(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+	#DIM DYNAMIC InputDataBackUp
+
+	CALL PRINT_TUI_AddText
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	CALL PRINT_TUISelect
+	InputDataBackUp = RESULT
+	CALL PRINT_TUI_WindowRefresh
+	RETURN InputDataBackUp
+
+@PRINT_TUIQRO(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	#DIMS DYNAMIC BackGround
+	#DIMS DYNAMIC Cname
+	#DIMS DYNAMIC TachieClass,6
+	#DIM DYNAMIC InputDataBackUp
+	CALL PRINT_TUI_LogWindowDelete
+	CALL PRINT_TUI(BackGround, Cname, TachieClass:0, TachieClass:1, TachieClass:2, TachieClass:3, TachieClass:4, TachieClass:5)
+	CALL PRINT_TUISelect
+	InputDataBackUp = RESULT
+	CALL PRINT_TUI_WindowRefresh
+	RETURN InputDataBackUp
+
+@K15_UUIBG
+	#FUNCTIONS
+	#DIMS DYNAMIC BackGround
+	VARSET BackGround
+
+	IF SAVESTR:現在位置 == "居間"
+		BackGround += @"BGリビング"
+	ELSEIF PLACE("自室") || PLACE("partner的房間") || PLACE("指导者的房間")
+		BackGround += @"BG自室+0x30000000"
+	ELSEIF PLACE("情人旅館")
+		BackGround += @"BG情人旅館+0x30000000"
+	ELSEIF PLACE("公園")
+		BackGround += @"BG公園+0x30000000"
+	ELSE 
+		BackGround += @"BG自室+0x30000000"
+	ENDIF
+	RETURNF BackGround
+
+@PRINT_TUISelect
+	#DIM DYNAMIC Lcount
+	#DIM DYNAMIC Lcount2
+	#DIM DYNAMIC NobuttonCount
+	#DIM DYNAMIC NUM_SELECT
+	#DIMS DYNAMIC MEMOS, 10
+	#DIM DYNAMIC Max_TextCount
+
+	#DIMS DYNAMIC BtnText ;UUIじゃないときいしか使わないよ
+	;選択肢没有ならスキップする
+	IF PRINT_TUIButtons:0 == ""
+		INPUT 
+		RETURN
+	ENDIF
+
+	BtnText = 
+
+
+	IF CFLAG:UUI == 0
+		VARSET LOCALS
+		SPLIT PRINT_TUIButtons, "/", LOCALS
+		FOR Lcount, 0, 10
+			VARSET MEMOS
+			SPLIT LOCALS:Lcount, "_", MEMOS
+			IF MEMOS:0 == ""
+			ELSEIF STRCOUNT(MEMOS:0, "#")
+				BtnText += @"%MEMOS:1%/"
+			ELSEIF STRCOUNT(MEMOS:0, "NOBUTTON")
+				IF STRCOUNT(MEMOS:1, "#")
+					BtnText += @"NOBUTTON_%MEMOS:2%/"
+				ELSE
+					BtnText += @"NOBUTTON_%MEMOS:1%/"
+				ENDIF
+			ELSE 
+				BtnText += @"%MEMOS:0%/"
+			ENDIF
+		NEXT
+		NotUUISelectLineCount = 0
+		NotUUISelectLineCount = STRCOUNT(BtnText, "/") +1
+		VARSET PRINT_TUIButtons
+		CALL PRINT_SELECT(BtnText)
+		RETURN RESULT
+	ELSEIF CFLAG:UUI == 1
+		VARSET LOCALS
+		SPLIT PRINT_TUIButtons, "/", LOCALS
+		FOR Lcount, 0, 10
+			IF LOCALS:Lcount == ""
+				Lcount -= 1
+				BREAK
+			ENDIF
+
+
+			SPLIT LOCALS:Lcount, "_", MEMOS
+			IF RESULT > 1
+				IF STRCOUNT(MEMOS:0, "#")
+					D20XX_OS_WindowInput:Lcount += @"<button value='{Lcount-NobuttonCount}'><font color='%MEMOS:0%'>[%MEMOS:1%]</font></button>"
+					SIF Max_TextCount < STRLENS(@"[%MEMOS:1%]")
+						Max_TextCount = STRLENS(@"[%MEMOS:1%]")
+				ELSEIF STRCOUNT(MEMOS:0, "NOBUTTON")
+					NobuttonCount++
+					IF STRCOUNT(MEMOS:1, "#")
+						D20XX_OS_WindowInput:Lcount += @"<font color='%MEMOS:1%'>%MEMOS:2%</font>"
+						SIF Max_TextCount < STRLENS(@"%MEMOS:2%")
+							Max_TextCount = STRLENS(@"%MEMOS:2%")
+					ELSE
+						D20XX_OS_WindowInput:Lcount += @"%MEMOS:1%"
+						SIF Max_TextCount < STRLENS(@"%MEMOS:1%")
+							Max_TextCount = STRLENS(@"%MEMOS:1%")
+					ENDIF
+				ENDIF
+			ELSE
+				D20XX_OS_WindowInput:Lcount += @"<button value='{Lcount-NobuttonCount}'>[%LOCALS:Lcount%]</button>"
+				SIF Max_TextCount < STRLENS(@"[%LOCALS:Lcount%]")
+					Max_TextCount = STRLENS(@"[%LOCALS:Lcount%]")
+			ENDIF
+
+		NEXT
+		Max_TextCount += 4 ;左右の┃の分
+		
+		;偶数にする
+		SIF Max_TextCount%2 == 1
+			Max_TextCount++
+		
+		Max_TextCount *= 50;横幅px化
+		PRINTL 
+		CALL D20XX_OS_Window((122*50/2-Max_TextCount/2),16,(Max_TextCount),(Lcount+1),0,"#FFFFF",@"%K15_UUI_WindowColor%")
+		
+		$OutPutSelectLoop
+		INPUT 
+		SELECTCASE RESULT
+			CASE IS <= Lcount
+				VARSET PRINT_TUIButtons, "", 0, 10
+				RETURN RESULT
+			CASEELSE
+				CLEARLINE 1
+				GOTO OutPutSelectLoop
+		ENDSELECT
+	ENDIF
+;ポップアップ画像表示用
+@PRINT_TUIPopUp
+	#DIM DYNAMIC Lcount
+	#DIM DYNAMIC PopUpCount
+	#DIM DYNAMIC Xpos,10
+	#DIM DYNAMIC Size
+
+	#DIM DYNAMIC Offset
+
+	VARSET Xpos
+
+	Size = 1500
+	;FOR Lcount, 0, 10
+	;	SIF PRINT_TUIPopUp:Lcount == ""
+	;		BREAK
+	;	PopUpCount++
+	;NEXT
+	;PopUpCount++
+	;
+	;IF PopUpCount % 2 == 0
+	;	Offset = (PopUpCount / 2) * 2000 - 1000
+	;ELSE
+	;	Offset = ((PopUpCount - 1) / 2) * 2000
+	;ENDIF
+	;; 座標を格納していく
+	;FOR Lcount, 0, PopUpCount-1
+	;	Xpos:Lcount = ((Lcount * 2000) - Offset)
+	;NEXT
+
+	;もっとスマートな計算が出来ればいいんだけど全部で3パターンならこうする方が簡単確実や
+	FOR Lcount, 0, 3
+		SIF PRINT_TUIPopUp:Lcount == ""
+			BREAK
+		PopUpCount++
+	NEXT
+
+	SELECTCASE PopUpCount
+		CASE 1
+			Xpos:0 = 0
+		CASE 2
+			Xpos:0 = -1000
+			Xpos:1 = 1000
+		CASE 3
+			Xpos:0 = -2000
+			Xpos:1 = 0
+			Xpos:2 = 2000
+		CASEELSE
+			;どういう状況？
+			PRINTL
+			D20XX_OS_WIndowInput:0 = <font color='red'>ポップアップ表示に失敗しました</font>
+			CALL D20XX_OS_Window((122*50/2-3000/2),16,3000,(Lcount+1),0,"#FFFFF",@"%K15_UUI_WindowColor%")
+			RETURN
+	ENDSELECT
+
+	;PRINTFORMW Debug100 Xpos:0 = {Xpos:0}  Xpos:1 = {Xpos:1}  PopUpCount = {PopUpCount}
+	;CLEARLINE 1
+	
+	FOR Lcount, 0, PopUpCount
+		SPLIT PRINT_TUIPopUp:Lcount, "<PSPLIT/>", LOCALS
+		PRINTFORML 
+		CALL K15_Tachietica_ImgStamp((NUM("折り返し文字数")*50/2 -Size/2 + Xpos:Lcount),15,LOCALS:0,Size,TOINT(LOCALS:2),LOCALS:1)
+		;CALL K15_Tachietica_ImgStamp((Xpos:Lcount),15,LOCALS:0,Size,TOINT(LOCALS:2),LOCALS:1)
+
+	NEXT
+
+;他の関数にポップアップ情報を間違えずに綿sれうように作った疑似的なクラス型変数
+@PopUpClass(ImgName,FocusImg = "　",IsButton = -1)
+	#FUNCTIONS
+	#DIMS DYNAMIC ImgName
+	#DIMS DYNAMIC FocusImg
+	#DIM DYNAMIC IsButton
+	;<PSPLIT/>が分解用キーワード、別に一文字である必要性は無いのだ
+	;文字数多ければ被る可能性は無いわけだしね
+	RETURNF @"%ImgName%<PSPLIT/>%FocusImg%<PSPLIT/>{IsButton}"
+

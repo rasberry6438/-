@@ -1,0 +1,465 @@
+﻿@COM144
+;放尿
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+CALL SHOW_COM_ORDER_COM, 144
+
+;実行できない
+SIF TCVAR:干劲 == 0
+	RETURN 0
+;-------------------------------------------------
+;実行決定
+;-------------------------------------------------
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+RETURN 1
+
+@FLAG_COM144, ARG
+;尿的污垢発生
+STAIN:Ｖ = SET_STAIN(STAIN:Ｖ, "尿")
+IF CHECK_CLO("Ｖ露出") == 0
+	SIF EQUIP:胖次
+		STAIN:胖次 = SET_STAIN(STAIN:胖次, "尿")
+	SIF EQUIP:下身衣装
+		STAIN:下身衣装 = SET_STAIN(STAIN:下身衣装, "尿")
+	SIF EQUIP:贴身制服
+		STAIN:贴身制服下身衣装 = SET_STAIN(STAIN:贴身制服下身衣装, "尿")
+ENDIF
+SIF TEQUIP:推倒
+	STAIN:PLAYER:Ｍ = SET_STAIN(STAIN:PLAYER:Ｍ, "尿")
+
+;利尿剤の効果は消失
+TEQUIP:利尿剤 = 0
+;主动放尿したので、最後まで出し切ります
+BASE:尿意 = 0
+IF NOWEX:放尿 == 0
+	NOWEX:放尿 += 1
+	EX:放尿 += 1
+ENDIF
+
+@SOURCE_COM144, ARG
+CALL SOURCE_SMPLAY, "放尿", ARG
+
+CALL VARSET_COMF
+
+CALL SOURCE_DOWNBASE_HP, 144
+
+;顔面放尿PLAYの時には好きでやってるのでペナは少ない
+IF TEQUIP:推倒
+	SOURCE:0:達成感 = 1000 + ABL:施虐属性*500
+	SOURCE:0:不潔 = 500
+	SOURCE:0:情愛 = 1000 + (ABL:露出癖 + ABL:施虐属性)*200
+	SOURCE:0:露出 = 3000
+	SOURCE:0:逸脱 = 1000
+ELSE
+	IF CHECK_COM("強制放尿")
+		SOURCE:0:達成感 = 3000
+		SOURCE:0:不潔 = 1000
+		SOURCE:0:露出 = 5000
+		SOURCE:0:逸脱 = 3000
+	ELSE
+		SOURCE:0:達成感 = 3000
+		SOURCE:0:不潔 = 1000
+		SOURCE:0:露出 = 3000
+		SOURCE:0:逸脱 = 1000
+	ENDIF
+	SOURCE:0:屈従 = 3000
+
+	;ABL:受虐属性をみる
+	SELECTCASE ABL:受虐属性
+	CASE 0
+		TIMES SOURCE:0:情愛, 0.80
+		TIMES SOURCE:0:露出, 0.80
+	CASE 1
+		TIMES SOURCE:0:情愛, 1.00
+		TIMES SOURCE:0:露出, 1.00
+	CASE 2
+		TIMES SOURCE:0:情愛, 1.30
+		TIMES SOURCE:0:露出, 1.20
+	CASE 3
+		TIMES SOURCE:0:情愛, 1.40
+		TIMES SOURCE:0:露出, 1.40
+	CASE 4
+		TIMES SOURCE:0:情愛, 1.70
+		TIMES SOURCE:0:露出, 1.50
+	CASEELSE
+		TIMES SOURCE:0:情愛, 2.00
+		TIMES SOURCE:0:露出, 1.70
+	ENDSELECT
+	SIF TALENT:高慢
+		TIMES SOURCE:0:逸脱, 2.00
+ENDIF
+
+;PALAM:欲情をみる
+SELECTCASE PALAM:欲情
+CASE IS < PALAMLV:1
+	TIMES SOURCE:0:逸脱, 1.50
+CASE IS < PALAMLV:2
+	TIMES SOURCE:0:逸脱, 1.00
+CASE IS < PALAMLV:3
+	TIMES SOURCE:0:逸脱, 0.90
+CASE IS < PALAMLV:4
+	TIMES SOURCE:0:逸脱, 0.70
+CASE IS >= PALAMLV:4
+	TIMES SOURCE:0:逸脱, 0.50
+ENDSELECT
+
+;場所をみる
+IF TEQUIP:室内露出PLAY || TEQUIP:野外PLAY
+	TIMES SOURCE:0:逸脱, 2.50
+	TIMES SOURCE:0:露出, 1.50
+ELSEIF TEQUIP:浴室PLAY
+	TIMES SOURCE:0:逸脱, 0.50
+ENDIF
+
+SELECTCASE EXP:放尿経験 + EXP:漏尿経験
+CASE IS < EXPLV:1
+	TIMES SOURCE:0:逸脱, 3.00
+CASE IS < EXPLV:2
+	TIMES SOURCE:0:逸脱, 2.50
+	TIMES SOURCE:0:不潔, 0.70
+CASE IS < EXPLV:3
+	TIMES SOURCE:0:逸脱, 2.00
+	TIMES SOURCE:0:不潔, 0.50
+CASE IS < EXPLV:4
+	TIMES SOURCE:0:逸脱, 1.00
+	TIMES SOURCE:0:不潔, 0.20
+CASE IS < EXPLV:5
+	TIMES SOURCE:0:逸脱, 0.80
+	TIMES SOURCE:0:不潔, 0.05
+CASEELSE
+	TIMES SOURCE:0:逸脱, 0.60
+	TIMES SOURCE:0:不潔, 0.00
+ENDSELECT
+
+SIF TALENT:謙虚
+	TIMES SOURCE:0:逸脱, 0.50
+SIF TALENT:害羞
+	TIMES SOURCE:0:逸脱, 3.50
+SIF TALENT:不知羞恥
+	TIMES SOURCE:0:逸脱, 0.50
+
+IF COND("マーキングフラグ")
+	TIMES SOURCE:0:露出, 1.20
+	TIMES SOURCE:0:屈従, 1.20
+	TIMES SOURCE:0:逸脱, 1.20
+ENDIF
+
+CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM144
+;顔面放尿PLAYの時には好きでやってるのでペナは少ない
+IF TEQUIP:推倒
+	PRINTFORM %CALLNAME:TARGET%
+	IF CHECK_CLO("Ｖ露出")
+		PRINTFORMW 跨坐在臉頰上的姿勢保持著、抓住%CALLNAME:PLAYER%的頭讓口腔準確的對準自己的尿道、隨後毫無顧忌的放鬆了括約肌、
+	ELSEIF TALENT:倒錯的 && ABL:露出癖 >= 3 && RAND:3 == 0
+		PRINTFORMW 跨坐在臉頰上的姿勢保持著、連%CLO("股間")%也不挪開、就那樣開始小便了、
+	ELSEIF CHECK_BOTTOM("休闲褲")
+		PRINTFORMW %BOTTOM(TARGET, "略")%脫下後、跨坐在%CALLNAME:PLAYER%的臉頰上、將微微張開的口腔當做目標開始小便、
+		CALL SETFLAG, "下身衣装を脱がす", TARGET
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%的腦袋按住、微微抬起腰肢、讓自己的陰部暴露出來、將微微張開的口腔當做目標開始小便、
+		SIF CHECK_CLO("Ｖ露出") == 0
+			CALL SETFLAG, "下身衣装を露出：テ接吻ト没有", TARGET
+	ENDIF
+	IF CHECK_CLO("Ｖ露出")
+		PRINTFORM %CALLNAME:PLAYER%的口腔被大量的灌注了溫暖的濁黃\@ EXP_GAIN("膀胱精液経験") ? 混雜著白濁的 # \@液体、整個口腔在眨眼之間就被灌滿、
+		IF CHECK("口内放尿", PLAYER)
+			PRINTFORMW 在鳴響著咽喉將尿液飲下的時候、濃烈的氨臭味就會從咽喉反芻至鼻腔、最後將腦海填滿、支配……
+		ELSE
+			PRINTFORMW 即使拼命地嘗試去吞嚥、但終究無法消除心中的強烈厭惡感。沒能被完全嚥下去的尿液從嘴角與鼻腔中溢出來了……
+		ENDIF
+		CALL SETFLAG, "飲尿", PLAYER
+	ELSE
+		PRINTFORMW 越過布料溢出的溫暖液體漸漸在%CALLNAME:PLAYER%的臉頰上蔓延、讓%CALLNAME:PLAYER%不由得閉上了眼睛……
+	ENDIF
+	RETURN 1
+ENDIF
+
+;胖次をずらすかどうか
+IF CHECK_CLO("Ｖ露出") == 0
+	LOCAL = 0
+	IF INSERT("挿入") == 0 && ABL:PLAYER:施虐属性
+		PRINTFORML 如果要穿著衣服小便的話也許會太過激了……
+		PRINTFORML 要怎么做呢？
+		PRINTFORML [ 0] 將\@ PENIS(TARGET) ? 陰莖 # 陰部 \@露出后放尿
+		PRINTFORML [ 1] 就這樣穿著衣服放尿
+		CALL INPUT_SELECT, 2
+		LOCAL = RESULT
+	ENDIF
+	IF LOCAL == 0
+		CALL SETFLAG, "下身衣装を露出：テ接吻ト没有", TARGET
+		;休闲褲などのときはこっち
+		SIF CHECK_CLO("Ｖ露出") == 0
+			CALL SETFLAG, "下身衣装を脱がす", TARGET
+	ENDIF
+ENDIF
+
+IF CHECK_COM("強制放尿")
+	;挿入中
+	IF INSERT("挿入")
+		PRINTFORM %CALLNAME:PLAYER%在%CALLNAME:TARGET%
+		IF INSERT("Ｖ挿入")
+			PRINT 的膣道不斷衝擊著的同時、
+		ELSE
+			PRINT 的肛門不斷開闢著的同時、
+		ENDIF
+		PRINTFORMW 尿道口執拗地揉搓著、
+		PRINTFORMW %CALLNAME:TARGET%實在無法忍耐、將尿液噗呲噗呲的迸射出來了……
+		IF CHECK_CLO("Ｖ露出") && INSERT("屈曲位")
+			PRINTFORMW 因為身體保持著被翻倒的姿勢、濁黃的飛沫從腹部一直流淌到臉頰上了……
+			STAIN:Ｂ = SET_STAIN(STAIN:Ｂ, "尿")
+		ENDIF
+	;拘束中
+	ELSEIF TEQUIP:拘束
+		PRINTFORM %CALLNAME:PLAYER%将
+		IF CHECK_CLO("Ｖ露出") == 0
+			PRINTFORMW %CLO("股間")%内側的%CALLNAME:TARGET%的尿道口著重的刺激著、
+		ELSEIF RAND:2 == 0
+			PRINTFORMW %CALLNAME:TARGET%的陰部展開、將顫抖著的尿道口用指尖愛撫著、
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%的尿道口著重的刺激著、
+		ENDIF
+		;手、足
+		IF GETBIT(TEQUIP:拘束, 20) && GETBIT(TEQUIP:拘束, 21)
+			SIF GETBIT(TEQUIP:拘束, 22)
+				PRINTFORM 身體被牢牢禁錮住、動彈不得的
+			PRINTFORMW %CALLNAME:TARGET%無法遮掩住自己的下體、在%CALLNAME:PLAYER%的凝視中尿失禁了……
+		;足だけ
+		ELSEIF GETBIT(TEQUIP:拘束, 21)
+			PRINTFORM 無法合上雙腿的%CALLNAME:TARGET%將股間用雙手遮掩著、但是、
+			IF CHECK_CLO("Ｖ露出")
+				PRINTFORMW 從手指的縫隙之中可以清楚地看見、那濁黃色的液體正淅瀝瀝的流淌著……
+			ELSE
+				PRINTFORMW 浸透布料然後蔓延開來的渾濁尿液、以激烈地氣勢沾滿了整個下半身……
+			ENDIF
+		;手だけ
+		ELSE
+			PRINTFORM %CALLNAME:TARGET%
+			SIF TALENT:娇小 && TALENT:貧乳
+				PRINT 小小的
+			PRINTFORMW 的不斷顫抖、從體內迸射出尿液了……
+		ENDIF
+	ELSEIF CHECK_CLO("Ｖ露出") == 0
+		PRINTFORMW %CALLNAME:PLAYER%將拼命忍耐著尿意的%CALLNAME:TARGET%的尿道口隔著布料執拗地刺激著、強制性地讓她排尿、
+		PRINTFORMW 迸射的尿液無法被%CLO("股間")%遮擋、讓%CALLNAME:TARGET%的整個下半身沾滿了濁黃的尿液……
+	;野外or室内
+	ELSEIF TEQUIP:室内露出PLAY || TEQUIP:野外PLAY
+		PRINTFORML %CALLNAME:PLAYER%將%CALLNAME:TARGET%的一隻腳高高舉起、用另一隻手去挑逗揉搓著尿道口、
+		PRINTFORMW %CALLNAME:TARGET%難以忍耐、在極致的羞恥中、就像一隻雌犬一樣顫抖著迸射出尿液……
+	ELSEIF RAND:3 == 0
+		PRINTFORML %CALLNAME:PLAYER%將%CALLNAME:TARGET%的性器用嘴含住、用舌尖不斷挑逗著尿道口、
+		PRINTFORMW 察覺到%CALLNAME:TARGET%已經無法忍耐之後、%CALLNAME:PLAYER%快速的鬆開嘴、拉開距離、平靜地觀賞著從股間流下的濁黃水流……
+	ELSEIF RAND:2 == 0
+		PRINTFORML %CALLNAME:PLAYER%將%CALLNAME:TARGET%的腿彎用手肘夾住、將尿道口用指尖輕微的揉搓、摩擦著、
+		PRINTFORM %CALLNAME:TARGET%
+		SIF TALENT:娇小 && TALENT:貧乳
+			PRINT 小小的
+		PRINTFORMW 的不斷顫抖、從體內迸射出尿液了……
+	ELSE
+		IF RAND:2 == 0
+			PRINTFORML %CALLNAME:PLAYER%將%CALLNAME:TARGET%的尿道口用指尖不斷地刺激著、
+			PRINTFORMW %CALLNAME:TARGET%無法忍耐地迸射出尿液……
+		ELSEIF COND("人里")
+			PRINTFORMW 被隱秘地玩弄著尿道口的%CALLNAME:TARGET%因羞恥、屈辱與隱約的快樂而浮現出淚珠的同時、在無人的小巷中倚靠著牆壁蹲下、開始小便了……
+		ELSEIF COND("森林") || COND("花園")
+			PRINTFORMW 被隱秘地玩弄著尿道口的%CALLNAME:TARGET%因羞恥、屈辱與隱約的快樂而浮現出淚珠的同時、在隱秘的茂密草叢中半蹲下來、開始小便了……
+		ELSEIF COND("水辺")
+			PRINTFORMW 被隱秘地玩弄著尿道口的%CALLNAME:TARGET%因羞恥、屈辱與隱約的快樂而浮現出淚珠的同時、在人煙稀少的礁岩之後、趁著海浪的拍打聲迸射出尿液……
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%因羞恥與快樂而染紅了臉頰、在被帶到隱秘之處後、就地蹲下、迫不及待的開始小便……
+		ENDIF
+	ENDIF
+	RETURN 1
+ENDIF
+
+;挿入中
+IF INSERT("挿入")
+	PRINTFORM %CALLNAME:TARGET%在被%CALLNAME:PLAYER%將\@ INSERT("Ａ挿入") ? 肛門 # \@激烈地侵犯著的同時、
+	IF CHECK_CLO("Ｖ露出") && INSERT("屈曲位")
+		PRINTFORMW 隨著猛烈地衝擊而被強硬地推上頂峰、在神志恍惚的同時迸射出尿液……
+		IF ABL:受虐属性 >= 3 && TALENT:倒錯的 && PALAM:欲情 >= 30000 && EXP_GAIN("放尿経験") == 0
+			PRINTFORMW 身體保持著將整個下體高高舉起的、令人害羞的姿勢、因激烈地調教而欲亂情迷的%CALLNAME:TARGET%完全沒有躲避的意思、反而大張著嘴將自己的尿液一飲而盡……
+			STAIN:Ｍ = SET_STAIN(STAIN:Ｍ, "尿")
+		ELSE
+			PRINTFORMW 因為身體保持著被翻倒的姿勢、以激烈氣勢迸發的濁黃飛沫從腹部一直流淌到臉頰上了……
+		ENDIF
+		STAIN:Ｂ = SET_STAIN(STAIN:Ｂ, "尿")
+	ELSEIF CHECK_CLO("Ｖ露出") && INSERT("背面座位") && COND("脚の使用")
+		PRINTFORMW 雙腿以M字開腿的姿勢被大大張開、痙攣著的尿道口隨著又一次猛烈地撞擊放鬆下來、從體內迸射出尿液……
+		TFLAG:地の文分岐 = 2
+	ELSE
+		PRINTFORMW 隨著猛烈地衝擊而被強硬地推上頂峰、在神志恍惚的同時迸射出尿液……
+	ENDIF
+ELSEIF CHECK_CLO("Ｖ露出") == 0
+	PRINTFORMW %CALLNAME:TARGET%在接到%CALLNAME:PLAYER%的命令後、就滿臉潮紅的開始小便了、
+	PRINTFORMW 迸射的尿液無法被%CLO("股間")%遮擋、讓%CALLNAME:TARGET%的整個下半身沾滿了濁黃的尿液……
+;拘束中
+ELSEIF TEQUIP:拘束
+	;手、足
+	IF GETBIT(TEQUIP:拘束, 20) && GETBIT(TEQUIP:拘束, 21)
+		PRINTFORMW 被牢牢禁錮住的%CALLNAME:TARGET%在接到%CALLNAME:PLAYER%的命令之後、順從地開始小便了……
+	;足だけ
+	ELSEIF GETBIT(TEQUIP:拘束, 21)
+		PRINTFORM %CALLNAME:TARGET%
+		IF PENIS(TARGET)
+			PRINTFORMW 在接到%CALLNAME:PLAYER%的命令之後、順從地開始小便了……
+		ELSE
+			PRINTFORMW 將陰部用手指展開、讓淅瀝瀝地流出濁黃液體的尿道口被清楚地暴露出來……
+		ENDIF
+	;手だけ
+	ELSE
+		PRINTFORMW 雙手無法自由行動的%CALLNAME:TARGET%保持著雙腿M字展開的姿勢、開始小便了……
+	ENDIF
+ELSE
+	IF (ABL:PLAYER:施虐属性 >= 3 || ABL:受虐属性 >= 3) && (TEQUIP:室内露出PLAY || TEQUIP:野外PLAY)
+		PRINTFORML 要試著命令%CALLNAME:TARGET%像是野獸一樣在這裡留下氣味標記嗎？
+		PRINTFORML [ 0] 是
+		PRINTFORML [ 1] 否
+		CALL INPUT_SELECT, 2
+		SIF RESULT == 0
+			CALL SETFLAG, "マーキングフラグ", TARGET
+	ENDIF
+	;マーキング
+	IF COND("マーキングフラグ")
+		PRINTFORM %CALLNAME:TARGET%
+		SIF COND("脚の使用")
+			PRINTFORM %TEXTR("保持著四肢著地的姿勢將大腿舉起、/用像是雌犬一樣的淫猥姿勢")%
+		IF COND("人里")
+			PRINTFORMW 在%TEXTR("民家的牆角/樹木的根部/石柱的根部")%用尿液留下了自己的氣味……
+		ELSEIF TEQUIP:野外PLAY
+			PRINTFORMW 在樹木的根部用尿液留下了自己的氣味……
+		ELSE
+			PRINTFORMW 在%TEXTR("走廊的拐角/走廊的牆角/附近的門前")%用尿液留下了自己的氣味……
+		ENDIF
+	;前回くぱぁ
+	ELSEIF PREVCOM == 13
+		PRINTFORMW %CALLNAME:TARGET%面向著%CALLNAME:PLAYER%、保持著將陰部用力展開的羞恥姿勢開始小便了……
+		TFLAG:地の文分岐 = 3
+	ELSEIF RAND:3 && ABL:信頼 + ABL:欲望 + ABL:露出癖 + ABL:受虐属性 >= 14
+		PRINTFORMW %CALLNAME:TARGET%在接到命令後露出了意亂情迷的笑容、像是在向%CALLNAME:PLAYER%展示一樣的小便了……
+		TFLAG:地の文分岐 = 1
+	ELSEIF PENIS(TARGET) == 0 && (RAND:2 || ABL:露出癖 >= 3 || ABL:奉仕精神 >= 3)
+		PRINTFORM %CALLNAME:TARGET%將陰部用手指展開、連痙攣著迸射出尿液的尿道也一併暴露著的
+		SIF EXP:放尿経験 >= 10 && COND("脚の使用") && RAND:3 == 0
+			PRINTFORM 已經習慣的姿態
+		PRINTFORMW 開始小便了……
+		TFLAG:地の文分岐 = 3
+	ELSEIF COND("人里")
+		PRINTFORMW 被隱秘地玩弄著尿道口的%CALLNAME:TARGET%因羞恥、屈辱與隱約的快樂而浮現出淚珠的同時、在無人的小巷中倚靠著牆壁蹲下、開始小便了……
+	ELSEIF COND("森林") || COND("花園")
+		PRINTFORMW 被隱秘地玩弄著尿道口的%CALLNAME:TARGET%因羞恥、屈辱與隱約的快樂而浮現出淚珠的同時、在隱秘的茂密草叢中半蹲下來、開始小便了……
+	ELSEIF COND("水辺") || COND("海")
+		PRINTFORMW 被隱秘地玩弄著尿道口的%CALLNAME:TARGET%因羞恥、屈辱與隱約的快樂而浮現出淚珠的同時、在人煙稀少的礁岩之後、趁著海浪的拍打聲迸射出尿液……
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%因羞恥與快樂而染紅了臉頰、在被帶到隱秘之處後、就地蹲下、迫不及待的開始小便……
+	ENDIF
+ENDIF
+
+@COM_ORDER_COM144, ARG
+VARSET LOCAL
+LOCALS = 
+
+;すべての命令に共通の要素を考慮
+;(信頼が高いと命令に従いやすいなど)
+CALL COM_ORDER, ARG
+
+LOCAL = RESULT
+
+IF ABL:露出癖
+	LOCAL += MIN(ABL:露出癖, 10) * 2
+	LOCALS = %LOCALS% + 露出癖LV{ABL:露出癖}({MIN(ABL:露出癖, 10) * 2})
+ENDIF
+IF TEQUIP:推倒
+	IF ABL:施虐属性
+		LOCAL += MIN(ABL:施虐属性, 5) * 3
+		LOCALS = %LOCALS% + 施虐属性LV{ABL:施虐属性}({MIN(ABL:施虐属性, 5) * 3})
+	ENDIF
+ELSE
+	IF ABL:受虐属性
+		LOCAL += MIN(ABL:受虐属性, 5) * 3
+		LOCALS = %LOCALS% + 受虐属性LV{ABL:受虐属性}({MIN(ABL:受虐属性, 5) * 3})
+	ENDIF
+ENDIF
+IF ABL:受虐属性 == 0
+	LOCAL -= 20
+	LOCALS = %LOCALS% - 受虐属性没有(20)
+ENDIF
+;冷静
+IF TALENT:冷静
+	LOCAL -= 5
+	LOCALS = %LOCALS% - 冷静(5)
+ENDIF
+;害羞
+IF TALENT:害羞
+	LOCAL -= 15
+	LOCALS = %LOCALS% - 害羞(15)
+ENDIF
+;不知羞恥
+IF TALENT:不知羞恥
+	LOCAL += 2
+	LOCALS = %LOCALS% + 不知羞恥(2)
+ENDIF
+;清楚
+IF TALENT:清楚
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 清楚(10)
+ENDIF
+;接受快感
+IF TALENT:接受快感
+	LOCAL += 5
+	LOCALS = %LOCALS% + 接受快感(5)
+ENDIF
+;否定快感
+IF TALENT:否定快感
+	LOCAL -= 5
+	LOCALS = %LOCALS% - 否定快感(5)
+ENDIF
+;倒錯的
+IF TALENT:倒錯的
+	LOCAL += 10
+	LOCALS = %LOCALS% + 倒錯的(10)
+ENDIF
+
+;媚薬
+IF TEQUIP:媚薬
+	LOCAL += 2
+	LOCALS = %LOCALS% + 媚薬(2)
+ENDIF
+;利尿剤
+IF TEQUIP:利尿剤
+	LOCAL += 20
+	LOCALS = %LOCALS% + 利尿剤(20)
+ENDIF
+;视频拍摄
+IF TEQUIP:攝像機
+	LOCAL -= 20
+	LOCALS = %LOCALS% - 撮影中(20)
+ENDIF
+IF TEQUIP:浴室PLAY == 0
+	LOCAL -= 30
+	LOCALS = %LOCALS% - 非浴室(30)
+ENDIF
+;野外or室内露出
+IF TEQUIP:野外PLAY
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 野外PLAY(10)
+ELSEIF TEQUIP:室内露出PLAY
+	LOCAL -= 10
+	LOCALS = %LOCALS% - 室内露出(10)
+ENDIF
+
+;合計を表示(65以上で実行)
+CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 65
+
+RETURN RESULT

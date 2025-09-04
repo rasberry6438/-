@@ -1,0 +1,374 @@
+﻿
+;-------------------------------------------------
+;@PRINT_BARのRESULTSにHTML形式で返す奴
+;-------------------------------------------------
+@PRINT_BARH, ARGS, ARG, ARG:1, ARG:2
+	#DIM LCOUNT
+	;バーの要素の色
+	#DIM BAR_COLOR
+	;枠[]を表示するか
+	#DIM IS_BRACKETS = 1
+	;バーの背景(右側の余白部分といった方が良いかもしれない)の色
+	#DIM BG_COLOR
+	;バーの要素
+	#DIMS BAR_CHARA
+	;バーに挿入する文字
+	#DIMS INS_CHARA
+
+	#DIMS RESULT_HTML
+	RESULT_HTML =
+
+	SIF ARG < 0
+		ARG = 0
+	SIF ARG:1 < 0
+		ARG:1 = 0
+
+	IF STRCOUNT(ARGS, "^枠无")
+		ARGS = %EXTSTR(ARGS, "枠无")%
+		IS_BRACKETS = 0
+	ENDIF
+
+	RESULTS = 
+	
+	SIF IS_BRACKETS
+		RESULT_HTML += @"["
+	
+	RESULT_HTML += @"<font "
+	GETFONT
+	CHKFONT "ＭＳ 哥特"
+	SIF RESULT
+		RESULTS += @"face='ＭＳ 哥特' "
+	VARSET BAR_COLOR
+	
+
+	;色と記号の設定
+	SELECTCASE ARGS
+		CASE "ＰＡＬＡＭ絶頂"
+			BAR_COLOR = DEF_COLOR("ショッキング粉紅")
+		CASE "ＰＡＬＡＭ"
+			BAR_COLOR = ((DEF_COLOR("白")/65536)/10*(10-MIN(10, GET_PALAMLV(ARG))))*65536
+			BAR_COLOR += (((DEF_COLOR("白")/256)%256)/10*(10-MIN(10, GET_PALAMLV(ARG))))*256
+			BAR_COLOR += ((DEF_COLOR("白")%256)/10*(10-MIN(10, GET_PALAMLV(ARG))))
+			BAR_COLOR += ((DEF_COLOR("粉紅")/65536)/10*MIN(10, GET_PALAMLV(ARG)))*65536
+			BAR_COLOR += (((DEF_COLOR("粉紅")/256)%256)/10*MIN(10, GET_PALAMLV(ARG)))*256
+			BAR_COLOR += ((DEF_COLOR("粉紅")%256)/10*MIN(10, GET_PALAMLV(ARG)))
+		CASE "赤色ゲージ"
+			BAR_COLOR = DEF_COLOR("赤")
+		CASE "緑色ゲージ"
+			BAR_COLOR = DEF_COLOR("緑")
+		CASE "青色ゲージ"
+			BAR_COLOR = 0x4470EF
+		CASE "黄色ゲージ"
+			BAR_COLOR = DEF_COLOR("黄色")
+		CASE "白色ゲージ"
+			BAR_COLOR = DEF_COLOR("白")
+		CASE "爱心粉紅ゲージ"
+			BAR_COLOR = DEF_COLOR("爱心粉紅")
+		CASE "桃色ゲージ"
+			BAR_COLOR = DEF_COLOR("粉紅")
+		CASE "魂ゲージ"
+			SELECTCASE ARG
+			CASE IS >= 101
+				BAR_COLOR = DEF_COLOR("緑")
+			CASE 1 TO 100
+				BAR_COLOR = DEF_COLOR("青")
+			CASEELSE
+				BAR_COLOR = DEF_COLOR("灰色")
+			ENDSELECT
+		CASE "減少ゲージ"
+			SELECTCASE ARG * 100 / ARG:1
+			CASE IS >= 75
+				BAR_COLOR = DEF_COLOR("緑")
+			CASE IS >= 50
+				BAR_COLOR = DEF_COLOR("青")
+			CASE IS >= 25
+				BAR_COLOR = DEF_COLOR("黄色")
+			CASE IS >= 1
+				BAR_COLOR = DEF_COLOR("紅")
+			CASEELSE
+				BAR_COLOR = DEF_COLOR("灰色")
+			ENDSELECT
+		CASE "溜めゲージ"
+			SELECTCASE ARG * 100 / ARG:1
+			CASE IS >= 90
+				BAR_COLOR = DEF_COLOR("粉紅")
+			CASE IS >= 75
+				BAR_COLOR = DEF_COLOR("黄色")
+			CASEELSE
+				BAR_COLOR = DEF_COLOR("青")
+			ENDSELECT
+		CASE "欲求ゲージ"
+			SELECTCASE ARG * 100 / ARG:1
+			CASE IS >= 90
+				BAR_COLOR = DEF_COLOR("ショッキング粉紅")
+			CASE IS >= 75
+				BAR_COLOR = DEF_COLOR("粉紅")
+			CASE IS >= 50
+				BAR_COLOR = DEF_COLOR("黄色")
+			CASEELSE
+				BAR_COLOR = DEF_COLOR("青")
+			ENDSELECT
+	ENDSELECT
+
+	;バーの色を決定
+	RESULT_HTML += @"color=\"#%TOSTR(BAR_COLOR,"X6")%\">"
+
+	;バーの背景色
+	BG_COLOR = (MAX(30, (BAR_COLOR/65536)/5)*65536 + MAX(30, ((BAR_COLOR/256)%256)/5)*256 + MAX(30, (BAR_COLOR%256)/5) )
+
+	;基本は長方形のブロック□
+	BAR_CHARA = %UNICODE(0x2587)%
+
+	;PALAM形式のバーの最大値の算出
+	SELECTCASE ARGS
+		CASE "ＰＡＬＡＭ", "ＰＡＬＡＭ絶頂"
+			IF GET_PALAMLV(ARG) >= 16
+				ARG:1 = PALAM_LV(16)
+			ELSE
+				ARG:1 = PALAM_LV(GET_PALAMLV(ARG) + 1) - PALAM_LV(GET_PALAMLV(ARG) )
+				ARG -= PALAM_LV(GET_PALAMLV(ARG) )
+			ENDIF
+	ENDSELECT
+
+	SELECTCASE ARG
+	;値が０以下
+	CASE IS <= 0
+		;バーの色を背景色に変更
+		;SETCOLOR BG_COLOR
+		RESULT_HTML += @"</font><font color='#%TOSTR(BG_COLOR,"X6")%'>"
+		RESULT_HTML += @"%BAR_CHARA * ARG:2%"
+		;RESULT_HTML += @"</font>"
+	;値が最大値以上
+	CASE IS >= ARG:1
+		;挿入する文字列があるか？MAXとか
+		VARSET INS_CHARA
+		SELECTCASE ARGS
+			CASE "黄色ゲージ", "白色ゲージ", "爱心粉紅ゲージ", "桃色ゲージ", "ＰＡＬＡＭ"
+				SIF ARG:2 >= 3
+					INS_CHARA = MAX
+		ENDSELECT
+		FOR LCOUNT, 0, ARG:2
+			IF INS_CHARA != "" && LCOUNT == ARG:2/2 - STRLENS(INS_CHARA)/2
+				SETFONT RESULTS
+
+				RESULT_HTML += @"%INS_CHARA%"
+				
+				;これいらないんじゃね？
+				;CHKFONT "ＭＳ 哥特"
+				;SIF RESULT
+				;	SETFONT "ＭＳ 哥特"
+
+				LCOUNT += STRLENS(INS_CHARA) - 1
+			ELSE
+				RESULT_HTML += @"%BAR_CHARA%"
+			ENDIF
+		NEXT
+	CASEELSE
+		FOR LCOUNT, 0, ARG:2
+			SELECTCASE LCOUNT
+			CASE (ARG*ARG:2 + ARG:1 - 1) / ARG:1
+				;バーの色を背景色に変更
+				RESULT_HTML += @"</font><font color=\"#%TOSTR(BG_COLOR,"X6")%\">"
+			ENDSELECT
+			RESULT_HTML += @"%BAR_CHARA%"
+		NEXT
+	ENDSELECT
+
+	RESULT_HTML += @"</font>"
+
+	SIF IS_BRACKETS
+		RESULT_HTML += @"]"
+		RESULTS = %RESULT_HTML%
+
+
+;=======================================================================================
+;STRLENSのHTML版 HTML文の中でタグ抜きの文字数を数える UはUnicode版
+;=======================================================================================
+@STRLENSH(OriginalHtml)
+	#FUNCTION
+	#DIMS DYNAMIC OriginalHtml
+	#DIM DYNAMIC Lcount
+	#DIM DYNAMIC TxtCount
+	HTML_TAGSPLIT OriginalHtml
+	
+
+	FOR Lcount, 0, RESULT
+		IF STRCOUNT(RESULTS:Lcount,"<") && STRCOUNT(RESULTS:Lcount,">")
+		ELSE
+			TxtCount += STRLENS(RESULTS:Lcount)
+		ENDIF
+	NEXT
+	RETURNF TxtCount
+@STRLENSHU(OriginalHtml)
+	#FUNCTION
+	#DIMS DYNAMIC OriginalHtml
+	#DIM DYNAMIC Lcount
+	#DIM DYNAMIC TxtCount
+	HTML_TAGSPLIT OriginalHtml
+	
+
+	FOR Lcount, 0, RESULT
+		IF STRCOUNT(RESULTS:Lcount,"<") && STRCOUNT(RESULTS:Lcount,">")
+		ELSE
+			TxtCount += STRLENSU(RESULTS:Lcount)
+		ENDIF
+	NEXT
+	RETURNF TxtCount
+
+;========================================================================
+;pxとフォントとの比率(HTMLで言うところのem)のコンバート関数
+;========================================================================
+@PxToEm(PxSize)
+	#FUNCTION 
+	#DIM EmSize
+	#DIM PxSize
+
+	EmSize = PxSize/GETCONFIG("フォントサイズ") *50
+	RETURNF EmSize
+
+@EmToPx(EmSize)
+	#FUNCTION 
+	#DIM EmSize
+	#DIM PxSize
+
+	PxSize = (EmSize * GETCONFIG("フォントサイズ")) / 50
+	
+	RETURNF PxSize
+
+
+
+;---------------------------------------------------------------------
+;能力の表示
+;表示順が能力の番号とは異なるため、NO_ABLでどの能力を表示するかを管理する
+;不顯示場合にはNOT_PRINT = 1とする
+;---------------------------------------------------------------------
+@NEW_PRINT_ABLH, ARG
+	#DIM LCOUNT
+	#DIM NUM_SHOWABL
+	#DIM NOT_PRINT
+	#DIM NO_ABL
+	;改行するかの判定に使う
+	#DIM NEXT_LINE
+	#DIMS TEXT_ABL
+
+	CALL DRAWLINES, "□ 能力 □/能力"
+
+	SIF CONFIG("項目：能力")
+		RETURN 0
+
+	IF COND("能力隠蔽", ARG)
+		CALL PRINT_MASK_DRAWLINE, ARG
+		RETURN 1
+	ENDIF
+
+	TEXT_ABL = 
+	;表示順の設定
+		TEXT_ABL += "信頼/欲望/技巧/奉仕精神/改行/"
+		TEXT_ABL += "Ｖ感覚/Ｖ技術/Ｖ拡張/Ｖ名器度/改行/"
+		TEXT_ABL += "Ａ感覚/Ａ技術/Ａ拡張/Ａ名器度/改行/"
+		TEXT_ABL += "Ｃ感覚/Ｂ感覚/Ｍ感覚/露出癖/改行/"
+		TEXT_ABL += "自慰中毒/精液中毒/受虐属性/施虐属性/改行/"
+		TEXT_ABL += "舌靈活/指靈活/腰靈活/改行/"
+	VARSET LOCALS
+	SPLIT TEXT_ABL, "/", LOCALS
+
+	NEXT_LINE = 0
+	FOR LCOUNT, 0, 100
+		;これがONだと灰色表示
+		NOT_PRINT = 0
+
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASE "改行"
+			PRINTL 
+			NEXT_LINE = 0
+			CONTINUE
+		ENDSELECT
+
+		NO_ABL = GETNUM(ABL, LOCALS:LCOUNT)
+		SELECTCASE LOCALS:LCOUNT
+		CASE "Ｃ感覚"
+			ABL:ARG:Ｐ感覚 = MAX(ABL:ARG:Ｃ感覚, ABL:ARG:Ｐ感覚)
+			ABL:ARG:Ｃ感覚 = MAX(ABL:ARG:Ｃ感覚, ABL:ARG:Ｐ感覚)
+			SIF PENIS(ARG)
+				NO_ABL = GETNUM(ABL, "Ｐ感覚")
+			IF TALENT:ARG:淫核
+				SETCOLOR DEF_COLOR("粉紅")
+			ELSEIF TALENT:ARG:Ｃ性向
+				SETCOLOR DEF_COLOR("爱心粉紅")
+			ENDIF
+		CASE "Ｖ感覚"
+			IF TALENT:ARG:淫壷
+				SETCOLOR DEF_COLOR("粉紅")
+			ELSEIF TALENT:ARG:Ｖ性向
+				SETCOLOR DEF_COLOR("爱心粉紅")
+			ENDIF
+			SIF TALENT:ARG:男性
+				NOT_PRINT = 1
+		CASE "Ａ感覚"
+			IF TALENT:ARG:尻穴狂い
+				SETCOLOR DEF_COLOR("粉紅")
+			ELSEIF TALENT:ARG:Ａ性向
+				SETCOLOR DEF_COLOR("爱心粉紅")
+			ENDIF
+		CASE "Ｂ感覚"
+			IF TALENT:ARG:淫乳
+				SETCOLOR DEF_COLOR("粉紅")
+			ELSEIF TALENT:ARG:Ｂ性向
+				SETCOLOR DEF_COLOR("爱心粉紅")
+			ENDIF
+		CASE "Ｍ感覚"
+			IF TALENT:ARG:蕩唇
+				SETCOLOR DEF_COLOR("粉紅")
+			ELSEIF TALENT:ARG:Ｍ性向
+				SETCOLOR DEF_COLOR("爱心粉紅")
+			ENDIF
+		CASE "尿道感覚"
+			NO_ABL = 15
+			IF TALENT:ARG:尿道狂
+				SETCOLOR DEF_COLOR("粉紅")
+			ELSEIF TALENT:ARG:尿道性感
+				SETCOLOR DEF_COLOR("爱心粉紅")
+			ENDIF
+		CASE "魔乳", "Ｖ技術", "Ｖ拡張", "Ｖ名器度"
+			SIF TALENT:ARG:男性
+				NOT_PRINT = 1
+		ENDSELECT
+
+		;口上側による行為の制限をしている？
+		IF CEVENT("尿道調教禁止", ARG) && STRCOUNT(LOCALS:LCOUNT, "尿道")
+			PRINTFORM %BL(12)% 
+		ELSEIF NOT_PRINT
+			SETCOLOR DEF_COLOR("灰色")
+			PRINTFORM %TEXT_RJ(ABLNAME:NO_ABL, 8)%:-- 
+			CALL PRINT_RANK, 0, 8
+		ELSE
+			SELECTCASE ABLNAME:NO_ABL
+			;特殊処理をするABL
+			CASE "Ｖ技術"
+				SIF ABL:ARG:Ｖ弛緩
+					NO_ABL = GETNUM(ABL, "Ｖ弛緩")
+				PRINTFORM %TEXT_RJ(ABLNAME:NO_ABL, 8)%:{ABL:ARG:NO_ABL, 2} 
+				CALL PRINT_RANK, ABL:ARG:NO_ABL, NUM("Ｓランク", NO_ABL)
+			CASE "Ａ技術"
+				SIF ABL:ARG:Ａ弛緩
+					NO_ABL = GETNUM(ABL, "Ａ弛緩")
+				PRINTFORM %TEXT_RJ(ABLNAME:NO_ABL, 8)%:{ABL:ARG:NO_ABL, 2} 
+				CALL PRINT_RANK, ABL:ARG:NO_ABL, NUM("Ｓランク", NO_ABL)
+			CASEELSE
+				SELECTCASE ABL:ARG:NO_ABL
+				CASE IS >= 100
+					PRINTFORM %TEXT_RJ(ABLNAME:NO_ABL, 8)%:{ABL:ARG:NO_ABL}
+				CASEELSE
+					PRINTFORM %TEXT_RJ(ABLNAME:NO_ABL, 8)%:{ABL:ARG:NO_ABL, 2} 
+				ENDSELECT
+				CALL PRINT_RANK, ABL:ARG:NO_ABL, NUM("Ｓランク", NO_ABL)
+			ENDSELECT
+		ENDIF
+
+		NEXT_LINE += 1
+		;改行
+		SIF NEXT_LINE%6 == 0
+			PRINTL 
+	NEXT

@@ -1,0 +1,110 @@
+﻿;-------------------------------------------------
+;画像をスプライト化する関数群
+;-------------------------------------------------
+;第一製作者　ブリート
+;-------------------------------------------------
+@MADEFACEPHOTO
+#DIM DYNAMIC LCOUNT
+#DIM DYNAMIC MEMO_TARGET
+#DIM DYNAMIC FACEID
+#DIM DYNAMIC ALLCHARACOUNT
+#DIM DYNAMIC MADEPHOTOCOUNT
+#DIMS DYNAMIC ALLCHARA
+#DIMS DYNAMIC MADEPHOTO
+
+;定義されている角色をすべて確認する
+FOR LCOUNT, 1, 200
+	SIF COND("勧誘可能角色", LCOUNT) == 0
+		CONTINUE
+
+	ALLCHARA += @"{LCOUNT}/"
+	ALLCHARACOUNT += 1
+NEXT
+
+;画像読み込み開始
+
+VARSET LOCALS
+SPLIT ALLCHARA, "/", LOCALS
+
+FOR LCOUNT, 0, ALLCHARACOUNT
+
+	PRINTFORML 颜绘パネルを読み込んでいます・・・({LCOUNT}/{ALLCHARACOUNT})
+
+	FACEID = 1000 + TOINT(LOCALS:LCOUNT)
+	IF GLOAD(FACEID, FACEID)
+		;スプライト名をつける
+		SPRITECREATE @"颜绘パネル%LOCALS:LCOUNT%", FACEID
+	;失敗したら画像を作成する
+	ELSE
+		MADEPHOTO += @"%LOCALS:LCOUNT%/"
+		MADEPHOTOCOUNT += 1
+	ENDIF
+
+	CLEARLINE 1
+
+NEXT
+
+PRINTFORML 颜绘パネルを読み込んでいます・・・({LCOUNT}/{ALLCHARACOUNT})
+
+LOADGLOBAL
+;アプデ後は全部作り直す
+IF GLOBAL:VER_eraAkumaMaid < GAMEBASE_VERSION
+    MADEPHOTO = %ALLCHARA%
+    MADEPHOTOCOUNT = ALLCHARACOUNT
+	GLOBAL:VER_eraAkumaMaid = GAMEBASE_VERSION
+	SAVEGLOBAL
+;読み込み失敗がなかったら終了
+ELSEIF MADEPHOTOCOUNT == 0
+    RETURN 1
+ENDIF
+
+;ここからは画像作成
+
+MEMO_TARGET = TARGET
+
+VARSET LOCALS
+SPLIT MADEPHOTO, "/", LOCALS
+
+FOR LCOUNT, 0, MADEPHOTOCOUNT
+
+	PRINTFORML 新的颜绘做成中・・・ ({LCOUNT}/{MADEPHOTOCOUNT})
+
+	FACEID = 1000 + TOINT(LOCALS:LCOUNT)
+
+	;ダミー作成
+	ADDCHARA TOINT(LOCALS:LCOUNT)
+	TARGET = CHARANUM - 1
+	CFLAG:颜绘 = 1
+
+	CALL VARSET_MAIDFACE, TARGET
+
+	;服を着せる
+	IF CFLAG:夜型
+		CALL SET_COORDINATE, "便装"
+	ELSE
+		CALL SET_COORDINATE, "制服"
+	ENDIF
+
+	;画像ID1000～に颜绘パネルを作成する
+	;EXTSTR(EXTSTR(MAIDFACE(TARGET, 1), "", ","), "+")はMAIDFACE(TARGET, 1)から背景指定と、
+	;末尾の,より右のサイズやマウスオーバーテ接吻トなどを省いたもの(いわゆる{FPOS},{FSIZE},{FSIZE},{0},{MEMO_value},%MEMO_title%/を除く)
+	;例えばフェリなら 4直髪長銀+7a普通+9微笑+11眯眯眼左+11眯眯眼右+13領帶西装茶色+16斜刘海銀+18通常眉灰色 のようなものが返ってくる
+	CALL OVERLAY_GCREATE, FACEID, @"0背景黄色枠有+%EXTSTR(EXTSTR(MAIDFACE(TARGET, 1), "", ","), "+")%"
+
+	;角色の削除
+	DELCHARA CHARANUM - 1
+
+	;スプライト名をつける
+	SPRITECREATE @"颜绘パネル%LOCALS:LCOUNT%", FACEID
+
+	;作成したパネルを保存
+	GSAVE FACEID, FACEID
+	TWAIT 1, 1	
+	CLEARLINE 1
+NEXT
+
+PRINTFORML 新的颜绘做成中・・・ ({LCOUNT}/{MADEPHOTOCOUNT})
+
+TARGET = MEMO_TARGET
+
+RETURN 2

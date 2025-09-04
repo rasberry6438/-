@@ -1,0 +1,264 @@
+﻿@COM9
+;舐肛※消費を少し高めにする
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+;-------------------------------------------------
+;射精格子
+;-------------------------------------------------
+SIF TEQUIP:推倒
+	CALL SAMEN_CHECK
+
+RETURN 1
+
+@FLAG_COM9, ARG
+;対象のＡ⇔調教者の口的污垢が移動
+CALL EQ_STAIN, TARGET, "Ａ", PLAYER, "Ｍ"
+
+
+@SOURCE_COM9, ARG
+CALL VARSET_COMF
+
+CALL SOURCE_DOWNBASE_HP, 9
+
+;※露出のソースを元より高めにしてみる
+SOURCE:0:露出 = 800
+SOURCE:0:逸脱 = 500
+SOURCE:0:Ａ液体追加 = 100
+
+;ABL:Ａ感覚をみる
+SOURCE:0:Ａ快楽 = CALCF("Ａ刺激", 1, 70)
+;調教者の舌靈活をみる
+SOURCE:0:Ａ快楽 = SOURCE_EXABL(SOURCE:0:Ａ快楽, "舌靈活", PLAYER)
+
+;面部騎乗の時には快感を得るよりはむしろ攻撃重視
+SIF TEQUIP:推倒
+	TIMES SOURCE:0:Ａ快楽, 0.30
+
+;EXP:Ａ経験に応じたＡ快感、苦痛、恐怖、逸脱(反感)補正
+SELECTCASE EXP:Ａ経験
+CASE IS >= 300
+	TIMES SOURCE:0:Ａ快楽, 1.60
+	TIMES SOURCE:0:疼痛, 0.50
+	TIMES SOURCE:0:恐惧, 0.20
+	TIMES SOURCE:0:逸脱, 0.20
+CASE IS >= 150
+	TIMES SOURCE:0:Ａ快楽, 1.40
+	TIMES SOURCE:0:疼痛, 0.60
+	TIMES SOURCE:0:恐惧, 0.40
+	TIMES SOURCE:0:逸脱, 0.60
+CASE IS >= 50
+	TIMES SOURCE:0:Ａ快楽, 1.20
+	TIMES SOURCE:0:疼痛, 0.80
+	TIMES SOURCE:0:恐惧, 0.70
+CASE IS >= 20
+	TIMES SOURCE:0:逸脱, 1.20
+CASE IS >= 5
+	TIMES SOURCE:0:Ａ快楽, 0.50
+	TIMES SOURCE:0:疼痛, 1.50
+	TIMES SOURCE:0:恐惧, 1.50
+	TIMES SOURCE:0:逸脱, 1.50
+CASEELSE
+	TIMES SOURCE:0:Ａ快楽, 0.10
+	TIMES SOURCE:0:疼痛, 2.00
+	TIMES SOURCE:0:恐惧, 2.00
+	TIMES SOURCE:0:逸脱, 2.00
+ENDSELECT
+
+;PALAM:欲情をみる
+SELECTCASE PALAM:欲情
+CASE IS < PALAMLV:1
+	TIMES SOURCE:0:屈従, 0.30
+CASE IS < PALAMLV:2
+	TIMES SOURCE:0:屈従, 0.50
+CASE IS < PALAMLV:3
+	TIMES SOURCE:0:屈従, 0.80
+CASE IS < PALAMLV:4
+CASE IS >= PALAMLV:4
+	TIMES SOURCE:0:屈従, 1.20
+ENDSELECT
+
+SIF TALENT:Ａ性向
+	CALL CALC, "好みのPLAY", SOURCE:0:Ａ快楽
+
+CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM9
+;同時推倒
+IF TEQUIP:Ｗ推倒
+	PRINTFORM %CALLNAME:TARGET%
+	;助手が前回と同じ行動(違う行動の時は、ここでなく、EQUIP_COM32で記述)
+	SIF SELECTCOM:1 == PREVCOM:1 && SELECTCOM:1 >= 0
+		PRINTFORM %TEXTS("Ｗ推倒中")%、
+	IF SELECTCOM == PREVCOM
+		PRINTFORM 在%CALLNAME:MASTER%的臉上
+		IF TALENT:不知羞恥 || TALENT:淫乱
+			PRINT 將臀瓣更加的打開、
+		ELSE
+			PRINT 將腰肢輕輕下沉、
+		ENDIF
+		PRINTFORMW 讓尻穴被持續地舔舐侍奉著……
+	ELSE
+		IF COND("脚の使用") == 0
+			PRINTFORMW 坐在%CALLNAME:MASTER%的臉頰上、讓不斷張合的肛門與期待已久的唇舌相吻……
+		ELSE
+			PRINTFORMW 跨在%CALLNAME:MASTER%的臉頰上、讓不斷張合的肛門與期待已久的唇舌相吻……
+		ENDIF
+		;淫乱or欲情4LV以上なら追加
+		IF TALENT:淫乱 || PALAM:欲情 >= PALAMLV:4
+			SIF (SELECTCOM:1 == 65 || SELECTCOM:1 == 75) && RAND:2 == 0
+				PRINTFORMW %CALLNAME:TARGET%與%CALLNAME:(TARGET:1)%交纏著舌頭的同時、貪求著胯下傳來的甜美快感……
+		ENDIF
+	ENDIF
+;被逆推ているときは面部騎乗
+ELSEIF TEQUIP:推倒 && (TEQUIP:面部騎乗 == SELECTCOM || PREVCOM == SELECTCOM) && COND("前Ｔ調教者") == PLAYER
+	PRINTFORM %CALLNAME:TARGET%
+	IF RAND:2 == 0
+		PRINTFORM %TEXTS("肛門")%
+	ELSEIF ABL:欲望 + ABL:Ａ感覚 >= 6
+		PRINTFORM 自己用手指張開
+	ENDIF
+	PRINTFORMW 肛門、讓%CALLNAME:PLAYER%持續用靈巧的舌頭侍奉著……
+	;肛門が露出していないで、胖次をずらしていないなら自動的にずらす
+	SIF !CHECK_CLO("Ａ露出")
+		CALL SETFLAG, "下身衣装を露出：テ接吻ト没有", TARGET
+ELSEIF TEQUIP:推倒
+	PRINTFORM %CALLNAME:TARGET%
+	;前回が面部騎乗
+	IF (TEQUIP:面部騎乗 == 1 || PREVCOM == 1) && COND("前Ｔ調教者") == PLAYER
+		PRINTFORM 輕輕地半抬起腰肢、現在
+		;肛門が露出していないで、胖次をずらしていないなら自動的にずらす
+		SIF !CHECK_CLO("Ａ露出")
+			CALL SETFLAG, "下身衣装を露出：テ接吻ト没有", TARGET
+	;足がある
+	ELSEIF COND("脚が無い") == 0
+		IF TALENT:害羞 && TALENT:内気 == 0
+			PRINT 害羞地
+		ELSEIF TALENT:内気 && TALENT:恋慕 == 0
+			PRINT 胆怯、怯懦
+		;「小悪魔」で随机1/2
+		ELSEIF TALENT:小悪魔 && RAND:2 == 0
+			PRINT 在臉上露出戲謔的壞笑的同時、
+		ENDIF
+		PRINTFORM 在%CALLNAME:PLAYER%的臉頰上方、
+		IF (TALENT:害羞 || TALENT:内気) && RAND:3 == 0
+			PRINTFORM 在用手隱約的遮擋著的同時
+		;「傲慢」or「淫乱」or「小悪魔」で随机
+		ELSEIF (TALENT:傲慢 || TALENT:淫乱 || TALENT:小悪魔) && RAND:2 == 0
+			PRINT 大大地張開腿將股間風光暴露出來的同時
+		ENDIF
+		PRINT 快速坐下、
+		;肛門が露出していないで、胖次をずらしていないなら自動的にずらす
+		SIF !CHECK_CLO("Ａ露出") && CHECK_CLO("Ａ露出可")
+			CALL SETFLAG, "下身衣装を露出：テ接吻ト有些", TARGET
+	;拉米亚、で後は一応他の条件もつける…拉米亚って胖次沒穿な
+	ELSEIF COND("種族：拉米亚")
+		IF TALENT:害羞 && TALENT:内気 == 0
+			PRINT 害羞地
+		ELSEIF TALENT:内気 && TALENT:恋慕 == 0
+			PRINT 胆怯、怯懦
+		;「小悪魔」で随机1/4
+		ELSEIF TALENT:小悪魔 && RAND:4 == 0
+			PRINT 在臉上露出戲謔的壞笑的同時、
+		;「傲慢」or「淫乱」or「小悪魔」で随机1/3
+		ELSEIF (TALENT:傲慢 || TALENT:淫乱 || TALENT:小悪魔) && RAND:3 == 0
+			PRINT 為了更清楚的展示而慢慢地
+		;欲情4以上＋A感覚3以上で随机1/2
+		ELSEIF PALAM:欲情 >= PALAMLV:4 && ABL:Ａ感覚 >= 3 && RAND:2 == 0
+			PRINT 興奮而迫不及待的
+		;其他
+		ELSE
+			PRINT 順利的
+		ENDIF
+		PRINTFORM 讓仰視的%CALLNAME:PLAYER%的臉頰與腰肢快速接近、
+	ENDIF
+	;欲情6以上orA感覚3以上で随机1/2
+	IF PALAM:欲情 >= PALAMLV:6 && ABL:Ａ感覚 >= 3 && RAND:2 == 0
+		PRINTFORMW 讓%CALLNAME:PLAYER%的唇舌與%TEXTS("肛門")%肛門緊密相連……
+	;それ以外
+	ELSE
+		PRINTFORMW 讓%CALLNAME:PLAYER%用舌頭輕輕刺入%TEXTS("肛門")%肛門……
+	ENDIF
+ELSEIF PREVCOM == SELECTCOM && COND("前Ｔ調教者") == PLAYER
+	PRINTFORM %CALLNAME:PLAYER%將%CALLNAME:TARGET%的
+	IF RAND:2 || TEQUIP:六九式
+		PRINTFORM 將%TEXTS("お尻：感触")%%TEXTR("用臉頰填滿/用自己的臉頰享受/盡情享受")%之後、將
+	ELSEIF COND("指の使用", PLAYER)
+		PRINTFORM 將豐腴的尻肉撥開、將%TEXTR("變得一目了然的/被剝開暴露出來的/被推開來拉長的")%
+	ENDIF
+	PRINTFORMW %TEXTR("肛門執拗的舔舐著/尻穴那粘膜的異味用舌尖仔細品嚐著/肛門的皺褶用舌頭描繪著/尻穴的奇異韻味盡情享受著")%、如此沉醉了好一會……
+;被逆推ていないときは从后面将…いや前からってのもあるか…
+ELSE
+	IF TEQUIP:六九式
+		PRINTFORM %CALLNAME:PLAYER%將%CALLNAME:TARGET%的
+		;肛門が露出していないで、胖次をずらしていないなら自動的にずらす
+		IF !CHECK_CLO("Ａ露出") && CHECK_CLO("Ａ露出可")
+			CALL SETFLAG, "下身衣装を露出：テ接吻ト有些", TARGET
+		ELSE
+			PRINTFORM 豐腴的尻肉大力的撥開
+		ENDIF
+		PRINTFORM 、%TEXTS("６９")%
+	ELSE
+		SIF PLAYER != MASTER
+			PRINTFORM %CALLNAME:PLAYER%将
+		;前回Ａくぱぁ
+		IF PREVCOM == 14
+			PRINT 清楚地展示出肛門的
+		;縄着用時かつ拉米亚でない
+		ELSEIF TEQUIP:拘束 && COND("脚が無い") == 0
+			PRINT 雙腿被拘束具強迫拉得大開的
+		;害羞で快Ａor欲情が高い
+		ELSEIF TALENT:害羞 && (PALAM:快Ａ >= PALAMLV:3 || PALAM:欲情 >= PALAMLV:4)
+			PRINT 用雙手將因羞澀而染上紅暈的臉頰蒙上、膽怯地微微張開雙腿的
+		;害羞で快Ａor欲情が低い
+		ELSEIF TALENT:害羞 && (PALAM:快Ａ <= PALAMLV:3 || PALAM:欲情 <= PALAMLV:4)
+			PRINT 因羞澀而抗拒的緊閉著雙腿的
+		;淫乱or欲情4LV以上
+		ELSEIF (TALENT:淫乱 || PALAM:欲情 >= PALAMLV:4) && ABL:Ａ感覚 >= 3
+			PRINT 因渴求快感而誇張地張開雙腿的
+		ENDIF
+		PRINTFORM %CALLNAME:TARGET%的
+		;肛門が露出していないで、胖次をずらしていないなら自動的にずらす
+		IF !CHECK_CLO("Ａ露出") && CHECK_CLO("Ａ露出可")
+			CALL SETFLAG, "下身衣装を露出：テ接吻ト有些", TARGET
+		;前から
+		ELSEIF RAND:2
+			PRINT 腰肢用力舉起
+		;从后面将
+		ELSE
+			PRINT 股間用臉頰緊緊貼住
+		ENDIF
+		PRINT 、
+	ENDIF
+	PRINTFORM 將%TEXTS("肛門")%肛門用
+	IF RAND:2 == 0
+		PRINT 舌尖
+	ELSE
+		PRINT 嘴唇
+	ENDIF
+	IF RAND:4 == 0
+		PRINT 温柔地
+	ELSEIF RAND:3 == 0
+		PRINT 謹慎認真地
+	ELSEIF RAND:2 == 0
+		PRINT 激烈地
+	ELSE
+		PRINT 像是在享受痛苦的反應一樣粗暴地
+	ENDIF
+	IF RAND:4 == 0
+		PRINTFORMW 吮吸著……
+	ELSEIF RAND:3 == 0
+		PRINTFORMW 舔舐著……
+	ELSEIF RAND:2 == 0
+		PRINTFORMW 愛撫著……
+	ELSE
+		PRINTFORMW 品味著……
+	ENDIF
+ENDIF

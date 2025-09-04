@@ -1,0 +1,422 @@
+﻿@COM180
+	;被拘束
+	CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+	;-------------------------------------------------
+	;実行できるかの判定
+	;-------------------------------------------------
+	CALL SHOW_COM_ORDER_COM, 180
+
+	;実行できない
+	SIF TCVAR:干劲 == 0
+		RETURN 0
+
+	;-------------------------------------------------
+	;実行決定
+	;-------------------------------------------------
+	CALL TRAIN_MESSAGE_B
+
+	SIF REFUSE_CHECK()
+		RETURN 0
+
+	STR:前回指令 = %STR:今回指令%
+
+	RETURN 1
+
+
+@FLAG_COM180, ARG
+
+
+@SOURCE_COM180, ARG
+	CALL VARSET_COMF
+
+	IF     BIND("縄：手足縛", TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  500
+	ELSEIF BIND("縄：亀甲縛り"    , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   = 1000
+	ELSEIF BIND("縄：逆海老"      , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  500
+	ELSEIF BIND("縄：足吊"      , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  750
+	ELSEIF BIND("手枷"            , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  200
+	ELSEIF BIND("吊り"            , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  200
+	ELSEIF BIND("Ｍ字開脚"        , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  200
+	ELSEIF BIND("床"          , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  200
+	ELSEIF BIND("四つん這い"      , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  200
+	ELSEIF BIND("縄"              , TEQUIP:PLAYER:拘束)
+		SOURCE:0:性行動   =  500
+	ENDIF
+
+	SOURCE:0:情愛     = 1000 + MIN(MAX(ABL:奉仕精神, ABL:施虐属性), 10) * 500
+	SOURCE:0:達成感   = 2000 + MIN(MAX(ABL:奉仕精神, ABL:施虐属性), 10) * 1000
+	SOURCE:0:欲情追加 = CALCF("実行値による欲情追加")
+
+	CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM180
+	;どんな被拘束か選択する
+
+	;既に拘束されている場合はここに来ないはず
+	IF TEQUIP:PLAYER:拘束
+		TFLAG:指令中止 = 1
+		RETURN 0
+	ENDIF
+
+	;カウンター中の場合の拘束処理
+	IF TFLAG:カウンター中
+		;拘束の制限時間が短いと凄い事になるので10秒固定にしたけどほんとは計算したい
+		LOCAL = 10000
+		PRINTFORML %CALLNAME:PLAYER%要被%CALLNAME:TARGET%用拘束具绑住了！
+		PRINTFORML [0]抵抗！
+		PRINTFORML  [1] 想要更进一步
+		PRINTFORML  [2] 任凭摆布
+
+		IF CONFIG("制限時間")
+			TINPUT LOCAL, 100, 2
+		ELSE
+			CALL INPUT_SELECT, 3
+		ENDIF
+
+		SELECTCASE RESULT
+			CASE 0 ;抵抗！
+				PRINTFORMW 但是%CALLNAME:PLAYER%\@ RAND:2 ? 敏捷地躲開了！ # 轻巧地躲開了！ \@
+				FLAG:情緒 -= 5
+				CFLAG:前回拘束種類 = 0
+				TFLAG:指令中止 = 1
+				RETURN 0
+
+			CASE 1 ;希望を言う
+
+			CASE 2 ;身を委ねる
+				IF CFLAG:前回拘束種類
+					TEQUIP:PLAYER:拘束 = CFLAG:前回拘束種類
+				ELSEIF CFLAG:PLAYER:前回拘束種類
+					TEQUIP:PLAYER:拘束 = CFLAG:PLAYER:前回拘束種類
+				ELSE
+					TEQUIP:PLAYER:拘束 = BIND("床", -1)
+				ENDIF
+		ENDSELECT
+	ENDIF
+
+	IF TEQUIP:PLAYER:拘束 == 0
+		WHILE 1
+			PRINTFORML 被%CALLNAME:PLAYER%%CALLNAME:TARGET%…
+			PRINTFORML  [ 0] 用绳子绑起来　　　(无法做出任何动作的紧缚)
+			PRINTFORML  [ 1] 秘银枷　(用手枷固定住双手)
+			PRINTFORML  [ 2] 秘银链　(将手用鎖捆住、吊起来)
+			PRINTFORML  [ 3] 责难桌　(将腿分開后拘束≒分娩台)
+			PRINTFORML  [ 4] 责难床　　(仰躺在床上、并且绑住手脚)
+			PRINTFORML  [ 5] 秘银桌　(趴在桌子上、被绑住双腿)
+
+			IF TFLAG:カウンター中
+				CALL INPUT_SELECT, 6
+			ELSE
+				PRINTFORML [100] 因为感觉不舒服所以要求结束
+				CALL INPUT_SELECT, 6, 100
+			ENDIF
+
+			SELECTCASE RESULT
+				CASE 100 ;嫌な予感がするので被拘束のを止める
+					TFLAG:指令中止 = 1
+					RETURN 0
+
+				CASE 0   ;縄で縛らせる
+					PRINTFORML 具體的束縛方法是……
+					PRINTFORML  [ 0] 手首足首縛　　(將手腕和腳腕互相束縛到一起)
+					PRINTFORML  [ 1] 亀甲縛　　　　(將全身用繩索緊緊捆住、將胸部和恥丘格外凸顯出來的情色束縛法)
+					PRINTFORML  [ 2] 逆海老責　　　(將雙手雙腳在背面相互束縛住、用彎曲的蝦一樣的姿勢強行束縛住)
+					PRINTFORML  [ 3] 足吊　　　　　(將上半身拘束、只將一隻腳吊起、無法隱藏性器官的情色束縛法)
+					PRINTFORML [100] 返回
+
+					CALL INPUT_SELECT, 4, 100
+
+					SELECTCASE RESULT
+						CASE 100 ;もどる
+						CASE 0   ;手足縛
+							TEQUIP:PLAYER:拘束 = BIND("縄：手足縛", -1)
+							BREAK
+						CASE 1   ;亀甲縛り
+							TEQUIP:PLAYER:拘束 = BIND("縄：亀甲縛り", -1)
+							BREAK
+						CASE 2   ;逆海老責
+							TEQUIP:PLAYER:拘束 = BIND("縄：逆海老", -1)
+							BREAK
+						CASE 3   ;足吊
+							TEQUIP:PLAYER:拘束 = BIND("縄：足吊", -1)
+							BREAK
+					ENDSELECT
+
+				CASE 1   ;秘银枷
+					TEQUIP:PLAYER:拘束 = BIND("手枷", -1)
+					BREAK
+				CASE 2   ;秘银链
+					TEQUIP:PLAYER:拘束 = BIND("吊り", -1)
+					BREAK
+				CASE 3   ;责难桌
+					TEQUIP:PLAYER:拘束 = BIND("Ｍ字開脚", -1)
+					BREAK
+				CASE 4   ;责难床
+					TEQUIP:PLAYER:拘束 = BIND("床", -1)
+					BREAK
+				CASE 5   ;秘银桌
+					TEQUIP:PLAYER:拘束 = BIND("四つん這い", -1)
+					BREAK
+			ENDSELECT
+		WEND
+	ENDIF
+
+	IF     BIND("縄：手足縛", TEQUIP:PLAYER:拘束)
+		PRINTFORM %CALLNAME:TARGET%将%CALLNAME:PLAYER%的\@ RAND:2 ? 股间完全打開、 # 双脚摆成Ｍ字、 \@
+		IF RAND:2
+			PRINTFORMW 将手腕固定在脚腕上、\@ RAND:2 ? 让身体无法做出任何动作地用绳子绑住 # 让身体无法挣扎地绑住 \@
+		ELSE
+			PRINTFORMW 将手腕绑在脚腕上、\@ RAND:2 ? 让身体无法做出任何动作 # 禁止了任何反抗行为 \@
+		ENDIF
+
+	ELSEIF BIND("縄：亀甲縛り"    , TEQUIP:PLAYER:拘束)
+		PRINTFORMW %CALLNAME:TARGET%将绳子挂在%CALLNAME:PLAYER%的脖子上\@ RAND:2 ? 打了很多个结之后 # 在胸部、肚脐、下腹部打了好几个结 \@将绳子从股间穿过去绑在了后背上
+		PRINTFORMW 就这样将伸到后背的绳子和挂在脖子上的绳子拉紧系在一起、\@ RAND:2 ? 在结之间穿过绳子… # 一边穿过之前打的绳结一边做出菱形的网… \@
+		PRINTFORMW 之后、将双手拉向身后\@ RAND:2 ? 用强调胸部的姿势拘束住… # 保持着挺起胸部的姿势拘束住… \@
+
+	ELSEIF BIND("縄：逆海老"      , TEQUIP:PLAYER:拘束)
+		PRINTFORMW %CALLNAME:TARGET%将%CALLNAME:PLAYER%的両手和両足各自绑在一起之后、接着将手足拉向身后将四肢绑在了一起
+		PRINTFORMW 这样、就将%CALLNAME:PLAYER%摆成了反过来的虾一样的姿势
+
+	ELSEIF BIND("縄：足吊"      , TEQUIP:PLAYER:拘束)
+		PRINTFORM %CALLNAME:TARGET%将绳子从%CALLNAME:PLAYER%的胸的谷間と下乳穿过紧紧的向上提起来绑住
+		PRINTFORMW 之后将%CALLNAME:PLAYER%绑在身后用绳子捆住
+		PRINTFORM 最后%CALLNAME:TARGET%将%CALLNAME:PLAYER%的一只腿吊起来、绑在了
+		IF COND("人里")
+			PRINT 阴暗小巷中的外置空调上
+		ELSEIF COND("森林")
+			PRINT 高度合适的树枝上
+		ELSEIF TEQUIP:野外PLAY
+			PRINT 附近的高处
+		ELSEIF TEQUIP:室内露出PLAY
+			PRINT 楼梯的扶手上
+		ELSE
+			PRINT 吊灯的灯架上
+		ENDIF
+		PRINTFORMW 被绳子挂了起来……
+
+	ELSEIF BIND("手枷"            , TEQUIP:PLAYER:拘束)
+		PRINTFORMW %CALLNAME:PLAYER%被%CALLNAME:TARGET%拉住双手放在前面、用手枷拘束住
+	ELSEIF BIND("吊り"            , TEQUIP:PLAYER:拘束)
+		PRINTFORMW %CALLNAME:PLAYER%被%CALLNAME:TARGET%用锁链吊起来双手
+	ELSEIF BIND("Ｍ字開脚"        , TEQUIP:PLAYER:拘束)
+		PRINTFORMW %CALLNAME:PLAYER%被%CALLNAME:TARGET%放在拘束台上、腿摆成Ｍ字之后固定住了
+	ELSEIF BIND("床"          , TEQUIP:PLAYER:拘束)
+		PRINTFORMW %CALLNAME:PLAYER%被%CALLNAME:TARGET%推倒在床上、手脚被摆成大字拘束住
+	ELSEIF BIND("四つん這い"      , TEQUIP:PLAYER:拘束)
+		PRINTFORMW %CALLNAME:PLAYER%被%CALLNAME:TARGET%摆成四肢着地的姿势、固定住了双腿
+	ELSE
+	ENDIF
+
+	TEQUIP:推倒 = 1
+	CALL ADD_STATE, PLAYER, "バインド"
+
+	CFLAG:前回拘束種類 = TEQUIP:PLAYER:拘束
+
+	RETURN 1
+
+
+@EQUIP_COM180
+	SIF TEQUIP:PLAYER:拘束 == 0
+		RETURN 0
+
+	CALL SOURCE_COM180, 20
+
+	SIF TEQUIP:PLAYER:拘束
+		EXP:PLAYER:拘束経験 += 1
+
+	RETURN 1
+
+
+@EQUIP_COM180_2
+	SIF TEQUIP:PLAYER:拘束 == 0
+		RETURN 0
+
+	PRINTFORML ＜拘束され中：%BINDS(TEQUIP:PLAYER:拘束)%＞
+
+	LOCAL = 0
+
+	;20bit 手が使えない, 21bit 足が使えない, 22bit 体勢が変えられない, 23bit 無理な姿勢, 24bit 胸, 25bit 股間
+	SIF GETBIT(TEQUIP:PLAYER:拘束, 20)
+		LOCAL += 1
+	SIF GETBIT(TEQUIP:PLAYER:拘束, 21)
+		LOCAL += 1
+	SIF GETBIT(TEQUIP:PLAYER:拘束, 22)
+		LOCAL += 1
+	SIF GETBIT(TEQUIP:PLAYER:拘束, 23)
+		LOCAL += 1
+	SIF GETBIT(TEQUIP:PLAYER:拘束, 24)
+		LOCAL += 1
+	SIF GETBIT(TEQUIP:PLAYER:拘束, 25)
+		LOCAL += 1
+	LOCAL = MAX(LOCAL, 1)
+
+	EXP:PLAYER:拘束経験 += LOCAL
+
+	SIF ASSIPLAY == 0 && ABL:施虐属性 >= 1
+		TFLAG:好感度BOUNS += 1
+
+	RETURN 1
+
+
+@COM_ORDER_COM180, ARG
+	VARSET LOCAL
+	LOCALS =
+
+	;すべての命令に共通の要素を考慮
+	;(信頼が高いと命令に従いやすいなど)
+	CALL COM_ORDER, ARG
+	LOCAL = RESULT
+
+	;ABL:奉仕精神
+	IF ABL:奉仕精神
+		LOCAL += MIN(ABL:奉仕精神, 10) * 2
+		LOCALS = %LOCALS% + 奉仕精神LV{ABL:奉仕精神}({MIN(ABL:奉仕精神, 10) * 2})
+	ENDIF
+	;ABL:施虐属性
+	IF ABL:施虐属性
+		LOCAL += MIN(ABL:施虐属性, 10) * 5
+		LOCALS = %LOCALS% + 施虐属性LV{ABL:施虐属性}({MIN(ABL:施虐属性, 10) * 5})
+	ENDIF
+
+	;TALENT:処女 (你を拘束してしまえば自分は安全!)
+	IF TALENT:処女
+		LOCAL += 5
+		LOCALS = %LOCALS% + 処女(5)
+	ENDIF
+	;TALENT:娇小 (你を拘束してしまえば自分は安全!)
+	IF TALENT:娇小
+		LOCAL += 5
+		LOCALS = %LOCALS% + 娇小(5)
+	ENDIF
+	;TALENT:坏心眼
+	IF TALENT:坏心眼
+		LOCAL += 10
+		LOCALS = %LOCALS% + 坏心眼(10)
+	ENDIF
+	;TALENT:好奇心
+	IF TALENT:好奇心
+		LOCAL += 3
+		LOCALS = %LOCALS% + 好奇心(3)
+	ENDIF
+	;TALENT:保守的
+	IF TALENT:保守的
+		LOCAL += -3
+		LOCALS = %LOCALS% - 保守的(3)
+	ENDIF
+	;TALENT:倒錯的
+	IF TALENT:倒錯的
+		LOCAL += 10
+		LOCALS = %LOCALS% + 倒錯的(10)
+	ENDIF
+	;TALENT:受け身
+	IF TALENT:受け身
+		LOCAL += -20
+		LOCALS = %LOCALS% - 受け身(20)
+	ENDIF
+
+	;媚薬
+	IF TEQUIP:媚薬
+		LOCAL += 6
+		LOCALS = %LOCALS% + 媚薬(6)
+	ENDIF
+
+	;EXP:拘束経験
+	IF ABL:施虐属性 < 5 && TALENT:倒錯的 == 0
+		IF     EXP:PLAYER:拘束経験 >= 300 && EXP:拘束経験 >=  50
+			LOCAL +=  -5
+			LOCALS = %LOCALS% - 拘束経験の差(5)
+		ELSEIF EXP:PLAYER:拘束経験 >= 300 && EXP:拘束経験 >=   1
+			LOCAL += -10
+			LOCALS = %LOCALS% - 拘束経験の差(10)
+		ELSEIF EXP:PLAYER:拘束経験 >= 300 && EXP:拘束経験 >=   0
+			LOCAL += -20
+			LOCALS = %LOCALS% - 拘束経験の差(20)
+		ELSEIF EXP:PLAYER:拘束経験 >=  50 && EXP:拘束経験 >= 300
+			LOCAL +=   5
+			LOCALS = %LOCALS% + 拘束経験の差(5)
+		ELSEIF EXP:PLAYER:拘束経験 >=  50 && EXP:拘束経験 >=   1
+			LOCAL +=  -5
+			LOCALS = %LOCALS% - 拘束経験の差(5)
+		ELSEIF EXP:PLAYER:拘束経験 >=  50 && EXP:拘束経験 >=   0
+			LOCAL += -10
+			LOCALS = %LOCALS% - 拘束経験の差(10)
+		ELSEIF EXP:PLAYER:拘束経験 >=   1 && EXP:拘束経験 >= 300
+			LOCAL +=  10
+			LOCALS = %LOCALS% + 拘束経験の差(10)
+		ELSEIF EXP:PLAYER:拘束経験 >=   1 && EXP:拘束経験 >=  50
+			LOCAL +=   5
+			LOCALS = %LOCALS% + 拘束経験の差(5)
+		ELSEIF EXP:PLAYER:拘束経験 >=   1 && EXP:拘束経験 >=   0
+			LOCAL +=  -5
+			LOCALS = %LOCALS% - 拘束経験の差(5)
+		ELSEIF EXP:PLAYER:拘束経験 ==   0 && EXP:拘束経験 >= 300
+			LOCAL +=  20
+			LOCALS = %LOCALS% + 拘束経験の差(20)
+		ELSEIF EXP:PLAYER:拘束経験 ==   0 && EXP:拘束経験 >=  50
+			LOCAL +=  10
+			LOCALS = %LOCALS% + 拘束経験の差(10)
+		ELSEIF EXP:PLAYER:拘束経験 ==   0 && EXP:拘束経験 >=   1
+			LOCAL +=   5
+			LOCALS = %LOCALS% + 拘束経験の差(5)
+		ENDIF
+	ELSE
+		IF     EXP:PLAYER:拘束経験 >=  50 && EXP:拘束経験 >= 300
+			LOCAL +=   5
+			LOCALS = %LOCALS% + 拘束経験の差(5)
+		ELSEIF EXP:PLAYER:拘束経験 >=   1 && EXP:拘束経験 >= 300
+			LOCAL +=  10
+			LOCALS = %LOCALS% + 拘束経験の差(10)
+		ELSEIF EXP:PLAYER:拘束経験 >=   1 && EXP:拘束経験 >=  50
+			LOCAL +=   5
+			LOCALS = %LOCALS% + 拘束経験の差(5)
+		ELSEIF EXP:PLAYER:拘束経験 ==   0 && EXP:拘束経験 >= 300
+			LOCAL +=  20
+			LOCALS = %LOCALS% + 拘束経験の差(20)
+		ELSEIF EXP:PLAYER:拘束経験 ==   0 && EXP:拘束経験 >=  50
+			LOCAL +=  10
+			LOCALS = %LOCALS% + 拘束経験の差(10)
+		ELSEIF EXP:PLAYER:拘束経験 ==   0 && EXP:拘束経験 >=   1
+			LOCAL +=   5
+			LOCALS = %LOCALS% + 拘束経験の差(5)
+		ENDIF
+	ENDIF
+
+	;EXP:拘束強制絶頂経験
+	IF     EXP:拘束強制絶頂経験 >= 300
+		LOCAL += 10
+		LOCALS = %LOCALS% + 強制絶頂経験(10)
+	ELSEIF EXP:拘束強制絶頂経験 >= 50
+		LOCAL += 5
+		LOCALS = %LOCALS% + 強制絶頂経験(5)
+	ELSEIF EXP:拘束強制絶頂経験 >= 1
+		LOCAL += 2
+		LOCALS = %LOCALS% + 強制絶頂経験(2)
+	ENDIF
+	;EXP:拘束強制射精経験
+	IF     EXP:拘束強制射精経験 >= 300
+		LOCAL += 10
+		LOCALS = %LOCALS% + 強制射精経験(10)
+	ELSEIF EXP:拘束強制射精経験 >= 50
+		LOCAL += 5
+		LOCALS = %LOCALS% + 強制射精経験(5)
+	ELSEIF EXP:拘束強制射精経験 >= 1
+		LOCAL += 2
+		LOCALS = %LOCALS% + 強制射精経験(2)
+	ENDIF
+
+	;合計を表示(40以上で実行)
+	CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 40
+
+	RETURN RESULT
+

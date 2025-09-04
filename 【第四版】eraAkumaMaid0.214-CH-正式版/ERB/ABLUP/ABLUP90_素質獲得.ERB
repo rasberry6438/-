@@ -1,0 +1,391 @@
+﻿;-------------------------------------------------
+;素質の獲得
+;-------------------------------------------------
+@ABLUP90
+#DIM MEMO_LINECOUNT
+#DIM MEMO_LINECOUNT2
+#DIM CHOICE
+#DIM IS_GET, 300
+#DIMS TALENTNAME_UP
+#DIMS TALENTNAME_NOW
+#DIMS TALENTNAME_DOWN
+
+REDRAW 0
+
+MEMO_LINECOUNT = LINECOUNT
+
+PRINTL 
+
+CALL PRINT_STRL, @"使用_黄色_{NUM("経験値：素質獲得")}Ｐ_經驗值的話、就可以獲得/失去某些素質"
+;PRINTFORML （但是哟、每一次改变素質、都会使下一次改变所必要的経験値增加200Ｐ）
+PRINTFORML 还有{EXP:経験値}Ｐ経験値
+
+PRINTFORML 
+VARSET IS_GET
+
+PRINTFORML [  0] 体力+200（現在的体力为{MAXBASE:体力}）
+IS_GET:0 = 1
+
+;37で性器年齢+1, 38で性器年齢-1
+IF TALENT:男性 == 0 && CONFIG("性器年齢") && COND("性器年齢変更禁止") == 0
+	TALENTNAME_UP = 
+	TALENTNAME_DOWN = 
+	TALENTNAME_NOW = [%TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢)%]
+
+	IF TALENT:性器年齢 <= 4
+		PRINTFORM [ 37] [性器年齢]を+1させる 
+
+		TALENTNAME_UP = [%TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢 + 1)%]
+		SELECTCASE TALENTNAME_UP
+		CASE "[性器年齢]"
+			SIF TALENTNAME_NOW != "[性器年齢]"
+				PRINTFORM (%TALENTNAME_NOW%を失います)
+		CASE TALENTNAME_NOW
+		;	PRINTFORM (現在は%TALENTNAME_NOW%です)
+		CASEELSE
+			IF TALENTNAME_NOW != "[性器年齢]"
+				CALL PRINT_STR, @"(%TALENTNAME_NOW%から_黄色_%TALENTNAME_UP%_になります)"
+			ELSE
+				PRINTFORM (%TALENTNAME_UP%になります)
+			ENDIF
+		ENDSELECT
+		IS_GET:37 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] [性器年齢]を+1させる"
+	ENDIF
+	PRINTL 
+
+	IF TALENT:性器年齢 >= 2
+		PRINTFORM [ 38] [性器年齢]を-1させる 
+
+		TALENTNAME_DOWN = [%TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢 - 1)%]
+		SELECTCASE TALENTNAME_DOWN
+		CASE "[性器年齢]"
+			SIF TALENTNAME_NOW != "[性器年齢]"
+				PRINTFORM (%TALENTNAME_NOW%を失います)
+		CASE TALENTNAME_NOW
+		;	PRINTFORM (現在は%TALENTNAME_NOW%です)
+		CASEELSE
+			IF TALENTNAME_NOW != "[性器年齢]"
+				CALL PRINT_STR, @"(%TALENTNAME_NOW%から_黄色_%TALENTNAME_DOWN%_になります)"
+			ELSE
+				PRINTFORM (%TALENTNAME_DOWN%になります)
+			ENDIF
+		ENDSELECT
+		IS_GET:38 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] [性器年齢]を-1させる"
+	ENDIF
+	PRINTL 
+ENDIF
+
+IF TALENT:不易濕 && COND("不易濕変更禁止") == 0
+	PRINTFORML [ 41] 失卻[不易濕]
+	IS_GET:41 = 1
+ELSEIF TALENT:容易濕 == 0 && COND("容易濕変更禁止") == 0
+	PRINTFORML [ 40] 獲得[容易濕]
+	IS_GET:40 = 1
+ENDIF
+
+IF PENIS(TARGET)
+	IF TALENT:遅漏 && COND("遅漏変更禁止") == 0
+		PRINTFORML [ 43] 失卻[遅漏]
+		IS_GET:43 = 1
+	ELSEIF TALENT:早漏 && COND("早漏変更禁止") == 0
+		PRINTFORML [ 42] 失卻[早漏]
+		IS_GET:42 = 1
+	ELSE
+ 		IF COND("早漏変更禁止") == 0
+			PRINTFORML [ 42] 獲得[早漏]
+			IS_GET:42 = 1
+		ENDIF
+		IF COND("遅漏変更禁止") == 0
+			PRINTFORML [ 43] 獲得[遅漏]
+			IS_GET:43 = 1
+		ENDIF
+	ENDIF
+ENDIF
+IF TALENT:縦深菊穴 == 0 && COND("縦深菊穴変更禁止") == 0
+	IF EXP:Ａ経験 >= 300 && EXP:Ａ拡張経験 >= 20 && ABL:Ａ拡張 >= 3
+		PRINTFORML [ 45] 獲得[縦深菊穴]
+		IS_GET:45 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[縦深菊穴]　　　（要:Ａ経験300＆Ａ拡張経験20＆Ａ拡張3LV）_L"
+	ENDIF
+ENDIF
+IF TALENT:腸液分泌体質 == 0 && COND("腸液分泌体質変更禁止") == 0
+	IF EXP:Ａ経験 >= 100
+		PRINTFORML [ 50] 獲得[腸液分泌体質]
+		IS_GET:50 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[腸液分泌体質]　（要:Ａ経験100）_L"
+	ENDIF
+ENDIF
+IF TALENT:絶頂失禁体質 == 0 && COND("絶頂失禁体質変更禁止") == 0
+	IF EXP:漏尿経験 >= 5
+		PRINTFORML [ 51] 獲得[絶頂失禁体質]
+		IS_GET:51 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[絶頂失禁体質]　（要:漏尿経験5）_L"
+	ENDIF
+ENDIF
+IF TALENT:発情体質 == 0 && COND("発情体質変更禁止") == 0
+	PRINTFORML [ 53] 獲得[発情体質]
+	IS_GET:53 = 1
+ENDIF
+IF TALENT:嘔吐反射耐性 == 0 && COND("嘔吐反射耐性変更禁止") == 0
+	IF EXP:口交経験 >= 150 || EXP:喉性交経験 >= 20
+		PRINTFORML [ 55] 獲得[嘔吐反射耐性]
+		IS_GET:55 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] [嘔吐反射耐性] を得る　（要:口交経験150 or 喉性交経験20）_L"
+	ENDIF
+ENDIF
+IF TALENT:拡張適性 == 0 && COND("拡張適性変更禁止") == 0
+	IF MAX(EXP:Ｖ拡張経験, EXP:Ａ拡張経験, EXP:尿道拡張経験) >= 20
+		PRINTFORML [ 57] 獲得[拡張適性]
+		IS_GET:57 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[拡張適性]　　　（要:Ｖ拡張経験20 or Ａ拡張経験20 or 尿道拡張経験20）_L"
+	ENDIF
+ENDIF
+
+IF TALENT:汚臭無視 == 0 && COND("汚臭無視変更禁止") == 0
+	PRINTFORML [124] 獲得[汚臭無視]
+	IS_GET:124 = 1
+ENDIF
+
+IF TALENT:笨蛋 == 0 && COND("笨蛋変更禁止") == 0
+	PRINTFORML [144] \@ TALENT:調教知識 ? 変更 # 獲得 \@[調教知識]
+	IS_GET:144 = 1
+ENDIF
+
+IF TALENT:Ｃ性向 == 0 && COND("Ｃ性向変更禁止") == 0
+	PRINTFORML [160] 獲得[Ｃ性向]
+	IS_GET:160 = 1
+ENDIF
+IF TALENT:男性 == 0 && COND("Ｖ性向変更禁止") == 0
+	IF TALENT:Ｖ性向 == 0
+		PRINTFORML [162] 獲得[Ｖ性向]
+		IS_GET:162 = 1
+	ENDIF
+ENDIF
+IF TALENT:Ａ性向 == 0 && COND("Ａ性向変更禁止") == 0
+	PRINTFORML [164] 獲得[Ａ性向]
+	IS_GET:164 = 1
+ENDIF
+IF TALENT:男性 == 0 && COND("Ｂ性向変更禁止") == 0
+	IF TALENT:Ｂ性向 == 0
+		PRINTFORML [166] 獲得[Ｂ性向]
+		IS_GET:166 = 1
+	ENDIF
+ENDIF
+IF TALENT:Ｍ性向 == 0 && COND("Ｍ性向変更禁止") == 0
+	PRINTFORML [168] 獲得[Ｍ性向]
+	IS_GET:168 = 1
+ENDIF
+IF TALENT:尿道性感 == 0 && COND("尿道性感変更禁止") == 0
+	IF ABL:Ｃ感覚 >= 3 && EXP:尿道経験 >= 5
+		PRINTFORML [170] 獲得[尿道性感]
+		IS_GET:170 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[尿道性感]　　　（要:Ｃ感覚3LV＆尿道経験5）_L"
+	ENDIF
+ENDIF
+IF TALENT:喉性感 == 0 && COND("喉性感変更禁止") == 0
+	IF ABL:Ｍ感覚 >= 3
+		PRINTFORML [172] 獲得[喉性感]
+		IS_GET:172 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[喉性感]　　　　（要:Ｍ感覚3LV）_L"
+	ENDIF
+ENDIF
+IF TALENT:子宮性感 == 0 && TALENT:男性 == 0 && COND("子宮性感変更禁止") == 0
+	IF ABL:Ｖ感覚 >= 3 && EXP:子宮口経験 >= 5
+		PRINTFORML [173] 獲得[子宮性感]
+		IS_GET:173 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[子宮性感]　　　（要:Ｖ感覚3LV＆子宮口経験5）_L"
+	ENDIF
+ENDIF
+IF TALENT:气味弱点 == 0 && COND("气味弱点変更禁止") == 0
+	PRINTFORML [175] 獲得[气味弱点]\@ TALENT:汚臭鈍感 ? （同時失卻[污臭鈍感]）# \@
+	IS_GET:175 = 1
+ENDIF
+IF TALENT:結腸性感 == 0 && COND("結腸性感変更禁止") == 0
+	IF TALENT:尻穴狂い && EXP:結腸経験 >= 5
+		PRINTFORML [177] 獲得[結腸性感]
+		IS_GET:177 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[結腸性感]　　　（要:[尻穴狂]＆結腸経験5）_L"
+	ENDIF
+ENDIF
+
+IF ABL:技巧 >= 5
+	PRINTFORML [200] 降低提升過度的技巧(現在{ABL:技巧}LV)
+	IS_GET:200 = 1
+ENDIF
+IF EXP:経験値/NUM("経験値：素質獲得") > 10
+	PRINTFORML [201] 多次进行体力+200
+	IS_GET:201 = 1
+ENDIF
+
+IF TALENT:具現 == 0 && COND("具現変更禁止") == 0
+	IF COND("種族：悪魔") || COND("種族：魔法使") || COND("種族：妖术使") || COND("種族：淫魔")
+		PRINTFORML [231] 獲得[具現]
+		IS_GET:231 = 1
+	ELSE
+		CALL PRINT_STR, "暗灰色_[ ×] 獲得[具現]　　　　　（要:[魔法使] or [妖术使] or [悪魔] or [淫魔]）_L"
+	ENDIF
+ENDIF
+
+
+PRINTL [999] 返回
+
+CALL INPUT_SELECT, 300, 999
+
+CHOICE = RESULT
+
+IF CHOICE == 999
+	REDRAW 1
+	RETURN 0
+ELSEIF IS_GET:CHOICE == 0
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+ELSEIF EXP:経験値 < NUM("経験値：素質獲得")
+	PRINTW 經驗值不足
+	REDRAW 1
+	RETURN 0
+ENDIF
+
+SELECTCASE CHOICE
+CASE 0
+	MAXBASE:体力 += 200
+	BASE:体力 += 200
+	PRINTFORMW 体力值上昇200
+CASE 200
+	$INPUT_LOOP
+	MEMO_LINECOUNT2 = LINECOUNT
+	PRINTL 
+	PRINTFORML 現在的技巧為{ABL:技巧}LV
+	PRINTFORML 要降低到多少級呢？ 請輸入0～{ABL:技巧 - 1}範圍內的值。放棄更改時請輸入[100]
+	PRINTFORML 順便、%CALLNAME:MASTER%的技巧是{ABL:MASTER:技巧}LV
+	PRINTL 
+	PRINTL [100]果然還是放棄
+	CALL INPUT_SELECT, ABL:技巧, 100
+	CHOICE = RESULT
+
+	SELECTCASE CHOICE
+	CASE 100
+		CLEARLINE LINECOUNT - MEMO_LINECOUNT
+		RESTART
+	CASEELSE
+		PRINTFORML 真的要下降至{CHOICE}LV嗎？
+		CALL PRINT_SELECT, "是/否"
+		IF RESULT == 0
+			PRINTFORMW 技巧從{ABL:技巧}LV下降至{CHOICE}LV
+			ABL:技巧 = CHOICE
+		ELSE
+			CLEARLINE LINECOUNT - MEMO_LINECOUNT2
+			GOTO INPUT_LOOP
+		ENDIF
+	ENDSELECT
+CASE 201
+	$INPUT_LOOP2
+	MEMO_LINECOUNT2 = LINECOUNT
+	PRINTL 
+	PRINTFORML 現在的体力为{MAXBASE:体力}
+	CALL PRINT_STRL, @"要进行几次+200呢？ 请输入0～_黄色_{EXP:経験値/NUM("経験値：素質獲得")}_范围内的数字。取消的话请输入[  0]"
+	PRINTFORML 顺便、%CALLNAME:MASTER%的体力为{MAXBASE:MASTER:体力}
+	PRINTL 
+	SIF EXP:経験値/NUM("経験値：素質獲得") > 10
+		PRINTL [ 10]10回
+	SIF EXP:経験値/NUM("経験値：素質獲得") > 100
+		PRINTL [100]100回
+	PRINTFORML [{EXP:経験値/NUM("経験値：素質獲得"), 3}]用光所有的経験値
+	PRINTL [  0]还是算了
+	CALL INPUT_SELECT, EXP:経験値/NUM("経験値：素質獲得") + 1
+	CHOICE = RESULT
+
+	SELECTCASE CHOICE
+	CASE 0
+		CLEARLINE LINECOUNT - MEMO_LINECOUNT
+		RESTART
+	CASEELSE
+		CALL PRINT_STRL, @"真的要将最大体力增加_黄色_{CHOICE*200}_吗？"
+		CALL PRINT_STRL, @"最大体力: {MAXBASE:体力} -> {MAXBASE:体力 + CHOICE*200} (+_黄色_{CHOICE*200}_)"
+		CALL PRINT_STRL, @"  経験値: {EXP:経験値} -> {EXP:経験値 - CHOICE*NUM("経験値：素質獲得")} (-_黄色_{CHOICE*NUM("経験値：素質獲得")}_)"
+		CALL PRINT_SELECT, "是/否"
+		IF RESULT == 0
+			CALL PRINT_STRL, @"最大体力增加了_黄色_{CHOICE*200}_"
+			CALL PRINT_STRL, @"最大体力: {MAXBASE:体力} -> {MAXBASE:体力 + CHOICE*200} (+_黄色_{CHOICE*200}_)"
+			CALL PRINT_STRL, @"  経験値: {EXP:経験値} -> {EXP:経験値 - CHOICE*NUM("経験値：素質獲得")} (-_黄色_{CHOICE*NUM("経験値：素質獲得")}_)"
+			MAXBASE:体力 = MAXBASE:体力 + CHOICE*200
+			BASE:体力 = BASE:体力 + CHOICE*200
+			;1回は後で消費するので CHOICE-1 回だけここで追加で消費する
+			EXP:経験値 -= NUM("経験値：素質獲得")*(CHOICE - 1)
+			ABL:素質獲得回数 += CHOICE - 1
+		ELSE
+			CLEARLINE LINECOUNT - MEMO_LINECOUNT2
+			GOTO INPUT_LOOP2
+		ENDIF
+	ENDSELECT
+CASE 37
+	TALENT:性器年齢 += 1
+	SELECTCASE TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢)
+	CASE "性器年齢", TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢 - 1)
+		PRINTFORMW 性器年齢+1
+	CASEELSE
+		PRINTFORMW 性器年齢が+1、变成了[%TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢)%]
+	ENDSELECT
+CASE 38
+	TALENT:性器年齢 -= 1
+	SELECTCASE TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢)
+	CASE "性器年齢", TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢 + 1)
+		PRINTFORMW 性器年齢が-1されました
+	CASEELSE
+		PRINTFORMW 性器年齢が-1され、[%TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:性器年齢)%]成为了
+	ENDSELECT
+;以下は素質名で判定
+CASEELSE
+	SELECTCASE TALENTNAME:CHOICE
+	CASE "調教知識"
+		LOCAL = TALENT:調教知識
+		CALL SETFLAG, "調教知識の選択", TARGET
+		SIF TALENT:調教知識 == LOCAL
+			RESTART
+	CASE "气味弱点"
+		TALENT:CHOICE = 1
+		PRINTFORMW 獲得[%TALENTNAME:CHOICE%]
+		IF TALENT:汚臭鈍感
+			TALENT:汚臭鈍感 = 0
+			PRINTFORMW 同時、失卻[污臭鈍感]
+		ENDIF
+	;純粋喪失
+	CASE "不易濕"
+		TALENT:CHOICE = 0
+		PRINTFORMW 失卻[%TALENTNAME:CHOICE%]
+	;逆転
+	CASE "早漏", "遅漏"
+		IF TALENT:CHOICE
+			TALENT:CHOICE = 0
+			PRINTFORMW 失卻[%TALENTNAME:CHOICE%]
+		ELSE
+			TALENT:CHOICE = 1
+			PRINTFORMW 獲得[%TALENTNAME:CHOICE%]
+		ENDIF
+	;それ以外は純粋獲得
+	CASEELSE
+		TALENT:CHOICE = 1
+		PRINTFORMW 獲得[%TALENTNAME:CHOICE%]
+	ENDSELECT
+ENDSELECT
+
+EXP:経験値 -= NUM("経験値：素質獲得")
+ABL:素質獲得回数 += 1
+
+SIF COND("素質獲得可能")
+	RESTART
+
+REDRAW 1
+

@@ -1,0 +1,346 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;X1は角色番号に置換してください
+;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+@WISH_K47_ADDSELECT
+;これどんどん長くなっていきそう
+IF TALENT:Ｖ妊娠不能 && CEVENT("身体を元に戻して") && CEVENT("身体を元に戻した") == 0
+	IF FIND_COND("現在存在", "助手", "奥丝卡") && BASE:MASTER:魂 >= 101
+		STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("呪いを解いて要", 16)% … %CALLNAME:ASSI%に%CALLNAME:TARGET%の淫紋と避妊の護符を外せないか交渉します/
+	ELSEIF FIND_COND("現在存在", "助手", "種族：驱魔人")
+		STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("呪いを解いて要", 16)% … %CALLNAME:ASSI%に%CALLNAME:TARGET%の淫紋と避妊の護符を外せないか交渉します/
+	ENDIF
+ENDIF
+
+;詳しくは@FIND_COND参照。@CONDにおける現在存在、助手、奥丝卡を満たす場合 == 1を満たす　魂が1.0以上ある
+@KOJO_WISH_K47_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "呪いを解いて要",
+	IF FIND_COND("現在存在", "助手", "奥丝卡") 
+		PRINTFORMW 你正在向奥斯卡询问能不能解除莉迪亚的护符。
+		PRINTFORML 
+		CALL PRINT_STRL, "黄色_- 奥丝卡 -_"
+		PRINTFORMW 『原来如此，正在为解除不了避孕的护符而感到困扰。』
+		PRINTFORMW 『好吧，我能帮你解開』
+		CALL PRINT_STRL, "黄色_- 莉迪亚 -_"
+		PRINTFORMW 「可以吗？但是听说要让恶魔视线愿望，好像必需要献上灵魂？%CNAME("一人称")%没有足够的灵魂来支付哦？」
+		CALL PRINT_STRL, "黄色_- 奥丝卡 -_"
+		PRINTFORMW 『就算你没有足够的灵魂也会支付，没错吧？%CNAMET(ASSI, "二人称")%。』
+		PRINTFORMW 你回答说当然。
+		CALL PRINT_STRL, "黄色_- 莉迪亚 -_"
+		PRINTFORMW 「谢谢你，%CALLNAME:ASSI%小姐，支付灵魂的%CNAME("二人称")%也是。%CNAME("一人称")%永元不会忘记你们两人为我做的一切的。」
+		PRINTFORMW 以你的灵魂为代价，莉迪亚的护符被完全解除了
+
+		;魂のやり取り　奥丝卡に魂を払う処理
+		CALL EXCHANGE_SOUL, "取引", 100, ASSI
+
+	;詳しくは@FIND_COND参照。@CONDにおける現在存在、助手、玛丽を満たす場合 == 1を満たす
+	ELSEIF FIND_COND("現在存在", "助手", "玛丽")
+		PRINTFORMW 你正在正向%CALLNAME:ASSI%询问能不能解除莉迪亚的护符。
+		PRINTFORML 
+		CALL PRINT_STRL, "黄色_- 玛丽 -_"
+		PRINTFORMW 『原来如此，因为被迫打上避孕的护符而感到困扰吗。』
+		PRINTFORMW 『没问题的哟，现在就可以解除。』 
+		CALL PRINT_STRL, "黄色_- 莉迪亚 -_"
+		PRINTFORMW 「可以吗？%CNAME("一人称")%没有任何能支付给你的东西。」
+		CALL PRINT_STRL, "黄色_- 玛丽 -_"
+		PRINTFORMW 『有困难时就要互相帮助嘛』
+		CALL PRINT_STRL, "黄色_- 莉迪亚 -_"
+		PRINTFORMW 「谢谢%CNAME(@"{FIND_COND("玛丽")}")%。我永远不会忘记你对我的帮助的。」
+		PRINTFORMW 在%CALLNAME:ASSI%的帮助下莉迪亚的护符被完全解除了
+	ELSE
+		;現状帕拉奇娜専用。口上がない驱魔人がいればここに来るはず
+		;【余談】
+		;実の所、@FIND_CONDは複数の@COND条件をすべて満たす場合==1を返すのでFIND_COND("種族：驱魔人", "現在存在", "助手")にまとめられる
+		;あえて分けた理由は@CONDの解説の為。COND("XXX", ASSI)の後半部分はARG、TARGET、ASSI、MASTER等でなければ成立しない。"助手"の様な文字列は弾かれる
+		PRINTFORMW 你正在正向%CALLNAME:ASSI%询问，能不能解除莉迪亚的护符。
+		PRINTFORMW …看来似乎愿意帮忙解除莉迪亚的护符！
+		PRINTFORMW 「谢谢你%CALLNAME:ASSI%。我永远不会忘记你对我的帮助的。」
+		PRINTFORMW 在%CALLNAME:ASSI%的帮助下莉迪亚的护符被完全解除了。
+	ENDIF
+	CALL SET_CEVENT, "身体を元に戻した"
+	TALENT:吸精体質 = 0
+	TALENT:Ｖ妊娠不能 = 0
+	MARK:淫紋 = 0
+	;彼女に手を出してなければ元に返回部分が増える。条件が厳しすぎる気もするがとりあえずこれで。というかeraできれい清爽元に戻して给ことの需要はあるのか？
+	IF CEVENT("調教開始：初調教") == 0
+		TALENT:Ｖ名器 = 2
+		TALENT:母乳体質 = 0
+		ABL:Ｃ感覚 = 0
+		ABL:Ｂ感覚 = 0
+		ABL:Ｖ感覚 = 0
+		ABL:尿道感覚 = 0
+	ENDIF
+ENDSELECT
+
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K47_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K47_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+ENDSELECT
+
+;-------------------------------------------------
+;互动指令の選択肢を追加
+
+;hokaguru	@付きは関数宣言	ここで一括の処理なので２つ以上は要らないとおぼえておけばおーけい
+@DAILY2_K47_ADDSELECT
+;hokaguru	多分これが一番スマート　実際の内容は下の関数で分岐させる
+SIF BASE:MASTER:魂 >= 100 && BASE:MASTER:精力 >= 10
+	STR:選択肢 += "供给血液/"
+
+SIF DEVENT("托一托胸部") > 0
+	STR:選択肢 += "从乳頭挤奶/"
+
+SIF DEVENT("托一托胸部") > 0
+	STR:選択肢 += "玩弄小豆豆/"
+
+SIF DEVENT("托一托胸部") > 0
+	STR:選択肢 += "玩弄小穴/"
+
+
+
+@KOJO_DAILY2_K47_ADDSELECT, ARGS
+SELECTCASE ARGS
+;同じ血を渡す、とするなら名前で処理を判断している為被るとエラーになる。
+;なので血を渡すに入った場合に選択肢追加の条件で就这様で内容を分岐させる
+;上の選択肢追加を削るのも考えたけど多分
+CASE "血を渡す"
+	IF BASE:欲求不満 == 100 && COND("発情期")
+		PRINTFORMW 产生了某种强烈的讨厌的预感…现在把血液交出去似乎会发生很危险的事…即便如此也要把血液交%CALLNAME:TARGET%吗？
+		CALL PRINT_SELECT, "转让血液/还是算了"
+		SELECTCASE RESULT
+		CASE 0
+			PRINTFORMW 「可以吗？谢谢。那我就不客气地收下了呐!」
+			PRINTFORML 这句话说完之后，突然把你推倒在地，然后一口咬在你的喉咙上！
+			PRINTFORMW 感受到剧烈痛觉的同时你的意识越来越模糊…
+			PRINTFORML
+			PRINTFORML
+			PRINTFORML
+			;この辺りはそれっぽい系统信息
+			CALL PRINT_STR, "紅_＜复活！＞_W_"
+			PRINTFORMW %CALLNAME:MASTER%使用最后的一丝力气，嘶声竭力般复活了
+			PRINTFORML 　【%CALLNAME:TARGET%の恭順の珠　+400】
+			PRINTFORMW 　【%CALLNAME:TARGET%对%CALLNAME:MASTER%的好感　+30】
+			;この辺りは随意平衡決めて
+			CFLAG:好感度 += 30
+			BASE:MASTER:魂 = 1
+			BASE:MASTER:精力 = 1
+			JUEL:恭順 += 400
+			BASE:欲求不満 -= 100
+		CASE 1
+			PRINTFORMW 果然还是算了…
+		ENDSELECT
+	ELSEIF BASE:欲求不満 >= 1
+			PRINTFORMW 「可以吗？谢谢。那我就不客气地收下了呐」
+			PRINTFORMW 这句话说完之后抱住了我，朝着耳朵低语了什么，然后咬在了我的脖子上
+			PRINTFORML 頭脑逐渐变得昏沉…
+			;この辺りはそれっぽい系统信息
+			PRINTFORML 　【%CALLNAME:MASTER%の魂-0.50】
+			PRINTFORML 　【%CALLNAME:MASTER%の精力-10】
+			PRINTFORML 　【%CALLNAME:TARGET%の恭順の珠　+300】
+			PRINTFORMW 　【%CALLNAME:TARGET%对%CALLNAME:MASTER%的好感　+20】
+			CFLAG:好感度 += 20
+			BASE:MASTER:魂 -= 50
+			BASE:MASTER:精力 -= 10
+			JUEL:恭順 += 300
+			BASE:欲求不満 -= 70
+	;hokaguru どれにも掛からなかった場合ここにいく
+	ELSE
+		PRINTFORMW 「谢谢，但是我现在已经没问题了哟」
+	ENDIF
+CASE "乳絞り"
+	IF (CHARA_NUM("室内の邪魔者") || PLACE("個室") == 0)
+		PRINTFORMW 「希望你能注意一下时间和场所呐？」
+		IF COND("男性")
+			PRINTFORMW 在她咏唱什么东西的一瞬间，射精感涌上了你的阴茎!
+			PRINTFORMW 你就像失禁了一样射精了…
+			PRINTFORMW 褲子上有一片污渍在不断扩大…
+		ELSE
+			PRINTFORMW 在她咏唱什么东西的一瞬间。从你的腰部传来了触电般的强烈快感!
+			IF TALENT:扶她
+				PRINTFORMW 保持着跪着的姿势，你像失禁了一样同时射精和高潮了！
+				PRINTFORMW 裙子下面已经湿透，各种液体滴答滴答地滴在床上…
+			ELSE
+				PRINTFORMW 保持着跪着的姿势，你像失禁了一样一边潮吹一边高潮了！
+				PRINTFORMW 裙子下面已经湿透，从小穴流出的液体滴答滴答地滴在床上…
+			ENDIF
+		ENDIF
+		PRINTFORMW 「欲求不满现在缓解一点了吗？至少要注意时间和场合呐？」
+		BASE:MASTER:精力 = 1
+	ELSE
+		;初めて
+		;IF DEVENT(STR:日常イベント名) == 0
+			PRINTFORMW 「诶？想给%CNAME("一人称")%挤奶？」
+			PRINTFORMW 「你的精神还正常吗？」
+			PRINTFORMW 「唔姆，嘛，必竟约定好了呢。给你摸一摸也可以哟。」
+		; 二回目以降の条件分岐がまだ書けないのでとりあえず書いたものを置いておく（恐らくコメントアウト外しただけでは乳絞り成功しなくても成功した扱いになるのでは
+		;ELSE
+		;	PRINTFORMW 「え？またやるの？」
+		;	PRINTFORMW 「唔姆，嘛，必竟约定好了呢。给你摸一摸也可以哟。」
+		;ENDIF
+		IF BASE:精力 >= 6
+			PRINTFORMW 将她的乳房袒露出来，你拿着准备好的杯子開始榨乳。
+			PRINTFORMW 将乳頭用手指捏住然后轻轻一拉，像这样刺激一下母乳就流了出来…
+			PRINTFORML %CALLNAME:MASTER%の精力+5
+			PRINTFORML %CALLNAME:TARGET%の精力-5
+			BASE:MASTER:精力 += 5
+			BASE:精力 -= 5
+			PRINTFORMW 「诶，你要把这个喝掉吗？」
+		ELSE
+			PRINTFORMW 然而，无论怎么尝试都没有母乳流出...
+		ENDIF
+	ENDIF
+CASE "豆弄り"
+	IF (CHARA_NUM("室内の邪魔者") || PLACE("個室") == 0)
+		PRINTFORMW 「希望你能注意一下时间和场所呐？」
+		IF COND("男性")
+			PRINTFORMW 在她咏唱什么东西的一瞬间，射精感涌上了你的阴茎!
+			PRINTFORMW 你就像失禁了一样射精了…
+			PRINTFORMW 褲子上有一片污渍在不断扩大…
+		ELSE
+			PRINTFORMW 在她咏唱什么东西的一瞬间。从你的腰部传来了触电般的强烈快感!
+			IF TALENT:扶她
+				PRINTFORMW 保持着跪着的姿势，你像失禁了一样同时射精和高潮了！
+				PRINTFORMW 裙子下面已经湿透，各种液体滴答滴答地滴在床上…
+			ELSE
+				PRINTFORMW 保持着跪着的姿势，你像失禁了一样一边潮吹一边高潮了！
+				PRINTFORMW 裙子下面已经湿透，从小穴流出的液体滴答滴答地滴在床上…
+			ENDIF
+		ENDIF
+		PRINTFORMW 「欲求不满现在缓解一点了吗？至少要注意时间和场合呐？」
+		BASE:MASTER:精力 = 1
+	;精力ガン無視でイキ地獄とかやりたいけどいろいろと問題快要醒了で怖い
+	ELSEIF BASE:精力 <= 6
+		PRINTFORMW 「抱歉，我已经累了。希望今天不要玩弄%CNAME("一人称")%的身体了。」
+	ELSE
+		PRINTFORMW 「诶？想玩弄%CNAME("一人称")%的阴蒂？不是去床上做而是就直接就这么做？」
+		PRINTFORMW 「你说这话是认真的吗？」
+		PRINTFORMW 「唔姆，嘛，必竟约定好了呢。给你摸一摸也可以哟。」
+		PRINTFORM %CALLNAME:PLAYER%将
+		SIF EQUIP:胖次
+			PRINTFORM %TEXTR("手伸入了%CALLNAME:TARGET%的胖次里/手包在了%CALLNAME:TARGET%的胖次上/%CALLNAME:TARGET%的胖次挪開")%
+		PRINTFORMW 開始抚摸敏感的小豆豆。
+		;胖次履いてる時の条件分岐はこれで動くとと信じたい。PRINTFORM君は初めて使います。想像どうりの挙動をしてると信じたい
+		IF TALENT:淫乱
+			PRINTFORM %CALLNAME:PLAYER%%TEXTR("用跳蛋刺激阴蒂/用手指来回挑弄阴蒂/画圈圈一样进行爱抚/对阴蒂根部进行刺激/轻轻按压阴蒂/在狭缝里来回摩擦")%，%CALLNAME:TARGET%感到十分開心，
+		ELSE
+			PRINTFORM %CALLNAME:PLAYER%%TEXTR("用跳蛋刺激阴蒂/用手指来回挑弄阴蒂/画圈圈一样进行爱抚/对阴蒂根部进行刺激/轻轻按压阴蒂/在狭缝里来回摩擦")%，%CALLNAME:TARGET%对此产生了反应，
+		ENDIF
+		PRINTFORMW 敏感な場所への很强刺激に%TEXTR(@"腰を浮かして/发出甜美的声音て/悶えて/股を強く閉じて/%CALLNAME:PLAYER%の手を押さえて")%いる…
+		;跳蛋所持の条件分岐が書けません(血涙。もし問題あったら跳蛋の部分は引っこ抜いてくださいな
+		;;PRINTFORMW 「ちょ、ちょっと！激しいって！もっと温柔的してよ！」
+		PRINTFORMW %CALLNAME:TARGET%通过%TEXTR(@"声を我慢しながら/膝をがくがくと揺らしながら/足をぴんと延ばしながら/发出甜美的声音ながら/%CALLNAME:PLAYER%の手を強く抑え押さえて")%%TEXTR("潮/尿")%を%TEXTR("圆圈で漏らすように/胖次に帯污迹的ができる程度に/激烈地")%出しながら絶頂した。
+		PRINTFORMW 在肩膀上下起伏地呼吸着的同时沉浸在高潮的余韵里，液体像涓流一样从小穴内不断流出…
+		PRINTFORML %CALLNAME:TARGET%の精力-5
+		;PRINTFORML %CALLNAME:MASTER%の手淫経験＋30
+		BASE:精力 -= 5
+		EXP:MASTER:手淫経験 += 30
+		;EXP:MASTER:手淫経験 += 30でも平衡ぶっ壊すリスクがあれば下げても大丈夫です
+	ENDIF
+CASE "壺弄り"
+	IF (CHARA_NUM("室内の邪魔者") || PLACE("個室") == 0)
+		PRINTFORMW 「希望你能注意一下时间和场所呐？」
+		IF COND("男性")
+			PRINTFORMW 在她咏唱什么东西的一瞬间，射精感涌上了你的阴茎!
+			PRINTFORMW 你就像失禁了一样射精了…
+			PRINTFORMW 褲子上有一片污渍在不断扩大…
+		ELSE
+			PRINTFORMW 在她咏唱什么东西的一瞬间。从你的腰部传来了触电般的强烈快感!
+			IF TALENT:扶她
+				PRINTFORMW 保持着跪着的姿势，你像失禁了一样同时射精和高潮了！
+				PRINTFORMW 裙子下面已经湿透，各种液体滴答滴答地滴在床上…
+			ELSE
+				PRINTFORMW 保持着跪着的姿势，你像失禁了一样一边潮吹一边高潮了！
+				PRINTFORMW 裙子下面已经湿透，从小穴流出的液体滴答滴答地滴在床上…
+			ENDIF
+		ENDIF
+		PRINTFORMW 「欲求不满现在缓解一点了吗？至少要注意时间和场合呐？」
+		BASE:MASTER:精力 = 1
+	;精力ガン無視でイキ地獄とかやりたいけどいろいろと問題快要醒了で怖い
+	ELSEIF BASE:精力 <= 6
+		PRINTFORMW 「抱歉，我已经累了。希望今天不要玩弄%CNAME("一人称")%的身体呐」
+	ELSE
+		PRINTFORMW 「诶？想玩弄%CNAME("一人称")%的小穴？不是想要把那个东西放进去而只是想玩弄小穴？」
+		PRINTFORMW 「虽然不知道你想做什么…」
+		PRINTFORMW 「唔姆，嘛，毕竟约定好了呢，可以哟。」
+		PRINTFORM %CALLNAME:PLAYER%将
+		SIF EQUIP:胖次
+			PRINTFORM %TEXTR("手伸入%CALLNAME:TARGET%的胖次里/%CALLNAME:TARGET%的胖次挪開")%
+		PRINTFORMW 開始爱抚敏感的小穴。
+		;胖次履いてる時の条件分岐はこれで動くとと信じたい。PRINTFORM君は初めて使います。想像どうりの挙動をしてると信じたい
+		IF TALENT:淫乱
+			PRINTFORM %CALLNAME:PLAYER%%TEXTR("使用振动棒按摩阴蒂/使用振动棒刺激G点/在小穴里不断蠕动手指/将振动棒插入小穴深处/用振动棒来回摩擦/用手指来回摩擦G点/用手指来回拨弄G点/用手指插入小穴深处")%，%CALLNAME:TARGET%感到開心，
+		ELSE
+			PRINTFORM %CALLNAME:PLAYER%%TEXTR("使用振动棒按摩阴蒂/使用振动棒刺激G点/在小穴里不断蠕动手指/将振动棒插入小穴深处/用振动棒来回摩擦/用手指来回摩擦G点/用手指来回拨弄G点/用手指插入小穴深处")%，%CALLNAME:TARGET%对此产生了反应，
+		ENDIF
+		PRINTFORMW 敏感な場所への很强刺激に%TEXTR(@"腰を浮かして/发出甜美的声音て/悶えて/股を強く閉じて/%CALLNAME:PLAYER%の手を押さえて")%いる…
+		;跳蛋所持の条件分岐が書けません(血涙。もし問題あったら振動棒の部分は引っこ抜いてくださいな
+		;PRINTFORMW 「ちょ、ちょっと！激しいって！もっと温柔的してよ！」
+		PRINTFORMW %CALLNAME:TARGET%通过%TEXTR(@"声を我慢しながら/膝をがくがくと揺らしながら/足をぴんと延ばしながら/发出甜美的声音ながら/%CALLNAME:PLAYER%の手を強く抑え押さえて")%%TEXTR("潮/尿")%を%TEXTR("圆圈で漏らすように/胖次に帯污迹的ができる程度に/激烈地")%出しながら絶頂した。
+		PRINTFORMW 在肩膀上下起伏地呼吸着的同时沉浸在高潮的余韵里，液体像涓流一样从小穴内不断流出…
+		PRINTFORML %CALLNAME:TARGET%の精力-5
+		;PRINTFORML %CALLNAME:MASTER%の手淫経験＋30
+		BASE:精力 -= 5
+		EXP:MASTER:手淫経験 += 30
+		;EXP:MASTER:手淫経験 += 30でも平衡ぶっ壊すリスクがあれば下げても大丈夫です
+ 	ENDIF
+ENDSELECT
+
+;--------------------------
+;约会行き先の選択肢を追加。
+@DATE_K47_ADDSELECT
+;ここで増やした選択肢を選ぶと、それがSAVESTR:约会 に代入される仕組みです
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+@KOJO_DATE_K47_ADDSELECT
+SELECTCASE SAVESTR:约会
+CASE "追加選択肢その１"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応存疑
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+CASE "追加選択肢之２"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応存疑
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+ENDSELECT
+

@@ -1,0 +1,628 @@
+﻿;かんたん卡莉斯塔とまぐろうを並べてカーソルを合わせると吹き出しが出る
+@SAMPLE_02
+CALL EFFECT_ALLRESET
+CALL BACKGROUND_GSC, "0青空+0xAF000000"
+WAIT 
+CALL POPUP_SPRIT, "K15_鞄", X_ALIGN(300, "中央") - 200, Y_VALIGN(300, "中央"), 300, 300
+CALL POPUP_SPRIT, "K15_鞄", X_ALIGN(300, "中央") + 200, Y_VALIGN(300, "中央"), 300, 300
+CALL POPUP_BUTTON, "21对话框開心", X_ALIGN(300, "中央") - 200, Y_VALIGN(300, "中央"), 300, 300
+CALL POPUP_BUTTON, "21对话框開心", X_ALIGN(300, "中央") + 200, Y_VALIGN(300, "中央"), 300, 300
+WAIT 
+CALL POPUP_SELECT
+CALL EFFECT_ALLRESET
+IF POPUP_RESULT == 0
+	PRINTFORMW かんたん卡莉斯塔
+ELSEIF POPUP_RESULT == 1
+	PRINTFORMW まぐろう
+ELSE
+	WAIT
+ENDIF
+
+
+@K15_POPB, ARGS, BUTTON_XPOS, BUTTON_YPOS, BUTTON_WIDTH, BUTTON_HEIGHT
+	#DIM DYNAMIC LCOUNT
+	#DIM DYNAMIC SPLIT_COUNT
+	#DIM DYNAMIC BUTTON_ID
+	#DIM DYNAMIC BUTTON_VALUE
+	#DIM DYNAMIC BUTTON_XPOS
+	#DIM DYNAMIC BUTTON_YPOS
+	#DIM DYNAMIC BUTTON_WIDTH
+	#DIM DYNAMIC BUTTON_HEIGHT
+	#DIMS DYNAMIC BUTTON_NAME
+
+	BUTTON_ID = POPUP_SETB_COUNT + 40
+	SIF BUTTON_ID >= 50
+		RETURN 0
+	BUTTON_VALUE = POPUP_SETB_COUNT
+	BUTTON_NAME = G_BUTTON%TOSTR(POPUP_SETB_COUNT, "D2")%
+
+
+	;マウスオーバー時の画像の作成
+	CALL OVERLAY_GCREATE, BUTTON_ID, ARGS, BUTTON_WIDTH, BUTTON_HEIGHT
+	SIF RESULT == 0		;作成失敗の場合は中断
+		RETURN 0
+
+	;スプライトを作成
+	SPRITECREATE BUTTON_NAME, BUTTON_ID
+
+	;ボタンMapが作成されていないなら作成
+	SIF SPRITECREATED("BMP_WAINDOW") == 0
+		;CALL BMP_WINDOW_CREATE, 0xDF000000
+		CALL BMP_WINDOW_CREATE, 0x00000000
+
+	;ボタンMapを解除
+	CBGREMOVEBMAP
+
+	;BMAPにボタンの位置を書き込む
+	GSETBRUSH 11, 0xFF000000 + BUTTON_VALUE
+	GFILLRECTANGLE 11, BUTTON_XPOS, (Y_VALIGN(BUTTON_HEIGHT, "上") * -1) + BUTTON_YPOS, BUTTON_WIDTH, BUTTON_HEIGHT		;GFILLRECTANGLEは左上基準なのでYの位置を補正する
+
+	;ボタンMap再表示
+	CBGSETBMAPG 11
+
+	;ボタン用の画像を表示
+	CBGSETBUTTONSPRITE BUTTON_VALUE, "", BUTTON_NAME, BUTTON_XPOS, BUTTON_YPOS, Z_DEPTH
+
+	Z_DEPTH -= 1
+	POPUP_SETB_COUNT += 1
+
+	RETURN 1
+
+
+@K15_Notepad
+	;主にBASE:バイオリズムで管理する
+	;0～5bit	周期日数などで使用
+	;10bit		安全日
+	;11bit		危険日
+	;12bit		排卵中（超危険状態）
+	;13bit		排卵誘発剤使用中
+	;20bit		発情中
+	
+	;0～6bit	周期日数などで使用
+	;14bit		産卵日
+	;15bit		排卵日
+	;16bit		抱卵期
+	;17bit		産卵日
+	;18bit		溶卵期
+	;19bit		月経
+	;20bit		発情期
+	;21bit		重発情日
+
+;
+@K15_NuclearTestSite_B1
+	#DIMS Temp
+	#DIMS Temp2
+	#DIMS Temp3
+	#DIM LCount
+	CALL BACKGROUND_GSC("BG自室+0x70000000")
+	$LOOP
+		CLEARLINE LINECOUNT
+	HTML_PRINT @"<nobr><nonbutton pos='{3500}'><img src='K15T_TestBody3' height='{4000}' ypos='{500}'></nonbutton></nobr>"
+	FOR Lcount, 0, 43
+		PRINTFORML 
+	NEXT 
+
+
+
+	CALL PRINT_BARH("黄色ゲージ",1500,2000,30)
+	Temp = %RESULTS%
+
+	CALL PRINT_BARH("魂ゲージ",185,200,5)
+	Temp2 = %RESULTS%
+
+	CALL PRINT_BARH("減少ゲージ",35,45,5)
+	Temp3 = %RESULTS%
+
+
+	
+
+	CALL D20XX_OS_WindowInput_Constructor
+	D20XX_OS_WindowInput:0 += @"%TEXTS("日期表示")% -槞彁的房間-"
+	D20XX_OS_WindowInput:1 += @"你 体力%Temp% 魂%Temp2%%TEXTS("0.01", BASE:MASTER:魂)% 精力%Temp2%{BASE:MASTER:精力}/{MAXBASE:MASTER:精力}"
+	D20XX_OS_WindowInput:2 += @"かにみそ大好き欧尼酱"
+	;#region
+		;D20XX_OS_WindowInput:0 += @"<nonbutton pos='1100'>- <font color = 'Yellow'>耶涅尔</font> -</nonbutton>"
+		;D20XX_OS_WindowInput:1 += @"<nonbutton pos='1100'>%PRINT_NamariF("おう、你かどうした？")%</nonbutton>"
+		;D20XX_OS_WindowInput:2 += @"<nonbutton pos='1100'></nonbutton>"
+		;D20XX_OS_WindowInput:3 += @"<nonbutton pos='1100'></nonbutton>"
+		;D20XX_OS_WindowInput:4 += @"<nonbutton pos='1100'></nonbutton>"
+		;D20XX_OS_WindowInput:5 += @"<nonbutton pos='1100'></nonbutton>"
+		;D20XX_OS_WindowInput:6 += @"<button pos='1100' value = '100'><font color = 'Yellow'>[魔界に行きたい]</font></button>"
+		;D20XX_OS_WindowInput:7 += @"<nonbutton pos='1100'></nonbutton>"
+		;D20XX_OS_WindowInput:8 += @"%RESULTS:1%<button pos='1100' value = '200'><font color = 'Yellow'>[何でもない]</font></button>"
+	;#endregion
+	CALL D20XX_OS_Window(1400,1,3800,4,,,"#505050")
+	
+	PRINTL 
+	CALL D20XX_OS_WindowInput_Constructor
+	D20XX_OS_WindowInput:0 += @"　方針 <b><i>やさいせいかつ</i></b>"
+	D20XX_OS_WindowInput:1 += @" 信頼 　76.2　心情 普通"
+	D20XX_OS_WindowInput:2 += @"性興味　12.7　性欲 5.56"
+	CALL D20XX_OS_Window(0,1,1300,4,,,"#505050")
+	
+	PRINTL 
+	CALL D20XX_OS_WindowInput_Constructor
+	D20XX_OS_WindowInput:0 += @"[能力表示与职位変更]"
+	D20XX_OS_WindowInput:1 += @""
+	D20XX_OS_WindowInput:2 += @"[コミュニケーション]"
+	D20XX_OS_WindowInput:3 += @"[身体接觸]"
+	D20XX_OS_WindowInput:4 += @"[性騷擾]"
+	D20XX_OS_WindowInput:5 += @""
+	D20XX_OS_WindowInput:6 += @"[ごはん]"
+	D20XX_OS_WindowInput:7 += @"[茶/点心]"
+	D20XX_OS_WindowInput:8 += @"[おふろ]"
+	D20XX_OS_WindowInput:9 += @"[送禮]"	
+	D20XX_OS_WindowInput:10 += @""
+	D20XX_OS_WindowInput:11 += @"[换地方]"
+	D20XX_OS_WindowInput:12 += @"[買東西]"
+	D20XX_OS_WindowInput:13 += @"[Config]"
+	D20XX_OS_WindowInput:14 += @""
+	D20XX_OS_WindowInput:15 += @"[保存]"
+	D20XX_OS_WindowInput:16 += @"[加载]"
+	D20XX_OS_WindowInput:17 += @""
+	D20XX_OS_WindowInput:18 += @"[消磨时间]"
+	CALL D20XX_OS_Window(0,8,1200,20,,,"#505050")
+
+		
+	PRINTL 
+	CALL D20XX_OS_WindowInput_Constructor
+	CALL K15_STR("「Kanny missor suckiy nang deshch kar_UH_？」")
+	CALL K15_VOCAB(RESULTS)
+	CALL D20XX_NO_NOBR2(RESULTS)
+	CALL K15_HTML_PRINT_STR(RESULTS)
+	D20XX_OS_WindowInput:0 += @"%RESULTS%"
+	CALL D20XX_OS_Window(1000,39,3800,4,,,"#505050")
+
+	WAIT
+
+@K15_TachieGenerate_Test
+
+	;
+@K15_NuclearTestSite_A1
+	REDRAW 0
+
+	;PRINTFORML 12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+	;PRINTFORML %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% %UNICODE(0x2588)% 
+	;CALL PRINT_STRL("PRINT_STRテスト _H_HH_WH_WHH_BH_BHH_BBHH_UH_／／／")
+	;PRINTFORML PRINT_STRL("PRINT_STRテスト _H_HH_WH_WHH_BH_BHH_BBHH_UH_／／／")
+	;PRINTFORML
+	;PRINTFORML
+	;HTML_PRINT @"%HUNI("H")%%HUNI("HH")%%HUNI("BH")%%HUNI("BHH")%%HUNI("WH")%%HUNI("WHH")%%HUNI("BBH")%%HUNI("BBHH")%%HUNI("BWH")%%HUNI("BWHH")%%HUNI("UH")%%HUNI("／／／")%%HUNI("U扶她")%"
+	;PRINTFORML 
+	;PRINTFORMW
+
+	D20XX_OS_WindowInput:0 = こういう感じに表示されます
+	D20XX_OS_WindowInput:1 = ０１２３４５６７８９10111213141516171819202122232425262728293031323334353637383940414243444546474849<font color='#00FF00'>505152535455565758596061</font>6263646566676869707172737475767778798081828384858687888990
+	D20XX_OS_WindowInput:2 = 右にマージンを増やした場合の表記
+	D20XX_OS_WindowInput:4 = %HUNI("H")%%HUNI("HH")%%HUNI("BH")%%HUNI("BHH")%%HUNI("WH")%%HUNI("WHH")%%HUNI("BBH")%%HUNI("BBHH")%%HUNI("BWH")%%HUNI("BWHH")%%HUNI("UH")%%HUNI("／／／")%%HUNI("U扶她")%
+	D20XX_OS_WindowInput:5 = PRINTSTR風表記テストですよ_UH_UH_UH_UH_UH_UH_UH_UH_UH_UH_UH_UH_これが正常にされているのか_U便当_、改行されるかを検証しています。
+	CALL D20XX_OS_WindowSTRFORM(0,16,3000,11,5)
+	WAIT
+
+	;ここから抽出開始
+	;０１２３
+	;４５６７８９10111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758<font color
+	;='#00FF00'>596061</font>6263646566676869707172737475767778798081828384858687888990
+	
+	STR:0 = み
+	STR:1 = ０１２３４５６７８９10111213141516171819202122232425262728293031323334353637383940414243444546474849<font color='#00FF00'>505152535455565758596061</font>6263646566676869707172737475767778798081828384858687888990
+	STR:2 = む
+	CALL K15_Tachie_PackageW(STR,"0c2+0xAF000000",1000)
+	CALL Old_Tachie_Package_ManualDelete
+
+	;MEMOS:0 = <font color="#%K15_VOICE_COLOR%">「%K15_CyrillicConverter("Anata nor sakana")%」</font>
+	STR:0 = <font color="#%K15_VOICE_COLOR%">「Коннор Рёхрий сакана гар наммар дещ кедор...」</font>
+	STR:1 = <font color="#ccffe5">『この料理は無垢な』</font>
+	CALL K15_Tachie_PackageW(STR,"0c2+0xAF000000",1000)
+	CALL Old_Tachie_Package_ManualDelete
+
+	STR:0 = <font color="#%K15_VOICE_COLOR%">自動改行テストです。</font>
+	STR:1 = <font color="#ccffe5">０１２３４５６７８９10111213141516171819202122232425262728293031323334353637383940414243444546474849<font color='#00FF00'><b>505152535455</b>565758596061</font>6263646566676869707172737475767778798081828384858687888990０１２３４５６７８９10111213141516171819202122232425262728293031323334353637383940414243444546474849<i>505152535455565758596061</i>6263646566676869707172737475767778798081828384858687888990</font>
+	STR:2 = 自動改行され、なおかつこの行は消えません
+	CALL K15_Tachie_PackageW(STR,"0c2+0xAF000000",1000)
+	CALL Old_Tachie_Package_ManualDelete
+
+	STR:0 = テ接吻ト样本%HUNI("HH")%
+	STR:1 = <font color = '#FF00C5'>色付き</font>
+	STR:2 = <button value = '100'>ボタン</button>
+	STR:3 = <b>粗大的</b>
+	STR:4 = <i>斜め</i>
+	STR:5 = <u>下線</u>
+	STR:6 = <s>取消</s>
+	STR:7 = <button value = '200'><font color = '#FF0000'><b><i><u><s>全部乗せ</b></i></u></s></font></button>
+	STR:8 = パラレル日本語→%HUNI("そそ")%%HUNI("つん")%%HUNI("なお")%%HUNI("まふ")%%HUNI("はよ")%%HUNI("ひに")%%HUNI("ゐに")%%HUNI("やよ")%%HUNI("ゐん")%%HUNI("逆あ")%%HUNI("にす")%%HUNI("もむ")%%HUNI("をね")%%HUNI("小ゐ")%%HUNI("亜漢字1")%%HUNI("亜漢字2")%%HUNI("亜漢字3")%%HUNI("亜漢字4")%
+	STR:9 = 最後の行
+	CALL Old_Tachie_PackageW("ここに表情変化を入力","0c2+0xAF000000",1000)
+	;WAIT
+	CALL Old_Tachie_Package_ManualDelete
+
+	CALL Old_Tachie_PackageW("ここに表情変化を入力","0c2+0xAF000000",1000)
+	CALL Old_Tachie_Package_ManualDelete
+
+	STR:0 = <font color="#%K15_VOICE_COLOR%">「槞彁は普段この色で話します」</font>
+	STR:1 = <font color="#ccffe5">『翻訳機はこの色で発声します』</font>
+	STR:2 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#ff96ff">この色１</font>で表示した方が良い？」</font>
+	STR:3 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#%KnownWordColor%">この色２</font>で表示した方が良い？」</font>
+	STR:4 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#%KnownWordSelectingColor%">この色３</font>で表示した方が良い？」</font>
+	STR:5 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#ed795f">この色４</font>で表示した方が良い？」</font>
+	STR:6 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#ff457d">この色５</font>で表示した方が良い？」</font>
+	STR:7 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#c20a25">この色６</font>で表示した方が良い？」</font>
+	STR:8 = 
+	STR:9 = 「何番が良いでしょうか？」
+	CALL Old_Tachie_PackageW("右腕_丁寧/左腕_丁寧/眉_困り/口_ワ/","0c2+0xAF000000",1000)
+	CALL Old_Tachie_Package_ManualDelete
+
+	;NO:TARGET = 15
+	;CALL K15_VOCAB(K15_CyrillicConverter("Kore var Example tekisto deshch"))
+	;STR:0 = <font color="#%K15_VOICE_COLOR%">「%RESULTS%」</font>
+	;CALL Old_Tachie_PackageW("右腕_丁寧/左腕_丁寧/眉_困り/口_ワ/目_ちらり/","0c2+0x00000000",1000)
+
+	;HTML_PRINT RESULTS
+
+;
+@K15_NuclearTestSite_A2
+	#DIMS Hoge
+	REDRAW 0
+
+	;CALL K15_VOCAB_SET("Exapmle")
+	;WAIT
+	;CALL K15_VOCAB_SET("Exapmle")
+
+	STR:0 = <font color="#%K15_VOICE_COLOR%">「槞彁は普段この色で話します」</font>
+	STR:1 = <font color="#ccffe5">『翻訳機はこの色で発声します』</font>
+	STR:2 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#ff96ff">この色１</font>で表示した方が良い？」</font>
+	STR:3 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#%KnownWordColor%">この色２</font>で表示した方が良い？」</font>
+	STR:4 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#%KnownWordSelectingColor%">この色３</font>で表示した方が良い？」</font>
+	STR:5 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#ed795f">この色４</font>で表示した方が良い？」</font>
+	STR:6 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#ff457d">この色５</font>で表示した方が良い？」</font>
+	STR:7 = <font color="#%K15_VOICE_COLOR%">「既知の単語は<font color="#c20a25">この色６</font>で表示した方が良い？」</font>
+	STR:8 = 
+	STR:9 = 「何番が良いでしょうか？」
+	CALL Old_Tachie_PackageW("右腕_丁寧/左腕_丁寧/眉_困り/口_ワ/","0c2+0xAF000000",1000)
+	CALL K15_VOCAB_SET("Example")
+	CALL Old_Tachie_Package_ManualDelete
+	;PRINTFORML Test
+
+	STR:0 = <font color="#%K15_VOICE_COLOR%">「槞彁は普段この色で話します」</font>
+	STR:1 = <font color="#ccffe5">『翻訳機はこの色で発声します』</font>
+	STR:2 = <font color="#c4a9c4">「フェードアウト」</font>
+	STR:3 = <font color="#706070">「フェードアウト」</font>
+	STR:4 = <font color="#2e272e">「フェードアウト」</font>
+	STR:5 = <font color="#ccffe5">「フェードアウト」</font>
+	STR:6 = <font color="#00E56E">「フェードアウト」</font>
+	STR:7 = <font color="#FFFFFF">「フェードアウト」</font>
+	STR:8 = 
+	STR:9 = 「何番が良いでしょうか？」
+	CALL Old_Tachie_PackageW("右腕_丁寧/左腕_丁寧/眉_困り/口_ワ/","0c2+0xAF000000",1000)
+	CALL K15_VOCAB_SET("Example")
+	CALL Old_Tachie_Package_ManualDelete
+
+	CALL K15_VOCAB(K15_CyrillicConverter("This is an Example text"))
+	STR:0 = %RESULTS%
+	CALL Old_Tachie_PackageW("","0c2+0xAF000000",1000)
+	CALL Old_Tachie_Package_ManualDelete
+;
+@K15_NuclearTestSite_A3
+	;CALL LIBRALY_T("立ち絵テストメッセージ")
+@K15_NuclearTestSite_A4
+	#DIM WindowXpos
+	#DIM WindowYsize
+	REDRAW 0
+	
+	WindowXpos = 1000
+	WindowYsize = 3000
+	
+	D20XX_OS_WindowInput:0 = <shape type='rect' param='0,50,600,100' color='White'>
+	D20XX_OS_WindowInput:1 = <shape type='rect' param='0,0,600,200' color='White'><nonbutton pos='{200}'><font color='#000000'>ねぇねぇ</font></nonbutton>
+	D20XX_OS_WindowInput:2 = <shape type='rect' param='0,0,600,50' color='White'>
+	CALL D20XX_OS_WindowSTRFORM(WindowXpos,4,3000,35,5,"#93AAD4","#93AAD4")
+	WAIT
+
+	PRINTL
+	D20XX_OS_WindowInput:0 = <shape type='rect' param='0,50,600,100' color='White'>
+	D20XX_OS_WindowInput:1 = <shape type='rect' param='0,0,600,200' color='White'><nonbutton pos='{200}'><font color='#000000'>ねぇねぇ</font></nonbutton>
+	D20XX_OS_WindowInput:2 = <shape type='rect' param='0,0,600,50' color='White'>
+	D20XX_OS_WindowInput:3 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,50,800,100' color='#9BE061'>
+	D20XX_OS_WindowInput:4 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,0,800,200' color='#9BE061'><nonbutton pos='{WindowYsize-700}'><font color='#000000'>どうしたの？</font></nonbutton>
+	D20XX_OS_WindowInput:5 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,0,800,50' color='#9BE061'>
+	D20XX_OS_WindowInput:6 = 
+	CALL D20XX_OS_WindowSTRFORM(WindowXpos,4,3000,35,5,"#93AAD4","#93AAD4")
+	WAIT
+
+	PRINTL
+	D20XX_OS_WindowInput:0 = <shape type='rect' param='0,50,600,100' color='White'>
+	D20XX_OS_WindowInput:1 = <shape type='rect' param='0,0,600,200' color='White'><nonbutton pos='{200}'><font color='#000000'>ねぇねぇ</font></nonbutton>
+	D20XX_OS_WindowInput:2 = <shape type='rect' param='0,0,600,50' color='White'>
+	D20XX_OS_WindowInput:3 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,50,800,100' color='#9BE061'>
+	D20XX_OS_WindowInput:4 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,0,800,200' color='#9BE061'><nonbutton pos='{WindowYsize-700}'><font color='#000000'>どうしたの？</font></nonbutton>
+	D20XX_OS_WindowInput:5 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,0,800,50' color='#9BE061'>
+	D20XX_OS_WindowInput:6 = <shape type='rect' param='0,50,1200,100' color='White'>
+	D20XX_OS_WindowInput:7 = <shape type='rect' param='0,0,1200,200' color='White'><nonbutton pos='{200}'><font color='#000000'>私的房間さ、来ない？</font></nonbutton>
+	D20XX_OS_WindowInput:8 = <shape type='rect' param='0,0,1200,50' color='White'>
+	CALL D20XX_OS_WindowSTRFORM(WindowXpos,4,3000,35,5,"#93AAD4","#93AAD4")
+	WAIT
+
+	PRINTL
+	D20XX_OS_WindowInput:0 = <shape type='rect' param='0,50,600,100' color='White'>
+	D20XX_OS_WindowInput:1 = <shape type='rect' param='0,0,600,200' color='White'><nonbutton pos='{200}'><font color='#000000'>ねぇねぇ</font></nonbutton>
+	D20XX_OS_WindowInput:2 = <shape type='rect' param='0,0,600,50' color='White'>
+	D20XX_OS_WindowInput:3 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,50,800,100' color='#9BE061'>
+	D20XX_OS_WindowInput:4 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,0,800,200' color='#9BE061'><nonbutton pos='{WindowYsize-700}'><font color='#000000'>どうしたの？</font></nonbutton>
+	D20XX_OS_WindowInput:5 = <shape type='space' param='{WindowYsize-900}'><shape type='rect' param='0,0,800,50' color='#9BE061'>
+	D20XX_OS_WindowInput:6 = <shape type='rect' param='0,50,1200,100' color='White'>
+	D20XX_OS_WindowInput:7 = <shape type='rect' param='0,0,1200,200' color='White'><nonbutton pos='{200}'><font color='#000000'>私的房間さ、来ない？</font></nonbutton>
+	D20XX_OS_WindowInput:8 = <shape type='rect' param='0,0,1200,50' color='White'>
+	D20XX_OS_WindowInput:9 = <shape type='space' param='{WindowYsize-1200}'><shape type='rect' param='0,50,1100,100' color='#9BE061'>
+	D20XX_OS_WindowInput:10 = <shape type='space' param='{WindowYsize-1200}'><shape type='rect' param='0,0,1100,200' color='#9BE061'><nonbutton pos='{WindowYsize-1000}'><font color='#000000'>分かった、待ってて</font></nonbutton>
+	D20XX_OS_WindowInput:11 = <shape type='space' param='{WindowYsize-1200}'><shape type='rect' param='0,0,1100,50' color='#9BE061'>
+	CALL D20XX_OS_WindowSTRFORM(WindowXpos,4,3000,35,5,"#93AAD4","#93AAD4")
+	WAIT
+@K15_NuclearTestSite_A5
+	REDRAW 0
+	;CALL PRINT_TUI("BG住宅街+0x70000000",TachieClass("槞彁","しょんぼり頭翼/嘟嘴/困扰眉/混乱/",90,1250,0),TachieClass("イェニェル","目陰/",90,3000,0),)
+	CALL LIBT_セリフ(@"「Konnychiva」")
+	CALL LIBT_翻訳機(@"『こんにちわ』")
+	CALL LIBT_地の文(@"３")
+	CALL LIBT_地の文(@"４")
+	CALL LIBT_地の文(@"５")
+	CALL LIBT_地の文(@"６")
+	CALL LIBT_地の文(@"７")
+	CALL LIBT_地の文(@"８")
+	CALL LIBT_地の文(@"９")
+	CALL LIBT_地の文(@"１０")
+	CALL LIBT_地の文(@"１１")
+	CALL PRINT_TUIWR("BGリビング+0x30000000",TachieClass("イェニェル",0,"目影/",90,800,300),TachieClass("槞彁",2,"惊嚇頭翼/ヮ/惊嚇呆毛/しいたけ/",90,3000,0))
+
+	CALL LIBT_イェニェル(@"「ごきげんよう」")
+	CALL LIBT_地の文(@"２")
+	CALL LIBT_地の文(@"３")
+	CALL LIBT_地の文(@"４")
+	CALL LIBT_地の文(@"５")
+	CALL LIBT_地の文(@"６")
+	CALL LIBT_地の文(@"７")
+	CALL LIBT_地の文(@"８")
+	CALL LIBT_地の文(@"９")
+	CALL LIBT_地の文(@"１０")
+	CALL LIBT_地の文(@"１１")
+	CALL PRINT_TUIWR("BGリビング+0x30000000",TachieClass("イェニェル",2,"/",90,800,300),TachieClass("槞彁",0,"/",90,3000,0))
+
+	CALL LIBT_セリフ(@"「Kolle var」")
+	CALL LIBT_翻訳機(@"『これは』")
+	CALL LIBT_地の文(@"３")
+	CALL LIBT_地の文(@"４")
+	CALL LIBT_地の文(@"５")
+	CALL LIBT_地の文(@"６")
+	CALL LIBT_地の文(@"７")
+	CALL LIBT_地の文(@"８")
+	CALL LIBT_地の文(@"９")
+	CALL PRINT_TUIWR("BGリビング+0x30000000",TachieClass("イェニェル",0,"ムッ/",90,800,300),TachieClass("槞彁",2,"微笑４/爱心呆毛/笑颜/",90,2800,0))
+
+	CALL LIBT_セリフ(@"「Kolle var」")
+	CALL LIBT_翻訳機(@"『これは』")
+	CALL LIBT_地の文(@"　")
+	CALL LIBT_イェニェル(@"「対話シーンのテストだ」")
+	CALL LIBT_セリフ(@"「Test deshch」")
+	CALL LIBT_翻訳機(@"『テストです』")
+	CALL PRINT_TUIWRA("BGリビング+0x30000000",TachieClass("イェニェル",2,"/",90,1000,300),TachieClass("槞彁",1,"通常頭翼/ヮ/困扰眉/爱心呆毛/笑颜/",90,2800,0))
+
+	CALL LIBT_地の文(@"旧UIと新UIを分けずに書く事が出来るよう成为了！")
+	CALL PRINT_TUIWR("BGリビング+0x30000000",TachieClass("イェニェル",0,"/",90,-1600,300),TachieClass("槞彁",0,"全裸/惊嚇頭翼/半開４/惊嚇呆毛/混乱/",90,2000,0))
+
+		CALL D20XX_Generate_UniqueFcsv, "イェニェル"
+		CALL D20XX_FACE_FcsvToSprite(RESULTS)
+		CALL D20XX_FACE_Packaging(RESULTS)
+		RESULTS = %CONVERTSTR(RESULTS)%
+		CALL D20XX_NO_NOBR(RESULTS)
+		CALL D20XX_OS_SpriteYposReverse(RESULTS)
+		CALL D20XX_OS_WindowInput_Constructor
+		LOCALS = %RESULTS%
+	CALL LIBT_選択肢("そうだね/違うと思う/そうかな")
+	CALL LIBT_イェニェル(@"「どう思う？」")
+	CALL LIBT_地の文(@"２")
+	CALL LIBT_地の文(@"３")
+	CALL LIBT_地の文(@"４")
+	CALL LIBT_地の文(@"５")
+	CALL LIBT_地の文(@"６")
+	CALL LIBT_地の文(@"７")
+	CALL LIBT_地の文(@"８")
+	CALL LIBT_地の文(@"%LOCALS%")
+	CALL PRINT_TUIQR("BGリビング+0x30000000",TachieClass("イェニェル",2,"/",90,800,300),TachieClass("槞彁",0,"/",90,3000,0))
+	SELECTCASE RESULT
+		CASE 0
+			PRINTFORMW １が押されたわよ
+		CASE 1
+			PRINTFORMW ２が押された
+		CASE 2
+			PRINTFORMW ３が押されたと思う
+	ENDSELECT 
+	PRINTL ↑↑↑↑↑
+	PRINTFORMW ログはこのような形で残ります
+	
+	CALL EFFECT_ALLRESET
+@K15_Tachie_PackageW(TachieTextInput,TachieChange,Xpos)
+	#DIMS DYNAMIC TachieTextInput,10
+	#DIMS DYNAMIC TachieChange
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Lcount
+	[IF_DEBUG]
+		#DIM DYNAMIC MEMO_TARGET
+		MEMO_TARGET = NO:TARGET
+		NO:TARGET = 15
+	[ENDIF]
+	VARSET RESULTS:0, ""
+	FOR Lcount,0,10
+		CALL K15_VOCAB(STR:Lcount)
+		STR:Lcount = %RESULTS%
+		VARSET RESULTS:0, ""
+	NEXT
+	;CALL Old_Tachie_PackageW(TachieChange,"D20XX_Title+0xAF000000")
+	CALL Old_Tachie_PackageW(TachieChange,TachieChange,Xpos)
+	;CALL Old_Tachie_PackageW(TachieChange,"D20XX_Title+0x60000000")
+
+	VARSET STR, "", 0 , 20
+
+	[IF_DEBUG]
+		NO:TARGET = MEMO_TARGET
+	[ENDIF]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;;槞彁以外がTachiePackageを使えるようにするための奴
+@OLD_Tachie_Package(TachieChange,BackGround,Xpos)
+	#DIMS DYNAMIC TachieChange
+	#DIMS DYNAMIC BackGround
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Lcount
+
+	CALL BACKGROUND_GSC(BackGround)
+	FOR Lcount,0,10
+		D20XX_OS_WindowInput:Lcount = %STR:Lcount%
+	NEXT
+	;スクロールアップすれば過去ログを読めるように、読みやすくなるように画面の外にも同じウィンドウを生成しておく
+	FOR Lcount,0,13
+		PRINTL
+	NEXT
+	CALL D20XX_OS_WindowSTRFORM(0,32,6000,11,1,,"#1D1D46")
+	;CALL D20XX_OS_WindowSTRFORM(0,32,6000,11,1,,"#1D1D46")
+
+	PRINTL 
+	TRYCALLFORM K{(NO:TARGET)}_TachieGenerate(TachieChange,Xpos)
+	IF RESULT == 0
+		HTML_PRINT @"<font color='#FF0000'><b><i><u>【エラー】この角色(%NAME:TARGET%)には立ち絵が無いようですよ</u></i></b></font>"
+	ELSEIF RESULT == 1
+		HTML_PRINT @"%RESULTS%"
+	ENDIF 
+
+	FOR Lcount,0,43
+		PRINTL
+	NEXT
+	
+	FOR Lcount,0,10
+		CALL D20XX_NO_NOBR2(STR:Lcount)
+		D20XX_OS_WindowInput:Lcount = %RESULTS%
+	NEXT
+	PRINTL
+	;CALL D20XX_OS_WindowSTRFORM(0,32,6000,11,1,,"#1D1D46")
+	CALL D20XX_OS_WindowSTRFORM(0,32,6000,11,1,,"#505050")
+	VARSET STR, "", 0 , 20
+;
+@OLD_Tachie_PackageW(TachieChange,BackGround,Xpos)
+	#DIMS DYNAMIC TachieChange
+	#DIMS DYNAMIC BackGround
+	#DIM DYNAMIC Xpos
+	CALL OLD_Tachie_Package(TachieChange,BackGround,Xpos)
+	WAIT
+;
+;
+@OLD_Tachie_PackageWA(TachieChange,BackGround,Xpos)
+	#DIMS DYNAMIC TachieChange
+	#DIMS DYNAMIC BackGround
+	#DIM DYNAMIC Xpos
+	CALL OLD_Tachie_Package(TachieChange,BackGround,Xpos)
+	WAIT
+	CALL OLD_Tachie_Package_ManualDelete
+;
+@OLD_Tachie_PackageWAU(TachieChange,BackGround,Xpos)
+	#DIMS DYNAMIC TachieChange
+	#DIMS DYNAMIC BackGround
+	#DIM DYNAMIC Xpos
+	CLEARLINE 12
+	CALL OLD_Tachie_PackageWA(TachieChange,BackGround,Xpos)
+;
+@OLD_Tachie_PackageU(TachieChange,BackGround,Xpos)
+	#DIMS DYNAMIC TachieChange
+	#DIMS DYNAMIC BackGround
+	#DIM DYNAMIC Xpos
+	CLEARLINE 12
+	CALL OLD_Tachie_Package(TachieChange,BackGround,Xpos)
+;
+@OLD_Tachie_PackageWU(TachieChange,BackGround,Xpos)
+	#DIMS DYNAMIC TachieChange
+	#DIMS DYNAMIC BackGround
+	#DIM DYNAMIC Xpos
+	CLEARLINE 12
+	CALL OLD_Tachie_Package(TachieChange,BackGround,Xpos)
+	WAIT
+;
+
+@OLD_Tachie_Package_ManualDelete
+	CALL EFFECT_ALLRESET
+	;スクロールアップしたときに過去ログが読みにくくならないように消す
+	VARSET STR, "", 0, 20
+	CLEARLINE 45
+
+
+@TestSiteEXP

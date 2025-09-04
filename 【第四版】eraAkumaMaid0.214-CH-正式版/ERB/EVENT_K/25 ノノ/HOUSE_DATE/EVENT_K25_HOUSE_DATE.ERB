@@ -1,0 +1,389 @@
+﻿;本文が長くなりそうなので、こっちにお家约会の文章を移しておく
+;……が、それもさらに長くなりそうなので細かく分離
+;ここではお家约会中の文章を主に管理する
+
+@INSIDE_HOUSE
+
+SELECTCASE SAVESTR:現在位置
+CASE @"%CALLNAME:TARGET%の自室"
+	PRINTFORML 这是%CALLNAME:TARGET%平时住的房间。
+	PRINTFORML 书架上摆满了各种各样的书籍，\@!COND("同居中") && CFLAG:送禮回数 >= 1 ? 里面放着%CALLNAME:MASTER%送的 # 很贵的\@相机。
+CASE "リビング"
+	PRINTFORML 这是%CALLNAME:TARGET%家的客厅。
+	PRINTFORML 家具统一都是木质的，墙上挂着一些颇为奇特的画作，但它们作为房间的点缀，给整体氛围增添了一抹活泼。
+CASE "弟的房間"
+	PRINTFORML 这是%CALLNAME:TARGET%弟弟的房间。
+	PRINTFORML 清一色黑色的壁纸和地板上，摆放着红色的家具……。
+CASE "妹的房間"
+	PRINTFORML 这是%CALLNAME:TARGET%妹妹的房间。
+	PRINTFORML 桌子上放着一个正在制作中的迷你房屋模型……。
+CASE "両親的房間"
+	PRINTFORML 这是%CALLNAME:TARGET%的父亲的房间。
+	PRINTFORML 在大床旁边，挂着他们结婚时的照片……。
+CASE "書斎"
+	PRINTFORML 这是%CALLNAME:TARGET%家的书房。
+	PRINTFORML 占满整面墙的书架上，从从新的漫画到明显很旧的厚重书籍，各种书籍都摆放在其中……。
+CASE "廚房"
+	PRINTFORML 这是%CALLNAME:TARGET%家的厨房。
+	PRINTFORML %CALLNAME:TARGET%正在最新式的系统厨房中央泡红茶……。
+;ここからは庭で约会するときに使う場所
+CASE "テラス"
+	PRINTFORML 温室内的露台。
+	PRINTFORML 颜色统一的白色家具被清洁得一尘不染，给人一种清爽的感觉……。
+CASE "温室"
+	PRINTFORML 小型温室。
+	PRINTFORML 种满了热带植物，仿佛是异国的丛林……。
+CASE "庭"
+	PRINTFORML %CALLNAME:TARGET%家的庭院。
+	PRINTFORML 五颜六色的花朵和整齐排列的玫瑰丛非常漂亮……。
+CASE "エラー"
+	PRINTFORML 被指定了没有预想到的地方。
+	PRINTFORML 如果发现这个文本，请尽可能提交错误报告。
+ENDSELECT
+
+@SEEING_HOUSE
+#FUNCTIONS
+#DIMS NARRATIVE
+
+NARRATIVE = %CALLNAME:MASTER%は
+SELECTCASE SAVESTR:現在位置
+CASE @"%CALLNAME:TARGET%の自室"
+	NARRATIVE += "%躺在柔软的床上"
+CASE "リビング"
+	IF CFLAG:家族
+		NARRATIVE += "和%CALLNAME:TARGET%的家人一起看着电视"
+	ELSE
+		NARRATIVE += "坐在软硬适中的沙发上"
+	ENDIF
+CASE "弟的房間"
+	NARRATIVE += "看着房间里的装修，眼睛隐隐作痛"
+CASE "妹的房間"
+	NARRATIVE += "看到桌子上放着的人偶的设计图"
+CASE "両親的房間"
+	NARRATIVE += "眯着眼睛看着从拉上的窗帘中漏出的光"
+CASE "書斎"
+	NARRATIVE += "看着满是书的书架"
+CASE "廚房"
+	NARRATIVE += "看着熟练地泡茶的%CALLNAME:TARGET%"
+;ここからは庭で约会するときに使う場所
+CASE "テラス"
+	NARRATIVE += "享受从温室中散发出的甜香"
+CASE "温室"
+	NARRATIVE += "欣赏四周种类繁多的植物"
+CASE "庭"
+	NARRATIVE += "被鲜艳玫瑰的香气包围着"
+ENDSELECT
+NARRATIVE += "悠闲地放松了……。"
+
+RETURNF @"%NARRATIVE%"
+
+@HOUSE_ACTION
+#DIM ACTOR
+#DIM MOB
+
+PRINTFORM 想要把%CALLNAME:MASTER%は
+SELECTCASE SAVESTR:現在位置
+CASE @"%CALLNAME:TARGET%の自室"
+	PRINTFORMW 看了看%CALLNAME:TARGET%的书架。
+	SELECTCASE RAND:6
+	CASE 0
+		PRINTFORMW ……摆放着各种摄影师的摄影集。
+	CASE 1
+		PRINTFORMW ……一本用过的教科书被拿了出来。
+	CASE 2
+		PRINTFORMW ……放置着手工制作的相册。
+	CASE 3
+		PRINTFORMW ……漫画按照五十音顺序排列着。
+	CASE 4
+		PRINTFORMW ……藏着色情书籍。
+	CASE 5
+		PRINTFORMW ……放着%CALLNAME:TARGET%的智能手机。
+		IF TALENT:恋慕
+			PRINTFORMW 主屏幕壁纸是%CALLNAME:MASTER%在社团时的照片……。
+		ELSE
+			PRINTFORMW 主屏幕壁纸是一张美丽的朝霞照片……。
+		ENDIF
+	ENDSELECT
+CASE "リビング"
+	PRINTFORMW 决定和在客厅的%CALLNAME:TARGET%的家人聊天。
+	PRINTFORMW 要和谁聊天呢？
+	CALL PRINT_SELECT, "父亲/母亲/弟弟/妹妹"
+	SELECTCASE RESULT
+	CASE 0
+		CALL CREATE_MOB, "ノア"
+		MOB = CNUM("ノア")
+		CALL PRINT_MAIDFACE, MOB
+		SELECTCASE RAND:5
+		CASE 0
+			PRINTFORMW 「你就是%NAME:TARGET%\@TRUE_SEX(MASTER) == "男性" ? 君 # 酱\@吧」
+			PRINTFORMW 「%CALLNAME:TARGET%每次提起你都很開心」
+			PRINTFORMW 「今后还请多多関照」
+		CASE 1
+			PRINTFORMW 「%CALLNAME:TARGET%他和另外两个孩子不太一样，他是作为堕天使降生的……」
+			PRINTFORMW 「他本人似乎也因为自己的性质而感到烦恼」
+			IF YOKUBO()
+				PRINTFORMW 「不过最近好像找到了和自己和解的方法，或许是因为你的影响吧？」
+			ELSE
+				PRINTFORMW 「即便如此，如果是你的话，或许将来他能找到和解的方法也说不定」
+			ENDIF
+		CASE 2
+			PRINTFORMW 「即使是非人类，也能像普通人一样生活，抓住普通的幸福」
+			PRINTFORMW 「这城市真的是个好地方」
+		CASE 3
+			IF CNUM("诺伊") && RAND:2
+				ACTOR = CNUM("诺伊")
+				PRINTFORMW 「哦呀，你知道%CALLNAME:ACTOR%的事啊」
+				PRINTFORMW 「他对我来说就像是兄长一样，自从他先堕天以后我们就有了些距离……」
+				PRINTFORMW 「最近他似乎平静下来了，真是太好了。因为以前的他真的是个麻烦的存在」
+			ELSE
+				PRINTFORMW 「我堕天的原因吗？」
+				PRINTFORMW 「虽然有些不好意思，但是因为我爱上了我的妻子」
+				PRINTFORMW 「当天使找到比主，比使命更重要的存在时，就会失去天使的资格。就是这么一回事」
+				IF CNUM("卡莉斯塔") && RAND:2
+					PRINTFORMW 「……当然，最近的天使情况我就不太清楚了」
+					PRINTFORMW 「嗯，你就把它当作我们这一代的故事来听吧」
+				ELSEIF CNUM("白色死神")
+					PRINTFORMW 「……不过，那毕竟只是普通天使的情况」
+					PRINTFORMW 「如果是被赋予无法替代的特殊角色的存在，情况可能就不一样了」
+					PRINTFORMW 「比如……嗯，比如掌管死亡的天使」
+				ENDIF
+			ENDIF
+		CASE 4
+			PRINTFORMW 「我听说过你的事情，你真的是个很强的孩子呢」
+			PRINTFORMW 「虽然确实忠于欲望，但也很清楚自己的存在方式」
+			PRINTFORMW 「……事实上，拥有恢复之魂的人并不只有你一个」
+			PRINTFORMW 「但是他们中的许多人沉溺于这种力量，渴望成为英雄。但品质这东西是绝对不能用灵魂来衡量的」
+			PRINTFORMW 「我见过很多这样走向毁灭的人」
+			IF CNUM("玛丽")
+				PRINTFORMW 「这并不仅仅是名誉或是可见的形态。即使看起来成功了，内心深处也可能是严重破碎的」
+				PRINTFORMW 「你似乎是一种吸引奇特存在的类型，也许你已经遇到了这样的存在」
+			ENDIF
+		ENDSELECT
+	CASE 1
+		CALL CREATE_MOB, "茜"
+		MOB = CNUM("茜")
+		CALL PRINT_MAIDFACE, MOB
+		IF CEVENT("母初会話") == 0
+			PRINTFORMW 「想来这是我们第一次一对一地交谈呢」
+			PRINTFORMW 「我是%NAME:MOB%。%CALLNAME:TARGET%的母亲」
+			PRINTFORMW %NAME:MOB%注视着%CALLNAME:MASTER%，随后轻轻地笑了
+			PRINTFORMW 「……果然，你也是个特别的人」
+			PRINTFORMW 「那孩子虽然很温柔，但因为作为堕天使而生，总是不自觉地与他人保持距离」
+			PRINTFORMW 「你却没有让我感到这一点，我还在想是不是……」
+			PRINTFORMW 「……呵呵，没関系的」
+			PRINTFORMW 「正因为你接受了那孩子的这一面，他才能露出满脸的笑容吧」
+			CALL SET_CEVENT, "母初会話"
+		ELSE
+			SELECTCASE RAND:5
+			CASE 0
+				PRINTFORMW 「是的，我只是一个普通人而已」
+				PRINTFORMW 「其他的孩子也只是普通的人类，只有%CALLNAME:TARGET%是特别的」
+			CASE 1
+				PRINTFORMW 「虽然我以前是修女」
+				PRINTFORMW 「后来和堕天使结婚了，现在和教会已经没有任何関系了」
+			CASE 2
+				PRINTFORMW 「无限的灵魂……原来还有这样的人」
+				PRINTFORMW 「遇到他的时候也很吃惊，那也是相当震惊的经历」
+			CASE 3
+				PRINTFORMW 「就把这里当作自己的家一样随意吧」
+			CASE 4
+				PRINTFORMW 「%CALLNAME:TARGET%的私服，是不是很可爱？」
+				PRINTFORMW 「不知不觉中就长成了有品味的孩子呢……」
+			ENDSELECT
+		ENDIF
+	CASE 2
+		;意味深な見た目と意味深な会話……をするただの邪気眼持ち
+		CALL CREATE_MOB, "葉月"
+		MOB = CNUM("葉月")
+		CALL PRINT_MAIDFACE, MOB
+		IF CEVENT("葉月初会話") == 0
+			PRINTFORMW 「……呼，他竟然会对人类怀有爱慕之情……」
+			PRINTFORMW 「了解光明的人，果然还是渴望光明啊……」
+			PRINTFORMW ……虽然话语充满深意，但在%CALLNAME:MASTER%的耳中无非是「%CALLNAME:TARGET%有了恋人真好」这样的安心之词……
+			PRINTFORMW 「……啊啊，我还没自报家門……」
+			PRINTFORMW 「公開真名就如同将自己的心脏暴露出来一样。不过，对你这样的强者来说，自报家門才是礼仪……」
+			PRINTFORMW 「我的名字是%NAME:MOB%。以帝国皇帝之名为冠……被赋予月之名，沉浸于黑暗之中的存在……」
+			CALL SET_CEVENT, "葉月初会話"
+		ELSE
+			SELECTCASE RAND:5
+			CASE 0
+				PRINTFORMW 「真是的，一副奇怪的表情……」
+			CASE 1
+				PRINTFORMW 「唔、别靠近我！」
+				PRINTFORMW 「我体内隐藏的黑暗力量会吞噬掉你的灵魂……！」
+			CASE 2
+				PRINTFORMW 「诶……巧、巧克力这种软弱的的……！」
+				PRINTFORMW 「……哼，就拿一个给你……」
+			CASE 3
+				PRINTFORMW 「%CALLNAME:TARGET%的事吗？……哼」
+				PRINTFORMW 「嘛，虽然不讨厌他……」
+			CASE 4
+				PRINTFORMW 「%CALLNAME:TARGET%竟然会喜欢上这样的\@TALENT:MASTER:男性 ? 男人 # 女人\@……」
+				PRINTFORMW 「担心？　那种事情！　……没有那种事」
+				PRINTFORMW 「虽然我是人类，但沉溺于黑暗、染上黑色的存在。即使是堕天使，也不可能与那样的男人相容」
+			ENDSELECT
+		ENDIF
+	CASE 3
+		CALL CREATE_MOB, "まひる"
+		MOB = CNUM("まひる")
+		CALL PRINT_MAIDFACE, MOB
+		SELECTCASE RAND:5
+		CASE 0
+			PRINTFORMW 「哦，原来你是……」
+			IF TALENT:MASTER:謎之魅力
+				PRINTFORMW 「嗯，倒不是不能理解」
+				IF TALENT:MASTER:男性
+					PRINTFORMW 「就是那种气质型帅哥的感觉？」
+				ELSE
+					PRINTFORMW 「身边也有这种受欢迎的人，大概也都是这种感觉的」
+				ENDIF
+			ELSE
+				PRINTFORMW 「有点意外呢」
+				PRINTFORMW 「因为看起来就是一副好色的脸啊」
+			ENDIF
+		CASE 1
+			IF TALENT:MASTER:伪娘
+				PRINTFORMW 「诶！？　你是男的！？」
+				PRINTFORMW 「确、确实哥哥也是那种类型的，但作为家人总觉得有所不同吧？」
+				PRINTFORMW 「哇……原来男生也可以这么漂亮……」
+				PRINTFORMW 「……那个，等会能教我一点护肤的方法吗？」
+			ELSEIF TALENT:MASTER:扶她
+				PRINTFORMW 「诶！？ 两边都有！？」
+				PRINTFORMW 「嘛，确实有时候在亲戚间会遇到那种堕天使，但……」
+				PRINTFORMW 「……那个，身体没什么不适吗？」
+				PRINTFORMW 「……没事吗。人体真是神奇啊……」
+			ELSEIF TALENT:MASTER:性反転
+				PRINTFORMW 「诶，你原来是……用魔法变成异性的身体！？」
+				PRINTFORMW 「不，因为想到我要变成男生的话，就觉得奇怪，如果心理是男性的话就一点问题都没有，或者说那才是正常的」
+				PRINTFORMW 「故意变成异性的身体，感觉不奇怪吗？没问题吗？」
+				PRINTFORMW 「……そう、这就是所谓的多样性啊……」
+			ELSE
+				PRINTFORMW 「拥有不断恢复的灵魂的人类，吗」
+				PRINTFORMW 「哥哥也是，真的有很多了不起的人呢……」
+				PRINTFORMW 「……不过，这里是人外奥运会场吗……？」
+			ENDIF
+		CASE 2
+			IF CNUM("霧江") && RAND:3 == 0
+				PRINTFORMW 「哇，你有姐姐啊。嗯，看起来很随和，也许是那种感觉的」
+				PRINTFORMW 「我们家就我和哥哥还有弟弟，除了我之外都是男孩子」
+				PRINTFORMW 「……嗯，有时候会不小心把哥哥叫成「姐姐」」
+			ELSEIF (CNUM("樱") || CNUM("南実")) && RAND:2
+				PRINTFORMW 「哇，你有妹妹啊，有点意外——」
+				PRINTFORMW 「我们家没有妹妹，所以有点好奇……」
+				PRINTFORMW 「……呐，能告诉我你经常和妹妹一起做什么吗？」
+			ELSE
+				PRINTFORMW 「……啊，那家伙和我是双胞胎」
+				PRINTFORMW 「哥哥是最大的，然后就是我们两个。嗯，我觉得他比我小」
+				PRINTFORMW 「……那你呢？有兄弟姐妹吗？」
+			ENDIF
+		CASE 3
+			PRINTFORMW 「……说起来，你的姓是什么？」
+			PRINTFORMW 「原因？说起原因有点复杂……我爸爸原本是没有姓的」
+			PRINTFORMW 「嗯，现在是用我妈妈的姓，但因为这个我就有点好奇」
+			PRINTFORMW 「缅甸啦冰岛啦，好像没有姓……」
+		CASE 4
+			PRINTFORMW 「……话说回来，那个哥哥啊……」
+			PRINTFORMW 「确实很温柔，和很多人都相处得很好，又认真，而且，你知道的，堕天使也不是随便就能找到的，对吧？」
+			PRINTFORMW 「也许是因为那样，即使関系再好，但总感觉有点距离感。……啊！不是说他冷淡什么的」
+			PRINTFORMW 「总之，就是这样。因为这样我就一直觉得他不会有恋人」
+			PRINTFORMW 「结果你突然被叫来，真是吓我一跳」
+		ENDSELECT
+	ENDSELECT
+	CALL DEL_MOB
+CASE "弟的房間"
+	PRINTFORMW 决定调查一下有些在意的地方。
+	PRINTDATAW
+		DATA ……床底下什么都没有。
+		DATA ……放着色情漫画。
+		DATA ……放着最新的游戏机。
+		DATA ……假装没看见吧。
+		DATA ……出现了一本看起来很有品味，仿佛盖亚在耳边低语般的杂志。
+		DATA ……有着封印的龙纹刺绣的盒子。
+		DATA ……開着漫画应用界面的手机就放在那里。
+	ENDDATA
+CASE "妹的房間"
+	PRINTFORMW 决定调查一下有些在意的地方。
+	SELECTCASE RAND:6
+	CASE 0
+		PRINTFORMW ……出现了一本难以名状的薄本。
+	CASE 1
+		PRINTFORMW ……摆放着最近流行的漫画全集。
+	CASE 2
+		PRINTFORMW ……可能是最近买的，放着一些几乎没怎么使用的化妆品。
+	CASE 3
+		PRINTFORMW ……放着一个装着卫生巾的盒子。
+		IF VAGINA(MASTER)
+			IF TRUE_SEX(MASTER) == "男性"
+				PRINTFORMW 作为女性的长辈，虽然有些想问，但毕竟不是那么亲近的関系。
+				PRINTFORMW 为了以后的関系，最好还是假装什么都没看见……。
+			ELSE
+				PRINTFORMW 虽然有些话想说，但毕竟不是那么亲近的関系。
+				PRINTFORMW 考虑到今后的関系，还是视而不见为好……。
+			ENDIF
+		ELSE
+			PRINTFORMW 虽然不是没兴趣，但考虑到对方是谁。
+			PRINTFORMW 考虑到今后的関系，还是轻轻放下为好……。
+		ENDIF
+	CASE 4
+		PRINTFORMW ……挂着全家福。
+	CASE 5
+		PRINTFORMW ……摆放着最近人气偶像的写真。
+	ENDSELECT
+CASE "両親的房間"
+	PRINTFORMW 决定调查一下有些在意的地方。
+	SELECTCASE RAND:4
+	CASE 0
+		PRINTFORML ……摆放着幸福的结婚照。
+		PRINTFORMW 父亲的样子和现在一模一样……。
+	CASE 1
+		PRINTFORML ……找到了一个大相册。
+		PRINTFORMW 看来是记录%CALLNAME:TARGET%他们成长的……。
+	CASE 2
+		PRINTFORMW ……找到了一个大的透明文件夹。
+		PRINTFORMW 里面夹着从看起来像古文献到比较近期的各种信纸……。
+	CASE 3
+		PRINTFORMW ……找到了一本用不知名语言写的古旧书籍。
+		PRINTFORMW 完全不知道写的是什么，甚至怎么读都不清楚……。
+	ENDSELECT
+CASE "書斎"
+	PRINTFORML 决定随意地看看摆满了从外国书籍到最新漫画的杂乱书架。
+	PRINTDATAW
+		DATA 有几本拉丁语的书籍……。
+		DATA 有関性的书籍，但插图显得有些过时……。
+		DATA 不起眼的地方放着恋爱指南书……。
+		DATA 看起来都保存得很仔细，没有一丝灰尘……。
+		DATA 房间里開着空调吗，感觉凉快的有些寒冷……。
+		DATAFORM 每看到某些书事，%CALLNAME:MASTER%就有些脊背发凉……。
+	ENDDATA
+CASE "廚房"
+	IF FLAG:情緒 >= 5
+		PRINTFORMW 决定漫不经心地观察着熟练地泡茶的%CALLNAME:TARGET%……。
+	ELSE
+		PRINTDATAW
+			DATA 「这种茶叶是我的最爱。很好喝的」
+			DATA 「啊，对不起。如果水溢出来就麻烦了……」
+			DATA 「其实我很想试试像正宗做法那样从高处倒水……」
+			DATA 「………啊，对了。需要加牛奶和糖吗？」
+		ENDDATA
+		PRINTFORMW 和%CALLNAME:TARGET%愉快地闲聊……。
+		FLAG:情緒++
+	ENDIF
+;ここからは庭で约会するときに使う場所
+CASE "温室"
+	PRINTFORMW 决定观察在温室中培育的植物。
+	IF COND("春")
+		PRINTFORMW 或许因为是春天，五颜六色的花朵被美丽地种植在一起……。
+	ELSEIF COND("夏")
+		PRINTFORMW 一排排的向日葵的花朵真是壮观……。
+	ELSEIF COND("秋")
+		PRINTFORMW 美丽的波斯菊被种植在一起……。
+	ELSE
+		PRINTFORMW 尽管是冬天，温暖的室内还是有小花可爱地绽放……。
+	ENDIF
+CASE "庭"
+	PRINTDATAW
+		DATA 决定观察庭院里的植物。
+		DATA 轻松地在庭院中散步。
+		DATA 深深吸了一口花香……。
+	ENDDATA
+ENDSELECT

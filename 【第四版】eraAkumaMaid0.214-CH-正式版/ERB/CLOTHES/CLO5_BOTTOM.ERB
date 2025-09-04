@@ -1,0 +1,463 @@
+﻿;-------------------------------------------------
+;角色ARGにARGSを着せる。ARGS == ""なら脱がす
+;-------------------------------------------------
+@SET_BOTTOM, ARGS, ARG
+#DIMS MEMO_CLO
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+MEMO_CLO = %CSTR:ARG:下身衣装%
+;汚れ＆移開たりしたフラグ等を初期化して新品にする
+STAIN:ARG:下身衣装 = 0
+
+CALL PALAM_BOTTOM, ARGS, ARG
+
+;コモンフラグを設定する
+CSTR:ARG:下身衣装 = %SET_CLO_COMMON(CSTR:ARG:下身衣装, ARG)%
+EQUIP:ARG:下身衣装 = STRLENS(CSTR:ARG:下身衣装)
+
+;连褲襪を履いたら襪子は脱掉
+SIF CHECK_BOTTOM("连褲襪", ARG)
+	CALL SET_SOCKS, "", ARG
+;裙不可なら脱掉
+SIF CHECK_BOTTOM("裙不可", ARG)
+	CALL SET_SKIRT, "", ARG
+;休闲褲不可なら脱掉
+SIF CHECK_SKIRT("休闲褲不可", ARG) && CHECK_BOTTOM("休闲褲", ARG)
+	CALL SET_SKIRT, "", ARG
+;布鲁马被りは禁止
+SIF CHECK_PANTIES("布鲁马", ARG) && CHECK_BOTTOM("布鲁马", ARG)
+	CALL SET_PANTIES, "", ARG
+;下身衣装履いたなら、下ろしてた胖次は穿く
+SIF EQUIP:ARG:下身衣装 && CHECK_PANTIES("下拉半遮", ARG)
+	CALL SETFLAG, "整理胖次", ARG
+SIF CHECK_BOTTOM("紧身短褲", ARG)
+	CALL SET_BODYS, "", ARG
+SIF MEMO_CLO != CSTR:ARG:下身衣装
+	TFLAG:着替えた = 1
+
+;-------------------------------------------------
+;ARGの下身衣装の名前。ARGSに"略"と入れると略称になる
+;-------------------------------------------------
+@BOTTOM(ARG, ARGS)
+#FUNCTIONS
+#DIM LCOUNT
+#DIMS COLOR_ABOUT
+#DIMS CIPTYPE
+#DIMS BOTTOM_TYPE
+#DIMS COLOR_TYPE
+
+VARSET LOCALS
+SELECTCASE ARGS
+CASE "CIP正面"
+	;正面以外になるもの
+	IF CHECK_BOTTOM("紧身短褲", ARG)
+		;紧身短褲は裙を履いてるかで大きく分岐させる
+		IF SKIRT(ARG, "CIP正面") != ""
+			RETURNF "正面裤襪"
+		ELSE
+			RETURNF "紧身短褲"
+		ENDIF
+
+	ELSEIF CHECK_BOTTOM("布鲁马", ARG)
+		RETURNF "正面布鲁马"
+	ELSEIF CHECK_BOTTOM("開裆皮裤", ARG)
+		RETURNF "正面開裆皮裤"
+	ELSEIF CHECK_BOTTOM("热褲", ARG) || CHECK_BOTTOM("短褲", ARG)
+		IF CHECK_BOTTOM("前開", ARG)
+			RETURNF "正面前開热褲"
+		ELSEIF CHECK_BOTTOM("迷你", ARG)
+			RETURNF "正面迷你热褲"
+		ELSEIF CHECK_BOTTOM("ダメージ", ARG)
+			RETURNF "正面牛仔热褲"
+		ELSE
+			RETURNF "正面热褲"
+		ENDIF
+	ELSEIF CHECK_BOTTOM("長褲", ARG)
+		IF CHECK_BOTTOM("男物", ARG)
+			LOCALS = 男士胖次
+		ELSE
+			LOCALS = 長褲
+		ENDIF
+		SIF CHECK_BOTTOM("前開", ARG)
+			LOCALS = 前開%LOCALS%
+		LOCALS = 正面%LOCALS%
+
+	ELSEIF CHECK_BOTTOM("运动衫休闲褲", ARG)
+		RETURNF "正面运动衫休闲褲"
+	ELSEIF CHECK_BOTTOM("五分褲", ARG)
+		LOCALS = 正面五分褲
+	ELSEIF CHECK_BOTTOM("网纹裤襪", ARG) || CHECK_BOTTOM("渔网连褲襪", ARG)
+		SIF CHECK_BOTTOM("開放型", ARG)
+			RETURNF "正面開放型网纹裤襪"
+		RETURNF "正面网纹裤襪"
+	ELSEIF CHECK_BOTTOM("裤襪", ARG)
+		SIF CHECK_BOTTOM("開放型", ARG)
+			RETURNF "正面開放型裤襪"
+		RETURNF "正面裤襪"
+	ELSEIF CHECK_BOTTOM("连褲襪", ARG)
+		SIF CHECK_BOTTOM("開放型", ARG)
+			RETURNF "正面開放型连褲襪"
+		RETURNF "正面连褲襪"
+	ELSEIF CHECK_BOTTOM("牵手", ARG)
+		SIF CHECK_BOTTOM("KANZAKI製プ重置制服", ARG)
+			LOCALS = 正面KANZAKI製プ重置制服
+	ELSE
+		RETURNF ""
+	ENDIF
+CASE "CIP背面"
+	IF CHECK_BOTTOM("開裆皮裤", ARG)
+		RETURNF ""
+	ELSEIF CHECK_BOTTOM("热褲", ARG) || CHECK_BOTTOM("短褲", ARG)
+		IF CHECK_BOTTOM("迷你", ARG)
+			RETURNF ""
+		ELSEIF CHECK_BOTTOM("ダメージ", ARG)
+			RETURNF "背面牛仔热褲"
+		ELSE
+			RETURNF "背面热褲"
+		ENDIF
+	ELSEIF CHECK_BOTTOM("牛仔褲", ARG) || CHECK_BOTTOM("長褲", ARG)
+		SIF CHECK_BOTTOM("男物", ARG)
+			RETURNF ""
+		RETURNF "背面長褲"
+	ELSE
+		RETURNF ""
+	ENDIF
+CASE "CIP紧身短褲"
+	SIF CHECK_BOTTOM("紧身短褲", ARG)
+		RETURNF "紧身短褲"
+	RETURNF ""
+CASE "CIP淚珠泳衣"
+	IF CHECK_BOTTOM("前開热褲", ARG)
+		RETURNF "淚珠泳衣前開热褲"
+	ELSEIF CHECK_BOTTOM("迷你热褲", ARG)
+		RETURNF "淚珠泳衣迷你热褲"
+	ENDIF
+
+	RETURNF ""
+CASE "CIP正面カラー", "CIP背面カラー", "CIP淚珠泳衣カラー"
+	SELECTCASE ARGS
+	CASE "CIP正面カラー"
+		CIPTYPE = CIP正面
+	CASE "CIP背面カラー"
+		CIPTYPE = CIP背面
+	CASE "CIP淚珠泳衣カラー"
+		CIPTYPE = CIP淚珠泳衣
+	ENDSELECT
+
+	BOTTOM_TYPE = %REPLACE(BOTTOM(ARG, CIPTYPE), "正面", "")%
+	BOTTOM_TYPE = %REPLACE(BOTTOM_TYPE, "背面", "")%
+	BOTTOM_TYPE = %REPLACE(BOTTOM_TYPE, "淚珠泳衣", "")%
+
+	COLOR_TYPE = %CLOCOLOR_MAIDFACE(BOTTOM_TYPE, CHECK_CLOCOLOR(CSTR:ARG:下身衣装), ARG)%
+
+	RETURNF COLOR_TYPE
+
+CASE "略"
+	IF CHECK_BOTTOM("布鲁马", ARG)
+		LOCALS = 布鲁马
+	ELSEIF CHECK_BOTTOM("热褲", ARG)
+		LOCALS = 热褲
+	ELSEIF CHECK_BOTTOM("短褲", ARG)
+		LOCALS = 短褲
+	ELSEIF CHECK_BOTTOM("紧身短褲", ARG)
+		LOCALS = 紧身短褲
+	ELSEIF CHECK_BOTTOM("睡衣", ARG)
+		LOCALS = 睡衣休闲褲
+	ELSEIF CHECK_BOTTOM("五分褲", ARG)
+		LOCALS = 五分褲
+	ELSEIF CHECK_BOTTOM("短褲", ARG)
+		LOCALS = 短褲
+	ELSEIF CHECK_BOTTOM("运动衫", ARG)
+		LOCALS = 运动衫
+	;ELSEIF CHECK_BOTTOM("低腰牛仔褲", ARG)
+	;	LOCALS = 低腰牛仔褲
+	ELSEIF CHECK_BOTTOM("牛仔褲", ARG)
+		LOCALS = 牛仔褲
+	ELSEIF CHECK_BOTTOM("褲裙", ARG)
+		LOCALS = キュロット
+	ELSEIF CHECK_BOTTOM("袴", ARG)
+		LOCALS = 袴
+	ELSEIF CHECK_BOTTOM("网纹裤襪", ARG) || CHECK_BOTTOM("渔网连褲襪", ARG)
+		SIF CHECK_BOTTOM("開放型", ARG)
+			RETURNF "開放型网纹裤襪"
+		RETURNF "网纹裤襪"
+	ELSEIF CHECK_BOTTOM("裤襪", ARG)
+		SIF CHECK_BOTTOM("開放型", ARG)
+			RETURNF "開放型裤襪"
+		RETURNF "裤襪"
+	ELSEIF CHECK_BOTTOM("连褲襪", ARG)
+		SIF CHECK_BOTTOM("開放型", ARG)
+			RETURNF "開放型连褲襪"
+		RETURNF "连褲襪"
+	ELSEIF CHECK_BOTTOM("打底褲", ARG)
+		LOCALS = 打底褲
+	ELSEIF EQUIP:ARG:下身衣装
+		LOCALS = 休闲褲
+	ENDIF
+CASE "種類"
+	SPLIT CSTR:ARG:下身衣装, "/", LOCALS
+CASE ""
+	;LOCALS:0に名称、LOCALS:1～に色が入る場合がある
+	SPLIT CSTR:ARG:下身衣装, "/", LOCALS
+	RETURNF @"%CLOCOLOR(CSTR:ARG:下身衣装, "形容詞")%%LOCALS%"
+ENDSELECT
+RETURNF LOCALS
+
+;-------------------------------------------------
+;ARG番の下身衣装の名称
+;-------------------------------------------------
+@NAME_BOTTOM(ARG)
+#FUNCTIONS
+VARSET LOCALS
+
+SELECTCASE ARG
+CASE 0
+	LOCALS = 布鲁马
+;CASE 1
+;	LOCALS = 高開衩布鲁马
+CASE 2
+	LOCALS = 紧身短褲
+CASE 3
+	LOCALS = 热褲
+CASE 4
+	LOCALS = 短褲
+CASE 5
+	LOCALS = 五分褲
+CASE 6
+	LOCALS = 休闲褲
+CASE 7
+	LOCALS = 运动衫休闲褲
+CASE 8
+	LOCALS = 牛仔褲
+CASE 9
+	LOCALS = 低腰牛仔褲
+CASE 10
+	LOCALS = 褲裙
+CASE 11
+	LOCALS = 打底褲
+CASE 12
+	LOCALS = 连褲襪
+CASE 13
+	LOCALS = 渔网连褲襪
+CASE 14
+	LOCALS = 開放型连褲襪
+CASE 15
+	LOCALS = 裤襪
+CASE 16
+	LOCALS = 网纹裤襪
+CASE 17
+	LOCALS = 牵手
+ENDSELECT
+RETURNF LOCALS
+
+;-------------------------------------------------
+;角色ARGに下身衣装ARGSを着せた場合のCSTR処理
+;-------------------------------------------------
+@PALAM_BOTTOM, ARGS, ARG
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+STR_ADD = %EXTSTR(ARGS, "/")%
+ARGS = %EXTSTR(ARGS, "", "/")%
+
+SELECTCASE ARGS
+CASE "", "没有"
+	CSTR:ARG:下身衣装 = 
+CASE "布鲁马"
+	CSTR:ARG:下身衣装 = 布鲁马/
+;CASE "高開衩布鲁马"
+;	CSTR:ARG:下身衣装 = 高開衩布鲁马/Ｔ字褲/
+CASE "紧身短褲"
+	CSTR:ARG:下身衣装 = 紧身短褲/不可移開/
+CASE "热褲", "短褲"
+	CSTR:ARG:下身衣装 = %ARGS%/不可移開/不可手交/可从缝隙偷窥的/休闲褲/社会之窗/
+CASE "前開热褲", "前開短褲"
+	CSTR:ARG:下身衣装 = %ARGS%/不可移開/不可手交/可从缝隙偷窥的/休闲褲/社会之窗/
+CASE "牛仔热褲", "ダメージ短褲"
+	CSTR:ARG:下身衣装 = %ARGS%/不可移開/不可手交/可从缝隙偷窥的/休闲褲/社会之窗/
+CASE "迷你热褲", "迷你短褲"
+	CSTR:ARG:下身衣装 = %ARGS%/不可移開/不可手交/可从缝隙偷窥的/低腰/休闲褲/社会之窗/
+CASE "長褲"
+	CSTR:ARG:下身衣装 = 長褲/不可移開/不可手交/休闲褲/長褲/
+CASE "前開長褲"
+	CSTR:ARG:下身衣装 = 前開長褲/不可移開/不可手交/休闲褲/長褲/
+
+CASE "開裆皮裤"
+	CSTR:ARG:下身衣装 = 開裆皮裤/不可移開/不可手交/休闲褲/長褲/Ｖ露出/Ａ露出/皮革/黒/
+
+CASE "五分褲"
+	CSTR:ARG:下身衣装 = 五分褲/不可移開/不可手交/可从缝隙偷窥的/休闲褲/男物可/
+CASE "运动衫休闲褲"
+	CSTR:ARG:下身衣装 = 运动衫休闲褲/不可移開/不可手交/休闲褲/男物可/
+CASE "牛仔褲"
+	CSTR:ARG:下身衣装 = 牛仔褲/不可移開/不可手交/休闲褲/男物可/社会之窗/長褲/
+CASE "前開牛仔褲"
+	CSTR:ARG:下身衣装 = 前開牛仔褲/不可移開/不可手交/休闲褲/男物可/社会之窗/長褲/
+CASE "低腰牛仔褲"
+	CSTR:ARG:下身衣装 = 低腰牛仔褲/不可移開/不可手交/休闲褲/社会之窗/長褲/
+CASE "打底褲"
+	CSTR:ARG:下身衣装 = 打底褲/不可移開/不可手交/休闲褲/
+CASE "塑身長褲"
+	CSTR:ARG:下身衣装 = 塑身長褲/不可移開/不可手交/休闲褲/長褲/
+CASE "连褲襪"
+	CSTR:ARG:下身衣装 = 连褲襪/不可移開/不可手交/透明/
+CASE "渔网连褲襪"
+	CSTR:ARG:下身衣装 = 渔网连褲襪/不可移開/不可手交/蕾丝/黒/
+CASE "開放型连褲襪"
+	CSTR:ARG:下身衣装 = 開放型连褲襪/不可移開/不可手交/Ｖ露出/Ａ露出/
+CASE "连褲襪黒", "黑色连褲襪"
+	CSTR:ARG:下身衣装 = 连褲襪/不可移開/不可手交/透明/黒/
+CASE "连褲襪赤"
+	CSTR:ARG:下身衣装 = 连褲襪/不可移開/不可手交/透明/赤/
+CASE "连褲襪白"
+	CSTR:ARG:下身衣装 = 连褲襪/不可移開/不可手交/透明/白/
+
+CASE "裤襪"
+	CSTR:ARG:下身衣装 = 裤襪/不可移開/不可手交/
+CASE "開放型裤襪"
+	CSTR:ARG:下身衣装 = 開放型裤襪/不可移開/不可手交/Ｖ露出/Ａ露出/
+CASE "网纹裤襪"
+	CSTR:ARG:下身衣装 = 网纹裤襪/不可移開/不可手交/黒/
+CASE "開放型网纹裤襪"
+	CSTR:ARG:下身衣装 = 開放型网纹裤襪/不可移開/不可手交/Ｖ露出/Ａ露出/黒/
+
+CASE "工装裤"
+	CSTR:ARG:下身衣装 = 工装裤/不可移開/不可手交/休闲褲/男物可/社会之窗/裙不可/
+;いわゆるバイク乗ったりする時に着てる上下つながってるヤツ。
+CASE "牵手"
+	CSTR:ARG:下身衣装 = 牵手/不可移開/不可手交/休闲褲/男物可/社会之窗/裙不可/長褲/
+
+CASE "休闲褲"
+	CSTR:ARG:下身衣装 = 休闲褲/不可移開/不可手交/休闲褲/男物可/社会之窗/長褲/
+CASE "前開休闲褲"
+	CSTR:ARG:下身衣装 = 前開休闲褲/不可移開/不可手交/休闲褲/男物可/社会之窗/長褲/
+CASE "西褲"
+	CSTR:ARG:下身衣装 = 西褲/不可移開/不可手交/休闲褲/男物可/社会之窗/長褲/
+CASE "学生休闲褲"
+	CSTR:ARG:下身衣装 = 学生休闲褲/不可移開/不可手交/休闲褲/男物/社会之窗/長褲/
+
+CASE "褲裙"
+	CSTR:ARG:下身衣装 = 褲裙/不可移開/不可手交/可从缝隙偷窥的/休闲褲/
+CASE "馬上袴"
+	CSTR:ARG:下身衣装 = 馬上袴/不可移開/不可手交/休闲褲/男物可/裙不可/
+CASE "圣诞休闲褲"
+	CSTR:ARG:下身衣装 = 圣诞休闲褲/不可移開/不可手交/休闲褲/男物可/
+;角色衣装
+CASE "KANZAKI製プ重置制服"
+	CSTR:ARG:下身衣装 = KANZAKI製プ重置制服/牵手/銀色/不可移開/不可手交/休闲褲/男物可/
+CASEELSE
+	CSTR:ARG:下身衣装 = %ARGS%/
+ENDSELECT
+
+CSTR:ARG:下身衣装 = %MERGE_STR(CSTR:ARG:下身衣装, STR_ADD)%
+
+
+;-------------------------------------------------
+;ARGの下身衣装が条件ARGSを満たすか確認する
+;-------------------------------------------------
+@CHECK_BOTTOM(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+SIF EQUIP:ARG:下身衣装 == 0
+	RETURNF 0
+
+SELECTCASE ARGS
+CASE "前開可"
+	;既に開かれている
+	SIF STRCOUNT(CSTR:ARG:下身衣装, "前開")
+		RETURNF 0
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "热褲", "長褲")
+		RETURNF 1
+CASE "连褲襪"
+	;裤襪もOK
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "连褲襪", "裤襪") == 0
+		RETURNF 0
+	RETURNF 1
+;主に埴輪ルックの判定で使う
+CASE "丈長休闲褲"
+	;休闲褲じゃないとダメ
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "休闲褲", "長褲") == 0
+		RETURNF 0
+	;丈の短いもの
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "热褲", "短")
+		RETURNF 0
+	RETURNF 1
+CASE "股間の隙間"
+	;太ももの付け根までを布地が締め付けている服
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "紧身短褲", "热褲", "短褲")
+		RETURNF 1
+;主に"阴部のチラ見せ撮影"の判定で使う
+CASE "めくり可能"
+	;めくれなさそうなもの
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "连褲襪", "不可移開")
+		RETURNF 0
+	RETURNF 1
+;不可移開でなく、ずらしていない
+CASE "ずらし可", "可以移開"
+	SIF STRCOUNT(CSTR:ARG:下身衣装, "Ｖ露出")
+		RETURNF 0
+	IF STRCOUNT(CSTR:ARG:下身衣装, "帯拉链的")
+		SIF STRCOUNT(CSTR:ARG:下身衣装, "帯拉链的開")
+			RETURNF 0
+		RETURNF 1
+	ENDIF
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "移開的", "不可移開")
+		RETURNF 0
+	RETURNF 1
+;连褲襪で、破いていない
+CASE "破ける"
+	SIF STRCOUNT(CSTR:ARG:下身衣装, "破開的")
+		RETURNF 0
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "连褲襪", "网纹裤襪")
+		RETURNF 1
+;帯拉链的が有、あけていない
+CASE "帯拉链的閉"
+	SIF STRCOUNT(CSTR:ARG:下身衣装, "帯拉链的開")
+		RETURNF 0
+	SIF STRCOUNT(CSTR:ARG:下身衣装, "帯拉链的")
+		RETURNF 1
+CASE "ＶＡ露出"
+	SIF STRCOUNT(CSTR:ARG:下身衣装, "Ｖ露出") && STRCOUNT(CSTR:ARG:下身衣装, "Ａ露出")
+		RETURNF 1
+	SIF STRCOUNT(CSTR:ARG:下身衣装, "開放型")
+		RETURNF 1
+CASE "開洞"
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "帯拉链的開", "移開的", "破開的", "Ｖ露出", "開衩", "開放型")
+		RETURNF 0
+	RETURNF 1
+CASE "開洞有连褲襪"
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "帯拉链的開", "移開的", "破開的", "Ｖ露出", "開衩", "開放型")
+		RETURNF 0
+	SIF STRCOUNT(CSTR:ARG:下身衣装, "连褲襪")
+		RETURNF 1
+CASE "Ａ開洞"
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "帯拉链的開", "移開的", "破開的", "Ａ露出", "開衩", "開放型")
+		RETURNF 0
+	RETURNF 1
+CASE "勒紧的"
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "移開的", "帯拉链的開", "Ｖ露出", "開衩", "破開的", "開放型")
+		RETURNF 0
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "高開衩")
+		RETURNF 1
+CASE "低腰"
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "低腰", "超低腰")
+		RETURNF 1
+CASE "闷热的"
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "移開的", "帯拉链的開", "Ｖ露出", "開衩", "破開的", "開放型")
+		RETURNF 0
+	SIF CHECK_STAIN(STAIN:ARG:下身衣装, "闷热的")
+		RETURNF 1
+CASE "湿的"
+	SIF STRCOUNTS(CSTR:ARG:下身衣装, "移開的", "帯拉链的開", "Ｖ露出", "開衩", "破開的", "通気性没有", "開放型")
+		RETURNF 0
+	SIF CHECK_STAIN(STAIN:ARG:下身衣装, "湿的")
+		RETURNF 1
+CASEELSE
+	SIF STRCOUNT(CSTR:ARG:下身衣装, ARGS)
+		RETURNF 1
+ENDSELECT
+RETURNF 0

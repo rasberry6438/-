@@ -1,0 +1,314 @@
+﻿;-------------------------------------------------
+;角色ARGの合意を管理する
+;合意については全て、口上側で合意禁止設定ができる
+;CALL SET_CEVENT, "新規合意禁止" とすることで、新たな合意がされないように出来る。解除する時はCALL DEL_CEVENT, "新規合意禁止" 。
+;CEVENT("合意禁止：全て")とCEVENT("新規合意禁止")の違いは、後者は既にされた合意が普通に機能する点のみ。
+;-------------------------------------------------
+@CHECK_GOUI, ARGS, ARG
+#DIM LCOUNT
+;汎用合意されたもの全部の羅列
+#DIMS DYNAMIC MEMO_GOUI
+;今回新たに増えた合意
+#DIMS DYNAMIC NEW_GOUI
+;新規合意を地の文表示する場合に使う
+#DIMS DYNAMIC TEXT_NEW_GOUI
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+;新たな合意を停止中ならこの関数は何も行わない
+SIF CEVENT("新規合意禁止", ARG)
+	RETURN 0
+;合意禁止中の場合も何も行わない
+SIF CEVENT("合意禁止：全て", ARG)
+	RETURN 0
+;既に合意済みなら飛ばす
+SIF COND(@"合意：%ARGS%", ARG)
+	RETURN 0
+
+SELECTCASE ARGS
+;重要度が高いもの、処理が特殊なもの、同時にフラグも弄るものなどは個別に記述する
+;これらはここが呼ばれる前の条件式で、合意禁止などにより弾いてある
+CASE "性処理"
+	SIF COND("性処理可能", ARG) == 0
+		RETURN 0
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%は%CALLNAME:ARG%から_イエロー_[性処理]_の合意を得た。"
+	CALL PRINT_STRW, @"イエロー_※午前中に%CALLNAME:MASTER%の精力が30＆魂が1.01以上ある時に限り、%CALLNAME:ARG%に相手して貰います※"
+	CALL SET_GOUI, "性処理", ARG
+CASE "改变髪型"
+	SIF COND("改变髪型可能", ARG) == 0
+		RETURN 0
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%从%CALLNAME:ARG%獲得了_イエロー_[改变髪型]_的合意。"
+	CALL SET_GOUI, "改变髪型", ARG
+CASE "全裸化"
+	SIF COND("全裸化お願い可能", ARG) == 0
+		RETURN 0
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%獲得了_イエロー_[全裸化]_的合意。"
+	CALL SET_GOUI, "全裸化", ARG
+CASE "便当"
+	SIF COND("便当可能", ARG) == 0
+		RETURN 0
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%は%CALLNAME:ARG%から_イエロー_[便当]_の合意を得た。"
+	CALL PRINT_STRW, "イエロー_※お昼を一緒に食べてくれます（お互相用精力が10回復し、好感度+20）※"
+	CALL PRINT_STRW, "イエロー_また作って欲しい時にはメイン画面[300]のお願いor取引で提案してみましょう。"
+	PRINTFORM 顺便一提做便当的人、主画面里名字的旁边 
+	PRINTFORM %UNI("便当")%
+	PRINTFORMW  会有这种显示
+	CALL SET_GOUI, "便当", ARG
+CASE "胖次交易"
+	SIF COND("胖次交易お願い可能", ARG) == 0
+		RETURN 0
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%獲得了_イエロー_[胖次交易]_的合意。"
+	CALL SET_GOUI, "胖次交易", ARG
+CASE "同居"
+	SIF COND("同居可能", ARG) == 0
+		RETURN 0
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%从%CALLNAME:ARG%那里獲得了_イエロー_[同居]_的合意。"
+	CALL PRINT_STRW, "イエロー_※同居了的话晚上也会住在一起※"
+	CALL PRINT_STRW, "在主画面[300]的拜托or交易里提案的话就可以解除。"
+	CALL SET_GOUI, "同居", ARG
+CASE "给看尾巴"
+	SIF COND("给看尾巴可能", ARG) == 0
+		RETURN 0
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%獲得了%CALLNAME:ARG%的_イエロー_[给看尾巴]_的合意。"
+	CALL PRINT_STRW, @"イエロー_今后可以在部室和自宅让耳朵和尾巴不隐藏起来了"
+	CALL SET_GOUI, "给看尾巴", ARG
+
+
+;それ以外の全合意から格子する。空文字だと検索時にめんどそうなので"汎用"指定
+;既に合意されている場合or合意禁止されている場合は下で一気に弾く
+CASEELSE
+	IF ARG == MASTER
+		CSTR:ARG:合意 = 
+		RETURN 0
+	ENDIF
+
+	IF TALENT:ARG:恋慕
+		MEMO_GOUI += "接吻/"
+	ELSEIF TALENT:ARG:贞操重视 == 0 && (COND("炮友", ARG) || ABL:ARG:信頼 >= 5 || TALENT:ARG:Ｍ性向 || TALENT:ARG:好色)
+		MEMO_GOUI += "接吻/"
+	ENDIF
+
+	SIF TALENT:ARG:炮友 || ABL:ARG:露出癖 + MARK:ARG:屈服刻印 >= 2
+		MEMO_GOUI += "掀起裙子/"
+
+	SIF ABL:ARG:露出癖 + MARK:ARG:屈服刻印 >= 3
+		MEMO_GOUI += "摆POSE/"
+
+	SIF COND("炮友", ARG) || COND("性処理契約", ARG) || ABL:ARG:露出癖 + MARK:ARG:屈服刻印 >= 3 || (TALENT:ARG:炮友 && TALENT:ARG:献身) || (COND("Ｖ熟達", ARG) && TALENT:ARG:不在乎貞操)
+		MEMO_GOUI += "检查内褲/"
+
+	SIF COND("炮友", ARG) || ABL:ARG:露出癖 + MARK:ARG:屈服刻印 >= 4 || (TALENT:ARG:炮友 && TALENT:ARG:献身)
+		MEMO_GOUI += "内衣写真/"
+
+	SIF ABL:ARG:露出癖 + MARK:ARG:屈服刻印 >= 5 || (COND("Ｖ熟達", ARG) && TALENT:ARG:不在乎貞操)
+		MEMO_GOUI += "检查阴部/"
+
+	SIF ABL:ARG:露出癖 + MARK:ARG:屈服刻印 >= 6
+		MEMO_GOUI += "Ｈ的写真/"
+
+	IF COND("危険日存在", ARG)
+		IF TALENT:ARG:相思相愛
+			MEMO_GOUI += "危険日生性交/"
+		ELSEIF TALENT:ARG:恋慕 && TALENT:ARG:淫乱 && CONFIG("危険日生性交の合意")
+			MEMO_GOUI += "危険日生性交/"
+		ENDIF
+	ENDIF
+
+	SIF EXP:ARG:精飲経験 && (ABL:ARG:精液中毒 || TALENT:ARG:精液嗜好 || ABL:ARG:奉仕精神 >= 5)
+		MEMO_GOUI += "精飲/"
+
+	SIF STRCOUNT(CSTR:ARG:特別経験, "飲尿PLAY完遂") && (TALENT:ARG:汚臭無視 || TALENT:ARG:倒錯的 || TALENT:ARG:感情缺乏 || TALENT:ARG:淫乱 || MARK:ARG:屈服刻印 >= 3)
+		MEMO_GOUI += "飲尿PLAY/"
+
+	SIF (ABL:ARG:Ａ感覚 >= 3 || (ABL:ARG:Ａ感覚 >= 1 && TALENT:ARG:Ａ性向) ) && ABL:ARG:Ａ拡張 >= 1 && EXP:ARG:Ａ経験 >= 20
+		MEMO_GOUI += "肛門性交/"
+
+	IF ABL:ARG:受虐属性 >= 3 || (ABL:ARG:受虐属性 && ABL:ARG:露出癖 >= 5) || TALENT:ARG:淫乱 || TALENT:ARG:倒錯的
+		IF TALENT:ARG:有男朋友
+			SIF TALENT:ARG:淫乱 || TALENT:ARG:恋慕 || TALENT:ARG:倒錯的
+				MEMO_GOUI += "身体穿环/"
+		ELSE
+			MEMO_GOUI += "身体穿环/"
+		ENDIF
+	ENDIF
+
+	SIF (TALENT:ARG:不知羞恥 || TALENT:ARG:好色 || TALENT:ARG:倒錯的 || TALENT:ARG:感情缺乏 || TALENT:ARG:淫乱 || MARK:ARG:屈服刻印 >= 3) && ABL:ARG:露出癖 >= 5
+		MEMO_GOUI += "露出PLAY/"
+
+	SIF TALENT:MASTER:認識阻害 && ABL:ARG:露出癖 + MARK:ARG:屈服刻印 >= 8
+		MEMO_GOUI += "ＡＶ撮影/"
+
+	SIF COND("叫出来Ｈの合意可能", ARG)
+		MEMO_GOUI += "叫出来Ｈ/"
+
+	SIF ABL:ARG:信頼 >= 3 || TALENT:ARG:恋慕
+		MEMO_GOUI += "约会/"
+
+	;同居については通常は CASE "同居" で設定する
+	SIF COND("同居可能", ARG)
+		MEMO_GOUI += "同居/"
+
+	;角色のCSVに書かれている合意を移す（こうしないと、角色加入直後に～の合意を得たと表示されない）
+	IF COND("角色メイク中")
+		MEMO_GOUI = %CSTR:ARG:合意%%MEMO_GOUI%
+		CSTR:ARG:合意 = 
+	ENDIF
+
+	;MEMO_GOUIのうち、CSTR:合意 に無い新規の合意を取り出す＆CSTR:合意 に新規合意を追加する
+	VARSET LOCALS
+	SPLIT MEMO_GOUI, "/", LOCALS
+
+	FOR LCOUNT, 0, 50
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			CONTINUE
+		CASEELSE
+			;既に合意済みなら飛ばす
+			SIF STRCOUNT(@"\/%CSTR:ARG:合意%", @"\/%LOCALS:LCOUNT%\/")
+				CONTINUE
+			;合意禁止されていても飛ばす
+			SIF CEVENT(@"合意禁止：%LOCALS:LCOUNT%", ARG)
+				CONTINUE
+
+			NEW_GOUI += @"%LOCALS:LCOUNT%\/"
+			TEXT_NEW_GOUI += @"\[%LOCALS:LCOUNT%\]"
+
+			;合意を追加する
+			CALL SET_GOUI, LOCALS:LCOUNT, ARG
+		ENDSELECT
+	NEXT
+
+	;今回新たに得た合意を表示する（VERUP格子中はテ接吻トは不顯示）
+	IF TEXT_NEW_GOUI != "" && FLAG:VERUP格子
+		CALL BLANKLINE
+		CALL PRINT_STRW, @"%CALLNAME:MASTER%は%CALLNAME:ARG%から_イエロー_%TEXT_NEW_GOUI%_の合意を得た。"
+	ENDIF
+ENDSELECT
+
+;-------------------------------------------------
+;CSTR:合意 にARGSを追加する。ARGSは / 区切りで複数指定可能。
+;例）ARGS = 同居/检查内褲
+;-------------------------------------------------
+@SET_GOUI, ARGS, ARG
+#DIM LCOUNT
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+VARSET LOCALS
+SPLIT ARGS, "/", LOCALS
+
+FOR LCOUNT, 0, 50
+	SELECTCASE LOCALS:LCOUNT
+	CASE ""
+		BREAK
+	CASEELSE
+		;合意済みなら追加しない
+		SIF STRCOUNT(@"\/%CSTR:ARG:合意%", @"\/%LOCALS:LCOUNT%\/")
+			CONTINUE
+
+		CSTR:ARG:合意 += @"%LOCALS:LCOUNT%\/"
+	ENDSELECT
+NEXT
+
+;-------------------------------------------------
+;CSTR:合意 からARGSを取り除く
+;-------------------------------------------------
+@DEL_GOUI, ARGS, ARG
+#DIM LCOUNT
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+VARSET LOCALS
+;イベントごとに分解する
+SPLIT CSTR:ARG:合意, "/", LOCALS
+
+;一旦CSTR:合意を初期化
+CSTR:ARG:合意 = 
+
+FOR LCOUNT, 0, 50
+	SELECTCASE LOCALS:LCOUNT
+	CASE "", ARGS
+		CONTINUE
+	ENDSELECT
+
+	;合意を追加する
+	CALL SET_GOUI, LOCALS:LCOUNT, ARG
+NEXT
+
+;-------------------------------------------------
+;角色ARGにARGSの合意を禁止させる。ARGSは / 区切りで複数指定してよい。フラグ自体はCEVENTを用いる。
+;ある合意に対して、対応したCEVENT("合意禁止：～")がONならその合意は無効化される
+;また、CALL FORBID_GOUI, "全て" とすることで全部の合意を禁止させることができる
+;一括で禁止解除したい場合には CALL FORBID_GOUI, "禁止解除" とすればよい。
+;-------------------------------------------------
+@FORBID_GOUI, ARGS, ARG
+#DIM LCOUNT
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+SELECTCASE ARGS
+CASE "全て"
+	CALL SET_CEVENT, "合意禁止：全て", ARG
+CASE "禁止解除"
+	CALL DEL_CEVENT_GROUP, "合意禁止", ARG
+CASEELSE
+	VARSET LOCALS
+	SPLIT ARGS, "/", LOCALS
+	FOR LCOUNT, 0, 50
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+		CASEELSE
+			 CALL SET_CEVENT, @"合意禁止：%LOCALS:LCOUNT%", ARG
+		ENDSELECT
+	NEXT
+ENDSELECT
+;便当の合意を禁止したら便当フラグも初期化
+SIF CEVENT("合意禁止：便当", ARG) || CEVENT("合意禁止：全て", ARG)
+	CALL SETFLAG, "便当フラグ終了", ARG
+
+;-------------------------------------------------
+;@FORBID_GOUIのシステム解説文付き版
+;-------------------------------------------------
+@PRINT_FORBID_GOUI, ARGS, ARG
+#DIM LCOUNT
+;禁止した合意を地の文表示する場合に使う
+#DIMS DYNAMIC TEXT_GOUI
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+CALL FORBID_GOUI, ARGS, ARG
+
+SELECTCASE ARGS
+CASE "全て"
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%は、これまでに%CALLNAME:ARG%と交わした_水色_全ての合意を失った_。"
+CASE "禁止解除"
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%は、これまでに%CALLNAME:ARG%と交わした_イエロー_全ての合意を取り戻した_。"
+CASEELSE
+	VARSET LOCALS
+	SPLIT ARGS, "/", LOCALS
+	FOR LCOUNT, 0, 50
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+		CASEELSE
+			 TEXT_GOUI += @"\[%LOCALS:LCOUNT%\]"
+		ENDSELECT
+	NEXT
+	CALL BLANKLINE
+	CALL PRINT_STRW, @"%CALLNAME:MASTER%は%CALLNAME:ARG%から_水色_%TEXT_GOUI%_の合意を禁止された。"
+ENDSELECT
+
+

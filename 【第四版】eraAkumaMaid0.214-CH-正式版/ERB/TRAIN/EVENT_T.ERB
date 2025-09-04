@@ -1,0 +1,6191 @@
+﻿;-------------------------------------------------
+;各種、特殊なテ接吻トを管理する
+;-------------------------------------------------
+@TEXT, ARGS, ARG
+#DIM LCOUNT
+#DIMS TEXT_TABLE
+#DIMS TEXT_TABLE2
+#DIM ACTOR
+#DIMS PREVACT
+#DIMS COMMENT_INSERT
+#DIMS COMMENT_PENIS
+
+SELECTCASE ARGS
+CASE "指导者能力"
+	SIF ASSI:1 == 0
+		RETURN 0
+	SIF COND("現在不在", ASSI:1) || CSTR:(ASSI:1):建议 == ""
+		RETURN 0
+	VARSET LOCALS
+	SPLIT CSTR:(ASSI:1):建议, "＆", LOCALS
+	FOR LCOUNT, 0, 10
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			IF STATE("撃沈", ASSI:1)
+				SETCOLOR DEF_COLOR("灰色")
+			ELSE
+				SETCOLOR DEF_COLOR("黄色")
+			ENDIF
+
+			CALL PRINT_LIST, LOCALS:LCOUNT
+		ENDSELECT
+	NEXT
+	RESETCOLOR
+CASE "脱ぎたて胖次の描写"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	IF TALENT:ARG:男性
+		PRINTFORMW 还带着温热的、股間部分和男性器接触的部分有一股淡淡的性臭……
+	ELSEIF CHECK_PANTIES("開洞", ARG) == 0
+		PRINTFORMW 因为没有股布的部分所以说不定还能给期待一下残留的香气之类的、眼前的%CALLNAME:ARG%对穿着的事情好像考虑的细致过頭了……
+	ELSE
+		SELECTCASE PANTIES(ARG, "略")
+		CASE "前貼"
+			PRINTFORMW 还带着温热的、从接触到阴部的部分散发出了独特的%TEXTS("气味")%……
+		CASE "Ｃ胖次"
+			PRINTFORMW 还带着温热的、到让人感觉有些抱歉的程度地付着的股布部分还带着些许的湿気……
+		CASEELSE
+			IF CHECK_PANTIES("開洞帯污迹的", ARG)
+				PRINTFORMW 看起来似乎%TEXTR("稍微还有点崭新的/不是新品的/穿旧了的")%、%TEXTR("紧贴着阴部的/股布的/容易脏的")%部分上沾着%TEXTR("浅黄的污迹/線状的污渍/比较顽固的污渍/呈线装的分泌物的污迹")%……
+			ELSEIF CHECK_STAIN(STAIN:ARG:胖次, "湿的")
+				PRINTFORMW 汗淋淋的、触碰阴部的部分在愛液的晕染下散发出强烈的%TEXTS("气味")%……
+			ELSEIF CHECK_STAIN(STAIN:ARG:胖次, "闷热的")
+				PRINTFORMW 略微温暖的、接触阴部的部分在分泌物和%TEXTS("气味")%的晕染下散发着湿気……
+			ELSE
+				PRINTFORMW 还带着温热的、阴部接触到的股布的部分还带着些许的湿気……
+			ENDIF
+		ENDSELECT
+	ENDIF
+CASE "挿入具合の描写"
+	SELECTCASE SIZE("阴茎", PLAYER)
+	CASE 1
+		COMMENT_PENIS = %CALLNAME:PLAYER%の阴茎
+	CASE 2
+		COMMENT_PENIS = %CALLNAME:PLAYER%の巨根
+	CASE 3
+		COMMENT_PENIS = %CALLNAME:PLAYER%の馬根阴茎
+	CASE 4
+		COMMENT_PENIS = %CALLNAME:PLAYER%の腕並阴茎
+	CASE IS >= 5
+		COMMENT_PENIS = %CALLNAME:PLAYER%の規格外阴茎
+	ENDSELECT
+
+	COMMENT_INSERT = 
+
+	IF PENIS(PLAYER) && ( (COND("性処理中") && NAMES("性処理") == "Ｖ性交") || INSERT("Ｖ挿入", TARGET, PLAYER) )
+		IF CHECK_COM("完全挿入可能", INSERT("対応指令") ) && SIZE("阴茎", PLAYER)
+			COMMENT_INSERT = %COMMENT_PENIS%を根元まで挿入中
+			IF COMMENT_INSERT != ""
+				SIF CEVENT("Ｖ完全挿入初達成")
+					COMMENT_INSERT += "_黄色_(今回初達成！)_爱心粉紅_"
+				COMMENT_INSERT = 爱心粉紅_＜%COMMENT_INSERT%＞_
+			ENDIF
+		ELSE
+			CALL SET_CEVENT, "Ｖ完全挿入未達成"
+		ENDIF
+		IF COND("臍下到達")
+			IF COMMENT_INSERT != ""
+				COMMENT_INSERT += @"爱心粉紅_＜"
+			ELSE
+				COMMENT_INSERT += @"爱心粉紅_＜%COMMENT_PENIS%が"
+			ENDIF
+			IF COND("腹部变形")
+				COMMENT_INSERT += @"臍上侵入＞＜腹部变形＞_"
+			ELSEIF COND("臍上侵入")
+				COMMENT_INSERT += @"臍上侵入＞_"
+			ELSE
+				COMMENT_INSERT += @"臍下到達＞_"
+			ENDIF
+		ENDIF
+	ENDIF
+	IF INSERT("Ａ挿入", TARGET, PLAYER) && CUP:Ｖ潤 >= 500
+		COMMENT_INSERT += @"爱心粉紅_＜Ａ刺激により\@ TALENT:処女 ? 処女 # \@膣から愛液漏れ出し中＞_"
+	ENDIF
+
+	SIF COMMENT_INSERT != ""
+		CALL PRINT_STRL, COMMENT_INSERT
+
+CASE "隙を見せていると"
+	;誰かに何かされ中？
+	PREVACT = 
+	ACTOR = FIND_COND("直前行動")
+	IF ACTOR
+		SELECTCASE CONDS("直前行動", ACTOR)
+		;CASE "展示内褲"
+		;	IF EQUIP:ACTOR:胖次
+		;		PREVACT = %CALLNAME:ACTOR%の胖次を鑑賞していると……
+		;	ELSE
+		;		PREVACT = %CALLNAME:ACTOR%の股間を眺めていると……
+		;	ENDIF
+		;CASE "清洁口交", "口淫", "手淫"
+		;	PREVACT = %CALLNAME:ACTOR%にされるがままにしていると……
+		;CASE "膝枕", 
+		;	PREVACT = %CALLNAME:ACTOR%に枕にされていると……
+		;CASE "膝枕"
+		;	PREVACT = %CALLNAME:ACTOR%に膝枕してもらっていると……
+		;CASE "沏茶"
+		;	PREVACT = %CALLNAME:ACTOR%の用意してくれた%SAVESTR:茶%を味わっていると……
+		;これは地の文没有
+		CASE "Ｈ的邀请", "推倒"
+
+		CASE "抚摸", "抱住", "把胸部压了上去", "摩擦股間", "亲脸頬", "接吻"
+			PREVACT = 正和%CALLNAME:ACTOR%亲热的时候……
+		ENDSELECT
+	ENDIF
+
+	SELECTCASE STR:日常イベント名
+	CASE "抚摸", "抱住", "把胸部压了上去", "摩擦股間", "亲脸頬", "接吻"
+	CASEELSE
+		PREVACT = 
+	ENDSELECT
+
+	;抵抗しないのをいいことに、
+	SELECTCASE CONDS("直前行動")
+	CASE "抱住", "把胸部压了上去", "摩擦股間", "亲脸頬", "接吻", "口淫", "手淫"
+		PRINTFORM %CALLNAME:MASTER%在%TEXTR("任其摆布/发着呆/窥伺着状况/随便考虑着什么")%的時候……
+	CASEELSE
+		IF PREVACT != ""
+			PRINTFORM %CALLNAME:MASTER%%PREVACT%
+		ELSE
+			SELECTCASE STR:日常イベント選択名
+			CASE "观察股间"
+				SELECTCASE CONDS("直前行動")
+				CASE "检查菊穴", "肛門のチラ見せ撮影", "肛門の見せつけ撮影"
+					PRINTFORMW %CALLNAME:MASTER%看到了眼前的光景……
+				CASE "检查阴部", "阴部のチラ見せ撮影", "阴部の見せつけ撮影"
+					PRINTFORMW %CALLNAME:MASTER%看到了眼前的光景……
+				CASE "检查内褲", "展示内褲", "检查布鲁马", "股間観察"
+					IF CHECK_CLO("Ｔ字褲臀圍")
+						PRINTFORMW %CALLNAME:MASTER%看到了被%CLO("お尻")%勒入肉中的\@ TALENT:巨尻 ? 巨大的 # \@臀部……
+					ELSE
+						PRINTFORMW %CALLNAME:MASTER%看到了眼前的光景……
+					ENDIF
+				CASEELSE
+					PRINTFORMW %CALLNAME:MASTER%正%TEXTR("懒散着无所事事/发着呆/窥伺着状况/随便考虑着什么")%的時候……
+				ENDSELECT
+			CASE "拜托扫除"
+				PRINTFORMW %TEXTR("瘫坐在椅子上的/沉浸在性行為的余韻中的/露出着下半身的")%%CALLNAME:MASTER%轻轻地招手%TEXTR("示意/请求清理/伸出了下体")%……
+			CASEELSE
+				IF CHARA_NUM("性処理直後")
+					PRINTFORMW %CALLNAME:MASTER%沉浸在性行為的余韻的时候……
+				ELSEIF COND("自动调戏中")
+					PRINTFORMW %CALLNAME:MASTER%正%TEXTR("看着手机的待机画面/懒散着无所事事/发着呆/窥伺着状况/随便考虑着什么")%的時候……
+				ELSE
+					PRINTFORM %CALLNAME:MASTER%正%TEXTR("看着手机的待机画面/懒散着无所事事/发着呆/窥伺着状况/非常闲的様子/做着无関紧要的事/读着旁辺的雑誌/随便考虑着什么/枕在自己手腕上休息")%的時候……
+				ENDIF
+			ENDSELECT
+		ENDIF
+	ENDSELECT
+
+CASE "出会いざまの格好所感"
+	SIF CFLAG:ARG:CIP発生済
+		RETURN 0
+	SIF COND("CIP発生", ARG)
+		CALL PRINT_CUTIN, "見たまま正面", ARG
+	IF CFLAG:ARG:Cosplay中
+		CALL PRINT_STRW, @"没想到今天的%CALLNAME:ARG%竟然是_黄色_%CLO_ABOUT(ARG, "姿")%_！"
+	ELSEIF MARK:ARG:淫紋 >= 2 && CFLAG:ARG:淫紋の様子 == 0 && CHECK_CLO("淫紋露出", ARG)
+		CALL TEXT, "淫紋の様子", ARG
+	ELSEIF CFLAG:ARG:CIP発生済
+		IF CLO_ABOUT(ARG) == CSTR:ARG:いつもの格好 && CHECK_CLO("泳装姿", ARG) + CHECK_PANTIES("布鲁马", ARG)
+			CALL PRINT_STRW, @"今天的%CALLNAME:ARG%是%CLO_ABOUT(ARG, "姿")%"
+		ELSE
+			IF CHECK_CLO("胖次が見える格好", ARG)
+				SIF CHECK_PANTIES("布鲁马") == 0 && CHECK_PANTIES("泳装") == 0
+					CALL PRINT_STRW, @"……因为穿着非常的不像样、%CALLNAME:ARG%的下半身现在看得一清二楚"
+				SIF EQUIP:ARG:胖次
+					CALL PRINT_STRW, @"今天%CALLNAME:ARG%穿着的是……%PANTIES(ARG)%的样子"
+			ELSE
+				CALL PRINT_STRW, @"今日的%CALLNAME:ARG%の格好は%CLO_ABOUT(ARG, "姿")%"
+			ENDIF
+		ENDIF
+	ENDIF
+
+CASE "ご褒美発生"
+	SIF FINDCHARA(CFLAG:ご褒美権, 1) <= 0
+		RETURN 0
+	CALL PRINT_STRW, @"拿到了好成績的%CALLNAME:MASTER%、可以从約好的对象那里拿到_爱心粉紅_Ｈ的奖励_了！"
+	CALL PRINT_STRW, "（_黄色_有効期限截止到今週结束为止_。早点去领吧）"
+CASE "情緒変化", "情緒変化＆爱心個数表示"
+	;情緒変化の値を爱心マークの個数に変換
+	LOCALS = {ABS(ARG)/30}.{(ABS(ARG)%30)/3}
+	SIF LOCALS == "0.0"
+		LOCALS = 0.1
+	PRINTFORM 情緒:
+	IF ARG > 0
+		LOCALS = 粉紅_↑%LOCALS%_HH
+	ELSE
+		LOCALS = 青_↓%LOCALS%_HH
+	ENDIF
+	CALL PRINT_STR, LOCALS
+	IF ARGS == "情緒変化＆爱心個数表示"
+		PRINT （
+		CALL TEXT, "情緒Heart"
+		PRINT )
+	ENDIF
+	PRINTL 
+CASE "状態"
+	SIF COND("現在不在", ARG)
+		RETURN 1
+
+	IF CFLAG:ARG:ご褒美権
+		CALL PRINT_STR, "[_爱心粉紅_Ｈ的奖励_]"
+	ELSEIF COND("Ｈ的約定", ARG)
+		CALL PRINT_STR, @"[_爱心粉紅_Ｈ的約定({CFLAG:ARG:Ｈ的約定}点)_]"
+	ENDIF
+
+	SIF STATE("困倦", ARG)
+		CALL PRINT_STR, "[_水色_困倦_]"
+
+	IF STATE("烂醉", ARG)
+		CALL PRINT_STR, "[_青_烂醉_]"
+	ELSEIF STATE("酔酒", ARG)
+		CALL PRINT_STR, "[_爱心粉紅_酔酒_]"
+	ENDIF
+
+	IF COND("浑身是汗", ARG)
+		CALL PRINT_STR, "[_黄色_浑身是汗_]"
+	ELSEIF COND("易出汗", ARG)
+		CALL PRINT_STR, "[_黄色_汗_]"
+	ENDIF
+
+	;椅子に腰かけたりしてる状態での睡眠だから、大体打瞌睡
+	SELECTCASE CFLAG:ARG:睡眠
+	CASE IS >= 5
+		CALL PRINT_STR, @"[_青_熟睡中(睡眠深度{CFLAG:ARG:睡眠 - 1}LV)_]"
+	CASE IS >= 3
+		CALL PRINT_STR, @"[_水色_打瞌睡(睡眠深度{CFLAG:ARG:睡眠 - 1}LV)_]"
+	CASE 2
+		CALL PRINT_STR, @"[_イエロー_快要醒了(睡眠深度{CFLAG:ARG:睡眠 - 1}LV)_]"
+	ENDSELECT
+
+	SIF TEQUIP:ARG:出浴
+		CALL PRINT_STR, "[出浴]"
+
+	SIF CFLAG:ARG:躁动难忍
+		CALL PRINT_STR, "[_粉紅_躁动难忍_]"
+	IF CFLAG:ARG:甜言蜜语 && CFLAG:ARG:心情好
+		CALL PRINT_STR, "[_爱心粉紅_有頂天_]"
+	ELSEIF CFLAG:ARG:甜言蜜语
+		CALL PRINT_STR, "[_爱心粉紅_甜言蜜语_]"
+	ELSEIF CFLAG:ARG:心情好
+		CALL PRINT_STR, "[心情好]"
+	ENDIF
+	SIF CFLAG:ARG:茶
+		PRINT_IMG "茶2"
+		;PRINTFORM %UNI("茶")%
+
+	SIF CFLAG:MASTER:约会的约定 == BASE:ARG:識別番号
+		CALL PRINT_STR, "[_爱心粉紅_约会_]"
+
+	SIF COND("電源BOX発覚", ARG)
+		CALL PRINT_STR, "[_黄色_享受中_]"
+
+	IF INSERT("挿入", ARG)
+		PRINT [
+		VARSET LOCALS
+		IF INSERT("两根挿入Ｖ中", ARG)
+			LOCALS = 两根挿入Ｖ中
+		ELSEIF INSERT("两根挿入Ａ中", ARG)
+			LOCALS = 两根挿入Ａ中
+		ELSEIF INSERT("二穴挿入", ARG)
+			LOCALS = 二穴挿入
+		ENDIF
+		IF STRLENS(LOCALS) == 0
+			SELECTCASE INSERT("挿入相手", ARG)
+			CASE PLAYER
+			CASE ASSI
+				LOCALS:1 = (%TEXTS("助手の名称")%)
+			CASE MASTER
+				LOCALS:1 = (主人)
+			ENDSELECT
+
+			IF INSERT("Ａ挿入", ARG)
+				LOCALS = Ａ%CONDS("体位", ARG)%%LOCALS:1%
+			ELSEIF INSERT("尿道挿入", ARG)
+				LOCALS = 尿道%CONDS("体位", ARG)%%LOCALS:1%
+			ELSE
+				LOCALS = %CONDS("体位", ARG)%%LOCALS:1%
+			ENDIF
+		ENDIF
+		IF COND("喜欢的体位中", ARG)
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			LOCALS = %LOCALS%☆
+		ENDIF
+		PRINTFORM %LOCALS%
+		RESETCOLOR
+		PRINT ]
+	ELSEIF INSERT("挿入中", ARG)
+		IF INSERT("Ａ挿入中", ARG)
+			PRINTFORM [Ａ挿入中(%CALLNAME:INSERT("挿入中", ARG)%)]
+		ELSEIF INSERT("尿道挿入中", ARG)
+			PRINTFORM [尿道挿入中(%CALLNAME:INSERT("挿入中", ARG)%)]
+		ELSE
+			PRINTFORM [Ｖ挿入中(%CALLNAME:INSERT("挿入中", ARG)%)]
+		ENDIF
+	ENDIF
+
+	;これはTARGETの値を見る
+	IF TEQUIP:Ｗ推倒
+		SIF ARG == PLAYER
+			PRINT [Ｗ被逆推中]
+	ELSEIF TEQUIP:ARG:六九式
+		PRINTFORM [\@ TEQUIP:ARG:推倒 ? 推倒 # \@６９(%TRAIN_NAME_STANDARD(TEQUIP:ARG:六九式)%)中]
+	ELSEIF TEQUIP:ARG:推倒
+		PRINT [推倒
+		IF TEQUIP:PLAYER:拘束
+			PRINT 拘束
+		ELSEIF TEQUIP:ARG:面部騎乗
+			PRINT 神情恍惚的脸颊面騎乗
+		ENDIF
+		PRINT 中]
+	ENDIF
+CASE "学力"
+	IF BASE:ARG:学力 == 0
+		PRINTFORM 学力--(学习-) 
+		RETURN 0
+	ENDIF
+	PRINTFORM 学力
+	SELECTCASE BASE:ARG:学力
+	CASE IS >= 80
+		CALL PRINT_STR, @"緑_%TOSTR(BASE:ARG:学力)%"
+	CASE IS >= 30
+		CALL PRINT_STR, @"%TOSTR(BASE:ARG:学力)%"
+	CASEELSE
+		CALL PRINT_STR, @"赤_%TOSTR(BASE:ARG:学力)%"
+	ENDSELECT
+	SELECTCASE CFLAG:ARG:勉強時間
+	CASE IS > 10
+		CALL PRINT_STR, @"(学习_緑_%TOSTR(CFLAG:ARG:勉強時間)%_) "
+	CASE IS >= 5
+		CALL PRINT_STR, @"(学习_黄色_%TOSTR(CFLAG:ARG:勉強時間)%_) "
+	CASE IS >= 1
+		CALL PRINT_STR, @"(学习%TOSTR(CFLAG:ARG:勉強時間)%) "
+	CASEELSE
+		CALL PRINT_STR, @"(学习_青_%TOSTR(CFLAG:ARG:勉強時間)%_) "
+	ENDSELECT
+
+	SIF ARG != MASTER || CFLAG:ARG:予想点 == 0
+		RETURN 1
+	PRINTFORM 预测分
+	SELECTCASE CFLAG:ARG:予想点
+	CASE IS >= 80
+		CALL PRINT_STR, @"緑_%TOSTR(CFLAG:ARG:予想点)%"
+	CASE IS >= 30
+		CALL PRINT_STR, @"%TOSTR(CFLAG:ARG:予想点)%"
+	CASEELSE
+		CALL PRINT_STR, @"赤_%TOSTR(CFLAG:ARG:予想点)%"
+	ENDSELECT
+
+CASE "学力評価"
+	SIF DAYEV("周考") == 0
+		RETURN 0
+	IF COND("成績：学年上位", ARG)
+		CALL PRINT_STR, "[_緑_学年上位_]"
+	ELSEIF COND("成績：赤点", ARG)
+		CALL PRINT_STR, "[_赤_上次不及格_]"
+	ENDIF
+CASE "関係"
+	PRINTPLAINFORM [
+	SELECTCASE CONDS("関係", ARG)
+	CASE "恋人"
+		CALL PRINT_COLORTEXT, CONDS("関係", ARG), DEF_COLOR("爱心粉紅")
+		;血縁補足が有るならそれも
+		IF TALENT:ARG:母親
+			PRINTFORM (実母)
+		ELSEIF TALENT:ARG:父親
+			PRINTFORM (実父)
+		ELSEIF TALENT:ARG:姉
+			PRINTFORM (実姉)
+		ELSEIF TALENT:ARG:兄
+			PRINTFORM (実兄)
+		ELSEIF TALENT:ARG:妹
+			PRINTFORM (実妹)
+		ELSEIF TALENT:ARG:弟
+			PRINTFORM (実弟)
+		ENDIF
+	CASEELSE
+		PRINTFORM %CONDS("関係", ARG)%
+	ENDSELECT
+
+	;性処理担当
+	;SIF COND("性処理中", ARG)
+	;	CALL PRINT_STR, "・_爱心粉紅_性処理係"
+	;指导者兼任の場合
+	;SIF ARG == ASSI:1
+	;	CALL PRINT_STR, @"・_緑_%TEXTS("助手の名称")%"
+	PRINTFORM ]
+CASE "称号"
+	SIF CSTR:ARG:称号 == ""
+		RETURN 0
+
+	;～の悪魔とかＯＬとか
+	PRINTPLAINFORM [%CSTR:ARG:称号%]
+
+CASE "正の字"
+	;正の字フォントがあるなら正の字表記
+	GETFONT
+	CHKFONT "seinoji"
+	IF RESULT
+		SETFONT "seinoji"
+		FOR LCOUNT, 0, (ARG / 5)
+			PRINTFORM 5
+		NEXT
+		SIF ARG%5
+			PRINTFORM {ARG%5}
+		SETFONT RESULTS
+	ELSE
+		PRINTFORM {ARG}
+	ENDIF
+CASE "性欲"
+	SIF MAXBASE:ARG:性欲 == 0
+		RETURN 0
+
+	PRINT 性欲
+	IF BASE:ARG:性欲 >= MAXBASE:ARG:性欲
+		PRINT [
+		IF BASE:ARG:性欲 >= MAXBASE:ARG:性欲*2
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINT 大満足！
+		ELSE
+			SETCOLOR DEF_COLOR("イエロー")
+			PRINT 満足！
+		ENDIF
+		RESETCOLOR
+		PRINT ]
+	ELSE
+		CALL PRINT_BAR, "桃色ゲージ", BASE:ARG:性欲, MAXBASE:ARG:性欲, 4
+	ENDIF
+	PRINTFORM {BASE:ARG:性欲}/{MAXBASE:ARG:性欲} 
+
+CASE "精力"
+	PRINTFORM 精力
+	CALL PRINT_BAR, "減少ゲージ", BASE:ARG:精力, MAXBASE:ARG:精力, 6
+	PRINTFORM {BASE:ARG:精力}/{MAXBASE:ARG:精力}
+	IF PENIS(ARG)
+		SIF BASE:ARG:濃厚精液
+			CALL PRINT_STR, @"(_黄色_濃厚射精あと{BASE:ARG:濃厚精液}回_)"
+	ENDIF
+	PRINT  
+
+CASE "精液欲"
+	SIF MAXBASE:ARG:精液欲 == 0
+		RETURN 0
+
+	PRINT 精液欲
+	IF BASE:ARG:精液欲 >= MAXBASE:ARG:精液欲
+		PRINT [
+		IF BASE:ARG:精液欲 >= MAXBASE:ARG:精液欲*2
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINT 大満足！
+		ELSE
+			SETCOLOR DEF_COLOR("イエロー")
+			PRINT 満足！
+		ENDIF
+		RESETCOLOR
+		PRINT ]
+	ELSE
+		CALL PRINT_BAR, "白色ゲージ", BASE:ARG:精液欲, MAXBASE:ARG:精液欲, 4
+	ENDIF
+	PRINTFORM {BASE:ARG:精液欲}/{MAXBASE:ARG:精液欲} 
+
+CASE "胎内精液量"
+	IF TALENT:ARG:Ａ妊娠体質
+		PRINTFORM Ａ胎内精液量
+		IF COND("Ａ胎内の精液量", ARG) >= 100000
+			CALL PRINT_STR, "[_爱心粉紅_いっぱい_]"
+		ELSE
+			CALL PRINT_BAR, "白色ゲージ", COND("Ａ胎内の精液量", ARG), 100000, 4
+		ENDIF
+	ELSEIF TALENT:ARG:男性 == 0
+		PRINTFORM 胎内精液量
+		IF COND("胎内の精液量", ARG) >= 100000
+			CALL PRINT_STR, "[_爱心粉紅_いっぱい_]"
+		ELSE
+			CALL PRINT_BAR, "白色ゲージ", COND("胎内の精液量", ARG), 100000, 4
+		ENDIF
+	ENDIF
+	PRINT  
+CASE "母乳"
+	SIF TALENT:ARG:母乳体質 == 0
+		RETURN 0
+	PRINT 母乳
+	IF BASE:ARG:母乳 >= MAXBASE:ARG:母乳
+		CALL PRINT_STR, "[_爱心粉紅_いっぱい_]"
+	ELSE
+		CALL PRINT_BAR, "白色ゲージ", BASE:ARG:母乳, MAXBASE:ARG:母乳, 4
+	ENDIF
+	PRINT  
+
+CASE "尿意"
+	PRINT 尿意
+	IF BASE:ARG:尿意 >= MAXBASE:ARG:尿意*3/2
+		PRINT [
+		SELECTCASE BASE:ARG:尿意
+		CASE IS >= MAXBASE:ARG:尿意*2
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINT 限界！
+		CASEELSE
+			SETCOLOR DEF_COLOR("イエロー")
+			PRINT 要漏出来了
+		ENDSELECT
+		RESETCOLOR
+		PRINT ]
+	ELSE
+		CALL PRINT_BAR, "溜めゲージ", BASE:ARG:尿意, MAXBASE:ARG:尿意, 4
+	ENDIF
+	PRINT  
+	;PRINTFORM {BASE:ARG:尿意}/{MAXBASE:ARG:尿意} 
+CASE "排泄欲"
+	PRINT 排泄欲
+	SELECTCASE BASE:ARG:排泄欲
+	CASE IS >= MAXBASE:ARG:排泄欲*5
+		CALL PRINT_STR, "[_爱心粉紅_膨腹(大)_]"
+	CASE IS >= MAXBASE:ARG:排泄欲*3
+		CALL PRINT_STR, "[_爱心粉紅_膨腹(小)_]"
+	CASE IS >= MAXBASE:ARG:排泄欲*2
+		CALL PRINT_STR, "[_爱心粉紅_限界＆腹痛！_]"
+	CASE IS >= MAXBASE:ARG:排泄欲
+		CALL PRINT_STR, "[_爱心粉紅_限界！_]"
+	CASEELSE
+		CALL PRINT_BAR, "溜めゲージ", BASE:ARG:排泄欲, MAXBASE:ARG:排泄欲, 4
+	ENDSELECT
+	;PRINTFORM {BASE:ARG:排泄欲}/{MAXBASE:ARG:排泄欲} 
+
+CASE "絶頂計算"
+	PRINTFORML 
+	DRAWLINE
+	PRINTFORM   絶頂     = {BASE:PLAYER:絶頂, 6} + {ARG, 6} = 
+	BASE:PLAYER:絶頂 += ARG
+	PRINTFORML {BASE:PLAYER:絶頂, 6} 絶頂
+	DRAWLINE
+CASE "情緒Heart"
+	;情緒を爱心の数にする
+	LOCAL = MOOD_HEART()
+
+	;减少の情緒
+	IF LOCAL < 0
+		FOR LCOUNT, 1, 4
+			IF LOCAL <= -LCOUNT
+				SETCOLOR DEF_COLOR("青")
+			ELSE
+				BREAK
+			ENDIF
+			CALL HEARTMARK
+		NEXT
+	ENDIF
+
+	;通常の情緒
+	FOR LCOUNT, 1, 9
+		SELECTCASE LCOUNT
+		CASE IS >= 6
+			IF LOCAL >= LCOUNT
+				SETCOLOR DEF_COLOR("黄色")
+			ELSE
+				BREAK
+			ENDIF
+		CASEELSE
+			IF LOCAL >= LCOUNT
+				SETCOLOR DEF_COLOR("爱心粉紅")
+			ELSE
+				SETCOLOR DEF_COLOR("灰色")
+			ENDIF
+		ENDSELECT
+		CALL HEARTMARK
+	NEXT
+	IF LOCAL >= 8
+		PRINT  
+		CALL HEARTMARK
+		PRINT MAX
+		CALL HEARTMARK
+	ENDIF
+	RESETCOLOR
+	PRINT  
+
+CASE "生理周期"
+	;---------------------------------------------------------
+	;危険日安全日の表示
+	;---------------------------------------------------------
+	SIF COND("妊娠可能", ARG) == 0
+		RETURN 0
+
+	VARSET LOCALS
+
+	IF BASE:ARG:育児中
+		IF TALENT:ARG:妊娠 == 3
+			LOCALS = 子＋産
+		ELSEIF TALENT:ARG:妊娠 == 2
+			LOCALS = 子＋臨
+		ELSEIF TALENT:ARG:妊娠
+			LOCALS = 子＋妊
+		;ELSEIF COND("妊娠中", ARG)
+		;	LOCALS = 子＋潜
+		ELSEIF COND("受精済", ARG)
+			LOCALS = 子_爱心粉紅_＋受
+		ELSEIF COND("排卵中", ARG)
+			LOCALS = 子_ショッキング粉紅_＋危
+		ELSEIF COND("発情期", ARG)
+			LOCALS = 子_爱心粉紅_＋発
+		ELSEIF COND("着床済", ARG)
+			LOCALS = 子_爱心粉紅_＋着
+		ELSEIF COND("避妊中", ARG)
+			LOCALS = 子＋避
+		ELSEIF COND("安全日", ARG)
+			LOCALS = 子＋安
+		ELSEIF COND("危険日", ARG)
+			LOCALS = 子_イエロー_＋危
+		ELSE
+			LOCALS = 子育て
+		ENDIF
+
+	ELSEIF TALENT:ARG:妊娠 == 3
+		LOCALS = 出産日
+	ELSEIF TALENT:ARG:妊娠 == 2
+		LOCALS = 臨月
+	ELSEIF TALENT:ARG:妊娠
+		IF COND("妊娠後期", ARG)
+			LOCALS = 妊娠後期
+		ELSEIF COND("妊娠中期", ARG)
+			LOCALS = 妊娠中期
+		ELSEIF COND("妊娠初期", ARG)
+			LOCALS = 妊娠初期
+		ELSE
+			LOCALS = 妊娠中
+		ENDIF
+	ELSEIF COND("着床済", ARG)
+		LOCALS = 爱心粉紅_着床済
+	ELSEIF TALENT:ARG:事后避孕药
+		LOCALS = 事后避孕药
+	ELSEIF COND("受精済", ARG)
+		LOCALS = 爱心粉紅_受精済
+		
+	ELSEIF COND("重発情期", ARG)
+		LOCALS = 赤_重発情日
+	ELSEIF COND("排卵中", ARG)
+		LOCALS = ショッキング粉紅_超危険日
+	ELSEIF COND("発情期", ARG)
+		LOCALS = 爱心粉紅_発情期
+	ELSEIF TALENT:ARG:未成熟
+		LOCALS = 未成熟
+	;避妊中
+	ELSEIF COND("避妊中", ARG)
+		IF CFLAG:ARG:口服避孕薬
+			LOCALS = 口服避孕薬
+		ELSE
+			LOCALS = 避妊中
+		ENDIF
+	;ELSEIF BASE:ARG:胎児
+	ELSEIF COND("産卵日", ARG)
+		LOCALS = 青_産卵日
+	ELSEIF COND("保卵期", ARG)
+		LOCALS = 緑_保卵期
+	ELSEIF COND("安全日", ARG)
+		IF TALENT:ARG:生理が重い
+			LOCALS = 青_生理中
+		ELSE
+			LOCALS = 安全日
+		ENDIF
+	ELSEIF COND("危険日", ARG)
+		LOCALS = イエロー_危険日
+	ENDIF
+	IF (CFLAG:ARG:Ｖ已中出 && TALENT:ARG:Ｖ妊娠不能 == 0) || (CFLAG:ARG:Ａ已中出 && TALENT:ARG:Ａ妊娠体質)
+		IF LOCALS != ""
+			LOCALS += "_爱心粉紅_(已中出)"
+		ELSE
+			LOCALS = 爱心粉紅_已中出
+		ENDIF
+	ENDIF
+
+	SIF LOCALS != ""
+		CALL PRINT_STR, @"NOBUTTON_[_%LOCALS%_]"
+
+CASE "追加地の文：腹部变形系"
+	SELECTCASE SIZE("阴茎", PLAYER)
+	CASE 1
+		COMMENT_PENIS = %CALLNAME:PLAYER%の阴茎
+	CASE 2
+		COMMENT_PENIS = %CALLNAME:PLAYER%の巨根
+	CASE 3
+		COMMENT_PENIS = %CALLNAME:PLAYER%の馬根阴茎
+	CASE 4
+		COMMENT_PENIS = %CALLNAME:PLAYER%の腕並阴茎
+	CASE IS >= 5
+		COMMENT_PENIS = %CALLNAME:PLAYER%の規格外阴茎
+	ENDSELECT
+
+	IF CHECK_COM("完全挿入可能", INSERT("対応指令") ) && PENIS(PLAYER) && SIZE("阴茎", PLAYER) >= 2
+		;Ｖ完全挿入が何度か挿入することで可能变成了場合
+		IF CEVENT("Ｖ完全挿入未達成") && CEVENT("Ｖ完全挿入達成文") == 0
+			CALL SET_CEVENT, "Ｖ完全挿入達成文"
+
+			SELECTCASE EXP_GAIN("Ｖ経験")
+			CASE IS >= 10
+				LOCALS = 因为被无数次地使用/
+			CASEELSE
+				LOCALS = 因为被多次地使用/
+			ENDSELECT
+
+			SIF EXP_GAIN("Ｖ拳交経験")
+				LOCALS += "连整个拳頭都插进去过/"
+
+			SELECTCASE EXP_GAIN("Ｖ性交経験")
+			CASE IS >= 5
+				LOCALS += "被重复地插入/"
+			CASEELSE
+				LOCALS += "被侵犯/"
+			ENDSELECT
+
+			SIF EX:絶頂数合計
+				LOCALS += "被不停地弄到高潮/"
+			SIF COND("弛緩")
+				LOCALS += "完全直不起腰肢，瘫软着高潮/"
+			PRINTFORM ……%TEXTR(LOCALS)%
+			PRINTFORMW 而%TEXTR("变得柔软/像是融化了一样/瘫软地张開")%的%CALLNAME:TARGET%的膣、将%COMMENT_PENIS%全根%TEXTR("咬住/吞入/用褶皱包裹住")%！
+		ENDIF
+	ENDIF
+
+	;今回初めての腹部变形
+	IF COND("腹部变形") && EXP_GAIN("腹部变形経験") == 0
+		PRINTFORM 因为%TEXTR("过于巨大/巨大/尺寸过大")%的阴茎%TEXTR("压上来/顶进来/撞进来")%%CALLNAME:TARGET%的腹部%TEXTR("咕哩……地膨胀了起来/肉眼可见地发生了变形/被装的满满的")%、
+		PRINTFORMW %TEXTR("从外面一眼就知道/一眼就能看出来/能够清楚地感觉到")%%TEXTR("被直接插到了超过肚脐的位置来回侵犯着/连内脏位置都会被插到移位地程度地被来回抽插着/子宫被激烈地撞击着/被毫不留情地一次次冲撞着膣穴的最深处")%的事实……
+	ENDIF
+
+CASE "追加地の文：Ｖ挿入後"
+	;調教ごとに一度だけ
+	SIF CHOSECOMS("Ｖ挿入")
+		RETURN 0
+	SIF TALENT:Ｖ損傷 || TALENT:Ａ損傷 || PENIS(PLAYER) == 0
+		RETURN 0
+
+	;LOCALSは女性器呼称、LOCALS:1は阴茎呼称
+	LOCALS = 
+	;Ｖ拡張度などで分岐
+	IF ABL:Ｖ拡張 >= 4 && RAND:3 == 0
+		LOCALS = 肉の洞窟
+	ELSEIF ABL:Ｖ拡張 >= 3 && RAND:2
+		LOCALS = 蜜壷
+	ELSEIF ABL:Ｖ拡張 >= 2
+		LOCALS = 膣穴
+	ELSEIF ABL:Ｖ拡張
+		LOCALS = 膣
+	ELSEIF EXP:Ｖ経験 < 50 && EXP:Ｖ性交経験 < 20 && ABL:Ｖ拡張 < 2
+		LOCALS = 秘裂
+	ELSE
+		LOCALS = 淫裂
+	ENDIF
+	SIF VAGE(TARGET) == 1 && AGE(TARGET) == 1 && ABL:Ｖ拡張 && ABL:Ｖ拡張 <= 2 && RAND:3
+		LOCALS = 幼%LOCALS%
+
+	IF PLAYER == MASTER && ( (CALCF("Ｖ履歴：Ｐ何日ぶり") >= 3 && RAND:5 == 0) || CALCF("Ｖ履歴：Ｐ何日ぶり") >= 10)
+		SELECTCASE CALCF("Ｖ履歴：Ｐ何日ぶり")
+		CASE IS >= 30
+			LOCALS:1 = 实际上已经被保管了一个多月的%CALLNAME:PLAYER%的
+		CASE IS >= 21
+			LOCALS:1 = 时隔三周归来的%CALLNAME:PLAYER%的
+		CASE IS >= 14
+			LOCALS:1 = 时隔两周归来的%CALLNAME:PLAYER%的
+		CASE IS >= 10
+			LOCALS:1 = 时隔{CALCF("Ｖ履歴：Ｐ何日ぶり")}天归来的%CALLNAME:PLAYER%的
+		CASEELSE
+			LOCALS:1 = 时隔{CALCF("Ｖ履歴：Ｐ何日ぶり")}日归来的%CALLNAME:PLAYER%的
+		ENDSELECT
+	ELSEIF SIZE("阴茎", PLAYER) >= 2 && RAND:2
+		LOCALS:1 = %CALLNAME:PLAYER%的%TEXTR("很大/凶悪/大/長大")%
+		IF SIZE("阴茎", PLAYER) >= SIZE("片手フィスト", TARGET)
+			LOCALS:1 = \@ SIZE("阴茎", PLAYER) > SIZE("片手フィスト", TARGET) ? 比自己手臂更大的 # 和自己手臂差不多的 \@
+		ELSEIF RAND:3 && COND("臍下到達") + COND("臍上侵入")
+			IF COND("臍上侵入")
+				LOCALS:1 = 能入侵到肚脐以上的
+			ELSE
+				LOCALS:1 = 几乎到达肚脐的
+			ENDIF
+		ENDIF
+	ELSEIF EXP:Ｖ経験 < 50 && EXP:Ｖ性交経験 < 20 && ABL:Ｖ拡張 < 2
+		LOCALS:1 = %CALLNAME:PLAYER%的
+	ELSEIF ABL:Ｖ拡張 < SIZE("阴茎", PLAYER) && RAND:2
+		IF RAND:2
+			LOCALS:1 = 过大的
+		ELSE
+			LOCALS:1 = 超过容量的
+		ENDIF
+	ELSEIF HARD("阴茎", PLAYER) >= 2 && RAND:3 == 0
+		LOCALS:1 = %CALLNAME:PLAYER%的坚硬的
+	ELSEIF SELECTCOM == TNUM("騎乗位") || TEQUIP:推倒
+		LOCALS:1 = %CALLNAME:PLAYER%\@ RAND:2 ? 怒張的 # 已觉醒的 \@
+	ELSEIF ABL:PLAYER:施虐属性 && SIZE("阴茎", PLAYER) && RAND:3 == 0
+		LOCALS:1 = \@ (COND("危険日") && TEQUIP:PLAYER:避孕套 == 0) ? 危険日的 # \@子宮不停地受到着撞击
+	ELSEIF RAND:4 == 0
+		LOCALS:1 = 慢慢进入的
+	ELSEIF RAND:3 == 0
+		LOCALS:1 = \@ RAND:2 ? 向着身体深处 # 摩擦着褶皱 \@前进的
+	ELSEIF RAND:2
+		LOCALS:1 = 强而有力的
+	ELSE
+		LOCALS:1 = 怒張的
+	ENDIF
+	LOCALS:1 = %LOCALS:1%阴茎
+
+	PRINTFORM %CALLNAME:TARGET%的
+	;Ｖ経験でそもそもの経験度合いを分岐
+	IF TALENT:処女 == 1 || SIZE("Ｖ拡張") + 1 <= SIZE("阴茎", PLAYER) || CHECK("Ｖ挿入") == 0
+		IF TALENT:処女 == 1
+			IF RAND:2 && TALENT:PLAYER:男性
+				PRINTFORM 第一次接受男人的
+			ELSE
+				PRINTFORM 將象徵貞潔的処女膜破られたばかりの
+			ENDIF
+		ELSEIF EXP:Ｖ性交経験 < 20 && RAND:2
+			IF CHECK("Ａ挿入") && EXP:Ａ性交経験 >= 50
+				PRINTFORM 与肛門相比还不习惯被侵犯的
+			ELSEIF RAND:2
+				PRINTFORM 还有些僵硬的
+			ELSE
+				PRINTFORM 还没有习惯迎接\@ RAND:2 ? 阴茎 # 异物 \@的
+			ENDIF
+		ELSEIF ABL:Ｖ拡張 < 2
+			IF RAND:2
+				PRINTFORM \@ AGE(TARGET) >= 2 ?  # 和外表一样 \@封闭的
+			ELSE
+				PRINTFORM \@ ABL:Ｖ拡張 == 0 ? 又狭窄又浅的 # 浅浅的 \@
+			ENDIF
+		ENDIF
+		PRINTFORM %LOCALS%、被%LOCALS:1%
+		IF ABL:Ｖ拡張 < SIZE("阴茎", PLAYER)
+			PRINTFORM %TEXTR("用力分開/扩展開/推開/强行伸展着内部的褶皱/挖到深处")%
+		ELSEIF RAND:3 == 0 && ABL:PLAYER:施虐属性
+			PRINTFORM %TEXTR("欺负到子宫口/推到子宫/侵犯到子宫的入口")%
+		ELSE
+			PRINTFORM %TEXTR("推上深处/搅拌着/推開/伸展着内部的褶皱/挖到深处")%
+		ENDIF
+		IF CUP:苦痛 >= 300
+			PRINTW 叫苦不迭……
+		ELSE
+			PRINTFORM 、一边
+			IF RAND:3 == 0
+				PRINTW 贪婪地開始寻找快感……
+			ELSEIF RAND:2
+				PRINTW 等待中的快感開始绽放……
+			ELSE
+				PRINTW 随着本能開始接受……
+			ENDIF
+		ENDIF
+		RETURN 0
+	ELSE
+		LOCALS:1 = %LOCALS:1%
+		;阴部に筋弛緩剤
+		IF GETBIT(TEQUIP:筋弛緩剤, 2) && ABL:Ｖ名器度 < 20
+			PRINTFORM 因为药物而失去了控制
+		;常時Ｖ振動棒挿入指示
+		ELSEIF TALENT:常時Ｖ振動棒 && RAND:3 == 0
+			PRINTFORM 平时就開始练习振动了
+			IF RAND:2 && TALENT:常時Ｖ振動棒 >= 3
+				PRINTFORM 一直扩张着的
+			ELSE
+				PRINTFORM 已经习惯了
+			ENDIF
+		ELSEIF ABL:Ｖ拡張 >= 4 && RAND:3 == 0
+			IF EXP:Ｖ拳交経験 && RAND:2
+				IF EXP:Ｖ拳交経験 >= 10 && ABL:Ｖ名器度 >= 20
+					PRINTFORM 经过恶毒调教而锻炼出来的
+				ELSEIF ABL:Ｖ拡張 >= 6 && TALENT:高大
+					PRINTFORM 手臂到肘部\@ RAND:2 ? 取得 # 接受 \@
+				ELSEIF EXP:Ｖ拳交経験 >= 5
+					PRINTFORM 习惯于拳交
+				ELSE
+					PRINTFORM 连拳交都经验过
+				ENDIF
+			ELSE
+				PRINTFORM 重复着扩张
+			ENDIF
+			IF ABL:Ｖ名器度 < 10
+				PRINTFORM 柔软的
+			ELSEIF ABL:Ｖ名器度 < 30
+				PRINTFORM 松弛的
+			ELSEIF EXP:Ｖ経験 >= 300 && RAND:2
+				PRINTFORM 历战的
+			ELSEIF ABL:Ｖ名器度 >= 70 && RAND:2
+				PRINTFORM 伸缩自如的
+			ELSEIF EXP:Ｖ性交経験 >= 100 && RAND:2
+				PRINTFORM 经验丰富的
+			ELSE
+				PRINTFORM 柔软的
+			ENDIF
+		ELSEIF EXP:Ｖ性交経験 >= 50 && (RAND:2 || EX:Ｖ絶頂 == 0)
+			;欲情が低い時の分岐もかねる
+			IF EXP:Ｖ経験 >= 300 && (PALAM:欲情 < 3000 || RAND:3 == 0)
+				PRINTFORM 被使用了
+			ELSEIF TALENT:淫壷 && FIRSTCOMS("Ｖ挿入")
+				IF ABL:Ｖ拡張 >= 3 && RAND:3 == 0
+					IF RAND:2
+						PRINTFORM 松弛柔软了
+					ELSE
+						PRINTFORM 变得柔软粘稠了
+					ENDIF
+				ELSEIF RAND:3 == 0
+					IF EXP:Ｖ性交経験 >= 100 && ABL:Ｖ拡張 >= 2
+						PRINTFORM 被侵犯得一塌糊涂
+					ELSEIF EXP:Ｖ性交経験 >= 100
+						PRINTFORM 被侵犯习惯了
+					ENDIF
+					PRINTFORM 淫荡的
+				ELSEIF RAND:3 == 0
+					PRINTFORM 濡湿了
+				ELSEIF RAND:2
+					PRINTFORM 渗出爱液
+				ELSE
+					PRINTFORM 粘糊糊的
+				ENDIF
+			ELSEIF PALAM:Ｖ潤 >= 3000 && PALAM:欲情 >= 10000
+				IF PALAM:Ｖ潤 >= 10000
+					IF RAND:2
+						PRINTFORM 稀稀拉拉地溢出爱液
+					ELSE
+						PRINTFORM 湿透了
+					ENDIF
+				ELSEIF RAND:2
+					PRINTFORM 用爱液沾湿的
+				ELSE
+					PRINTFORM 垂涎的
+				ENDIF
+			ELSEIF PALAM:欲情 >= 3000
+				PRINTFORM 发情了
+			ENDIF
+		ELSEIF EX:Ｖ絶頂
+			IF EX:Ｖ絶頂 >= 5
+				IF RAND:3 == 0
+					PRINTFORM 屡次被欺负
+				ELSEIF RAND:2
+					PRINTFORM 因快感而战栗
+				ELSE
+					PRINTFORM 仍在绝顶的余韵
+				ENDIF
+			ELSEIF PREVEX("Ｖ絶頂")
+				IF RAND:2
+					PRINTFORM 绝顶之后
+				ELSE
+					PRINTFORM 刚刚被欺负的
+				ENDIF
+			ELSEIF EX:Ｖ絶頂 == 1 && RAND:2
+				PRINTFORM 一度心情舒畅了
+			ELSE
+				PRINTFORM 达到了绝顶的
+			ENDIF
+		ELSEIF ABL:Ｖ感覚 >= 2 && EXP:Ｖ性交経験 >= 20 && FIRSTCOMS("Ｖ挿入")
+			IF RAND:2
+				PRINTFORM 积累了经验
+			ELSE
+				PRINTFORM 柔软的
+			ENDIF
+		ENDIF
+		PRINTFORM %LOCALS%は%LOCALS:1%を
+		IF CHECK_COM("完全挿入可能", SELECTCOM) == 0
+			IF EXP:Ｖ性交経験 < 20
+				PRINTFORM 想办法
+			ELSE
+				PRINTFORM 总算
+			ENDIF
+		ELSE
+			IF ABL:Ｖ拡張 == SIZE("阴茎", PLAYER) && CALCF("阴茎好き度", TARGET)
+				IF RAND:2
+					PRINTFORM 直到根部
+				ELSE
+					PRINTFORM 牢固地
+				ENDIF
+			ELSEIF TALENT:淫壷 && RAND:2
+				PRINTFORM 吸\@ RAND:2 ? 上去 # 进去 \@一样的
+			ELSEIF RAND:2
+				IF RAND:2
+					IF RAND:2
+						PRINTFORM 仿佛要被拖入其中
+					ELSE
+						PRINTFORM 滑溜溜
+					ENDIF
+					PRINTFORM 直到根部
+				ELSE
+					PRINTFORM 直到根部
+					IF RAND:2
+						PRINTFORM 不费吹灰之力
+					ELSE
+						PRINTFORM 从容不迫
+					ENDIF
+				ENDIF
+			ELSE
+				PRINTFORM %TEXTR("容易/深邃/从容不迫")%
+			ENDIF
+		ENDIF
+		IF RAND:3 == 0 && ABL:Ｖ拡張 > SIZE("阴茎", PLAYER)
+			PRINTFORM 吞下、
+		ELSEIF RAND:2 || SELECTCOM == TNUM("騎乗位")
+			PRINTFORM 叼进、
+		ELSE
+			PRINTFORM 接受
+		ENDIF
+	ENDIF
+	;抱擁系（温柔性格）、ギュッ系（強気or未熟）、絡みつき＆蠕動系（プロ）で分岐
+	IF TALENT:献身 && RAND:3
+		IF ABL:奉仕精神 >= 3 && ABL:Ｖ名器度 >= 70 && RAND:3 == 0
+			PRINTFORM 子宫口
+			IF TALENT:淫壷 && TALENT:子宮性感 && RAND:2
+				PRINTFORM 一边亲吻着龟頭
+			ELSEIF RAND:2
+				PRINTFORM 在前端一边擦着
+			ELSE
+				PRINTFORM 一边接住龟頭
+			ENDIF
+		ENDIF
+		IF TALENT:恋慕 && ASSI && CHOSECOMS("Ｖ挿入", ASSI) && RAND:2
+			PRINTFORM 像和%CALLNAME:ASSI%对抗一样热情地
+		ELSEIF TALENT:淫壷 && RAND:3 == 0
+			PRINTFORM 用炽热荡漾的媚肉
+		ELSEIF RAND:3 == 0
+			PRINTFORM \@ ABL:Ｖ名器度 >= 70 ? 绝妙的 # 恰好 \@用力度
+		ELSEIF RAND:2
+			PRINTFORM 柔软的
+		ELSE
+			PRINTFORM 温柔地
+		ENDIF
+		IF ABL:Ｖ名器度 >= 70 && RAND:3 == 0
+			PRINTW 抚摩过来……
+		ELSEIF RAND:2
+			PRINTW 包进来……
+		ELSE
+			PRINTW 迎进来……
+		ENDIF
+	ELSEIF TALENT:献身 == 0 && TALENT:強気 && ABL:Ｖ名器度 >= 20 && RAND:2
+		IF ABL:Ｖ名器度 >= 50 && RAND:3 == 0
+			PRINTFORM 缠绕着褶皱
+		ELSEIF RAND:2
+			PRINTFORM 紧紧地
+		ELSE
+			PRINTFORM 更加
+		ENDIF
+		IF TALENT:恋慕 && ASSI && CHOSECOMS("Ｖ挿入", ASSI) && ABL:Ｖ名器度 > ABL:ASSI:Ｖ名器度 && RAND:2
+			PRINTFORM 比%CALLNAME:ASSI%更强
+		ELSEIF ABL:Ｖ名器度 >= 70 && RAND:3 == 0
+			PRINTFORM 握在手中的力量
+		ELSEIF ABL:Ｖ名器度 >= 50 && RAND:2
+			PRINTFORM 用强大的力量
+		ELSE
+			PRINTFORM 紧紧地
+		ENDIF
+		IF RAND:3 == 0
+			PRINTW 紧握过来……
+		ELSEIF RAND:2
+			PRINTW 挤出来……
+		ELSE
+			PRINTW 勒紧过来……
+		ENDIF
+	ELSE
+		SIF TALENT:恋慕 && ASSI && CHOSECOMS("Ｖ挿入", ASSI) && RAND:2
+			PRINTFORM 不要输给%CALLNAME:ASSI%
+
+		IF RAND:2 && ABL:Ｖ名器度 >= 50
+			IF RAND:3 == 0
+				PRINTFORM \@ ABL:Ｖ名器度 >= 70 ? 磨磨蹭蹭 # \@就像咀嚼着一样
+			ELSEIF RAND:3 == 0
+				PRINTFORM 像骚动一样
+			ELSEIF RAND:2
+				PRINTFORM 活跃
+			ELSE
+				PRINTFORM 垄沟
+			ENDIF
+			IF RAND:2
+				PRINTFORM 一边蠕动
+			ELSE
+				PRINTFORM 一边蠢蠢欲动
+			ENDIF
+		ELSE
+			IF TALENT:淫壷 && RAND:3 == 0
+				IF RAND:2
+					PRINTFORM 在泥泞中
+				ELSE
+					PRINTFORM 热
+				ENDIF
+				PRINTFORM 荡漾的媚肉
+			ELSEIF ABL:Ｖ名器度 >= 50 && RAND:2
+				IF RAND:3 == 0
+					PRINTFORM 起伏的褶皱
+				ELSEIF RAND:2
+					PRINTFORM 起伏的强烈褶皱
+				ELSE
+					PRINTFORM 粗糙的肉褶
+				ENDIF
+			ELSE
+				PRINTFORM 有热量的褶皱
+			ENDIF
+			IF ABL:Ｖ名器度 >= 70 && RAND:3 == 0
+				PRINTFORM 紧紧地勒紧
+			ELSEIF ABL:Ｖ名器度 >= 40 && RAND:2
+				PRINTFORM 一边收缩
+			ELSE
+				PRINTFORM 一边吵闹着
+			ENDIF
+		ENDIF
+		IF RAND:2 == 0 && ABL:Ｖ名器度 >= 50
+			IF ABL:Ｖ感覚 >= 3 && RAND:3 == 0
+				PRINTFORM 贪婪地
+			ELSEIF ABL:Ｖ名器度 >= 80 && RAND:2
+				PRINTFORM 没有缝隙
+			ENDIF
+			PRINTFORMW %TEXTR("吸附着/缠绕着")%来……
+		ELSEIF RAND:2
+			PRINTW 刺激起来……
+		ELSE
+			PRINTW 抚摩过来……
+		ENDIF
+	ENDIF
+
+CASE "追加地の文：Ａ挿入後"
+	;調教ごとに一度だけ
+	SIF CHOSECOMS("Ａ挿入")
+		RETURN 0
+	SIF TALENT:Ａ損傷 || TALENT:Ａ損傷 || PENIS(PLAYER) == 0
+		RETURN 0
+
+	;LOCALSは肛門呼称、LOCALS:1は阴茎呼称
+	;Ａ拡張度などで分岐
+	LOCALS = 肛門
+	SIF AGE(TARGET) == 1 && ABL:Ａ拡張 && ABL:Ａ拡張 <= 2 && RAND:3
+		LOCALS = 幼%LOCALS%
+
+	IF PLAYER == MASTER && ( (CALCF("Ａ履歴：Ｐ何日ぶり") >= 3 && RAND:5 == 0) || CALCF("Ａ履歴：Ｐ何日ぶり") >= 10)
+		SELECTCASE CALCF("Ａ履歴：Ｐ何日ぶり")
+		CASE IS >= 30
+			LOCALS:1 = 实际上已经被保管了一个多月的%CALLNAME:PLAYER%的
+		CASE IS >= 21
+			LOCALS:1 = 时隔三周归来的%CALLNAME:PLAYER%的
+		CASE IS >= 14
+			LOCALS:1 = 时隔两周归来的%CALLNAME:PLAYER%的
+		CASE IS >= 10
+			LOCALS:1 = 时隔{CALCF("Ｖ履歴：Ｐ何日ぶり")}天归来的%CALLNAME:PLAYER%的
+		CASEELSE
+			LOCALS:1 = 时隔{CALCF("Ｖ履歴：Ｐ何日ぶり")}日归来的%CALLNAME:PLAYER%的
+		ENDSELECT
+	ELSEIF SIZE("阴茎", PLAYER) >= 2 && RAND:2
+		LOCALS:1 = %CALLNAME:PLAYER%的%TEXTR("很大/凶悪/大/長大")%
+		IF SIZE("阴茎", PLAYER) >= SIZE("片手フィスト", TARGET)
+			LOCALS:1 = \@ SIZE("阴茎", PLAYER) > SIZE("片手フィスト", TARGET) ? 比自己手臂更大的 # 和自己手臂差不多的 \@
+		ELSEIF RAND:3 && SIZE("阴茎", PLAYER) >= 2 && ABL:Ａ拡張 >= 2
+			IF TALENT:娇小 || SIZE("阴茎", PLAYER) >= 3
+				LOCALS:1 = 入侵到难以置信的深处的
+			ELSE
+				LOCALS:1 = 直腸深处也能满足到的
+			ENDIF
+		ENDIF
+	ELSEIF EXP:Ａ経験 < 50 && EXP:Ａ性交経験 < 20 && ABL:Ａ拡張 < 2 && ABL:Ａ感覚 < 2
+		LOCALS:1 = %CALLNAME:PLAYER%的
+	ELSEIF ABL:Ａ拡張 < SIZE("阴茎", PLAYER) && RAND:2
+		IF RAND:2
+			LOCALS:1 = 过大的
+		ELSE
+			LOCALS:1 = 超过容量的
+		ENDIF
+	ELSEIF HARD("阴茎", PLAYER) >= 2 && RAND:3 == 0
+		LOCALS:1 = %CALLNAME:PLAYER%的坚硬的
+	ELSEIF SELECTCOM == TNUM("肛門騎乗位") || TEQUIP:推倒
+		LOCALS:1 = %CALLNAME:PLAYER%\@ RAND:2 ? 怒張的 # 已觉醒的 \@
+	ELSEIF ABL:PLAYER:施虐属性 && SIZE("阴茎", PLAYER) && RAND:3 == 0
+		LOCALS:1 = 突入直腸的
+	ELSEIF RAND:4 == 0
+		LOCALS:1 = 慢慢进入的
+	ELSEIF RAND:3 == 0
+		LOCALS:1 = \@ RAND:2 ? 向着身体深处 # 摩擦着粘膜 \@前进的
+	ELSEIF RAND:2
+		LOCALS:1 = 强而有力的
+	ELSE
+		LOCALS:1 = 怒張的
+	ENDIF
+	LOCALS:1 = %LOCALS:1%阴茎
+
+	PRINTFORM %CALLNAME:TARGET%的
+	;Ａ経験でそもそもの経験度合いを分岐
+	IF TALENT:Ａ処女 || SIZE("Ａ拡張") + 1 <= SIZE("阴茎", PLAYER) || CHECK("Ａ挿入") == 0
+		IF TALENT:Ａ処女 && EXP:Ａ性交経験 == 0
+			PRINTFORM 第一次接受阴茎的
+		ELSEIF EXP:Ａ性交経験 < 20 && RAND:2
+			IF TALENT:男性 == 0 && CHECK("Ｖ挿入") && EXP:Ｖ性交経験 >= 50
+				PRINTFORM 与阴道相比还不习惯被侵犯的
+			ELSEIF RAND:2
+				PRINTFORM 还有些僵硬的
+			ELSE
+				PRINTFORM 还没有习惯迎接\@ RAND:2 ? 阴茎 # 异物 \@的
+			ENDIF
+		ELSEIF ABL:Ａ拡張 < 2
+			IF RAND:2
+				PRINTFORM \@ AGE(TARGET) >= 2 ? 和外表一样 # \@封闭的
+			ELSE
+				PRINTFORM \@ ABL:Ａ拡張 == 0 ? 又狭窄又浅的 # 浅浅的 \@
+			ENDIF
+		ENDIF
+
+		PRINTFORM %LOCALS%、被%LOCALS:1%
+
+		IF ABL:Ａ拡張 < SIZE("阴茎", PLAYER)
+			IF RAND:4 == 0
+				PRINTFORM 扩张開
+			ELSEIF RAND:3 == 0
+				PRINTFORM 推開
+			ELSEIF RAND:2
+				PRINTFORM 强行伸展了内部的褶皱
+			ELSE
+				PRINTFORM 挖到深处
+			ENDIF
+		ELSEIF RAND:2
+			PRINTFORM 推上深处
+		ELSE
+			PRINTFORM 搅拌着
+		ENDIF
+
+		IF CUP:苦痛 >= 300
+			PRINTW 叫苦不迭……
+		ELSE
+			PRINTFORM 、一边
+			IF RAND:3 == 0
+				PRINTW 贪婪地開始寻找快感……
+			ELSEIF RAND:2
+				PRINTW 等待中的快感開始绽放……
+			ELSE
+				PRINTW 渐渐地開始接受了……
+			ENDIF
+		ENDIF
+		RETURN 0
+	ELSE
+		LOCALS:1 = %LOCALS:1%
+		;肛門に筋弛緩剤
+		IF GETBIT(TEQUIP:筋弛緩剤, 0) && ABL:Ａ名器度 < 20
+			PRINTFORM 因为药物而失去了控制
+		;常時Ａ肛塞挿入指示
+		ELSEIF TALENT:常時Ａ肛塞 && RAND:3 == 0
+			PRINTFORM 从平时開始
+			IF RAND:2 && TALENT:常時Ａ肛塞 >= 3
+				PRINTFORM 一直扩张着的
+			ELSE
+				PRINTFORM 习惯了插入的
+			ENDIF
+		ELSEIF ABL:Ａ拡張 >= 4 && RAND:3 == 0
+			IF EXP:Ａ拳交経験 && RAND:2
+				IF EXP:Ａ拳交経験 >= 10 && ABL:Ａ名器度 >= 20
+					PRINTFORM 经过恶毒调教而锻炼出来的
+				ELSEIF ABL:Ａ拡張 >= 6 && TALENT:高大
+					PRINTFORM 无论到哪里\@ RAND:2 ? 取得 # 接受 \@
+				ELSEIF EXP:Ａ拳交経験 >= 5
+					PRINTFORM 习惯于拳交
+				ELSE
+					PRINTFORM 连拳交都经验过
+				ENDIF
+			ELSE
+				PRINTFORM 重复着扩张
+			ENDIF
+			IF ABL:Ａ名器度 < 10
+				PRINTFORM 哗啦哗啦的
+			ELSEIF ABL:Ａ名器度 < 20
+				PRINTFORM 合不上
+			ELSEIF ABL:Ａ拡張 >= 5 && ABL:Ａ感覚 >= 5 && RAND:2
+				PRINTFORM 为了让心情变好
+			ELSEIF EXP:Ａ経験 >= 300 && RAND:2
+				PRINTFORM 历战的
+			ELSEIF ABL:Ａ名器度 >= 70 && RAND:2
+				PRINTFORM 伸缩自如的
+			ELSEIF EXP:Ａ性交経験 >= 100 && RAND:2
+				PRINTFORM 经验丰富的
+			ELSE
+				PRINTFORM 柔软的
+			ENDIF
+		ELSEIF EXP:Ａ性交経験 >= 50 && (RAND:2 || EX:Ａ絶頂 == 0)
+			;欲情が低い時の分岐もかねる
+			IF EXP:Ａ経験 >= 300 && (PALAM:欲情 < 3000 || RAND:3 == 0)
+				PRINTFORM 被使用了
+			ELSEIF TALENT:尻穴狂い && FIRSTCOMS("Ａ挿入")
+				IF ABL:Ａ拡張 >= 3 && RAND:3 == 0
+					IF RAND:2
+						PRINTFORM 像要溶化般柔软的
+					ELSE
+						PRINTFORM 变得十分柔软
+					ENDIF
+				ELSE
+					IF EXP:Ａ性交経験 >= 100 && ABL:Ａ拡張 >= 2
+						PRINTFORM 被侵犯得一塌糊涂
+					ELSEIF EXP:Ａ性交経験 >= 100
+						PRINTFORM 被侵犯习惯了
+					ENDIF
+					PRINTFORM 淫荡的
+				ENDIF
+			ELSEIF PALAM:欲情 >= 10000
+				IF RAND:2
+					PRINTFORM 略微张着嘴巴、巴巴地望着
+				ELSE
+					PRINTFORM 期待落空
+				ENDIF
+			ELSEIF PALAM:欲情 >= 3000
+				IF RAND:2
+					PRINTFORM 兴奋得直打哆嗦
+				ELSE
+					PRINTFORM 发情时微微出汗
+				ENDIF
+			ENDIF
+		ELSEIF EX:Ａ絶頂
+			IF EX:Ａ絶頂 >= 5
+				IF RAND:3 == 0
+					PRINTFORM 屡次被欺负
+				ELSEIF RAND:2
+					PRINTFORM 因快感而战栗
+				ELSE
+					PRINTFORM 仍在绝顶的余韵
+				ENDIF
+			ELSEIF PREVEX("Ａ絶頂")
+				IF RAND:2
+					PRINTFORM 绝顶之后
+				ELSE
+					PRINTFORM 刚刚被欺负的
+				ENDIF
+			ELSEIF EX:Ａ絶頂 == 1 && RAND:2
+				PRINTFORM 一度心情舒畅了
+			ELSE
+				PRINTFORM 达到了绝顶的
+			ENDIF
+		ELSEIF ABL:Ａ感覚 >= 2 && EXP:Ａ性交経験 >= 20 && FIRSTCOMS("Ａ挿入")
+			IF RAND:2
+				PRINTFORM 沉浸在快感中
+			ELSE
+				PRINTFORM 柔软的
+			ENDIF
+		ENDIF
+		PRINTFORM %LOCALS%は%LOCALS:1%を
+		IF CHECK_COM("完全挿入可能", SELECTCOM) == 0
+			IF EXP:Ａ性交経験 < 20
+				PRINTFORM 想办法
+			ELSE
+				PRINTFORM 总算
+			ENDIF
+		ELSE
+			IF ABL:Ａ拡張 == SIZE("阴茎", PLAYER) && CALCF("阴茎好き度", TARGET)
+				IF RAND:2
+					PRINTFORM 直到根部
+				ELSE
+					PRINTFORM 牢固地
+				ENDIF
+			ELSEIF TALENT:尻穴狂い && RAND:2
+				PRINTFORM 吸\@ RAND:2 ? 上去 # 进去 \@一样的
+			ELSEIF ABL:Ａ拡張 > SIZE("阴茎", PLAYER) && RAND:2
+				IF RAND:2
+					IF RAND:2
+						PRINTFORM 仿佛要被拖入其中
+					ELSE
+						PRINTFORM 滑溜溜
+					ENDIF
+					PRINTFORM 直到根部
+				ELSE
+					PRINTFORM 直到根部
+					IF RAND:2
+						PRINTFORM 不费吹灰之力
+					ELSE
+						PRINTFORM 从容不迫
+					ENDIF
+				ENDIF
+			ELSEIF RAND:2
+				PRINTFORM 不费吹灰之力
+			ELSE
+				PRINTFORM 从容不迫
+			ENDIF
+		ENDIF
+		IF RAND:3 == 0 && ABL:Ａ拡張 > SIZE("阴茎", PLAYER)
+			PRINTFORM 吞下、
+		ELSEIF RAND:2 || SELECTCOM == TNUM("騎乗位")
+			PRINTFORM 叼进、
+		ELSE
+			PRINTFORM 接受
+		ENDIF
+	ENDIF
+	;抱擁系（温柔性格）、ギュッ系（強気or未熟）、絡みつき＆蠕動系（プロ）で分岐
+	IF TALENT:献身 && RAND:3
+		IF ABL:奉仕精神 >= 3 && ABL:Ａ名器度 >= 70 && RAND:3 == 0
+			PRINTFORM 肉厚的入口
+			IF RAND:2
+				PRINTFORM 一边蠢蠢地使用
+			ELSE
+				PRINTFORM 抚摸着肉茎
+			ENDIF
+		ENDIF
+		IF TALENT:恋慕 && ASSI && CHOSECOMS("Ａ挿入", ASSI) && RAND:2
+			PRINTFORM 像和%CALLNAME:ASSI%对抗一样热情地
+		ELSEIF TALENT:尻穴狂い && RAND:3 == 0
+			PRINTFORM 用柔软的肠道黏膜缠绕
+		ELSEIF RAND:3 == 0
+			PRINTFORM \@ ABL:Ａ名器度 >= 70 ? 绝妙的 # 恰好 \@用力度
+		ELSEIF RAND:2
+			PRINTFORM 柔软的
+		ELSE
+			PRINTFORM 温柔地
+		ENDIF
+		IF ABL:Ａ名器度 >= 70 && RAND:3 == 0
+			PRINTW 抚摩过来……
+		ELSEIF RAND:2
+			PRINTW 包进来……
+		ELSE
+			PRINTW 迎进来……
+		ENDIF
+	ELSEIF TALENT:献身 == 0 && TALENT:強気 && ABL:Ａ名器度 >= 20 && RAND:2
+		IF ABL:Ａ名器度 >= 50 && RAND:3 == 0
+			PRINTFORM 缠绕着褶皱
+		ELSEIF RAND:2
+			PRINTFORM 紧紧地
+		ELSE
+			PRINTFORM 更加
+		ENDIF
+		IF TALENT:恋慕 && ASSI && CHOSECOMS("Ａ挿入", ASSI) && ABL:Ａ名器度 > ABL:ASSI:Ａ名器度 && RAND:2
+			PRINTFORM 比%CALLNAME:ASSI%更强
+		ELSEIF ABL:Ａ名器度 >= 70 && RAND:3 == 0
+			PRINTFORM 握在手中的力量
+		ELSEIF ABL:Ａ名器度 >= 50 && RAND:2
+			PRINTFORM 用强大的力量
+		ELSE
+			PRINTFORM 紧紧地
+		ENDIF
+		IF RAND:3 == 0
+			PRINTW 紧握过来……
+		ELSEIF RAND:2
+			PRINTW 挤出来……
+		ELSE
+			PRINTW 勒紧过来……
+		ENDIF
+	ELSE
+		SIF TALENT:恋慕 && ASSI && CHOSECOMS("Ａ挿入", ASSI) && RAND:2
+			PRINTFORM 不要输给%CALLNAME:ASSI%
+
+		IF RAND:2 && ABL:Ａ名器度 >= 50
+			IF RAND:3 == 0
+				PRINTFORM \@ ABL:Ａ名器度 >= 70 ? 和鼹鼠 # \@就像咀嚼着一样
+			ELSEIF RAND:3 == 0
+				PRINTFORM 像骚动一样
+			ELSEIF RAND:2
+				PRINTFORM 活跃
+			ELSE
+				PRINTFORM 垄沟
+			ENDIF
+			IF RAND:2
+				PRINTFORM 一边蠕动
+			ELSE
+				PRINTFORM 一边蠢蠢欲动
+			ENDIF
+		ELSE
+			IF TALENT:尻穴狂い && RAND:3 == 0
+				IF RAND:2
+					PRINTFORM 在泥泞中
+				ELSE
+					PRINTFORM 热
+				ENDIF
+				PRINTFORM 用粘着的粘膜
+			ELSEIF ABL:Ａ名器度 >= 50 && RAND:2
+				IF RAND:3 == 0
+					PRINTFORM 肉厚如胶的肛門
+				ELSEIF RAND:2
+					PRINTFORM 起伏少的敏感的粘膜
+				ELSE
+					PRINTFORM 紧绷的肉圈
+				ENDIF
+			ELSE
+				PRINTFORM 热呼呼的直肠粘膜
+			ENDIF
+			IF ABL:Ａ名器度 >= 70 && RAND:3 == 0
+				PRINTFORM 紧紧地勒紧
+			ELSEIF ABL:Ａ名器度 >= 40 && RAND:2
+				PRINTFORM 一边收缩
+			ELSE
+				PRINTFORM 一边吵闹着
+			ENDIF
+		ENDIF
+		IF RAND:3 == 0 && ABL:Ａ名器度 >= 40
+			IF ABL:Ａ感覚 >= 3 && RAND:3 == 0
+				PRINTFORM 贪婪地
+			ELSEIF ABL:Ａ名器度 >= 50 && RAND:2
+				PRINTFORM 没有缝隙
+			ENDIF
+			PRINTW 纠缠不休……
+		ELSEIF RAND:2
+			PRINTW 刺激起来……
+		ELSE
+			PRINTW 抚摩过来……
+		ENDIF
+	ENDIF
+CASE "追加地の文：尿道挿入後"
+	;調教ごとに一度だけ
+	SIF CHOSECOMS("尿道挿入")
+		RETURN 0
+
+	;初めての阴茎受け入れ
+	IF EXP:尿道性交経験 == 0
+		IF PENIS(TARGET)
+			;拡張十分
+			IF MIN_STR(CONDS("尿道拡張度") ) > SIZE("阴茎の直径", PLAYER)
+				PRINTFORMW %CALLNAME:TARGET%的\@ EXP:尿道経験 >= 50 ? 经验丰富 # \@阴茎、被突出的那样到根源接受%CALLNAME:PLAYER%自己…
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%的阴茎经不起力气冲进来的肉棒、被拉得快要裂開了、发出了悲鸣……
+			ENDIF
+		ELSE
+			;拡張十分
+			IF MIN_STR(CONDS("尿道拡張度") ) > SIZE("阴茎の直径", PLAYER)
+				PRINTFORMW %CALLNAME:TARGET%的\@ EXP:尿道経験 >= 50 ? 经验丰富 # \@尿道会按照被突出的样子接受阴茎…
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%那里、无法忍受任凭力量冲入的肉棒、发出了悲鸣……
+			ENDIF
+		ENDIF
+	;被逆推ているとき（騎乗位）
+	ELSEIF TEQUIP:推倒
+		IF PENIS(TARGET)
+			;経験豊富で余裕
+			IF TALENT:尿道性感 && EXP:尿道性交経験 >= 20 && CHECK("尿道挿入")
+				IF CHOSECOM(SELECTCOM) == 0
+					IF RAND:2
+						PRINTFORMW %CALLNAME:TARGET%接受了自己的阴茎作为獲得快感的场所、对推广海绵体的喜悦露出甜美的呼吸……
+					ELSE
+						PRINTFORMW 完全习惯了这种异常行为的%CALLNAME:TARGET%、表情从容地挺起腰、贪婪地追求着%CALLNAME:PLAYER%自身……
+					ENDIF
+				ELSE
+					IF RAND:2
+						PRINTFORMW %CALLNAME:TARGET%兴奋得快要崩溃似的勃起阴茎、用敏感的粘膜享受%CALLNAME:PLAYER%的昂扬…
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%无意识地使腰前后弯曲、寻求在更深的地方的刺激……
+					ENDIF
+				ENDIF
+			;許容できるPLAYだが慣れていない
+			ELSEIF CHECK("尿道PLAY")
+				IF CHOSECOM(SELECTCOM) == 0
+					PRINTFORMW 虽然疼痛本身并不是那么严重、但是%CALLNAME:TARGET%却因为不习惯的行为翻着白眼移动着腰……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%对推開海绵体使之出入的感觉、还不安的情况…
+				ENDIF
+			ELSE
+				IF RAND:2
+					PRINTFORMW %CALLNAME:TARGET%还未习惯的伤口、咬紧牙関一边忍耐一边摇着腰……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%似乎已经习惯了行为本身、但是表情好像有点疼……
+				ENDIF
+			ENDIF
+		ELSE
+			;経験豊富で余裕
+			IF TALENT:尿道性感 && EXP:尿道性交経験 >= 20 && CHECK("尿道挿入")
+				IF CHOSECOM(SELECTCOM) == 0
+					IF RAND:2
+						PRINTFORMW 将自己的尿道作为性器官认识了的%CALLNAME:TARGET%、对到根源接受阴茎的喜悦露出甜美的叹息…
+					ELSE
+						PRINTFORMW 完全习惯了这种异常行为的%CALLNAME:TARGET%、表情从容地摇起腰、贪婪地追求着%CALLNAME:PLAYER%的阴茎……
+					ENDIF
+				ELSE
+					IF RAND:2
+						PRINTFORMW %CALLNAME:TARGET%兴奋地照射着身体、用真正的排泄器官黏膜享受%CALLNAME:PLAYER%的冲入……
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%无意识地使之用腰做着、寻求在更深的地方的刺激…
+					ENDIF
+				ENDIF
+			ELSEIF CHECK("尿道PLAY")
+				IF CHOSECOM(SELECTCOM) == 0
+					PRINTFORMW 虽然疼痛本身并不是那么严重、但是%CALLNAME:TARGET%对于向不习惯的膀胱插入行为时而皱眉頭……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%似乎无法掩饰对使用比其他任何孔都敏感的尿道来使用男性器官的感觉的不安……
+				ENDIF
+			ELSE
+				IF RAND:2
+					PRINTFORMW %CALLNAME:TARGET%一边浮起微妙的表情咬死不习惯的疼痛、一边在尿道上继续性行为……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%似乎已经习惯了行为本身、但总觉得脸上浮现出不安的样子……
+				ENDIF
+			ENDIF
+		ENDIF
+	ELSE
+		IF PENIS(TARGET)
+			;経験豊富で余裕
+			IF TALENT:尿道性感 && EXP:尿道性交経験 >= 20 && CHECK("尿道挿入")
+				IF CHOSECOM(SELECTCOM) == 0
+					IF RAND:3 == 0
+						PRINTFORMW %CALLNAME:TARGET%就像是将原本只通过液体的管子用有弹力的东西拨開侵入的感觉的俘虏……
+					ELSEIF RAND:2
+						PRINTFORMW 作为被侵犯自己的阴茎的地方接受了的%CALLNAME:TARGET%、对推广海绵体的喜悦露出甜的叹息…
+					ELSE
+						PRINTFORMW 完全习惯了这种异常行为的%CALLNAME:TARGET%、表情从容地挺出腰、贪婪地追求着%CALLNAME:PLAYER%的责备……
+					ENDIF
+				ELSE
+					IF RAND:2
+						PRINTFORMW %CALLNAME:TARGET%兴奋得快要崩溃似的勃起阴茎、用敏感的粘膜享受%CALLNAME:PLAYER%的突入…
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%无意识地使腰前后弯曲、寻求在更深的地方的刺激……
+					ENDIF
+				ENDIF
+			;許容できるPLAYだが慣れていない
+			ELSEIF CHECK("尿道PLAY")
+				IF CHOSECOM(SELECTCOM) == 0
+					PRINTFORMW 虽然疼痛本身并不是那么严重、但是%CALLNAME:TARGET%对于不习惯的行为却眼珠一片漆黑……
+				ELSEIF RAND:2
+					PRINTFORMW %CALLNAME:TARGET%难以测量%CALLNAME:PLAYER%的正气程度、无法形容的表情……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%似乎无法掩饰对推開海绵体而进出的不安……
+				ENDIF
+			;大分慣れてきたが痛い
+			ELSEIF EXP:尿道性交経験 >= 20
+				IF CHOSECOM(SELECTCOM) && TALENT:感情缺乏 == 0
+					PRINTFORMW %CALLNAME:TARGET%对于反复出现的恐怖行为、似乎隐藏不住胆怯的神色……
+				ELSEIF RAND:2
+					PRINTFORMW %CALLNAME:TARGET%咬紧牙関忍受着曾经经历过无数次的不习惯的伤口……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%似乎已经习惯了行为本身、但因为无法忍受尖锐的疼痛而露出苦闷的表情……
+				ENDIF
+			;厳しい
+			ELSE
+				IF RAND:2
+					PRINTFORMW %CALLNAME:TARGET%无意识地拉着腰、承受着被撕裂身体的剧烈的伤痛……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%似乎因为袭击敏感场所的尖锐疼痛而无法动弹……
+				ENDIF
+			ENDIF
+		ELSE
+			;経験豊富で余裕
+			IF TALENT:尿道性感 && EXP:尿道性交経験 >= 20 && CHECK("尿道挿入")
+				IF CHOSECOM(SELECTCOM) == 0
+					IF RAND:3 == 0
+						PRINTFORMW %CALLNAME:TARGET%就像是将原本只通过液体的管子用有弹力的东西拨開侵入的感觉的俘虏……
+					ELSEIF RAND:2
+						PRINTFORMW 作为被侵犯自己的尿道的地方接受了的%CALLNAME:TARGET%、对到(连)根源接受阴茎的喜悦露出甜的叹息…
+					ELSE
+						PRINTFORMW 完全习惯了这种异常行为的%CALLNAME:TARGET%、表情从容地挺出腰、贪婪地追求着%CALLNAME:PLAYER%的责备……
+					ENDIF
+				ELSE
+					IF RAND:2
+						PRINTFORMW %CALLNAME:TARGET%兴奋地照射着身体、用真正的排泄器官黏膜享受%CALLNAME:PLAYER%的冲入……
+					ELSE
+						PRINTFORMW %CALLNAME:TARGET%无意识地使腰前后弯曲、寻求在更深的地方的刺激……
+					ENDIF
+				ENDIF
+			ELSEIF CHECK("尿道PLAY")
+				IF CHOSECOM(SELECTCOM) == 0
+					IF RAND:2
+						PRINTFORMW %CALLNAME:TARGET%难以忍受肉厚的异物无视抵抗而深入侵入、紧闭双眼……
+					ELSE
+						PRINTFORMW 疼痛本身似乎并不是那么严重、但%CALLNAME:TARGET%却是\@ EXP:尿道性交経験 >= 20 ? 一点也不 # \@对向不习惯的膀胱的插入行为翻着白眼…
+					ENDIF
+				ELSEIF RAND:2
+					PRINTFORMW %CALLNAME:TARGET%难以测量%CALLNAME:PLAYER%的正气程度、无法形容的表情……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%被比其他任何孔都敏感的尿道出入的感觉、掩饰不住不安……
+				ENDIF
+			;大分慣れてきた
+			ELSEIF EXP:尿道性交経験 >= 20
+				IF CHOSECOM(SELECTCOM) && TALENT:感情缺乏 == 0
+					PRINTFORMW %CALLNAME:TARGET%对于反复出现的恐怖行为、似乎隐藏不住胆怯的神色……
+				ELSEIF RAND:2
+					PRINTFORMW %CALLNAME:TARGET%以微妙的表情接受了多次经历过的不习惯的行为……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%似乎已经习惯了这种行为本身、但不管怎么说、还是一副不愉快的样子勉勉强强地睁開大腿……
+				ENDIF
+			;厳しい
+			ELSE
+				IF RAND:2
+					PRINTFORMW %CALLNAME:TARGET%无意识地拉着腰、看着%CALLNAME:PLAYER%的样子……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%似乎因为被毫不留情的袭击敏感场所而无法做出任何微妙的动作……
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+
+CASE "追加地の文：騎乗位以外の挿入"
+	SIF ABL:信頼 < 3 && TALENT:恋慕 == 0 && ABL:欲望 < 3
+		RETURN 0
+
+	SELECTCASE SELECTCOM
+	CASE TNUM("正常位") TO 69
+		SIF CHECK("Ｖ挿入") == 0 && COND("性欲解消実行中") == 0
+			RETURN 0
+	CASE TNUM("肛門正常位") TO 79
+		SIF CHECK("Ａ挿入") == 0 && COND("性欲解消実行中") == 0
+			RETURN 0
+	CASE TNUM("尿道正常位") TO TNUM("尿道騎乗位")
+		SIF CHECK("尿道挿入") == 0 && COND("性欲解消実行中") == 0
+			RETURN 0
+	CASEELSE
+		RETURN 0
+	ENDSELECT
+
+	SIF CHECK_COM("立位")
+		RETURN 0
+
+	SELECTCASE SELECTCOM
+	CASE TNUM("正常位"), TNUM("尿道正常位")
+		PRINTFORM %CALLNAME:TARGET%
+		IF RAND:2 && COND("指の使用") && CHECK_CLO("腋露出")
+			PRINTFORM 用%TEXTR("梳起頭发的动作/両手放在頭後的动作")%%TEXTR("展示/显露出")%%TEXTS("腋：視覚")%的同时、
+			IF COND("視力") && RAND:2
+				PRINTFORMW 带着兴奋的神情凝视着%CALLNAME:PLAYER%……
+			ELSE
+				PRINTFORMW 气喘吁吁地接受了%CALLNAME:PLAYER%的突入……
+			ENDIF
+			CALL SETFLAG, "腋見せフラグ", TARGET
+		ELSEIF COND("脚の使用")
+			IF SELECTCOM == TNUM("尿道正常位") && RAND:2
+				IF RAND:3 == 0
+					PRINTFORMW 为了将%CALLNAME:PLAYER%的阴茎深入膀胱深处、而使劲地把腰压住……
+				ELSEIF RAND:2 == 0
+					PRINTFORM 叉開大腿、
+					IF SIZE("阴茎", PLAYER) >= 4
+						PRINTFORM %TEXTR("凶悪的/長大的/極太的")%
+					ELSEIF SIZE("阴茎", PLAYER) >= 3
+						PRINTFORM 巨大的
+					ENDIF
+					PRINTFORMW 享受阴茎抽插的乐趣……
+				ELSE
+					PRINTFORMW 抬起腰、在尿道上积极地将%CALLNAME:PLAYER%的阴茎往深处咽下……
+				ENDIF
+			ELSEIF RAND:2 && TEQUIP:PLAYER:避孕套 == 0
+				IF COND("要去了") && RAND:2
+					PRINTFORMW 气喘吁吁、半无意识地将双脚缠绕在%CALLNAME:PLAYER%的腰间……
+				ELSE
+					PRINTFORMW %CALLNAME:PLAYER%の腰の後ろに足を回し、股間をぐいぐいと押し出しながら%TEXTR("上目遣いに見つめて/突き込みを楽しんで/貪欲に快感を貪って")%いる…
+				ENDIF
+			ELSE
+				PRINTFORMW 双腿大開伸出腰肢、%TEXTR(@"欣然接受了%CALLNAME:PLAYER%的突入/贪得无厌地享受着快感")%…
+			ENDIF
+		ELSE
+			IF RAND:2
+				PRINTFORMW 朝向%CALLNAME:PLAYER%伸出腰肢、%TEXTR("欣然地接受了突入/贪得无厌地享受着快感")%…
+			ELSE
+				PRINTFORMW 把身体全部压在%CALLNAME:PLAYER%身上...
+			ENDIF
+		ENDIF
+	CASE TNUM("肛門正常位")
+		PRINTFORM %CALLNAME:TARGET%
+		IF RAND:2 && COND("指の使用") && CHECK_CLO("腋露出")
+			PRINTFORM 用%TEXTR("梳起頭发的动作/両手放在頭後的动作")%%TEXTR("展示/显露出")%%TEXTS("腋：視覚")%的同时、
+			IF COND("視力") && RAND:2
+				PRINTFORMW 带着兴奋的神情凝视着%CALLNAME:PLAYER%……
+			ELSE
+				PRINTFORMW 气喘吁吁地接受了%CALLNAME:PLAYER%的突入……
+			ENDIF
+			CALL SETFLAG, "腋見せフラグ", TARGET
+		ELSEIF COND("脚の使用")
+			PRINTFORMW Ｍ字開脚の体勢で腰を浮かせ、股間を隅々まで%CALLNAME:PLAYER%に見られながらの肛門性交を楽しんでいる…
+		ELSE
+			PRINTFORMW 抬起腰、以容易被侵犯肛門的姿势享受着……
+		ENDIF
+	CASE TNUM("後背位"), TNUM("肛門後背位"), TNUM("尿道後背位")
+		IF SELECTCOM == TNUM("尿道後背位") && RAND:2
+			IF RAND:3 == 0
+				PRINTFORMW %CALLNAME:TARGET%は股を締め、尿道で%CALLNAME:PLAYER%の阴茎をきゅうきゅうと締め付けながらお尻を突き出している…
+				CALL SETFLAG, "締め付けフラグ", TARGET
+			ELSEIF COND("要去了") && RAND:2 == 0
+				PRINTFORMW %CALLNAME:TARGET%接近顶峰了吧、只能抬起屁股、难为情地露出呻吟……
+			ELSE
+				PRINTFORM %CALLNAME:TARGET%对%CALLNAME:PLAYER%说
+				SIF TALENT:小尻
+					PRINTFORM %TEXTR("小小的/单薄的")%
+				SIF TALENT:巨尻
+					PRINTFORM %TEXTR("硕大的/肉感的")%
+				PRINTFORMW 尻肉%TEXTR("来回抚摸/抓揉")%的同时享受着尿道性交带来的快乐…
+			ENDIF
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%一边苦闷的享受身体的快乐、一边提高屁股享受来自%CALLNAME:PLAYER%的激烈的推挤…
+		ENDIF
+	CASE TNUM("屈曲位"), TNUM("肛門屈曲位"), TNUM("尿道屈曲位")
+		PRINTFORM %CALLNAME:TARGET%
+		IF RAND:2 && COND("指の使用") && CHECK_CLO("腋露出")
+			PRINTFORM 用%TEXTR("梳起頭发的动作/両手放在頭後的动作")%%TEXTR("展示/显露出")%%TEXTS("腋：視覚")%的同时、
+			IF COND("視力") && RAND:2
+				PRINTFORMW 带着兴奋的神情凝视着%CALLNAME:PLAYER%……
+			ELSE
+				PRINTFORMW 气喘吁吁地接受了%CALLNAME:PLAYER%的突入……
+			ENDIF
+			CALL SETFLAG, "腋見せフラグ", TARGET
+		ELSEIF RAND:2 && ABL:露出癖 >= 3 && MARK:屈服刻印 >= 2 && COND("指の使用")
+			PRINTFORMW 用自己的手臂抱住脚、积极地享受着羞耻的体位……
+		ELSE
+			IF SELECTCOM == TNUM("肛門屈曲位")
+				PRINTFORM 一边被挖弄肛門、
+				IF PENIS(TARGET)
+					PRINTFORMW 带着兴奋的神情凝视着%CALLNAME:PLAYER%……
+				ELSE
+					PRINTFORMW 一边兴奋地凝视着垂涎着的自己的身影……
+				ENDIF
+			ELSEIF SELECTCOM == TNUM("尿道屈曲位")
+				IF RAND:3 == 0
+					PRINTFORM 虽然是尿道%TEXTR("被挖開/从缝隙中溢出尿/被咕嘟咕嘟地流出来")%、
+					IF RAND:3 == 0 && ABL:尿道感覚 >= 5
+						PRINTFORMW 享受着可以说是异常的尿道性交……
+					ELSE
+						PRINTFORMW 享受着尿道括约肌扩展的感觉……
+					ENDIF
+				ELSEIF RAND:2 == 0 && ABL:尿道感覚 >= 5
+					PRINTFORMW 闭上双脚、享受着%CALLNAME:PLAYER%的阴茎紧绷被给予的快乐感觉……
+					CALL SETFLAG, "締め付けフラグ", TARGET
+				ELSE
+					PRINTFORMW 不介意每次抽插时带出的尿液、体味着从尿道传来的快感……
+				ENDIF
+			ELSE
+				SIF COND("危険日") && TEQUIP:PLAYER:避孕套 == 0
+					PRINTFORM 危険日にも拘らず避孕套没有で
+				PRINTFORMW 一边兴奋地凝视着被玩弄的小穴……
+			ENDIF
+		ENDIF
+	CASE TNUM("対面座位"), TNUM("肛門対面座位"), TNUM("尿道対面座位")
+		IF COND("指の使用")
+			IF RAND:2 && CHECK_CLO("腋露出")
+				PRINTFORMW 把手转动脖子抱住的%CALLNAME:TARGET%的汗流的%TEXTS("腋")%的%TEXTS("气味")%刺激%CALLNAME:PLAYER%的鼻腔…
+			ELSEIF SELECTCOM == TNUM("尿道対面座位") && RAND:2 == 0
+				IF RAND:3 == 0 && SIZE("阴茎", PLAYER) >= 3
+					IF RAND:3 == 0
+						PRINTFORM %CALLNAME:TARGET%在%CALLNAME:PLAYER%的膝盖上身体向后仰、
+						PRINTFORM %TEXTR("凶悪的/巨大的/大的")%阴茎的形状浮现的%TEXTR("腹部/小腹")%
+						PRINTFORMW 凝视着%TEXTR("非常轻松的表情/心神荡漾的表情/快楽的呻吟快忍不住的表情")%…
+					ELSEIF RAND:2 == 0
+						SIF TALENT:娇小
+							PRINTFORM 小小的身体
+						PRINTFORM 到膀胱为止咽下了%TEXTR("凶悪的/巨大的/大的")%阴茎的腹部
+						PRINTFORMW 每次取出都会说明%TEXTR("形成失真一般/膨胀得很残忍")%、尿道性交的激烈……
+					ELSE
+						IF TALENT:娇小 >= 2 && TALENT:PLAYER:高大
+							PRINTFORM %CALLNAME:TARGET%因为体格差别而被当成手淫便器一样对待、
+							PRINTFORMW 虽是%TEXTR("嬌声呻吟/发出歓喜的声音/性感的身体颤抖")%却想用小尿道榨取精子……
+						ELSE
+							PRINTFORM %CALLNAME:TARGET%是因为膀胱被阴茎压上来膨胀的感觉而上瘾的吗？
+							PRINTFORM %TEXTR("非常轻松的表情/心神荡漾的表情/快楽的呻吟快忍不住的表情")%浮现的%TEXTR("腹部/小腹")%
+							SIF TALENT:娇小
+								PRINTFORM 小小的
+							PRINTFORMW 用手抚摩着……
+						ENDIF
+					ENDIF
+				ELSEIF RAND:3 == 0
+					PRINTFORMW %CALLNAME:TARGET%享受着在%CALLNAME:PLAYER%上使之弹腰、推上膀胱的暴力性的快乐…
+				ELSEIF RAND:2 == 0
+					PRINTFORMW 由于%CALLNAME:PLAYER%的腕力和自己的体重对%TEXTR("膀胱/尿道粘膜")%的责备也得到了快乐的身体的%CALLNAME:TARGET%、用口水和眼泪一边弄脏脸一边提高着%TEXTR("嬌声/歓喜的呻吟")%…
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%对自重被拉伸的膀胱的感觉完全入了迷、每次一刺就痛痛地勒紧%CALLNAME:PLAYER%的阴茎…
+				ENDIF
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%把手转动在%CALLNAME:PLAYER%的脖子上抱了过来……
+			ENDIF
+		ENDIF
+	CASE TNUM("背面座位"), TNUM("肛門背面座位"), TNUM("尿道背面座位")
+		IF SELECTCOM == TNUM("背面座位") && SIZE("阴茎", PLAYER) >= 3 && ABL:Ｖ拡張 >= 4 && RAND:2
+			IF SIZE("阴茎", PLAYER) >= 4 && RAND:2
+				PRINTFORM %CALLNAME:TARGET%的%TEXTR("腹部/小腹")%、每当%CALLNAME:PLAYER%被活塞抽插时、就会伴随着%TEXTR("噗噜/呼噜")%这个迟钝的声音被%TEXTR("强迫/無理")%逼着%TEXTR("変形/膨胀")%…
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%的%TEXTR("腹部/小腹")%\@ TALENT:娇小 ? 对体格过大 # %CALLNAME:PLAYER%色色的大大的 \@阴茎%TEXTR(@"插入语、然后変形。/形状扭曲、活塞的样子在外面也能看到。")%…
+			ENDIF
+		ELSEIF SELECTCOM == TNUM("尿道背面座位")
+			IF BASE:尿意 >= 10000 && EXP_GAIN("放尿経験") == 0 && EXP_GAIN("膀胱精液経験") >= 5 && RAND:2 == 0
+				PRINTFORML 从用尿和精液膨胀了的%TEXTR("腹部/小腹/膀胱/下腹部")%取出的每次与液体的摇晃的声音鸣响、
+				PRINTFORMW %CALLNAME:TARGET%把%TEXTR("嬌声/歓喜的呻吟")%作为快乐的抒发…
+			ELSEIF SIZE("阴茎", PLAYER) >= 3 && RAND:2 == 0
+				IF RAND:2 == 0
+					PRINTFORMW %CALLNAME:TARGET%的%TEXTR("腹部/小腹")%很大地反过来了上身、浮现出%CALLNAME:PLAYER%的阴茎的形状、说明着接受的东西的%TEXTR("大的程度/長大的程度/凶悪的程度")%…
+				ELSE
+					PRINTFORM 每当%CALLNAME:PLAYER%把阴茎插入尿道时、%TEXTR("腹部/小腹")%就会像发出%TEXTR("噗噜/呼噜")%的声音一样膨胀、
+					PRINTFORMW %CALLNAME:TARGET%以%TEXTR("非常轻松的表情/心神荡漾的表情/快楽的呻吟快忍不住的表情")%享受着尿道性交…
+				ENDIF
+			ELSE
+				IF RAND:2 == 0
+					PRINTFORMW %CALLNAME:TARGET%把身体托付给%CALLNAME:PLAYER%、为了展示尿道性交而张開大腿……
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%闭上大腿、用尿道紧紧地勒紧%CALLNAME:PLAYER%的阴茎一样地刺激…
+					CALL SETFLAG, "締め付けフラグ", TARGET
+				ENDIF
+			ENDIF
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%は背を仰け反らせて%CALLNAME:PLAYER%にしなだれかかり、体を密着しながらの性交を楽しんでいる…
+		ENDIF
+	ENDSELECT
+
+CASE "追加地の文：騎乗位"
+	;干劲性処理モードならＯＫ
+	IF COND("干劲性処理")
+	;淫乱or欲情4LV以上なら追加
+	ELSE
+		SIF COND("調教中") && PALAM:欲情 < 10000 && TALENT:好色 + TALENT:淫乱 == 0
+			RETURN 0
+		SIF ABL:腰靈活 < 3 && EXP:腰靈活経験 < 20
+			RETURN 0
+
+		SELECTCASE SELECTCOM
+		CASE TNUM("正常位") TO 69
+			SIF ABL:Ｖ感覚 < 3 || EXP:Ｖ性交経験 < 20
+				RETURN 0
+		CASE TNUM("肛門正常位") TO 79
+			SIF ABL:Ａ感覚 < 3 || EXP:Ａ性交経験 < 20
+				RETURN 0
+		CASE TNUM("尿道正常位") TO TNUM("尿道騎乗位")
+			SIF TALENT:尿道性感 == 0 || EXP:尿道性交経験 < 20
+				RETURN 0
+		CASEELSE
+			IF INSERT("Ｖ挿入")
+				SIF ABL:Ｖ感覚 < 3 || EXP:Ｖ性交経験 < 20
+					RETURN 0
+			ELSEIF INSERT("Ａ挿入")
+				SIF ABL:Ａ感覚 < 3 || EXP:Ａ性交経験 < 20
+					RETURN 0
+			ELSEIF INSERT("尿道挿入")
+				SIF TALENT:尿道性感 == 0 || EXP:尿道性交経験 < 20
+					RETURN 0
+			ENDIF
+		ENDSELECT
+	ENDIF
+	IF TALENT:好色 + TALENT:淫乱 + TALENT:小悪魔 + TALENT:喜歡引人注目 && (COND("性処理実行中") || TALENT:害羞 == 0 || TEQUIP:媚薬) && RAND:4 
+		PRINTFORM %CALLNAME:TARGET%
+		;腋ルート
+		IF RAND:3 == 0 && CHECK_CLO("腋露出")
+			PRINTFORM 用%TEXTR("梳起頭发的动作/両手放在頭後的动作")%%TEXTR("展示/显露出")%%TEXTS("腋：視覚")%的同时、
+			CALL SETFLAG, "腋見せフラグ", TARGET
+		ELSE
+			;穴見せつけルート
+			IF RAND:2 && PENIS(PLAYER)
+				IF RAND:2
+					IF SIZE("阴茎", PLAYER) >= 2 && RAND:2
+						SELECTCASE SIZE("阴茎", PLAYER)
+						CASE 2
+							PRINTFORM 巨大的
+						CASE 3
+							PRINTFORM 极粗的
+						CASE 4
+							PRINTFORM 有胳膊那么大
+						CASEELSE
+							PRINTFORM 超出规格的大小
+						ENDSELECT
+					ELSEIF SIZE("阴茎", PLAYER) == 0 && RAND:2
+						PRINTFORM 小小的
+					ELSE
+						PRINTFORM 湿润的光芒
+					ENDIF
+					PRINTFORM 阴茎が出入りする様子を
+				ELSEIF INSERT("Ｖ挿入") || (SELECTCOM >= TNUM("正常位") && SELECTCOM <= 69)
+					IF EXP_GAIN("膣内精液経験") >= 3 && CHECK_STAIN(STAIN:Ｖ, "精液")
+						PRINTFORM 里边的精液冒泡
+					ELSEIF PALAM:Ｖ潤 >= 3000
+						PRINTFORM 用爱液粘糊的
+					ELSE
+						PRINTFORM 阴茎が出入りする
+					ENDIF
+					PRINTFORM 結合部を
+				ELSEIF INSERT("Ａ挿入") || (SELECTCOM >= TNUM("肛門正常位") && SELECTCOM <= 79)
+					IF EXP_GAIN("肛内精液経験") >= 3 && CHECK_STAIN(STAIN:Ａ, "精液") && PENIS(PLAYER)
+						PRINTFORM 阴茎一进入精液就冒着泡漏出来了
+					ELSE
+						PRINTFORM 推得圆乎乎的
+					ENDIF
+					PRINTFORM 肛門を
+				ELSEIF INSERT("尿道挿入") || (SELECTCOM >= TNUM("尿道正常位") && SELECTCOM <= TNUM("尿道騎乗位"))
+					IF PENIS(PLAYER) && TALENT:尿道狂 && RAND:2
+						PRINTFORM 阴茎吸得像章鱼嘴一样
+					ELSE
+						PRINTFORM 推得圆乎乎的
+					ENDIF
+					PRINTFORM 尿道口を
+				ENDIF
+			;股間or外性器見せつけルート
+			ELSEIF CHECK_CLO("Ｖ露出") + CHECK_CLO("Ａ露出") + COND("性処理実行中") && COND("指の使用") && COND("合意：检查阴部")
+				IF TALENT:男性 == 0 && CHECK_CLO("Ｖ露出") + COND("性処理実行中") && RANDIF(1, CHECK_CLO("Ａ露出") + COND("性処理実行中") )
+					IF COND("脚が無い") == 0 && (COND("陰核肥大") || (COND("陰毛") >= 1 && COND("陰毛") <= 3) || TALENT:陰蒂環 || TALENT:陰唇環) && RAND:2
+						PRINTFORM %TEXTR("打開双腿/大步地打開/以M字開脚的姿势")%
+						IF COND("陰核肥大") && RANDIF(1, (COND("陰毛") >= 1 && COND("陰毛") <= 3) > 0)
+							PRINTFORM %TEXTR("肥大/大到可以一眼看到/小指尖大小的")%%TEXTR("阴核/阴蒂/肉豆")%
+							IF TALENT:陰蒂環 && RAND:3
+								PRINTFORM %TEXTR("を貫く/に輝く/を飾る")%穿環を
+							ELSE
+								PRINTFORM を
+							ENDIF
+						ELSE
+							IF COND("陰毛") >= 1 && COND("陰毛") <= 3
+								SELECTCASE COND("陰毛")
+								CASE 1
+									PRINTFORM %TEXTR("无毛的/没有长毛痕跡的的美丽/光滑的")%股間
+								CASE 2
+									PRINTFORM 被漂亮脱毛的股间
+								CASE 3
+									PRINTFORM 光滑地被刮干净的股間
+								ENDSELECT
+							ELSE
+								PRINTFORM %TEXTR("股間/羞耻的地方/秘密場所")%
+							ENDIF
+							IF TALENT:陰蒂環 + TALENT:陰唇環 && RAND:2
+								PRINTFORM 将%TEXTR("被附上的/闪耀着光辉的/装饰")%穿环
+							ELSE
+								PRINTFORM を
+							ENDIF
+						ENDIF
+					ELSE
+						PRINTFORM 将%TEXTS("陰毛：視覚")%阴部用手指押開
+					ENDIF
+				ELSE
+					PRINTFORM %TEXTR(@"%TEXTS("肛門周辺")%/%TEXTS("肛門：視覚")%/尻穴")%用両手%TEXTR("扒開/広開")%
+				ENDIF
+			ENDIF
+			IF TALENT:害羞 == 0 && FLAG:二人きり == 0 && COND("性処理実行中") && RAND:2
+				IF CHARA_NUM("室内の邪魔者") == 1 && FIND_COND("現在存在")
+					PRINTFORM 向%CALLNAME:MASTER%和%CALLNAME:FIND_COND("現在存在")%展示的同时、
+				ELSE
+					PRINTFORM 向%CALLNAME:MASTER%和周围的部員展示的同时、
+				ENDIF
+			ELSE
+				PRINTFORM 露出来的同时、
+			ENDIF
+		ENDIF
+	ELSEIF CHECK_OTHER("帽子") && COND("指の使用") && RAND:3 == 0
+		PRINTFORM %CALLNAME:TARGET%手で%OTHER(TARGET, "帽子")%が落ちないように押さえ的同时、
+	ELSEIF TALENT:兩面通吃 && (SELECTCOM:1 == 1 || SELECTCOM:1 == 9) && RAND:3 == 0
+		PRINTFORM %CALLNAME:TARGET%与%CALLNAME:ASSI%的舌頭交织在一起的同时、
+	ELSEIF TALENT:大力士 && TALENT:娇小 == 0 && RANDIF(1, TALENT:巨乳, TALENT:小悪魔*3 + ABL:施虐属性 >= 3)
+		PRINTFORM %CALLNAME:TARGET%
+		IF RAND:2
+			PRINTFORM 微微弯曲着带有肌肉的肚子、
+		ELSE
+			PRINTFORM 几乎没有赘肉\@ RAND:2 ? 让肚子起伏 # 抖着屁股 \@的同时、
+		ENDIF
+	;小悪魔or施虐属性Lv3
+	ELSEIF TALENT:小悪魔*3 + ABL:施虐属性 >= 3 && RANDIF(1, COND("脱掉衣服露出胸部てきた可能") + TALENT:巨乳)
+		PRINTFORM %CALLNAME:TARGET%一边拧着%CALLNAME:PLAYER%的乳頭、
+	ELSEIF COND("脱掉衣服露出胸部てきた可能") || TALENT:巨乳
+		IF TALENT:巨乳 == 0
+			PRINTFORM %CALLNAME:TARGET%
+			CALL EVENT_DATUI, "脱掉衣服露出胸部"
+			PRINTFORM 并、
+		ELSE
+			IF RAND:3 == 0 && TALENT:巨乳 >= 2
+				LOCALS = %TEXTR("豊満的胸部夸张地摇晃/看起来很沉重的胸部悠悠地摇晃")%的同时、
+			ELSEIF TALENT:巨乳
+				LOCALS = %TEXTR("大大的胸部摇晃着/展示摇曳的胸部/揉着自己的胸")%的同时、
+			ENDIF
+			IF COND("脱掉衣服露出胸部てきた可能") && RAND:2
+				CALL EVENT_DATUI, "脱掉衣服露出胸部"
+				PRINTFORM てきた%CALLNAME:TARGET%は、%LOCALS%
+			ELSE
+				PRINTFORM %CALLNAME:TARGET%%LOCALS%、
+			ENDIF
+		ENDIF
+	ELSE
+		PRINTFORM %CALLNAME:TARGET%
+	ENDIF
+	IF RAND:2 && ABL:腰靈活 >= 3
+		PRINTFORM 弯腰
+	ELSE
+		SIF TALENT:妊娠 && RAND:3 == 0
+			PRINTFORM 肚子大的
+		PRINTFORM 将身体
+	ENDIF
+	IF RAND:2 && ABL:腰靈活 >= 3
+		PRINTFORM %TEXTR("好像很開心/无拘无束地/上下剧烈")%
+	ELSE
+		PRINTFORM %TEXTR("巧妙地/妖艳")%
+	ENDIF
+	PRINTFORM %TEXTR("振动着/游動着/摇晃着")%、
+	SIF ABL:欲望 >= 3 || TALENT:好色 + TALENT:淫乱
+		PRINTFORM 积极地
+	PRINTFORMW 贪图快感……
+CASE "狂野摇摆"
+	PRINTFORM %CALLNAME:TARGET%
+	IF COND("指の使用") && RAND:3 == 0
+		IF RAND:2
+			PRINTFORM 手扶着四肢爬行的话、
+		ELSE
+			PRINTFORM 如果背着手用双手脚保持姿势的话、
+		ENDIF
+	ELSEIF RAND:2
+		PRINTFORM 双手放在膝盖上保持平衡、
+	ELSEIF INSERT("Ｖ挿入")
+		PRINTFORM 把阴道勒紧、
+	ELSEIF INSERT("Ａ挿入")
+		PRINTFORM 紧闭肛門、
+	ELSEIF INSERT("尿道挿入")
+		PRINTFORM 在尿道紧闭的状态下、
+	ENDIF
+	IF TALENT:恋慕 && RAND:3 == 0
+		PRINTFORM 凝视着%CALLNAME:PLAYER%的脸
+	ELSEIF TALENT:大力士 && RAND:2
+		PRINTFORM 紧绷的肚子一边起伏
+	ELSEIF TALENT:貧乳 == 0 && TALENT:男性 == 0 && CHECK_CLO("乳頭露出") && RAND:2
+		IF TALENT:巨乳 && RAND:3 == 0
+			PRINT 朴素的
+		ELSEIF TALENT:巨乳 && RAND:2
+			PRINT 有迫力
+		ELSEIF RAND:2
+			PRINT 有张力
+		ELSE
+			PRINT 形状好
+		ENDIF
+		IF TALENT:巨乳 && RAND:3 == 0
+			PRINTFORM %TOFULL(CONDS("罩杯尺寸") )%杯的%TALENT_NAME(GETNUM(TALENT, "巨乳"), TALENT:巨乳)%
+		ELSEIF RAND:2
+			PRINTFORM 乳房
+		ELSE
+			PRINTFORM 胸
+		ENDIF
+		PRINTFORM 一边摇晃
+	ENDIF
+	IF RAND:4 == 0
+		IF INSERT("Ｖ挿入")
+			PRINTFORMW 開始用淫靡的腰肢使阴道液起泡…!
+		ELSEIF INSERT("Ａ挿入")
+			PRINTFORMW 用直肠的粘膜执拗地擦起了阴茎…！
+		ELSEIF INSERT("尿道挿入")
+			PRINTFORMW 用过于敏感的粘膜执拗地擦起了阴茎…！
+		ENDIF
+	ELSEIF RAND:3 == 0
+		IF RAND:2
+			PRINTFORMW 開始做敲腰的凶猛的上下运动…！
+		ELSE
+			PRINTFORMW 用厉害的气势使之弹了腰…！
+		ENDIF
+	ELSEIF RAND:2
+		IF RAND:2
+			PRINTFORMW 激烈的上下晃动使阴茎開始一进一出…!
+		ELSE
+			PRINTFORMW 開始无拘无束激烈地动了腰…！
+		ENDIF
+	ELSE
+		PRINTFORMW ８字一样開始摆动屁股…！
+	ENDIF
+
+CASE "追加地の文：６９中の射精"
+	PRINTFORM %CALLNAME:PLAYER%将
+	IF CHECK_COM("６９自慰", SELECTCOM)
+		IF TALENT:男性 == 0 && TALENT:容易濕 && RAND:3 == 0
+			PRINTFORM 近距离眺望从阴道口溢出爱液的样子、
+		ELSEIF TALENT:男性 == 0 && RAND:2
+			PRINTFORM %TEXTR("根据手指的运动从阴道口渗出爱液/将眼前的那个地方推開")%一边观察、
+		ELSE
+			PRINTFORM 同时%TEXTR("眺望在能感受到呼吸的距离被进行的淫靡的行为/享受眼前的光景")%
+		ENDIF
+	ELSEIF RAND:3 == 0
+		PRINTFORM 享受SEX的快乐、
+	ELSEIF SELECTCOM == 13 || SELECTCOM == 14
+		PRINTFORM 一边欣赏眼前的情景、
+	ELSE
+		SELECTCASE TEQUIP:PLAYER:六九式
+		CASE 4
+			PRINTFORM 一边舔着阴茎、
+		CASE 8
+			PRINTFORM %TEXTR("用手指一边取出阴道内的爱液一边玩/一边用指尖享受阴道内的触感/把手指伸进阴道一边享受反应")%、
+		CASEELSE
+			PRINTFORM 享受SEX的快乐、
+		ENDSELECT
+	ENDIF
+
+CASE "追加地の文：Ｗ推倒中の射精"
+	SIF TEQUIP:Ｗ推倒 == 0 || SELECTCOM:1 < 0
+		RETURN 0
+
+	PRINTFORM %CALLNAME:(TARGET:1)%
+	SELECTCASE SELECTCOM:1
+	CASE 1
+		IF CHECK_CLO("Ｖ露出", TARGET:1)
+			PRINTFORM 的%TEXTS("阴部：感触", TARGET:1)%
+		ELSE
+			PRINTFORM 胯股之间
+		ENDIF
+		IF SHOOT("中出し") || CHECK_CLO("Ｖ露出", TARGET:1) == 0
+			PRINTFORM 把脸压坐着
+		ELSEIF RAND:2
+			PRINTFORM 压開的刺激
+		ELSE
+			PRINTFORM 脸被黏糊糊的
+		ENDIF
+	CASE 4
+		IF SHOOT("中出し") || (ABL:(TARGET:1):施虐属性 > ABL:MASTER:受虐属性 && RAND:2)
+			IF PENIS(TARGET:1) && SIZE("阴茎", TARGET:1) >= 2 && RAND:2
+				PRINTFORM 的巨根被扭进喉咙深处
+			ELSEIF ABL:(TARGET:1):施虐属性 >= 3 && RAND:2
+				PRINTFORM 被紧紧抓住頭激烈的狠狠地口交、
+			ELSE
+				PRINTFORM 张開嘴\@ ABL:(TARGET:1):施虐属性 ? 激烈地 # \@被侵犯
+			ENDIF
+		ELSE
+			PRINTFORM 的\@ SIZE("阴茎", TARGET:1) >= 2 ? 巨根 # 阴茎 \@舔阴茎
+		ENDIF
+	CASE 6
+		IF PREVCOM:1 == 91
+			IF CHECK_STAIN(STAIN:(TARGET:1):Ｍ, "精液")
+				PRINTFORM 精液用口转移
+			ELSE
+				PRINTFORM 被亲吻的阴茎的味道
+			ENDIF
+		ELSEIF SHOOT("中出し")
+			PRINTFORM 和\@ TALENT:(TARGET:1):相思相愛 ? 充满爱情的吻 # 亲吻 \@し
+		ELSE
+			PRINTFORM と
+			IF RAND:2 && TALENT:(TARGET:1):恋慕 + TALENT:(TARGET:1):淫乱
+				PRINT 在梦中
+			ELSEIF RAND:2
+				PRINT 贪婪的样子
+			ENDIF
+			IF RAND:2
+				PRINTFORM 缠绕舌頭
+			ELSE
+				PRINTFORM 交换唾液
+			ENDIF
+		ENDIF
+	CASE 9
+		PRINTFORM 的%TEXTS("肛門", TARGET:1)%
+		IF RAND:2
+			PRINT 屁穴
+		ELSE
+			PRINT 肛門
+		ENDIF
+		IF SHOOT("中出し")
+			IF RAND:2
+				PRINTFORM 被强加
+			ELSE
+				PRINTFORM 舔舐的
+			ENDIF
+		ELSE
+			PRINTFORM 用舌頭品味
+		ENDIF
+	CASE 90, 97
+		PRINTFORM 阴茎被操纵
+	CASE 91
+		PRINTFORM 被口交
+	CASE 92
+		PRINTFORM 被%TEXTS("胸部", TARGET:1)%对待
+	CASE 95
+		PRINTFORM 用脚来对待。
+	CASE 98
+		PRINTFORM 被舔了阴部
+	CASE 104
+		IF SHOOT("中出し")
+			PRINTFORM 把脸埋在%TEXTS("胸部", TARGET:1)%里
+		ELSE
+			PRINTFORM 把脸埋在%TEXTS("胸部", TARGET:1)%里
+		ENDIF
+	CASE IS >= 0
+		IF SHOOT_A("逆強姦")
+			PRINTFORM 被…侵犯
+		ELSEIF SHOOT_A("逆肛交") || SHOOT_A("肛門奉仕")
+			PRINTFORM 被侵犯屁眼
+		ENDIF
+	ENDSELECT
+	IF SHOOT("中出し")
+		PRINTFORM 保持姿势、
+	ELSE
+		PRINTFORM 并、
+	ENDIF
+CASE "喝母乳"
+	SIF CHECK_COM("喝母乳可能") == 0
+		RETURN 0
+
+	SELECTCASE SELECTCOM
+	CASE 5
+		SIF CHECK_COM("舔乳頭") == 0
+			RETURN 0
+
+		PRINTFORM 由于这种刺激、母乳渗透到%CALLNAME:PLAYER%的口中、
+		IF RAND:3 && PENIS(PLAYER)
+			PRINTW 阴茎眼看着恢复活力……
+		ELSEIF RAND:2
+			PRINTW 微甜的味道和活力一起溢出……
+		ELSE
+			PRINTW 思维迟钝如雾……
+		ENDIF
+	CASE 90, 97, 104
+		SELECTCASE SELECTCOM
+		CASE 90, 97
+			SIF CHECK_COM("洗面奶手交") == 0
+				RETURN 0
+		ENDSELECT
+		;母乳を飲む
+		IF TEQUIP:推倒
+			PRINTFORM %CALLNAME:TARGET%压在嘴边
+			IF CALCF("Ｂ発情")
+				SIF COND("乳頭肥大")
+					PRINTFORM %TEXTR("大的/鼓起来了/勃然大起/肥大了")%
+			;陥没乳頭
+			ELSE
+				PRINTFORM 陷没
+			ENDIF
+			PRINTFORM 乳頭无意识地吸了上去、嘴里充满了甜蜜的母乳
+			IF RAND:3 && PENIS(PLAYER)
+				PRINTW 阴茎眼看着恢复活力……
+			ELSE
+				PRINTW 思维迟钝如雾……
+			ENDIF
+		ELSE
+			IF CHECK_COM("洗面奶手交")
+				PRINT 随着手的动作
+			ELSE
+				PRINT 一边温柔地改变着形状
+			ENDIF
+			PRINTFORM 让母乳染出的%CALLNAME:TARGET%
+			IF COND("巨乳輪") && RAND:3 == 0
+				PRINTFORM 把乳頭连同大的乳轮一起吸上来、
+			ELSEIF CALCF("Ｂ発情")
+				IF COND("乳頭肥大")
+					PRINTFORM %TEXTR("大的/鼓起来了/勃然大起/肥大了")%
+				ELSE
+					PRINTFORM %TEXTR("鼓起来了/勃起了/")%
+				ENDIF
+				PRINTFORM 喂奶%TEXTR("含在嘴里/叼着/一边甜美的咀嚼")%吸上来的话、
+			;陥没乳頭
+			ELSE
+				PRINTFORM %TEXTR("陷落了/半藏/被埋没了")%用力吸起乳頭、
+			ENDIF
+			PRINTFORMW 微甜的味道和活力一起溢出……
+		ENDIF
+	ENDSELECT
+	CALL SETFLAG, "喝母乳", PLAYER
+
+CASE "淫紋の様子", "淫紋の様子：掀起裙子", "淫紋の様子：脱衣後"
+	SIF ARG == 0 && TARGET > 0
+		ARG = TARGET
+
+	CALL PRINT_CUTIN, "腹部", ARG
+	;導入はシチュに合わせて少し変える
+	SELECTCASE ARGS
+	CASE "淫紋の様子：掀起裙子"
+		IF RAND:3 == 0
+			PRINTFORM %CLO("掀起裙子", ARG)%%TEXTR("从下面出现了/因为翻脸而暴露了/被隐藏在")%
+		ELSE
+			IF EQUIP:ARG:胖次
+				PRINTFORM %PANTIES(ARG, "胖次")%
+			ELSE
+				PRINTFORM 胯股之间
+			ENDIF
+			PRINTFORM %TEXTR("稍微向上移開视线就映入眼帘/一起映入眼帘/边欣赏边拜访")%
+		ENDIF
+		PRINTFORM %CALLNAME:ARG%%TEXTR(@"的淫紋/下腹部雕刻的刻印/刻着的%TEXTS("淫紋：形状描写", ARG)%")%
+	CASE "淫紋の様子：脱衣後"
+		IF COND("妊娠後期", ARG)
+			PRINTFORM 肚子大得睁大了眼睛%TEXTR("一起映入眼帘/边欣赏边拜访")%
+			PRINTFORM %CALLNAME:ARG%%TEXTR(@"的淫紋/下腹部雕刻的刻印/刻着的%TEXTS("淫紋：形状描写", ARG)%")%
+		ELSEIF COND("妊娠中期", ARG)
+			PRINTFORM 肚子大了很多%TEXTR("一起映入眼帘/边欣赏边拜访")%
+			PRINTFORM %CALLNAME:ARG%%TEXTR(@"的淫紋/下腹部雕刻的刻印/刻着的%TEXTS("淫紋：形状描写", ARG)%")%
+		ELSE
+			IF COND("豐腴", ARG)
+				PRINTFORM %TEXTR("有点疏忽大意的/肥胖/如此柔软的")%下腹部
+			ELSEIF TALENT:ARG:魅力
+				PRINTFORM %TEXTR("画出美丽的曲线/匀称/不禁想摸")%下腹部
+			ELSEIF COND("苗条", ARG)
+				PRINTFORM %TEXTR("绷紧了/几乎没有赘肉/肉感的")%下腹部
+			ELSE
+				PRINTFORM 暴露的下腹部
+			ENDIF
+			PRINTFORM %TEXTR(@"被刻入的淫纹/的彫成的刻印/的刻上的%TEXTS("淫紋：形状描写", ARG)%")%
+		ENDIF
+	CASEELSE
+		IF CHECK_CLO("泳装姿", ARG)
+			PRINTFORM 穿着泳衣露出来的%TEXTR(@"%CALLNAME:ARG%的淫紋\/下腹部彫上的刻印\/%TEXTS("淫紋：形状描写", ARG)%")%
+		ELSEIF CHECK_CLO("内衣姿", ARG)
+			PRINTFORM 穿着内衣露出来的%TEXTR(@"%CALLNAME:ARG%的淫紋\/下腹部彫上的刻印\/%TEXTS("淫紋：形状描写", ARG)%")%
+		ELSEIF CHECK_CLO("裸体", ARG)
+			PRINTFORM 因没穿衣服而露出来的%TEXTR(@"%CALLNAME:ARG%的淫紋\/下腹部彫上的刻印\/%TEXTS("淫紋：形状描写", ARG)%")%
+		ELSE
+			PRINTFORM 因随意的打扮而露出来的%TEXTR(@"%CALLNAME:ARG%的淫紋\/下腹部彫上的刻印\/%TEXTS("淫紋：形状描写", ARG)%")%
+		ENDIF
+	ENDSELECT
+
+	IF TALENT:ARG:妊娠
+		IF CFLAG:ARG:Ｖ已中出
+			PRINTFORM 神秘的光辉、
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINTFORM %TEXTR("中出不久/精液沾满阴道内")%事
+		ELSEIF CFLAG:ARG:躁动难忍 || COND("欲求不満", ARG) >= 2
+			PRINTFORM 神秘的光辉、
+			SETCOLOR DEF_COLOR("粉紅")
+			PRINTFORM %TEXTR("性欲不支/闷闷不乐/在胎内随着孩子的成长,需要更进一步的精液")%样子
+		ELSE
+			PRINTFORM 是配合胎儿的成长、日复一日地变换成大的、
+			PRINTFORM %TEXTR("身体想要更精液的事/今天还不能把精液放到阴道上很不满")%
+		ENDIF
+	ELSEIF COND("着床済", ARG)
+		IF CFLAG:ARG:Ｖ已中出
+			PRINTFORM 神秘的光辉、
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINTFORM %TEXTR("精子在已着床的子宫内游得很有力/中出不久/精液沾满阴道内")%事
+		ELSEIF CFLAG:ARG:躁动难忍 || COND("欲求不満", ARG) >= 2
+			PRINTFORM 神秘的光辉、
+			SETCOLOR DEF_COLOR("粉紅")
+			PRINTFORM %TEXTR("性欲不支/闷闷不乐/尽管在胎内開始生育,但还是想要更进一步的精液.")%样子
+		ELSE
+			PRINTFORM 似乎是在高兴着床的事似的、闪耀着强烈的光辉、
+			PRINTFORM %TEXTR("子宫想要更精液的事/今天还不能把精液注入胎内的不满")%
+		ENDIF
+	ELSEIF COND("受精済", ARG)
+		IF CFLAG:ARG:Ｖ已中出
+			PRINTFORM 神秘的光辉、
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINTFORM %TEXTR("子宫内和受精卵一起有力地游泳/中出不久/精液沾满阴道内")%事
+		ELSEIF TALENT:ARG:男性 && CFLAG:ARG:Ａ已中出
+			PRINTFORM 神秘的光辉、
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			PRINTFORM %TEXTR("刚从屁股洞里贪图快乐/肛門性交榨取精液不久/直肠内沾满精液")%事
+		ELSEIF CFLAG:ARG:躁动难忍 || COND("欲求不満", ARG) >= 2
+			PRINTFORM 神秘的光辉、
+			SETCOLOR DEF_COLOR("粉紅")
+			PRINTFORM %TEXTR("性欲不支/闷闷不乐/不拘受精还想要更进一步的精液")%样子
+		ELSE
+			PRINTFORM 变为与平时不同的花样、表示胎内的受精、
+			PRINTFORM %TEXTR("身体想要更精液的事/今天还不接受精液的不满")%
+		ENDIF
+	ELSE
+		PRINTFORM 神秘的光辉、
+		IF CFLAG:ARG:Ｖ已中出 || (TALENT:ARG:男性 && CFLAG:ARG:Ａ已中出)
+			SETCOLOR DEF_COLOR("爱心粉紅")
+			IF CFLAG:ARG:Ｖ已中出
+				PRINTFORM %TEXTR("子宫里精子正在茁壮地游泳/中出不久/精液沾满阴道内")%事
+			ELSE
+				PRINTFORM %TEXTR("刚从屁股洞里贪图快乐/肛門性交榨取精液不久/直肠内沾满精液")%事
+			ENDIF
+		ELSEIF CFLAG:ARG:躁动难忍 || COND("欲求不満", ARG) >= 2
+			SETCOLOR DEF_COLOR("粉紅")
+			PRINTFORM %TEXTR("性欲不支/闷闷不乐/需要精液")%样子
+		ELSEIF COND("排卵中", ARG)
+			SETCOLOR DEF_COLOR("ショッキング粉紅")
+			PRINTFORM %TEXTR("子宫排卵准备万端/子宫想要孕育的样子/今天是危险日中的危险日")%
+		ELSEIF COND("危険日", ARG)
+			SETCOLOR DEF_COLOR("イエロー")
+			PRINTFORM %TEXTR("如果现在被中出是怀孕了的状态的事/子宫做好育儿准备的事情/今天是危险日")%
+		ELSE
+			PRINTFORM %TEXTR("身体想要精液的事/今天还没有接受精液")%
+		ENDIF
+	ENDIF
+	RESETCOLOR
+	PRINTFORMW 向%CALLNAME:MASTER%诉说……
+	CFLAG:ARG:淫紋の様子 = 1
+
+ENDSELECT
+
+;-------------------------------------------------
+;@TEXTのなかでも分岐が複雑なものはここ
+;-------------------------------------------------
+@ADD_TEXT, ARGS
+#DIM ACTOR
+#DIMS HOLENAME
+#DIMS TEXT_TABLE
+
+HOLENAME = 
+
+SELECTCASE ARGS
+CASE "性器から性器へ"
+	;前ターンに性器挿入状態じゃないとダメ
+	SIF PREVPLAY("挿入中", PLAYER) == 0
+		RETURN 0
+
+	ACTOR = COND("Ｐ汚れの相手", PLAYER)
+
+	;前ターンにPLAYERがどこに挿入していたか
+	IF PREVPLAY("Ｖ挿入中", PLAYER)
+		HOLENAME = %TEXTR("膣穴/膣")%
+	ELSEIF PREVPLAY("Ａ挿入中", PLAYER)
+		HOLENAME = %TEXTR("尻穴/不浄の穴/肛門")%
+	ELSEIF PREVPLAY("尿道挿入中", PLAYER)
+		HOLENAME = %TEXTR("尿穴/尿道")%
+	ENDIF
+
+	;このターンで選んだ指令
+	SELECTCASE SELECTCOM
+	CASE TNUM("騎乗位"), TNUM("肛門騎乗位"), TNUM("尿道騎乗位")
+		PRINTFORM 在%CALLNAME:ACTOR%的%HOLENAME%中充分侵犯过的
+	CASE TNUM("肛門正常位"), TNUM("肛門後背位")
+		;前ターンにPLAYERがどこに挿入していたか
+		IF PREVPLAY("Ｖ挿入中", PLAYER)
+			IF RAND:3 == 0
+				PRINTFORM 被%CALLNAME:ACTOR%的\@ RAND:3 ? 愛 # 膣 \@液塗满的
+			ELSE
+				PRINTFORM 在%CALLNAME:ACTOR%的%HOLENAME%中%TEXTR("充分享受过的/挖掘过的/充分侵犯过的/拔出来的")%
+			ENDIF
+		ELSEIF PREVPLAY("Ａ挿入中", PLAYER)
+			IF RAND:3 == 0
+				PRINTFORM 被%CALLNAME:ACTOR%的腸液\@ RAND:2 ? 污染了的 # 塗上的 \@
+			ELSE
+				PRINTFORM 在%CALLNAME:ACTOR%的%HOLENAME%中%TEXTR("充分享受过的/挖掘过的/充分侵犯过的/拔出来的")%
+			ENDIF
+		ELSEIF PREVPLAY("尿道挿入中", PLAYER)
+			IF RAND:3 == 0
+				PRINTFORM 散發著氨水臭氣的
+			ELSE
+				PRINTFORM 在%CALLNAME:ACTOR%的%HOLENAME%中%TEXTR("充分享受过的/挖掘过的/充分侵犯过的/拔出来的")%
+			ENDIF
+		ENDIF
+		PRINTFORM %NAMES("阴茎", PLAYER)%、%CALLNAME:TARGET%的
+	;其他
+	CASE TNUM("正常位") TO TNUM("背面座位"), TNUM("肛門屈曲位") TO TNUM("肛門背面座位"), TNUM("尿道正常位") TO TNUM("尿道背面座位")
+		PRINTFORM 从%CALLNAME:ACTOR%的%HOLENAME%里拔出的%NAMES("阴茎", PLAYER)%、
+	ENDSELECT
+
+	SELECTCASE SELECTCOM
+	CASE TNUM("正常位") TO 69, TNUM("尿道正常位") TO TNUM("尿道騎乗位")
+		SIF !CHECK_CLO("Ｖ露出")
+			CALL SETFLAG, "下身衣装を露出：テ接吻ト没有", TARGET
+	CASE TNUM("肛門正常位") TO 79
+		SIF !CHECK_CLO("Ａ露出")
+			CALL SETFLAG, "下身衣装を露出：テ接吻ト没有", TARGET
+	ENDSELECT
+
+CASE "性器から口へ"
+	;前ターンに性器挿入状態じゃないとダメ
+	SIF PREVPLAY("挿入中", PLAYER) == 0
+		RETURN 0
+
+	;前のターンに入っていた相手
+	ACTOR = COND("Ｐ汚れの相手", PLAYER)
+
+	;前ターンにPLAYERがどこに挿入していたか
+	IF PREVPLAY("Ｖ挿入中", PLAYER)
+		HOLENAME = %TEXTR("膣穴/膣")%
+	ELSEIF PREVPLAY("Ａ挿入中", PLAYER)
+		HOLENAME = %TEXTR("尻穴/不浄の穴/肛門")%
+	ELSEIF PREVPLAY("尿道挿入中", PLAYER)
+		HOLENAME = %TEXTR("尿穴/尿道")%
+	ENDIF
+
+	TEXT_TABLE = 
+
+	;自分以外的污垢の場合には名前を出す
+	SIF ACTOR != TARGET
+		TEXT_TABLE += @"%CALLNAME:ACTOR%的"
+	;避孕套挿入していたりで汚れ没有or絶頂も射精も没有
+	IF COND("Ｐ汚れ", PLAYER) == 0 || PREVEX("射精", PLAYER) == 0
+		TEXT_TABLE += @"%HOLENAME%里刚刚拔出的\/"
+	ELSEIF PREVPLAY("Ｖ挿入中", PLAYER)
+		TEXT_TABLE += @"%HOLENAME%里%TEXTR("刚刚拔出不干净的/拔出直後散发着强烈气味的")%\/"
+	ELSEIF PREVPLAY("Ａ挿入中", PLAYER)
+		TEXT_TABLE += @"%HOLENAME%里%TEXTR("刚刚拔出非常脏的/拔出直後散发着难闻气味的/刚刚拔出还冒着热气的")%\/"
+	ELSEIF PREVPLAY("尿道挿入中", PLAYER)
+		TEXT_TABLE += @"%HOLENAME%里%TEXTR("刚刚拔出不干净的/拔出直後发出扑鼻气味的")%\/"
+	ENDIF
+	;自分以外的污垢の場合にはここの地の文優先
+	IF ACTOR != TARGET
+		PRINTFORM %TEXTR(TEXT_TABLE)%
+		RETURN 1
+	ENDIF
+
+	;避孕套射精した
+	IF PREVEX("套套内射精", PLAYER)
+		TEXT_TABLE += @"%TEXTR("刚刚在避孕套内射精的/射精直後避孕套味的/沾满精液的")%\/"
+	;ELSEIF PREVEX("射精", PLAYER)
+	;	TEXT_TABLE += @"%TEXTR("射精したばかりで敏感な/射精直後で硬度を失った/射精の残滓を鈴口から垂らす")%\/"
+	ENDIF
+
+	;このターンに選んだ指令限定の物
+	SELECTCASE SELECTCOM
+	CASE TNUM("口交"), TNUM("深喉")
+		;自分をイかせた
+		SIF ACTOR == TARGET && PREVEX("絶頂数合計")
+			TEXT_TABLE += @"%TEXTR("刚刚使自己绝顶的/给自己带来快乐的")%\/"
+
+		;SIF ACTOR == TARGET && PREVPLAY("生中出しした", PLAYER) && ABL:ACTOR:精液中毒 >= 3
+		;	TEXT_TABLE += @"自分の%HOLENAME%%TEXTR("を使ってくれた/に中出ししてくれた")%\/"
+
+		IF PREVPLAY("生中出しした", PLAYER)
+			;誰的污垢？
+			SELECTCASE ACTOR
+			CASE TARGET
+				TEXT_TABLE += "自己的"
+			CASE IS > 0
+				TEXT_TABLE += @"%CALLNAME:ACTOR%的"
+			ENDSELECT
+			IF PREVPLAY("Ｖ挿入中", PLAYER)
+				IF RAND:3 == 0
+					IF ACTOR && PREVEX("Ｖ絶頂", ACTOR) && EX:ACTOR:Ｖ絶頂 >= 5 && RAND:2
+						TEXT_TABLE += @"沾染上%TEXTR("本気汁/濃稠膣液/粘稠愛液")%的\/"
+					ELSE
+						TEXT_TABLE += "沾染上愛液的/"
+					ENDIF
+				ELSE
+					TEXT_TABLE += @"%TEXTR("刚刚膣内射精的/中出直後被愛液弄脏的/沾染上膣液和精液的")%\/"
+				ENDIF
+			ELSEIF PREVPLAY("Ａ挿入中", PLAYER)
+				IF RAND:3 == 0
+					TEXT_TABLE += @"%TEXTR("在尻穴中来回摩擦而被污染的/沾染上粘稠腸液的")%\/"
+				ELSE
+					TEXT_TABLE += @"%TEXTR("刚刚直腸内射精的/中出直後被腸液弄脏的/沾染上腸液和精液的")%\/"
+				ENDIF
+			ELSEIF PREVPLAY("尿道挿入中", PLAYER)
+				TEXT_TABLE += @"%TEXTR("刚刚在膀胱内射精的/中出直後被尿液弄脏的/沾染上尿液和精液的")%\/"
+			ENDIF
+		ENDIF
+	CASE TNUM("強制口交")
+
+	ENDSELECT
+
+	PRINTFORM %TEXTR(TEXT_TABLE)%
+
+ENDSELECT
+
+;-------------------------------------------------
+;@TEXTの#FUNCTIONS形式
+;-------------------------------------------------
+@TEXTS(ARGS, ARG)
+#FUNCTIONS
+#DIM LCOUNT
+#DIMS ADD_TEXT
+
+VARSET LOCALS
+
+SELECTCASE ARGS
+CASE "数値変化"
+;	LOCALS = -50/　/-25/　/-10/　/-5/　/-1/　/1/　/5/　/10/　/25/　/50
+	LOCALS = 1/-1/　/5/-5/　/10/-10/　/25/-25/　/50/-50/　/100/-100/
+CASE "髪色の種類", "髪色の種類：槞以外"
+	LOCALS = 黒/墨/灰/金/銀/赤/青/空/氷水/緑/茶/紫/桃/紅/桃金/白/紺/焦茶/深緑/棕/白金/真紅/栗/亜麻/
+	SIF ARGS == "髪色の種類：槞以外"
+		RETURNF LOCALS
+	SIF ARG == 0 && TARGET > 0
+		ARG = TARGET
+	SIF COND("種族：魔界人", ARG)
+		LOCALS += "槞/"
+	[IF_DEBUG]
+		SIF COND("種族：魔界人", ARG) == 0
+			LOCALS += "槞/"
+	[ENDIF]
+CASE "挑染の種類"
+	LOCALS = 挑染无/挑染１/挑染２/
+;種類を右に付ける
+CASE "髪の種類"
+	ADD_TEXT = %EXTSTR(ARGS, "", "の")%
+	SPLIT TEXTS("髪色の種類", ARG), "/", LOCALS
+	LOCALS += @"%ADD_TEXT%\/"
+	FOR LCOUNT, 1, 100
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			LOCALS += @"%LOCALS:LCOUNT%%ADD_TEXT%\/"
+		ENDSELECT
+	NEXT
+;種類を左に付ける
+CASE "挑染の色の種類", "渐变颜色の色の種類"
+	ADD_TEXT = %EXTSTR(ARGS, "", "の")%
+	SPLIT TEXTS("髪色の種類", ARG), "/", LOCALS
+	LOCALS = %ADD_TEXT%%LOCALS%\/
+	FOR LCOUNT, 1, 100
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			LOCALS += @"%ADD_TEXT%%LOCALS:LCOUNT%\/"
+		ENDSELECT
+	NEXT
+;髪色とはちょっとだけ違う
+CASE "まつ毛の色"
+	LOCALS = 黒茶/黒/墨/灰/金/銀/赤/青/空/氷水/緑/茶/紫/桃/紅/桃金/白/紺/焦茶/深緑/棕/白金/真紅/栗/亜麻/
+CASE "まつ毛の色の種類"
+	ADD_TEXT = まつ毛
+	SPLIT TEXTS("まつ毛の色", ARG), "/", LOCALS
+	LOCALS = %ADD_TEXT%%LOCALS%\/
+	FOR LCOUNT, 1, 100
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			LOCALS += @"%ADD_TEXT%%LOCALS:LCOUNT%\/"
+		ENDSELECT
+	NEXT
+CASE "髪長の種類"
+	LOCALS = 坊主/短/巻髪/中等長度/披肩/長/
+CASE "髪長の種類：坊主无"
+	LOCALS = %REPLACE(TEXTS("髪長の種類"), "坊主/", "")%
+
+CASE "後髪の種類"
+	LOCALS = 自然/直髪/外八/卷髪/
+CASE "前髪の種類"
+	LOCALS += "短前发/齐刘海/撩刘海/半遮眼/自然卷/散发/"
+	LOCALS += "单眼遮盖/双眼遮盖/进气口发型/右斜/中分/前髪尾/後梳/液状前髪/露额頭/露额頭２/分卷发/分卷发２/"
+	LOCALS += "短刘海/短刘海２/短刘海３/Ｍ字刘海/Ｍ字刘海２/Ｍ字刘海３/Ｍ字刘海４/Ｍ字刘海４長/Ｍ字刘海５/"
+	LOCALS += "自然刘海/自然刘海２/自然刘海３/自然刘海４/外八刘海/外八刘海２/斜刘海/斜刘海２/不对称/不对称２/"
+	LOCALS += "乱髪/乱髪２/乱髪３/乱髪４/乱髪５/乱髪６/乱髪７/乱髪８/透明刘海/透明刘海２/透明刘海３/前髪分け/前髪分け２/"
+	LOCALS += "長め齐刘海/長め齐刘海２/長鬓角/長鬓角２/交叉前发/交叉前发２/交叉前发３/大半遮盖/大半遮盖２/大半遮盖３/大半遮盖４/"
+	LOCALS += "編髪/編髪２/編髪３/"
+CASE "改髪の種類"
+	LOCALS += "无特殊髪型/妹妹頭/简易扎发/编起来/单辫/单辫２/双辫/"
+	LOCALS += "双马尾/自然双马尾/卷双马尾/短双马尾/長双马尾/三股辫双马尾/钻頭双马尾ール/細双马尾/侧扎发/"
+	LOCALS += "马尾辫/自然马尾辫/卷髪马尾辫/侧边马尾/盘頭/侧盘頭/三股辫/大三股辫/三股辫耳後ろ/おしゃれ三股辫/低団子頭/"
+	;一部改髪が無理な身体的特徴
+	SIF ARG == 0 && TARGET > 0
+		ARG = TARGET
+	IF TALENT:ARG:角 && COND("種族：魔界人", ARG) + COND("種族：悪魔", ARG)
+	ELSEIF COND("種族：淫魔", ARG) || (COND("種族：魔界人", ARG) && TALENT:ARG:翼)
+	ELSE
+		LOCALS += "团子頭双马尾/団子頭/高侧盘頭/三股辫编发/麻花辫/麻花辫２/"
+	ENDIF
+CASE "呆毛の種類"
+	LOCALS = 无呆毛/呆毛/呆毛２/呆毛３/呆毛４/呆毛５/呆毛６/呆毛７/呆毛８/呆毛９/呆毛１０/呆毛ツイン/触角/
+CASE "蝴蝶結の種類"
+	LOCALS = 无蝴蝶結/両側蝴蝶結/单側蝴蝶結/頭後蝴蝶結/頭上蝴蝶結
+
+CASE "瞳色の種類"
+	LOCALS = 黒/青/氷水/紫/緑/赤/茶/金/紅/桃/紺/焦茶/深緑/棕/銀
+CASE "左瞳色の種類", "右瞳色の種類"
+	ADD_TEXT = %EXTSTR(ARGS, "", "目の")%
+	SPLIT TEXTS("瞳色の種類"), "/", LOCALS
+	LOCALS = %ADD_TEXT%%LOCALS%\/
+	FOR LCOUNT, 1, 100
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			LOCALS += @"%ADD_TEXT%%LOCALS:LCOUNT%\/"
+		ENDSELECT
+	NEXT
+
+CASE "眼形の種類", "眼形の種類：随机向け", "眼形の種類：変化向け"
+	LOCALS = 普通眼/普通眼２/普通眼３/普通眼４/普通眼５/普通眼６/
+	LOCALS += "吊眼/吊眼２/吊眼３/吊眼４/吊眼５/吊眼６/"
+	LOCALS += "垂眼/垂眼２/垂眼３/垂眼４/垂眼５/垂眼６/"
+	LOCALS += "斜眼/斜眼２/斜眼３/斜眼４/斜眼５/斜眼６/"
+	LOCALS += "水灵眼/水灵眼２/眯眯眼/眯眯眼２/眯眯眼３/縦長目/三白眼/重度三白眼/温馨/"
+	SELECTCASE ARGS
+	CASE "眼形の種類：随机向け"
+		RETURNF LOCALS
+	;陰が無い
+	CASE "眼形の種類：変化向け"
+		LOCALS += "笑颜/笑颜２/笑颜３/笑颜４/笑颜５/笑颜６/闭眼/闭眼２/闭眼３/〇〇/＞＜/涙目〇〇/涙目＞＜/号泣/号泣２/婴儿哭/"
+	CASEELSE
+		LOCALS += "笑颜/笑颜２/笑颜３/笑颜４/笑颜５/笑颜６/闭眼/闭眼２/闭眼３/〇〇/＞＜/涙目〇〇/涙目＞＜/号泣/号泣２/婴儿哭/陰/"
+	ENDSELECT
+	[IF_DEBUG]
+		LOCALS += "普通眼９/吊眼９/垂眼９/斜眼９/"
+	[ENDIF]
+CASE "左眼形の種類", "右眼形の種類"
+	ADD_TEXT = %EXTSTR(ARGS, "", "目の")%
+	SPLIT TEXTS("眼形の種類"), "/", LOCALS
+	LOCALS = %ADD_TEXT%%LOCALS%\/
+	FOR LCOUNT, 1, 100
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			LOCALS += @"%ADD_TEXT%%LOCALS:LCOUNT%\/"
+		ENDSELECT
+	NEXT
+CASE "左眼形の種類：変化向け", "右眼形の種類：変化向け"
+	ADD_TEXT = %EXTSTR(ARGS, "", "目の")%
+	SPLIT TEXTS("眼形の種類：変化向け"), "/", LOCALS
+	LOCALS = %ADD_TEXT%%LOCALS%\/
+	FOR LCOUNT, 1, 100
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			LOCALS += @"%ADD_TEXT%%LOCALS:LCOUNT%\/"
+		ENDSELECT
+	NEXT
+
+CASE "目の変化の種類"
+	LOCALS = 飘忽/半目/睁開/
+
+CASE "白眼の種類"
+	LOCALS = 无眼白/白眼/黒目/
+CASE "左白眼の種類"
+	LOCALS = 左无眼白/左白眼/左黒目/
+CASE "右白眼の種類"
+	LOCALS = 右无眼白/右白眼/右黒目/
+
+CASE "目の光沢の種類"
+	LOCALS = 高光有/高光无/
+CASE "左目の光沢の種類"
+	LOCALS = 左高光有/左高光无/
+
+CASE "眉形の種類"
+	LOCALS = 通常眉/通常眉短/通常眉２/通常眉３/通常眉短２/通常眉短３/憤怒眉/憤怒眉短/斜眉/斜眉短/斜眉２/斜眉短２/困扰眉/困扰眉短/麻呂眉/麻呂眉短/蹙眉/蹙眉短/困惑眉/困惑眉短/
+CASE "長さを無視した眉形の種類"
+	SPLIT TEXTS("眉形の種類"), "/", LOCALS
+	LOCALS = %LOCALS%\/
+	FOR LCOUNT, 1, 100
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			BREAK
+		CASEELSE
+			SIF STRCOUNT(LOCALS:LCOUNT, "短")
+				CONTINUE
+			LOCALS += @"%LOCALS:LCOUNT%\/"
+		ENDSELECT
+	NEXT
+
+CASE "嘴形の種類"
+	LOCALS = 微笑/微笑２/微笑３/微笑４/微笑５/微笑６/△/△２/ω/ω２/嘟嘴/嘟嘴２/嘟嘴３/嘟嘴４/猫口/猫口２/
+	LOCALS += "へ字/へ字２/へ字３/へ字４/笑顔/笑顔２/笑顔３/笑顔４/笑顔５/呀哒/呀哒２/呀哒３/ワ/ヮ/ヮ２/ヮ３/半開/半開２/半開３/半開４/半開５/半開６/"
+	LOCALS += "大口/無口系/無口系２/嘲笑/嘲笑２/嘲笑３/嘲笑４/小口/小口２/小口３/ڡ/ڡ２/ڡ３/会話口/会話口２/会話口３/会話口４/"
+	LOCALS += "いー/いー２/いー３/いー４/いー５/いー６/いー７/おー/ni↘/栗口/栗口２/流口水/一文字/～/哈欠小/哈欠大/呀！/抿嘴/口哨/口哨２/吐舌/吐舌２/小夫/叉叉/"
+	LOCALS += "蠕动/得意/得意２/Д/"
+
+CASE "痣の種類"
+	LOCALS = 痣无/泪痣右/泪痣左/
+
+CASE "脸颊の種類"
+	LOCALS = 光滑/战妆/脸谱赤/脸谱青/赤面/赤面２/楕円/红晕/婴儿红晕/紅潮２/紅潮/血迹/隈/雀斑/
+
+CASE "对话框の種類"
+	LOCALS = 对话框憤怒/对话框尷尬/对话框乱/对话框電球/对话框！？/对话框汗３/对话框汗２/对话框汗/对话框圓圈/对话框爱心大量/对话框爱心/
+	LOCALS += "对话框兴奋/对话框惊讶/对话框睡眠/对话框困倦/对话框開心/对话框・・・/对话框？２/对话框？/对话框！/对话框圆圈/对话框叉叉/对话框／／／/"
+
+CASE "小物の種類"
+	LOCALS = 挎包/托下巴/頬手/唇边手/石頭右/石頭/剪刀右/剪刀/布右/布/Ｗ剪刀手/抖抖/叹气/頭上橘子/頭上太阳鏡/茶/咖啡/紅茶/塑料吸管/短冊/送禮/
+	LOCALS += "帯洞乳酪/圆形奶酪/橘子/啤酒/本/沒點燃的煙/烟/冰/pocky/面包/法棍/避孕套/帯血菜刀/菜刀/スマホ/スマホ白/スマホ黒/スマホ粉紅/闪光/暖呼呼/"
+	LOCALS += "扇子赤/扇子富士山/扇子桜/扇子白/萌袖/頬杖/頬杖左/Ｗ頬杖/对指/不可以/原来如此手/得意手/嘘声手/胖次花绳/胖次花绳湿/胖次花绳变化/"
+
+	;死神酱用
+	LOCALS += "オーフェス/オーフェス兴奋/オーフェス汗/オーフェス爱心/オーフェス！/オーフェス？/オーフェス！？/オーフェス電球/"
+
+CASE "精液の種類"
+	LOCALS = 精液左頬/精液右頬/精液髪/精液Ｂ/
+
+CASE "汗の種類"
+	LOCALS = 頬汗/
+
+CASE "裆部颜色"
+	SELECTCASE FLAG:裆部颜色
+	CASE 0
+		RETURNF "胖次の色と同じ"
+	CASE 1
+		RETURNF "白"
+	CASE 2
+		RETURNF "稍微帯些变化"
+	ENDSELECT
+
+CASE "前回選択角色"
+	RETURNF EXTSTR(SAVESTR:PREV_直前行動, "（", "）")
+CASE "最新中出し相手の"
+	SIF ARG == 0 && TARGET > 0
+		ARG = TARGET
+	IF PREVEX("Ｖ中出し", ARG)
+		SIF COND("最新Ｖ中出し相手", ARG)
+			LOCALS = %CALLNAME:COND("最新Ｖ中出し相手", ARG)%
+	ELSEIF PREVEX("Ａ中出し", ARG)
+		SIF COND("最新Ａ中出し相手", ARG)
+			LOCALS = %CALLNAME:COND("最新Ａ中出し相手", ARG)%
+	ELSEIF PREVEX("尿道内射精", ARG)
+		SIF COND("最新膀胱中出し相手", ARG)
+			LOCALS = %CALLNAME:COND("最新膀胱中出し相手", ARG)%
+	ELSEIF PREVEX("口内射精", ARG)
+		SIF COND("最新精飲相手", ARG)
+			LOCALS = %CALLNAME:COND("最新精飲相手", ARG)%
+	ENDIF
+	;相手が自分の場合
+	SELECTCASE LOCALS
+	CASE ""
+	CASE CALLNAME:ARG
+		LOCALS = 自己的
+	CASEELSE
+		LOCALS += "の"
+	ENDSELECT
+CASE "電話中の"
+	IF TEQUIP:電話中
+		IF TALENT:有男朋友 == 2
+			LOCALS += "和丈夫"
+		ELSEIF TALENT:有男朋友
+			LOCALS += "和男朋友"
+		ENDIF
+		LOCALS += @"%TEXTR("正在通话/通話中")%"
+	ENDIF
+CASE "に電話させたまま、"
+	IF TEQUIP:電話中
+		LOCALS += "に"
+		IF TALENT:有男朋友 == 2
+			LOCALS += "和丈夫"
+		ELSEIF TALENT:有男朋友
+			LOCALS += "和男朋友"
+		ENDIF
+		LOCALS += @"%TEXTR("就这样继续通着电话/就这样继续通话")%、"
+	ELSE
+		LOCALS = の
+	ENDIF
+CASE "電話しながら"
+	IF TEQUIP:電話中
+		IF TALENT:有男朋友 == 2
+			LOCALS += "和丈夫"
+		ELSEIF TALENT:有男朋友
+			LOCALS += "和男朋友"
+		ENDIF
+		LOCALS += @"%TEXTR("一边打电话/一边用电话讲话/一边通话")%"
+	ENDIF
+CASE "彼氏"
+	IF TALENT:有男朋友 == 2
+		LOCALS = 旦那
+	ELSEIF TALENT:有男朋友
+		LOCALS = 彼氏
+	ENDIF
+CASE "行動継続中の"
+	SELECTCASE CONDS("直前行動")
+	CASE "膝枕"
+		LOCALS = 正在侍奉膝枕的
+	CASE "抱住"
+		LOCALS = 用身体蹭过来的
+	CASE "口淫"
+		LOCALS = 正在把脸埋在股間舔舐着性器的
+	CASE "清洁口交"
+		LOCALS = 用嘴进行了掃除的
+	CASE "进行性処理"
+		LOCALS = 来帮忙进行性欲処理的
+	CASE "拜托処理性欲"
+		LOCALS = 完成了性処理的
+	CASE "帮忙消除性欲"
+		LOCALS = 压力消解后懒散様子的
+	CASE "POSE撮影"
+		LOCALS = 配合进行了写真撮影的
+	CASE "自撮り送信"
+		LOCALS = 发送了自拍照片以引起注意的
+	CASE "撩起裙子"
+		LOCALS = 自己掀開展示了裙下风景的
+	CASE "检查阴部"
+		SIF COND("合意：检查阴部")
+			LOCALS = 取悦般展示着阴部的
+	CASE "检查菊穴"
+		SIF COND("合意：检查阴部")
+			LOCALS = 取悦般展示着尻穴的
+	ENDSELECT
+
+	SIF CONDS("直前行動") == STR:日常イベント名
+		LOCALS = 
+CASE "点心詳細"
+	RETURNF SAVESTR:点心詳細
+CASE "点心"
+	SIF SAVESTR:点心 == ""
+		RETURNF ""
+
+	SPLIT SAVESTR:点心, "_", LOCALS
+	RETURNF LOCALS
+CASE "点心当番"
+	;SIF STRCOUNT(SAVESTR:点心, "亲手自制") == 0
+	;	RETURNF ""
+	RETURNF CALLNAME:TO_NUMBER(FLAG:点心当番)
+CASE "試験評価"
+	SELECTCASE ARG
+	CASE IS >= 90
+		LOCALS = 学年上位
+	CASE IS >= 80
+		LOCALS = 成績優秀
+	CASE IS >= 60
+		LOCALS = 高于平均分
+	CASE IS >= 30
+		LOCALS = 游走在及格线附近
+	CASEELSE
+		LOCALS = 挂科
+	ENDSELECT
+CASE "間柄の"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	;特殊な間柄の処理
+	SELECTCASE ARG
+	CASE MASTER
+		IF COND("血縁") && PLAYER == MASTER
+			IF COND("教員")
+				LOCALS = 既是你的亲%CONDS("間柄", PLAYER)%也是你教的学生的
+			ELSE
+				LOCALS = 是你的亲%CONDS("間柄", PLAYER)%
+			ENDIF
+		ELSE
+			SELECTCASE CONDS("関係")
+			CASE "同班同学"
+				LOCALS = 同学
+			CASE "交易对象"
+				LOCALS = 作为%CONDS("間柄")%的交易对象的
+			CASE "主人様"
+				LOCALS = 作为下僕的
+			CASE "魔法の師匠"
+				LOCALS = 作为弟子的
+			CASE "借住"
+				LOCALS = 作为家主的
+			ENDSELECT
+		ENDIF
+	CASEELSE
+		IF COND("血縁", ARG) && PLAYER == MASTER
+			IF COND("教員", ARG)
+				LOCALS = 既是你的亲%CONDS("間柄", ARG)%也是你的老師的
+			ELSE
+				LOCALS = 你的亲%CONDS("間柄", ARG)%
+			ENDIF
+		ELSEIF COND("種族：驱魔人", ARG)
+			LOCALS = %CONDS("間柄", ARG)%的除魔人的
+		ELSE
+			SELECTCASE CONDS("関係", ARG)
+			CASE "同班同学"
+				LOCALS = 同学
+			CASE "Ｈの師匠"
+				LOCALS = 作为Ｈ的師傅的
+			CASE "魔法の師匠"
+				LOCALS = 既是%CONDS("間柄", ARG)%也是師傅的
+			CASE "借住"
+				LOCALS = 作为食客的
+			CASE "炮友"
+				LOCALS = 作为炮友的%CSTR:ARG:称号%的
+			ENDSELECT
+		ENDIF
+	ENDSELECT
+
+	SIF LOCALS != ""
+		RETURNF LOCALS
+
+	SELECTCASE CONDS("間柄", ARG)
+	CASE "下級生", "同級生", "同僚"
+		LOCALS = %CONDS("間柄", ARG)%的
+	CASEELSE
+		LOCALS = 作为%CONDS("間柄", ARG)%的
+	ENDSELECT
+CASE "0.1"
+	LOCALS = {ARG/10}.{ARG%10}
+CASE "0.01"
+	LOCALS = {ARG/100}.{(ARG%100)/10}{ARG%10}
+CASE "0.001"
+	LOCALS = {ARG/1000}.{(ARG%1000)/100}{(ARG%100)/10}{ARG%10}
+CASE "大致的現在位置"
+	IF PLACE("自宅")
+		LOCALS = 自宅
+	ELSE
+		LOCALS = %SAVESTR:現在位置%
+	ENDIF
+CASE "現在位置"
+	LOCALS = %SAVESTR:現在位置%
+
+;影響のでかいものを変更させるのは不可にする・・・と思ったけど要望あったし、しょうがないにゃあ
+CASE "固定可能な素質"
+	LOCALS = 乳頭肥大/陥没乳頭/巨乳輪/陰核肥大/陰核包茎/短小/並根/巨根/馬根/真性包茎/假性包茎/露茎/
+	LOCALS += "処女/貧乳/並乳/巨乳/爆乳/超乳/小尻/並尻/巨尻/爆尻/超尻/苗条/豐腴/筋肉/娇小/高大/腸液分泌体質/絶頂失禁体質/発情体質/母乳体質/嘔吐反射耐性/拡張適性/扶她/童貞/喉性感/子宮性感/尿道性感/气味弱点/褐色肌/色白/青肌/色黒/萝莉/少女/大姐姐/大人/性経験皆無/"
+	SIF CONFIG("性器年齢")
+		LOCALS += "美穴/色素沉淀（弱）/色素沉淀/色素沉淀（強）/黑木耳/"
+CASE "対象の名称"
+	LOCALS = partner
+	SIF CEVENT(ARGS, MASTER)
+		LOCALS = %CEVENTS(ARGS, MASTER)%
+CASE "助手の名称"
+	LOCALS = 指导者
+	SIF CEVENT(ARGS, MASTER)
+		LOCALS = %CEVENTS(ARGS, MASTER)%
+CASE "全裸状態"
+	;何も衣装を身に着けていないとこうなる
+	LOCALS = 0,,0,,0,,0,,0,,0,,0,,0,,0,,0,,
+CASE "前回指令"
+	LOCALS = %STR:前回指令%
+CASE "絶頂"
+	IF PENIS(ARG) && NOWEX:ARG:射精量 == 0
+		NOWEX:ARG:射精量 = CALCF("射精量", COND("絶頂", ARG), ARG)
+		EX:ARG:射精量 += NOWEX:ARG:射精量
+	ENDIF
+	IF PENIS(ARG)
+		IF COND("濃厚射精", ARG)
+			SELECTCASE BASE:ARG:濃厚精液 - TCVAR:ARG:濃厚射精
+			CASE IS >= 1
+				LOCALS = 濃厚射精:{NOWEX:ARG:射精量}ml(濃厚射精还有{BASE:ARG:濃厚精液 - TCVAR:ARG:濃厚射精}回)
+			CASEELSE
+				LOCALS = 濃厚射精:{NOWEX:ARG:射精量}ml(濃厚射精停止)
+			ENDSELECT
+		ELSE
+			LOCALS = 射精:{NOWEX:ARG:射精量}ml
+		ENDIF
+	ELSE
+		LOCALS = 絶頂
+	ENDIF
+
+	SIF COND("絶頂", ARG) >= 2
+		LOCALS = \@ PENIS(ARG) ? 大量 # 強 \@%LOCALS%
+	;射精による経験などの処理
+	SELECTCASE COND("絶頂", ARG)
+	CASE IS >= 5
+		LOCALS = 超々々%LOCALS%
+	CASE 4
+		LOCALS = 超々%LOCALS%
+	CASE 3
+		LOCALS = 超%LOCALS%
+	ENDSELECT
+	LOCALS = %LOCALS% \@ ARG == ASSI ? (%TEXTS("助手の名称")%）# \@
+
+CASE "射精詳細"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	IF NOWEX:ARG:射精前骤停
+		LOCALS = \@ NOWEX:ARG:射精前骤停 >= 2 ? 大量 # \@射精前骤停
+	ELSEIF NOWEX:ARG:射精
+		LOCALS = \@ NOWEX:ARG:射精 >= 3 ? 超 # \@\@ NOWEX:ARG:射精 >= 2 ? 大量 # \@\@ NOWEX:ARG:前列腺高潮射精 ? 前列腺高潮射精 # \@
+		IF SHOOT("顔", ARG) && ARG == TARGET
+			LOCALS += "自我颜射"
+		ELSEIF SHOOT("口", ARG) && ARG == TARGET
+			LOCALS += "自我口内射精"
+		ELSE
+			LOCALS += "射精"
+		ENDIF
+		LOCALS += @":{NOWEX:ARG:射精量}ml"
+	ENDIF
+
+;道端の菠萝包桑作成
+CASE "淫紋：形状描写"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	SELECTCASE CEVENTS("淫紋", ARG)
+	CASE "改造"
+		SELECTCASE MARK:ARG:淫紋
+		CASE IS >= 3
+			LOCALS = 歯車镶嵌的紋章
+		CASEELSE
+			LOCALS = 不知名無機質的紋章
+		ENDSELECT
+	CASE "開花"
+		SELECTCASE MARK:ARG:淫紋
+		CASE 4
+			LOCALS = 鮮艳花開的紋章
+		CASE 3
+			LOCALS = 让人联想到花朵形状的紋章
+		CASEELSE
+			LOCALS = 心型点缀的紋章
+		ENDSELECT
+	CASE "浸食"
+		LOCALS = 描绘蜘蛛的紋章
+	CASE "聖翼"
+		LOCALS = 让人联想到天使之翼的紋章
+	CASE "堕落"
+		LOCALS = 淫靡地点缀下腹部的紋章
+	CASE "羽化"
+		LOCALS = 蝴蝶模样的紋章
+	CASEELSE
+		LOCALS = 心型的紋章
+	ENDSELECT
+CASE "Ｖコンディション"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	;まずは一時的変化
+	IF PREVEX("放尿", ARG)
+		LOCALS += "[放尿直後]"
+	ELSEIF TEQUIP:ARG:出浴
+		LOCALS += "[出浴]"
+	ELSEIF CFLAG:ARG:体育 && COND("昼") && COND("授業直前") == 0
+		LOCALS += "[体育直後]"
+	ELSEIF CFLAG:ARG:水泳 && COND("昼") && COND("授業直前") == 0
+		LOCALS += "[塩素臭]"
+	ENDIF
+	SIF CHECK_STAIN(STAIN:ARG:Ｖ, "Ｖ恥垢") || COND("Ｖ不潔", ARG)
+		LOCALS += "[恥垢汚れ]"
+	IF CHECK_STAIN(STAIN:ARG:Ｖ, "湿的")
+		LOCALS += "[愛液涎]"
+	ELSEIF CHECK_STAIN(STAIN:ARG:Ｖ, "闷热的")
+		LOCALS += "[ムレムレ]"
+	ENDIF
+	IF COND("性処理：生挿入直後", ARG) || PREVEX("Ｖ中出し", ARG)
+		LOCALS += "[中出し直後]"
+	ELSE
+		SIF COND("性処理：Ｖ挿入直後", ARG)
+			LOCALS += "[使用直後]"
+		SIF CFLAG:ARG:Ｖ已中出
+			LOCALS += "[已中出]"
+	ENDIF
+
+	;後に固定値
+	IF COND("陰毛", ARG)
+		IF CONDS("陰毛", ARG) == "保养完毕" && CEVENT("陰毛の名称", ARG)
+			LOCALS += @"[%CONDS("陰毛", ARG)%(%CEVENTS("陰毛の名称", ARG)%)]"
+		ELSE
+			LOCALS += @"[%CONDS("陰毛", ARG)%]"
+		ENDIF
+	ENDIF
+
+	SIF TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:ARG:性器年齢, ARG) != "性器年齢"
+		LOCALS += @"[%TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:ARG:性器年齢, ARG)%]"
+
+	SIF COND("Ｖ熟達", ARG)
+		LOCALS += "[Ｖ熟達]"
+
+	IF COND("妊娠中：妊娠発覚済み", ARG) 
+		LOCALS += "[妊娠中]"
+	ELSEIF TALENT:ARG:出産経験
+		LOCALS += "[経産婦]"
+	ELSEIF TALENT:ARG:処女
+		LOCALS += "[処女]"
+	ENDIF
+	SIF ABL:ARG:Ｖ弛緩
+		LOCALS += "[Ｖ弛緩]"
+	SIF TALENT:ARG:陰核肥大
+		LOCALS += "[陰核肥大]"
+	IF TALENT:ARG:陰蒂環
+		IF CEVENT("陰蒂環", ARG)
+			LOCALS += @"[\@ PENIS(ARG) ? 阴茎 # 阴蒂 \@穿環(%CEVENTS("陰蒂環", ARG)%)]"
+		ELSE
+			LOCALS += @"[\@ PENIS(ARG) ? 阴茎 # 阴蒂 \@穿環]"
+		ENDIF
+	ENDIF
+	IF TALENT:ARG:陰唇環
+		IF CEVENT("陰唇環", ARG)
+			LOCALS += @"[陰唇環(%CEVENTS("陰唇環", ARG)%)]"
+		ELSE
+			LOCALS += @"[陰唇環]"
+		ENDIF
+	ENDIF
+	IF TALENT:ARG:尿道穿環
+		IF CEVENT("尿道穿環", ARG)
+			LOCALS += @"[尿道穿環(%CEVENTS("尿道穿環", ARG)%)]"
+		ELSE
+			LOCALS += @"[尿道穿環]"
+		ENDIF
+	ENDIF
+	IF COND("調教中")
+		SELECTCASE SIZE("振動棒", ARG)
+		CASE 6
+			LOCALS += "[規格外振動棒]"
+		CASE 5
+			LOCALS += "[馬型振動棒]"
+		CASE 4
+			LOCALS += "[腕並振動棒]"
+		CASE 3
+			LOCALS += "[極太振動棒]"
+		CASE 2
+			LOCALS += "[振動棒(大)]"
+		CASE 1
+			LOCALS += "[振動棒]"
+		ENDSELECT
+		SIF TEQUIP:ARG:导管
+			LOCALS += "[导管]"
+	ELSE
+		SELECTCASE COND("身嗜み：Ｖ拡張", ARG)
+		CASE 1
+			LOCALS += "[Ｖ振動棒]"
+		CASE 2
+			LOCALS += "[Ｖ振動棒(大)]"
+		CASE 3
+			LOCALS += "[Ｖ極太振動棒]"
+		CASE 4
+			LOCALS += "[Ｖ腕並振動棒]"
+		ENDSELECT
+
+		SELECTCASE COND("身嗜み：尿道拡張", ARG)
+		CASE 1
+			LOCALS += "[尿道塞子]"
+		ENDSELECT
+	ENDIF
+
+CASE "Ａコンディション"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	;まずは一時的変化
+	IF PREVEX("排泄", ARG)
+		LOCALS += "[排泄直後]"
+	ELSEIF TEQUIP:ARG:出浴
+		LOCALS += "[出浴]"
+	ELSEIF CFLAG:ARG:体育 && COND("昼") && COND("授業直前") == 0
+		LOCALS += "[体育直後]"
+	ELSEIF CFLAG:ARG:水泳 && COND("昼") && COND("授業直前") == 0
+		LOCALS += "[塩素臭]"
+	ENDIF
+	IF COND("性処理：生挿入直後", ARG) || PREVEX("Ａ中出し", ARG)
+		LOCALS += "[中出し直後]"
+	ELSE
+		SIF COND("性処理：Ａ挿入直後", ARG)
+			LOCALS += "[使用直後]"
+		SIF CFLAG:ARG:Ａ已中出
+			LOCALS += "[已中出]"
+	ENDIF
+
+	;後に固定値
+	SIF COND("陰毛", ARG)
+		LOCALS += @"[%CONDS("Ａ陰毛", ARG)%]"
+
+	SIF COND("Ａ熟達", ARG)
+		LOCALS += "[Ａ熟達]"
+
+	IF TALENT:ARG:Ａ処女
+		LOCALS += "[Ａ処女]"
+	ELSEIF TALENT:ARG:縦深菊穴
+		LOCALS += "[縦深菊穴]"
+	ENDIF
+	SIF ABL:ARG:Ａ弛緩
+		LOCALS += "[Ａ弛緩]"
+
+;	SIF COND("身嗜み：腸洗浄", ARG)
+;		LOCALS += "[腸内清掃]"
+;	SIF COND("身嗜み：Ａ潤滑液", ARG)
+;		LOCALS += "[潤滑液]"
+
+	IF COND("調教中")
+		SELECTCASE SIZE("Ａ振動棒", ARG)
+		CASE 6
+			LOCALS += "[Ａ規格外振動棒]"
+		CASE 5
+			LOCALS += "[Ａ馬型振動棒]"
+		CASE 4
+			LOCALS += "[Ａ腕並振動棒]"
+		CASE 3
+			LOCALS += "[Ａ極太振動棒]"
+		CASE 2
+			LOCALS += "[Ａ振動棒(大)]"
+		CASE 1
+			LOCALS += "[Ａ振動棒]"
+		ENDSELECT
+	ELSE
+		SELECTCASE COND("身嗜み：Ａ拡張", ARG)
+		CASE 1
+			LOCALS += "[Ａ塞子]"
+		CASE 2
+			LOCALS += "[Ａ塞子(大)]"
+		CASE 3
+			LOCALS += "[極太Ａ塞子]"
+		CASE 4
+			LOCALS += "[Ａ塞子(特大)]"
+		ENDSELECT
+	ENDIF
+
+;基本的にはARG必須
+CASE "精液"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	IF COND("濃厚射精", ARG)
+		SELECTCASE KABURAND(5, ARG)
+		CASE 4
+			LOCALS = 粘稠精液
+		CASE 3
+			LOCALS = 果冻状浓精
+		CASE 2
+			LOCALS = 拉丝精液
+		CASE 1
+			LOCALS = 高浓度精液
+		CASEELSE
+			LOCALS = 濃厚精液
+		ENDSELECT
+	ELSE
+		LOCALS = 精液
+	ENDIF
+;SIZE("阴茎", ARG) >= 2以上でのみ呼び出される
+CASE "巨根：視覚"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	SELECTCASE SIZE("阴茎", ARG)
+	CASE IS >= 4
+		LOCALS = %TEXTR("大小超出规格的/轻易超越20cm的/大小極其凶悪的")%巨根
+	CASE 3
+		IF RAND:2
+			LOCALS = %TEXTR("玩笑般大小的/有著過分兇惡的大小的")%阴茎
+		ELSE
+			LOCALS = %TEXTR("20cm級的/有500mlPET瓶大小的/兒童手腕大小的")%巨根
+		ENDIF
+	CASE 2
+		LOCALS = %TEXTR("骄傲的巨根/硬邦邦的巨根/和細PET瓶相比充满余裕的巨根")%
+	ENDSELECT
+CASE "巨根：主人"
+	SELECTCASE SIZE("阴茎", MASTER)
+	CASE IS >= 4
+		LOCALS = %TEXTR("硬到翘起来的巨根/規格外的巨根/超越20cm的巨根/凶悪至極的巨根")%
+	CASE 3
+		LOCALS = %TEXTR("20cm級的巨根/硬到翘起来的巨根/凶悪尺寸的阴茎")%
+	CASE 2
+		LOCALS = %TEXTR("硬到翘起来的巨根/异常勃起的巨根")%
+	ENDSELECT
+
+CASE "阴茎：視覚"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	SIF PENIS(ARG) == 0
+		RETURNF LOCALS
+
+	IF PREVEX("射精", ARG)
+		LOCALS = %TEXTR("射精直後白色的液体滴落的/射精直後仍然敏感的/刚刚射精的")%
+	ELSEIF CHECK_STAIN(STAIN:ARG:Ｐ, "精液") && RAND:3 == 0
+		LOCALS = 被精液和先走汁弄得滑溜溜的
+	ELSEIF ARG == TARGET && PALAM:ARG:欲情 < 500 && TEQUIP:ARG:媚薬 == 0 && INSERT("挿入", ARG) == 0
+		IF RAND:2
+			LOCALS = 半勃起状態的
+		ELSE
+			LOCALS = 没有完全变硬的
+		ENDIF
+	;性交系を直前にしていないなら乱数分岐
+	ELSEIF RAND:2
+		LOCALS = GinGin勃起的
+	ELSE
+		IF RAND:2
+			LOCALS = 耸立的
+		ELSE
+			LOCALS = 站起的
+		ENDIF
+	ENDIF
+	IF ARG != MASTER && RAND:3 == 0
+		SELECTCASE SIZE("阴茎", ARG)
+		CASE IS >= 3
+			LOCALS = %TEXTR("兒童手腕大小的/尺寸極其凶悪的/玩笑般大小的")%
+		CASE 2
+			LOCALS = %TEXTR("令人神往般大小的/看起来就很大的/芸術般大小的")%
+		CASE 1
+		CASEELSE
+			IF RAND:3 == 0 && AGE(ARG) >= 3
+				LOCALS = 寒酸的
+			ELSEIF COND("池面", ARG)
+				LOCALS = 小小的
+			ELSE
+				LOCALS = %TEXTR("可愛的/小小的")%
+			ENDIF
+		ENDSELECT
+	ENDIF
+
+CASE "阴茎：尺寸表現付"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	SELECTCASE SIZE("阴茎", ARG)
+	CASE IS >= 4
+		LOCALS = %TEXTR("規格外的/轻易超越20cm的/極其凶悪的")%巨根
+	CASE 3
+		IF RAND:2
+			LOCALS = %TEXTR("玩笑般大小的/凶悪的")%阴茎
+		ELSE
+			LOCALS = %TEXTR("20cm級的/有500mlPET瓶大小的")%巨根
+		ENDIF
+	CASE 2
+		LOCALS = 巨根
+	CASE 0
+		IF COND("真性包茎", ARG)
+			LOCALS = 兒童包茎
+		ELSEIF COND("假性包茎", ARG)
+			LOCALS = 包茎阴茎
+		ELSE
+			LOCALS = 小小的阴茎
+		ENDIF
+	CASEELSE
+		LOCALS = 陰莖
+	ENDSELECT
+
+CASE "阴茎：呼び方"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	SIF CONFIG("包茎阴茎的称呼") == 0
+		RETURNF "阴茎"
+
+	IF COND("真性包茎",ARG)
+		LOCALS = 真性包茎阴茎
+	ELSEIF COND("假性包茎",ARG)
+		LOCALS = 包茎阴茎
+	ELSE
+		LOCALS = 陰莖
+	ENDIF
+CASE "阴茎：客観表現"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	SELECTCASE SIZE("阴茎", ARG)
+	CASE IS >= 2
+		LOCALS = 巨根
+	CASE 0
+		IF COND("真性包茎", ARG)
+			LOCALS = 兒童包茎
+		ELSEIF COND("假性包茎", ARG)
+			LOCALS = 包茎阴茎
+		ELSE
+			LOCALS = 短小阴茎
+		ENDIF
+	CASEELSE
+		LOCALS = 陰莖
+	ENDSELECT
+CASE "阴部：客観表現"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	IF COND("黑木耳", ARG)
+		LOCALS = 黑木耳
+	ELSEIF COND("萝莉小穴", ARG)
+		LOCALS = 萝莉小穴
+	ELSE
+		LOCALS = 陰部
+	ENDIF
+
+CASE "割れ目：表現短め"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	IF COND("黑木耳", ARG)
+		SELECTCASE AGE(ARG)
+		CASE IS >= 4
+			LOCALS = %TEXTR("散发着気味裂隙/大人的阴部/发黑的大陰唇")%
+		CASEELSE
+			LOCALS = %TEXTR("散发着気味裂隙/发黑的大阴唇")%
+		ENDSELECT
+	ELSEIF COND("美穴", ARG)
+		SELECTCASE AGE(ARG)
+		CASE IS >= 3
+			IF COND("色素沉淀", ARG) || COND("色素沉淀(弱)", ARG)
+				LOCALS = %TEXTR("紧紧地闭合的纵裂/稍微有点黑的阴唇/光滑的阴唇/看起来非常柔软的大阴唇")%
+			ELSE
+				LOCALS = %TEXTR("紧紧地闭合的纵裂/色素の单薄的大陰唇/光滑的阴唇/看起来非常柔软的大阴唇")%
+			ENDIF
+		CASEELSE
+			LOCALS = %TEXTR("紧紧地闭合的纵裂/スベスベの陰唇/看起来非常柔软的大阴唇")%
+		ENDSELECT
+	ELSEIF COND("色素沉淀", ARG) || COND("色素沉淀(強)", ARG)
+		SELECTCASE AGE(ARG)
+		CASE IS >= 4
+			LOCALS = %TEXTR("散发着気味裂隙/大人的阴部/肉厚的大陰唇")%
+		CASEELSE
+			LOCALS = %TEXTR("散发着気味的裂隙/大人的阴部/肥美的大陰唇")%
+		ENDSELECT
+	ELSEIF COND("萝莉小穴", ARG)
+		LOCALS = %TEXTR("残存幼稚的縦条纹/光滑的大陰唇")%
+	ELSE
+		SELECTCASE AGE(ARG)
+		CASE IS >= 4
+			LOCALS = %TEXTR("散发着気味裂隙/大人的阴部/肉厚的大陰唇")%
+		CASE 3
+			LOCALS = %TEXTR("散发着気味的裂隙/大人的阴部/肥美的大陰唇")%
+		CASE 2
+			LOCALS = %TEXTR("残存着兒童感觉的縦条纹/光滑的陰唇/柔软的大陰唇")%
+		CASEELSE
+			LOCALS = %TEXTR("残存幼稚的縦条纹/光滑的大陰唇")%
+		ENDSELECT
+	ENDIF
+CASE "割れ目", "割れ目：陰毛描写没有"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	;割れ目or纵裂描写
+	IF RAND:2 || CFLAG:ARG:陰毛描写 == 1
+		IF COND("黑木耳", ARG)
+			SELECTCASE AGE(ARG)
+			CASE IS >= 4
+				IF TALENT:ARG:陰唇環 && RAND:2
+					LOCALS = %TEXTR("穿环闪闪发光的含着小阴唇的纵裂/散发着気味裂隙/成熟的大人的蜜裂")%
+				ELSE
+					LOCALS = %TEXTR("粗糙的露出小阴唇的纵裂/散发着気味裂隙/成熟的略微发黑的大人的蜜裂")%
+				ENDIF
+			CASEELSE
+				IF TALENT:ARG:陰唇環 && RAND:2
+					LOCALS = %TEXTR("穿环闪着光的含着小阴唇的纵裂/散发着気味裂隙/大人的阴部")%
+				ELSE
+					LOCALS = %TEXTR("粗糙的露出小阴唇的纵裂/散发着気味裂隙/稍微有点黑的蜜裂")%
+				ENDIF
+			ENDSELECT
+		ELSEIF COND("美穴", ARG)
+			SELECTCASE AGE(ARG)
+			CASE 2, 3
+				LOCALS = %TEXTR("残存着兒童感觉的縦条纹/微微露出的肉隙/漂亮地收整了小陰唇的肉隙")%
+			CASEELSE
+				LOCALS = %TEXTR("看起来非常柔软的大阴唇/微微露出的肉隙/漂亮地收整了小陰唇的肉隙")%
+			ENDSELECT
+		ELSEIF COND("色素沉淀", ARG) || COND("色素沉淀(強)", ARG)
+			SELECTCASE AGE(ARG)
+			CASE IS >= 4
+				IF TALENT:ARG:陰唇環 && RAND:2
+					LOCALS = %TEXTR("小陰唇上发光的穿環露出来的縦条纹/散发着気味的裂隙/成熟大人的裂隙")%
+				ELSE
+					LOCALS = %TEXTR("小阴唇露出来的縦条纹/散发着気味的裂隙/成熟大人的裂隙")%
+				ENDIF
+			CASEELSE
+				IF TALENT:ARG:陰唇環
+					LOCALS = %TEXTR("大人的阴部/微微露出的肉隙/穿環付きの小陰唇が覗く割れ目")%
+				ELSE
+					LOCALS = %TEXTR("散发着気味的裂隙/大人的阴部/肥美的大陰唇")%
+				ENDIF
+			ENDSELECT
+		ELSEIF COND("萝莉小穴", ARG)
+			LOCALS = %TEXTR("残存幼稚的縦条纹/恰好合上了的肉隙")%
+		ELSE
+			SELECTCASE AGE(ARG)
+			CASE IS >= 4
+				IF TALENT:ARG:陰唇環 && RAND:2
+					LOCALS = %TEXTR("小陰唇上发光的穿環露出来的縦条纹/散发着気味的裂隙/成熟大人的裂隙")%
+				ELSE
+					LOCALS = %TEXTR("小阴唇露出来的縦条纹/散发着気味的裂隙/成熟大人的裂隙")%
+				ENDIF
+			CASE 3
+				IF TALENT:ARG:陰唇環
+					LOCALS = %TEXTR("大人的縦条纹/微微露出的肉隙/低頭看见穿環小陰唇的肉隙")%
+				ELSE
+					LOCALS = %TEXTR("散发着気味的裂隙/大人的阴部/肥美的大陰唇")%
+				ENDIF
+			CASE 2
+				LOCALS = %TEXTR("残存着兒童感觉的縦条纹/微微露出的肉隙/漂亮地收整了小陰唇的肉隙")%
+			CASEELSE
+				LOCALS = %TEXTR("残存幼稚的縦条纹/恰好合上了的肉隙")%
+			ENDSELECT
+		ENDIF
+		SIF CFLAG:ARG:陰毛描写 == 1
+			CFLAG:ARG:陰毛描写 = 2
+	;大陰唇描写
+	ELSE
+		;陰毛描写
+		SIF ARGS != "割れ目：陰毛描写没有"
+			LOCALS = %TEXTS("陰毛：視覚", ARG)%
+
+		SIF CFLAG:ARG:陰毛描写
+			LOCALS = 
+
+		IF COND("黑木耳", ARG)
+			LOCALS += @"%TEXTR("黑乎乎的大阴唇/露出下流的褶皱的大阴唇/厚实的大阴唇")%"
+		ELSEIF COND("美穴", ARG)
+			SELECTCASE AGE(ARG)
+			CASE IS >= 3
+				IF COND("色素沉淀", ARG) || COND("色素沉淀(弱)", ARG)
+					LOCALS += @"%TEXTR("稍微有点黑的阴唇/光滑的阴唇/看起来非常柔软的大阴唇")%"
+				ELSE
+					LOCALS += @"%TEXTR("一点黑色都不带的大阴唇/光滑的大阴唇/看起来非常柔软的大阴唇")%"
+				ENDIF
+			CASEELSE
+				LOCALS += @"%TEXTR("带有一些熟透的女性的颜色的大阴唇/光滑的大阴唇/看起来非常柔软的大阴唇")%"
+			ENDSELECT
+		ELSEIF COND("色素沉淀(強)", ARG)
+			LOCALS += @"%TEXTR("带有黒色的大陰唇/色素沉淀后的大陰唇/肉厚的大陰唇")%"
+		ELSEIF COND("色素沉淀", ARG)
+			LOCALS += @"%TEXTR("稍稍发黑的大陰唇/柔软的大陰唇/肥美的大陰唇")%"
+		ELSEIF COND("萝莉小穴", ARG)
+			LOCALS += @"%TEXTR("稚嫩的大陰唇/光滑的阴唇")%"
+		ELSE
+			SELECTCASE AGE(ARG)
+			CASE IS >= 4
+				LOCALS += @"%TEXTR("带有黒色的大陰唇/色素沉淀后的陰唇/肉厚的大陰唇")%"
+			CASE 3
+				LOCALS += @"%TEXTR("稍稍发黑的陰唇/柔软的大陰唇/肥美的大陰唇")%"
+			CASE 2
+				LOCALS += @"%TEXTR("淡淡染上色的大陰唇/光滑的陰唇/柔软的大陰唇")%"
+			CASEELSE
+				LOCALS += @"%TEXTR("没有肉单薄的陰唇/光滑的大陰唇")%"
+			ENDSELECT
+		ENDIF
+		CFLAG:ARG:陰毛描写 = 1
+	ENDIF
+CASE "大陰唇：視覚"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	IF COND("黑木耳", ARG)
+		LOCALS = %TEXTR("黑乎乎的大阴唇/肉厚的大阴唇")%
+	ELSEIF COND("美穴", ARG)
+		SELECTCASE AGE(ARG)
+		CASE IS >= 3
+			IF COND("色素沉淀", ARG) || COND("色素沉淀(弱)", ARG)
+				LOCALS = %TEXTR("稍微有点黑的阴唇/光滑的阴唇/看起来非常柔软的大阴唇")%
+			ELSE
+				LOCALS = %TEXTR("一点黑色都不带的大阴唇/光滑的大阴唇/看起来非常柔软的大阴唇")%
+			ENDIF
+		CASEELSE
+			LOCALS = %TEXTR("淡淡染上色的大陰唇/光滑的陰唇/柔软的大陰唇")%
+		ENDSELECT
+	ELSEIF COND("色素沉淀(強)", ARG)
+		LOCALS = %TEXTR("发黑的大陰唇/色素沉淀后的大陰唇/肉厚の大陰唇")%
+	ELSEIF COND("色素沉淀", ARG)
+		LOCALS = %TEXTR("略微发黑的大陰唇/看起来非常柔软的大阴唇/肥美的大陰唇")%
+	ELSEIF COND("萝莉小穴", ARG)
+		LOCALS = %TEXTR("稚嫩的大陰唇/光滑的阴唇")%
+	;それ以外orCONFIG("性器年齢") == 0の時は以下
+	ELSE
+		SELECTCASE AGE(ARG)
+		CASE IS >= 4
+			LOCALS = %TEXTR("发黑的大陰唇/色素沉淀后的大陰唇/肉厚の大陰唇")%
+		CASE 3
+			LOCALS = %TEXTR("略微发黑的大陰唇/看起来非常柔软的大阴唇/肥美的大陰唇")%
+		CASE 2
+			LOCALS = %TEXTR("淡淡染上色的大陰唇/光滑的陰唇/柔软的大陰唇")%
+		CASEELSE
+			LOCALS = %TEXTR("稚嫩的大陰唇/光滑的阴唇")%
+		ENDSELECT
+	ENDIF
+CASE "陰毛：視覚"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	;陰毛描写
+	SELECTCASE CONDS("陰毛", ARG)
+	CASE "随意生長"
+		LOCALS = %TEXTR("被浓密的阴毛覆盖的/毛茸茸的")%
+	CASE "自然"
+		LOCALS = 陰毛覆盖的
+	CASE "保养完毕"
+		LOCALS = %TEXTR("陰毛被精心修剪过的/边缘修剪很整齐的陰毛")%
+	CASE "剃过留痕"
+		LOCALS = 有剃过陰毛痕迹的
+	CASE "無髭", "还没長出来"
+		IF AGE(ARG) >= 3
+			LOCALS = %TEXTR("陰毛随意生长的/無髭状態的")%
+		ELSE
+			LOCALS = %TEXTR("陰毛丛生的/陰毛以抱歉的程度地生长着的")%
+		ENDIF
+	CASE "光滑无毛"
+		LOCALS = %TEXTR("刮得光溜溜的/陰毛処理得很完美的")%
+	CASE "脱毛処理"
+		LOCALS = %TEXTR("脱毛処理过的/綺麗地脱毛过的")%
+	ENDSELECT
+
+CASE "陰毛：表現短め"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	SELECTCASE CONDS("陰毛", ARG)
+	CASE ""
+		LOCALS = 
+	CASE "自然", "随意生長"
+		LOCALS = 被柔軟的陰毛装饰着的
+	CASE "保养完毕"
+		LOCALS = 阴毛被修剪的整整齐齐的
+	CASE "剃过留痕"
+		LOCALS = 帶著點點毛茬痕跡的
+	CASE "無髭"
+		LOCALS = 無髭状態的
+	CASE "还没長出来"
+		LOCALS = 淡淡的树丛一样可愛的
+	CASE "光滑无毛"
+		LOCALS = 剃得十分光滑的
+	CASE "脱毛処理"
+		LOCALS = 無毛的
+	ENDSELECT
+
+CASE "阴部：視覚", "阴部：感触"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	SWAP ARG, TARGET
+
+	IF CHECK_CLO("下身衣装露出")
+		IF CHECK_STAIN(STAIN:下身衣装, "尿")
+			LOCALS = %TEXTR("带有尿臭的/粘上尿污的")%
+		ELSEIF ARGS == "阴部：感触" && PALAM:Ｖ潤 >= 3000 && TALENT:絶頂失禁体質 && !RAND:5
+			LOCALS = 有点发臊的
+		ELSEIF ARGS == "阴部：感触" && PALAM:Ｖ潤 < 100 && !RAND:4
+			LOCALS = 干燥的
+		ELSEIF CHECK_BOTTOM("湿的") && !RAND:3
+			IF ARGS == "阴部：感触"
+				LOCALS = 温暖潮湿的
+			ELSE
+				LOCALS = 一圈颜色与周围不同的
+			ENDIF
+		ELSEIF CHECK_BOTTOM("闷热的") && RAND:2
+			IF RAND:2
+				LOCALS = 闷热的
+			ELSE
+				LOCALS = 汗湿的
+			ENDIF
+		ENDIF
+		IF ARGS == "阴部：視覚" && LOCALS == "" && CHECK_BOTTOM("布鲁马") == 0
+			LOCALS = %BOTTOM(TARGET, "略")%的股間
+		ELSE
+			LOCALS = %LOCALS%%BOTTOM(TARGET, "略")%
+		ENDIF
+	ELSEIF CHECK_CLO("贴身制服露出")
+		IF CHECK_STAIN(STAIN:贴身制服下身衣装, "尿")
+			LOCALS = %TEXTR("带有尿臭的/粘上尿污的")%
+		ELSEIF ARGS == "阴部：感触" && CHECK_BODYS("泳装") == 0 && PALAM:Ｖ潤 >= 1000 && TALENT:絶頂失禁体質 && !RAND:5
+			LOCALS = 有点发臊的
+		ELSEIF CHECK_BODYS("勒紧的") && PALAM:欲情 >= 1000 && !RAND:4
+			LOCALS = 勒紧散发気味的
+		ELSEIF CHECK_BODYS("湿的") && !RAND:3
+			IF ARGS == "阴部：感触"
+				LOCALS = 熱气腾腾的
+			ELSE
+				LOCALS = 一圈颜色与周围不同的
+			ENDIF
+		ELSEIF CHECK_BODYS("闷热的") && RAND:2
+			LOCALS = 闷热的
+		ENDIF
+		IF ARGS == "阴部：視覚" && LOCALS == ""
+			LOCALS = %BODYS(TARGET, "略")%の股間
+		ELSE
+			LOCALS = %LOCALS%%BODYS(TARGET, "略")%
+		ENDIF
+	;连褲襪+破ってない
+	ELSEIF CHECK_CLO("连褲襪露出")
+		IF CHECK_STAIN(STAIN:下身衣装, "尿")
+			LOCALS = %TEXTR("带有尿臭的/粘上尿污的")%
+		ELSEIF ARGS == "阴部：感触" && PALAM:Ｖ潤 >= 3000 && TALENT:絶頂失禁体質 && !RAND:5
+			LOCALS = 有点发臊的
+		ELSEIF ARGS == "阴部：感触" && PALAM:Ｖ潤 < 100 && !RAND:4
+			LOCALS = 干燥的
+		ELSEIF CHECK_BOTTOM("湿的") && !RAND:3
+			IF ARGS == "阴部：感触"
+				LOCALS = 温暖潮湿的
+			ELSE
+				LOCALS = 染上愛液的
+			ENDIF
+		ELSEIF CHECK_BOTTOM("闷热的") && RAND:2
+			IF RAND:2 || ARGS == "阴部：視覚"
+				LOCALS = 闷热的
+			ELSE
+				LOCALS = 汗湿的
+			ENDIF
+		ENDIF
+		IF ARGS == "阴部：視覚" && LOCALS == ""
+			LOCALS = %BOTTOM(TARGET, "略")%相隔的股間
+		ELSE
+			LOCALS = %LOCALS%%BOTTOM(TARGET, "略")%
+		ENDIF
+	;胖次+胖次をずらしていない+胖次を脱いでない+股間が露出していない
+	ELSEIF CHECK_CLO("胖次露出") && CHECK_CLO("Ｖ露出") == 0
+		IF CHECK_STAIN(STAIN:胖次, "尿")
+			LOCALS = %TEXTR("带有尿臭的/粘上尿污的")%
+		;高開衩
+		ELSEIF ARGS == "阴部：視覚" && CHECK_PANTIES("高開衩") && RAND:2
+			IF COND("陰毛") >= 6 && !RAND:3
+				LOCALS = 陰毛
+				SIF COND("陰毛") == 7
+					LOCALS = %LOCALS%完全
+				LOCALS = %LOCALS%露出的
+			ELSEIF RAND:2
+				IF AGE(TARGET) >= 2
+					IF TALENT:好色 && RAND:2
+						LOCALS = 色素沉淀的大陰唇一览无余的
+					ELSE
+						LOCALS = 勒进柔软的陰唇的
+					ENDIF
+				ELSE
+					LOCALS = 勒进股間后变細的
+				ENDIF
+			ELSE
+				LOCALS = 陰部眼看就要露出来的
+			ENDIF
+		;透明
+		ELSEIF ARGS == "阴部：視覚" && CHECK_PANTIES("透明") && RAND:2
+			LOCALS = 隐约
+			IF COND("陰毛") >= 4
+				LOCALS = %LOCALS%露出陰毛的
+			ELSE
+				LOCALS = %LOCALS%透明的
+			ENDIF
+		ELSEIF ARGS == "阴部：視覚" && !RAND:4
+			IF CHECK_PANTIES("褶边") && !RAND:4
+				LOCALS = 荷叶边下可愛的
+			;過激
+			ELSEIF AGE(TARGET) == 1 && CHECK_PANTIES("Ｈ") && !RAND:3
+				LOCALS = 大人样的
+			ELSEIF RAND:2
+				LOCALS = 突出陰影的
+			ELSE
+				LOCALS = 突出股間突起的
+			ENDIF
+		ELSEIF ARGS == "阴部：感触" && CHECK_PANTIES("泳装") == 0 && PALAM:Ｖ潤 >= 1000 && TALENT:絶頂失禁体質 && !RAND:4
+			LOCALS = 有点发臊的
+		ELSEIF CHECK_PANTIES("湿的") && !RAND:3
+			IF ARGS == "阴部：感触"
+				LOCALS = 熱气腾腾的
+			ELSE
+				IF RAND:2
+					LOCALS = 带有显眼污迹的
+				ELSE
+					LOCALS = 污迹浮在眼前的
+				ENDIF
+			ENDIF
+		ELSEIF CHECK_PANTIES("闷热的") && RAND:2
+			IF RAND:2
+				LOCALS = 闷热的
+			ELSE
+				LOCALS = 汗湿的
+			ENDIF
+		ENDIF
+		LOCALS = %LOCALS%%PANTIES(TARGET, "略")%
+	;股間が露出している
+	ELSEIF ARGS == "阴部：感触"
+		IF PREVPLAY("膣内浴尿")
+			IF RAND:2
+				LOCALS = 刚刚被作为小便器使用的
+			ELSE
+				LOCALS = 刚刚被小便注入的
+			ENDIF
+		;前回オシッコ
+		ELSEIF PREVEX("放尿") + PREVEX("絶頂漏尿") && RANDIF(1, PREVEX("Ｖ中出し"), TALENT:絶頂失禁体質)
+			LOCALS = 刚刚漏尿的
+		;前回CV絶頂or中出し
+		ELSEIF PREVEX("Ｃ絶頂") + PREVEX("Ｖ絶頂") + PREVEX("Ｖ中出し") && !RAND:3
+			IF PREVEX("Ｖ中出し") && RAND:3
+				IF EXP_GAIN("膣内精液経験") >= 4
+					LOCALS = 充分中出过的
+				ELSE
+					LOCALS = 精液溢出的
+				ENDIF
+			ELSEIF PREVEX("Ｃ絶頂") + PREVEX("Ｖ絶頂") && RAND:3
+				IF RAND:2
+					LOCALS = 快感荡漾的
+				ELSEIF TEQUIP:推倒
+					LOCALS = 剛剛迎來高潮的
+				ELSE
+					LOCALS = 剛剛被強迫推上高潮的
+				ENDIF
+			ELSE
+				LOCALS = 將因快感而不斷顫抖著的
+			ENDIF
+		ELSEIF COND("陰毛") && COND("陰毛") <= 3 && (!RAND:3 || PREVCOM == 145)
+			LOCALS = 光滑无毛
+			SIF PREVCOM == 145
+				LOCALS = 剛剛被完全剃除毛髮%LOCALS%
+			LOCALS = %LOCALS%的
+		ELSEIF CALCF("Ｖ発情") >= 3 && PREVCOM >= TNUM("正常位") && PREVCOM <= 69 && RANDIF(1, CALCF("Ｖ発情"), PALAM:Ｖ潤 >= 500, CHECK_STAIN(STAIN:Ｖ, "精液"), EX:Ｖ絶頂 > 3)
+			IF RAND:2
+				LOCALS = 淫亂張開的
+			ELSE
+				LOCALS = 淫靡張合的
+			ENDIF
+		ELSEIF COND("陰毛") == 7 && RANDIF(2, CALCF("Ｖ発情"), PALAM:Ｖ潤 >= 500, CHECK_STAIN(STAIN:Ｖ, "精液"), EX:Ｖ絶頂 > 3)
+			LOCALS = 被厚重的黑色密林深深掩藏的
+		ELSEIF EX:Ｖ絶頂 > 3 && RANDIF(2, CALCF("Ｖ発情"), PALAM:Ｖ潤 >= 500, CHECK_STAIN(STAIN:Ｖ, "精液"))
+			LOCALS = 剛剛不斷迎來高潮的
+		ELSEIF CHECK_STAIN(STAIN:Ｖ, "精液") && RANDIF(2, CALCF("Ｖ発情"), PALAM:Ｖ潤 >= 500)
+			LOCALS = 被精液弄脏的
+		ELSEIF PALAM:Ｖ潤 >= 500 && RANDIF(2, CALCF("Ｖ発情") )
+			LOCALS = 湿润的
+		ELSEIF CALCF("Ｖ発情") && RAND:2
+			IF CALCF("Ｖ発情") >= 4 && RAND:3
+				LOCALS = 不斷溢出白濁淫汁的
+			ELSEIF CALCF("Ｖ発情") >= 3
+				IF RAND:2
+					LOCALS = 將因快感而不斷顫抖著的
+				ELSE
+					LOCALS = 渴望的不斷張合著的
+				ENDIF
+			ELSEIF CALCF("Ｖ発情") == 2
+				LOCALS = 將早已被愛液浸透的
+			ELSE
+				IF RAND:2
+					LOCALS = 発情的
+				ELSE
+					LOCALS = 闷热的
+				ENDIF
+			ENDIF
+		ENDIF
+		LOCALS = %LOCALS%阴部
+	ELSE
+		;処女
+		IF TALENT:処女 == 1 && ( (SELECTCOM >= TNUM("正常位") && SELECTCOM <= 69) || !RAND:5)
+			LOCALS = 不识男人滋味的
+		ELSEIF PREVPLAY("膣内浴尿")
+			IF RAND:2
+				LOCALS = 刚刚被作为小便器使用的
+			ELSE
+				LOCALS = 刚刚被小便注入的
+			ENDIF
+		;前回オシッコ
+		ELSEIF PREVEX("放尿") + PREVEX("絶頂漏尿") && RANDIF(1, PREVEX("Ｖ中出し"), TALENT:絶頂失禁体質)
+			LOCALS = 刚刚漏尿的
+		;前回CV絶頂or中出し
+		ELSEIF PREVEX("Ｃ絶頂") + PREVEX("Ｖ絶頂") + PREVEX("Ｖ中出し") && !RAND:3
+			IF PREVEX("Ｖ中出し") && RAND:3
+				IF EXP_GAIN("膣内精液経験") >= 4
+					LOCALS = 充分中出过的
+				ELSE
+					LOCALS = 精液溢出的
+				ENDIF
+			ELSEIF PREVEX("Ｃ絶頂") + PREVEX("Ｖ絶頂") && RAND:3
+				IF RAND:2
+					LOCALS = 快感荡漾的
+				ELSEIF TEQUIP:推倒
+					LOCALS = 剛剛迎來高潮的
+				ELSE
+					LOCALS = 剛剛被強迫推上高潮的
+				ENDIF
+			ELSE
+				LOCALS = 將因快感而不斷顫抖著的
+			ENDIF
+		ELSEIF CALCF("Ｖ発情") >= 3 && PREVCOM >= TNUM("正常位") && PREVCOM <= 69 && RANDIF(1, CALCF("Ｖ発情"), CHECK_STAIN(STAIN:Ｖ, "精液"), EX:Ｖ絶頂 > 3, TALENT:陰蒂環 + TALENT:陰唇環)
+			IF RAND:2
+				LOCALS = 淫亂張開的
+			ELSE
+				LOCALS = 淫靡張合的
+			ENDIF
+		ELSEIF COND("陰毛") && (!RAND:3 || PREVCOM == 145)
+		ELSEIF TALENT:陰蒂環 + TALENT:陰唇環 && RANDIF(1, CALCF("Ｖ発情"), CHECK_STAIN(STAIN:Ｖ, "精液"), EX:Ｖ絶頂 > 3)
+			IF RAND:2
+				LOCALS = 閃爍金屬光澤的穿環装飾著的
+			ELSE
+				SIF TALENT:陰蒂環 && TALENT:陰唇環 && RAND:2
+					LOCALS = 好多个
+				LOCALS = 被%LOCALS%穿環装飾著的
+			ENDIF
+		ELSEIF EX:Ｖ絶頂 > 3 && RANDIF(1, CALCF("Ｖ発情"), CHECK_STAIN(STAIN:Ｖ, "精液"))
+			LOCALS = 剛剛不斷迎來高潮的
+		ELSEIF CHECK_STAIN(STAIN:Ｖ, "精液") && RANDIF(2, CALCF("Ｖ発情") )
+			LOCALS = 被精液弄脏的
+		ELSEIF CALCF("Ｖ発情") && RAND:2
+			IF CALCF("Ｖ発情") >= 4 && RAND:3
+				LOCALS = 不斷溢出白濁淫汁的
+			ELSEIF CALCF("Ｖ発情") >= 3
+				IF RAND:2
+					LOCALS = 不断流下愛液的
+				ELSE
+					LOCALS = 渴望的不斷張合著的
+				ENDIF
+			ELSEIF CALCF("Ｖ発情") == 2
+				IF RAND:2
+					LOCALS = 將早已被愛液浸透的
+				ELSE
+					LOCALS = 被愛液濡濕到發光的
+				ENDIF
+			ELSE
+				LOCALS = 発情的
+			ENDIF
+		ENDIF
+		;特に描写无なら陰毛描写
+		IF LOCALS == ""
+			SELECTCASE COND("陰毛")
+			CASE 1
+				IF RAND:2
+					LOCALS = 完全没有长毛的
+				ELSE
+					LOCALS = 光洁的
+				ENDIF
+			CASE 2
+				IF RAND:2
+					LOCALS = \@ PREVCOM == 145 ? 刚刚剃过 # \@光滑的
+				ELSE
+					LOCALS = \@ PREVCOM == 145 ? 剛剛 # \@被完全剃除毛髮的
+				ENDIF
+			CASE 3
+				IF RAND:3 == 0
+					LOCALS = \@ PREVCOM == 145 ? 刚刚剃过 # \@光滑的
+				ELSEIF RAND:2
+					LOCALS = \@ PREVCOM == 145 ? 剛剛把 # \@阴毛漂亮地整理过的
+				ELSE
+					LOCALS = \@ PREVCOM == 145 ? 剛剛 # \@被完全剃除毛髮的
+				ENDIF
+			CASE 4
+				;無髭状態
+				IF CONDS("陰毛") == "無髭"
+					IF RAND:2
+						LOCALS = 陰毛稀稀拉拉地生長的
+					ELSE
+						LOCALS = 留有剃痕的
+					ENDIF
+				;剃过留痕
+				ELSEIF CONDS("陰毛") == "剃过留痕"
+					IF RAND:2
+						LOCALS = 帶著微微毛茬的
+					ELSE
+						LOCALS = 留有剃痕的
+					ENDIF
+				;还没長出来
+				ELSEIF AGE(TARGET) == 1
+					IF RAND:2
+						LOCALS = 生長稀疏胎毛的
+					ELSE
+						LOCALS = 殘留著孩子氣息的
+					ENDIF
+				;还没長出来（大人）
+				ELSE
+					IF RAND:2 && BASE:陰毛%100 >= 5
+						LOCALS = 陰毛被整齊修剪過的
+					ELSE
+						LOCALS = 有著薄薄陰毛的
+					ENDIF
+				ENDIF
+			CASE 5
+				IF PREVCOM == 145
+					LOCALS = 刚刚修整过陰毛的
+				ELSE
+					IF RAND:2
+						LOCALS = 陰毛を\@ (RAND:3 == 0 && CEVENT("陰毛の名称") ) ? %CEVENTS("陰毛の名称")%に # \@剃り整えられた
+					ELSE
+						LOCALS = 照料周到的
+					ENDIF
+				ENDIF
+			CASE 6
+				IF AGE(TARGET) == 1
+					IF RAND:2
+						LOCALS = 陰毛稍微生長了的
+					ELSE
+						LOCALS = 可愛的
+					ENDIF
+				ELSE
+					LOCALS = 被柔軟的毛髮覆蓋著的
+				ENDIF
+			CASE 7
+				IF !RAND:3 && AGE(TARGET) >= 2
+					IF RAND:2
+						LOCALS = 被生长到肛門附近的毛发覆盖的
+					ELSE
+						LOCALS = 被濃密黑林所覆蓋的
+					ENDIF
+				ELSEIF RAND:2
+					LOCALS = 生長著茂密毛髮的
+				ELSE
+					LOCALS = 被厚重的黑色密林深深掩藏的
+				ENDIF
+			ENDSELECT
+		ENDIF
+		SIF AGE(TARGET) == 1 && !RAND:3
+			LOCALS = %LOCALS%幼嫩
+		IF PALAM:欲情 < PALAM_LV(6 - ABL:Ｖ拡張) && ABL:Ｖ拡張 <= 4
+			LOCALS = %LOCALS%秘縫
+		ELSE
+			LOCALS = %LOCALS%阴部
+		ENDIF
+	ENDIF
+	SWAP ARG, TARGET
+CASE "陰蒂環"
+	LOCALS = 穿環
+	SIF RAND:2 && CEVENT("陰蒂環")
+		LOCALS = %CEVENTS("陰蒂環")%的穿環
+CASE "陰唇環"
+	LOCALS = 穿環
+	SIF RAND:2 && CEVENT("陰唇環")
+		LOCALS = %CEVENTS("陰唇環")%的穿環
+CASE "乳环"
+	LOCALS = 穿環
+	SIF RAND:2 && CEVENT("乳环")
+		LOCALS = %CEVENTS("乳环")%的穿環
+CASE "肚脐环"
+	LOCALS = 穿環
+	SIF RAND:2 && CEVENT("肚脐环")
+		LOCALS = %CEVENTS("肚脐环")%的穿環
+CASE "气味"
+	SELECTCASE CONFIG("气味の表記変更")
+	CASE 1
+		LOCALS = 臭い
+	CASE 2
+		LOCALS = におい
+	CASE 3
+		LOCALS = ニオイ
+	CASEELSE
+		LOCALS = 气味
+	ENDSELECT
+CASE "腋"
+	SELECTCASE GETFONT()
+	CASE "しねきゃぷしょん"
+		LOCALS = 脇
+	CASEELSE
+		LOCALS = 腋
+	ENDSELECT
+CASE "腋：視覚"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	IF (PALAM:ARG:欲情 >= 10000 && RAND:3 == 0) || (PALAM:ARG:欲情 >= 30000 && RAND:2)
+		LOCALS = %TEXTR("汗湿的/発情的")%
+	ELSEIF CHECK_CLO("腋露出", ARG) == 0
+		SIF (CHECK_STAIN(STAIN:ARG:服, "汗") || PALAM:ARG:欲情 >= 10000) && RAND:3 == 0
+			LOCALS = 染上汗渍的
+	ELSEIF CFLAG:ARG:汗 && RAND:3 == 0
+		IF COND("易出汗", ARG)
+			LOCALS = %TEXTR("汗水滴落的/浮出汗迹的/出了汗的")%
+		ELSE
+			LOCALS = %TEXTR("汗湿的/透出汗迹的")%
+		ENDIF
+	ELSE
+		SELECTCASE COND("腋毛", ARG)
+		;光滑无毛
+		CASE 0 TO 3
+			IF RAND:3 == 0 && COND("腋毛", ARG) == 3 && AGE(ARG) >= 3
+				LOCALS = %TEXTR("照料周到的/体毛綺麗的/精心剃过艶丽的/洋溢着清潔感十分光滑的")%
+			ELSEIF RAND:3 == 0 && COND("腋毛", ARG) == 2 && AGE(ARG) >= 3
+				LOCALS = %TEXTR("照料周到的/仔细地进行过脱毛光滑的/洋溢着清潔感十分光滑的")%
+			ELSE
+				IF TALENT:ARG:筋肉 && RAND:3 == 0
+					LOCALS = %TEXTR("锻炼过有些肉肉的/有肌肉线条的/凹凸有致的")%
+				ELSEIF (TALENT:ARG:魅力 || AGE(ARG) <= 2) && RAND:3 == 0
+					LOCALS = 没有一点污迹的
+				ENDIF
+				SIF LOCALS == "" || RAND:3
+					LOCALS += @"%TEXTR("滑滑的/光滑的/艶丽的/綺麗的")%"
+			ENDIF
+		;うっすら
+		CASE 4
+			IF CONDS("腋毛", ARG) == "剃过留痕"
+				LOCALS = %TEXTR("稍微护理不足的/有明顯修剪痕跡的/残留着少量毛的/残留少量毛茬的")%
+			ELSE
+				LOCALS = %TEXTR("隐约有毛的/細而柔軟的胎毛装飾著的")%
+			ENDIF
+		;いっぱい
+		CASEELSE
+			LOCALS = %TEXTR("被毛覆盖住的/毛色深的/毛髮有着充分密度的")%
+		ENDSELECT
+	ENDIF
+	SELECTCASE GETFONT()
+	CASE "しねきゃぷしょん"
+		LOCALS = %LOCALS%脇
+	CASEELSE
+		LOCALS = %LOCALS%腋
+	ENDSELECT
+	SIF COND("腋毛", ARG) <= 3 && CHECK_CLO("腋露出", ARG) && RAND:3 == 0
+		LOCALS += "的凹窝"
+
+
+CASE "お尻：感触"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	;尺寸に（あんまり）関係ない形容
+	SELECTCASE AGE(ARG)
+	CASE 1, 2
+		LOCALS = %TEXTR("緊繃著的/娇嫩的/像是剝殼雞蛋一樣的")%尻部
+	CASE 3
+		IF TALENT:ARG:巨尻 && RAND:3 == 0
+			LOCALS = 十分豐腴的尻部
+		ELSE
+			LOCALS = %TEXTR("緊繃著的/柔軟而圓潤的")%尻部
+		ENDIF
+	CASEELSE
+		IF TALENT:ARG:巨尻
+			LOCALS = %TEXTR("十分豐腴的/年糕一樣柔軟的")%尻部
+		ELSE
+			LOCALS = 柔軟的尻部
+		ENDIF
+	ENDSELECT
+
+	IF RAND:4
+		IF TALENT:ARG:巨尻
+			IF TALENT:ARG:巨尻 >= 3 && RAND:4
+				LOCALS = %TEXTR("安産型骨盤的/圧倒性大小的/快要撑開的")%巨尻
+			ELSEIF TALENT:ARG:巨尻 >= 2
+				LOCALS = %TEXTR("洋溢著重量感的/豐腴的")%%TEXTR("巨尻/尻肉/双丘")%
+			ELSE
+				LOCALS = %TEXTR("巨大的/肥美的/大体积的")%%TEXTR("尻部/尻肉")%
+			ENDIF
+		ELSEIF TALENT:ARG:大力士
+			SIF TALENT:ARG:小尻 == 0
+				LOCALS = 紧绷的尻部
+		ELSEIF TALENT:ARG:小尻
+			LOCALS = %TEXTR("没有肉单薄的/小小的")%尻部
+		ENDIF
+	ENDIF
+	SIF LOCALS == ""
+		LOCALS = 尻部
+CASE "お尻：視覚"
+	;ここは基本的に巨尻の独壇場
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	IF TALENT:ARG:巨尻
+		IF TALENT:ARG:巨尻 >= 3 && RAND:4
+			LOCALS = %TEXTR("安産型骨盤的/圧倒性大小的/快要撑開的")%巨尻
+			SIF COND("苗条", ARG) && RAND:3 == 0
+				LOCALS = 与纤細的腰完全不相称的巨尻
+		ELSEIF TALENT:ARG:巨尻 >= 2
+			LOCALS = %TEXTR("洋溢著重量感的/豐腴的")%%TEXTR("巨尻/尻肉/双丘")%
+			SIF COND("苗条", ARG) && RAND:3 == 0
+				LOCALS = 像是芸術一般与细腰结合的大尻
+		ELSE
+			LOCALS = %TEXTR("巨大的/肥美的/大体积的/沉重的")%%TEXTR("尻部/尻肉")%
+			SIF COND("苗条", ARG) && RAND:3 == 0
+				LOCALS = 对比纤细的腰凸显的大尻
+		ENDIF
+	ELSEIF TALENT:ARG:大力士
+		LOCALS = 紧绷的尻部
+	ELSEIF TALENT:ARG:小尻
+		LOCALS = %TEXTR("没有肉单薄的/小小的/嬌小的")%尻部
+	ENDIF
+
+	;色は微妙…
+	IF TALENT:ARG:肤色 && (LOCALS == "" || RAND:4 == 0)
+		SELECTCASE CONDS("肤色", ARG)
+		CASE "褐色肌", "色黒"
+			LOCALS =%TEXTR("浅黒的/散着油光的小麦色/妖艳的褐色/类似煮蛋質感的")%\@ TALENT:ARG:巨尻 ? 巨尻 # 尻部 \@
+		CASE "色白"
+			LOCALS = %TEXTR("美丽的白色/类似白瓷的/一尘不染的的白色")%\@ TALENT:ARG:巨尻 ? 巨尻 # 双丘 \@
+		CASE "青肌"
+			LOCALS = %TEXTR("妖艶的/美丽的")%青色\@ TALENT:ARG:巨尻 ? 巨尻 # 双丘 \@
+		ENDSELECT
+	ENDIF
+
+	SIF LOCALS == ""
+		LOCALS = 尻部
+
+CASE "阴蒂"
+	SELECTCASE CALCF("Ｃ発情")
+	CASE IS >= 3
+		LOCALS = %TEXTR("肥大的/大的")%
+	CASE 2
+		LOCALS = %TEXTR("挺立著的/勃起的")%
+	CASE 1
+		LOCALS = %TEXTR("充血的/漸漸膨脹的")%
+	CASE 0
+		IF COND("陰毛") >= 6 && RAND:2
+			LOCALS = 被陰毛遮掩的
+		ELSEIF TALENT:娇小
+			LOCALS = 小小的
+		ENDIF
+	ENDSELECT
+	IF TALENT:陰蒂環 && RAND:2
+		LOCALS = 被%TEXTS("陰蒂環")%装飾着的
+	ELSEIF TALENT:Ｃ性向 && RAND:3 == 0
+		LOCALS = 敏感的
+	ENDIF
+CASE "肛門"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	;排泄直後
+	IF PREVEX("排泄", ARG)
+		LOCALS = 刚刚排出排泄物的
+	;直前にＡ絶頂
+	ELSEIF PREVEX("Ａ絶頂", ARG) && RAND:3 == 0
+		LOCALS = 因快感而顫抖的
+	;Ａ処女を要際
+	ELSEIF TALENT:ARG:Ａ処女 && SELECTCOM >= TNUM("肛門正常位") && SELECTCOM <= 79
+		LOCALS = %TEXTR("没有经历过男人的/不识男人滋味的")%
+	;今回調教ではまだＡ経験増加０
+	ELSEIF EXP_GAIN("Ａ経験", ARG) == 0
+		IF ABL:ARG:Ａ拡張 >= 2 && (ABL:ARG:Ａ拡張 >= 5 || EXP:ARG:Ａ経験 >= 300) && RANDIF(2, TALENT:ARG:常時Ａ肛塞)
+			IF RAND:2 && TALENT:ARG:男性 == 0 && TALENT:ARG:処女 == 0 && EXP:ARG:Ａ経験 >= MAX(EXP:ARG:Ｖ経験*2, 200) && EXP:ARG:Ａ性交経験 >= MAX(EXP:ARG:Ｖ性交経験*2, 100)
+				LOCALS = 与%TEXTR("膣/前穴")%相比経験豊富的
+			ELSE
+				LOCALS = %TEXTR("一眼就能看出是被经常使用的/一眼就能看到内部被使用状况的/周辺颜色因为经常使用而变色的")%
+			ENDIF
+		ELSEIF CHECK_CLO("Ａ露出", ARG) && !CHECK_CLO("Ｖ露出", ARG) && RANDIF(1, TALENT:ARG:常時Ａ肛塞)
+			LOCALS = 仅此一处暴露著的
+		ELSEIF TALENT:ARG:常時Ａ肛塞
+			IF RAND:2
+				LOCALS = 由于常時拡張\@ TALENT:ARG:常時Ａ肛塞 >= 3 ? 而松弛的 # 而些许放松的 \@
+			ELSE
+				LOCALS = \@ TALENT:ARG:常時Ａ肛塞 >= 3 ? 完全松弛的 # 没有閉合的 \@
+			ENDIF
+		ENDIF
+	;直前に肛門系調教なら、その描写優先
+	ELSE
+		;肛門系調教やＡ性向やＡ経験300or150以上にあわせて乱数分岐
+		SELECTCASE PREVCOM
+		CASE 33, TNUM("肛門正常位") TO 79, 136 TO 138, 142, 143, 202
+			IF ABL:ARG:Ａ拡張 >= 4 && RAND:3
+				LOCALS = 妩媚张開\@ PREVEX("Ａ中出し", ARG) ? 内部滴落精液 # \@的
+			ELSEIF ABL:ARG:Ａ拡張 >= 3 && RAND:3
+				LOCALS = 綻放開\@ PREVEX("Ａ中出し", ARG) ? 精液慢慢滲出 # 的 \@
+			ELSEIF ABL:ARG:Ａ拡張 >= 2 || TALENT:ARG:Ａ性向
+				LOCALS = 来回妖艷抽動\@ PREVEX("Ａ中出し", ARG) ? 缓缓漏出精液的 # 的 \@
+			;Ａ中出し直後
+			ELSEIF PREVEX("Ａ中出し", ARG)
+				LOCALS = 中出过的
+			ENDIF
+		ENDSELECT
+
+		IF SELECTCOM != PREVCOM && RAND:2
+			SELECTCASE PREVCOM
+			CASE 33
+				SIF TEQUIP:ARG:肛用振動棒 == 0
+					LOCALS = 刚刚抜出異物的
+			CASE 136
+				SIF TEQUIP:ARG:浣腸 == 0
+					LOCALS = 刚刚排泄的
+			CASE TNUM("肛門正常位") TO 79
+				SIF COND("前Ｔ調教者") == PLAYER && PENIS(PLAYER) && INSERT("Ａ挿入", ARG) == 0
+					LOCALS = 刚刚抜出陰莖的
+			CASE 142, 143
+				SIF COND("前Ｔ調教者") == PLAYER
+					LOCALS = 刚刚抜出拳頭的
+			ENDSELECT
+		ENDIF
+	ENDIF
+
+	;特に描写无なら汎用文
+	IF LOCALS == ""
+		IF PREVEX("Ａ中出し", ARG) && RAND:2
+			LOCALS = 刚刚注入精液的
+		ELSEIF EXP_GAIN("肛内精液経験", ARG) && (RAND:3 == 0 || PREVEX("Ａ中出し", ARG) )
+			LOCALS = 精液溢出的
+		ELSEIF PREVEX("絶頂数合計", ARG) && ABL:ARG:Ａ拡張 >= 2
+			LOCALS = 沉浸在絶頂余韻松弛的
+		;要去了
+		ELSEIF EX:ARG:绝顶忍耐 && RAND:3 == 0
+			LOCALS = 因临近絶頂的快感而顫抖著的
+		ELSEIF TALENT:ARG:Ａ性向 && RAND:3 == 0
+			IF RAND:2
+				LOCALS = 不斷激烈地痙攣著的
+			ELSE
+				LOCALS = 来回妖艷抽動著的
+			ENDIF
+		ELSEIF AGE(ARG) == 1 && COND("池面", ARG) == 0 && RAND:3 == 0
+			LOCALS = %TEXTR("小小的/可愛い")%
+		ELSEIF RAND:3 == 0 && COND("陰毛", ARG) >= 7 && AGE(ARG) >= 3
+			IF RAND:2 && AGE(ARG) >= 4
+				LOCALS = 被濃密黑林所覆蓋的
+			ELSE
+				LOCALS = 被陰毛装飾著邊緣的
+			ENDIF
+		ELSEIF RAND:2
+			IF ABL:ARG:Ａ拡張 >= 4 && EXP:ARG:Ａ経験 >= 150
+				IF RAND:2
+					LOCALS = 経験豊富的
+				ELSE
+					LOCALS = 经常使用的
+				ENDIF
+			ELSEIF ABL:ARG:Ａ拡張 >= 2 && EXP:ARG:Ａ経験 >= 50
+				LOCALS = 柔軟的
+			ELSEIF AGE(ARG) < 3 && COND("池面", ARG) == 0
+				LOCALS = 可愛的
+			ENDIF
+		ELSE
+			IF ABL:ARG:Ａ拡張 >= 6
+				LOCALS = 妩媚张開的
+			ELSEIF ABL:ARG:Ａ拡張 >= 4
+				LOCALS = 微妙打開的
+			ELSEIF ABL:ARG:Ａ拡張 >= 2
+				LOCALS = 稍微松弛的
+			ELSE
+				LOCALS = 緊張地收縮著的
+			ENDIF
+		ENDIF
+	ENDIF
+;これは肛塞とケツ毛は無視する
+CASE "肛門：視覚"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	IF TALENT:ARG:縦深菊穴
+		LOCALS = %TEXTR("过度拡張使得褶皱舒展了的/玩得太过变成縦割状態的/一眼就能从颜色看出游戏规则的")%
+	ELSEIF ABL:ARG:Ａ拡張 >= 3 && EXP:ARG:Ａ経験 >= 150
+		IF COND("Ａ熟達", ARG)
+			LOCALS = %TEXTR("习惯性交的/迫不及待的/经常使用的")%
+		ELSEIF EXP:ARG:Ａ性交経験 >= 20
+			LOCALS = %TEXTR("経験豊富的/经常使用的/熟知性交滋味的")%
+		ELSE
+			LOCALS = %TEXTR("経験豊富的/经常使用的/大大张開的")%
+		ENDIF
+	ENDIF
+	LOCALS += @"%TEXTR("尻穴/肛門")%"
+;お尻描写で同時に使いやすいので"尻"は敢えて使わない
+CASE "肛門周辺"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	IF COND("身嗜み：Ａ拡張", ARG) && COND("調教中", ARG) == 0
+		SELECTCASE COND("身嗜み：Ａ拡張", ARG)
+		CASE 1
+			LOCALS = 在肛門里的肛塞
+		CASE 2
+			LOCALS = 塞着肛門的肛塞
+		CASE 3
+			LOCALS = 正在拡張肛門的極太肛塞
+		CASE IS >= 4
+			LOCALS = 正在拡張肛門的特大肛塞
+		ENDSELECT
+		RETURNF LOCALS
+	ELSEIF TALENT:ARG:縦深菊穴
+		LOCALS = %TEXTR("累积経験变得肉厚的肛門/肛門内舒展到可怕程度的褶皱/使用到改变周辺颜色程度的肛門")%
+	ELSE
+		LOCALS = %TEXTR("肛門的褶皱/颜色醒目的肛門周辺")%
+	ENDIF
+
+	;肛塞以外は33％で陰毛描写
+	IF RAND:3 == 0 && AGE(ARG) >= 3
+		SELECTCASE COND("陰毛", ARG)
+		;もさもさ
+		CASE 7
+			IF RAND:2 && AGE(ARG) >= 4
+				LOCALS = 被浓密的阴毛覆盖的肛門
+			ELSE
+				LOCALS = 被陰毛装飾著邊緣的肛門
+			ENDIF
+		CASE 6
+			LOCALS = 被陰毛装飾著邊緣的肛門
+		;綺麗に剃り整えられている
+		CASE 5, 3
+			LOCALS = %TEXTR("被光滑地刮干净的/体毛完美処理过的/漂亮而干净的")%肛門
+		;还没長出来
+		CASE 4
+			IF RAND:2 && AGE(ARG) >= 4
+				LOCALS = 陰毛%TEXTR("少许生长的/茬有些注目的")%肛門
+			ELSE
+				LOCALS = 陰毛%TEXTR("稀疏生长着的/不齐地生长着的")%肛門
+			ENDIF
+		;脱毛
+		CASE 2
+			LOCALS = %TEXTR("脱毛済的/漂亮地除毛过的/体毛完美打理过的")%肛門
+		ENDSELECT
+	ENDIF
+
+;まだ書いてない
+CASE "尿道"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	;排尿直後
+	IF PREVEX("放尿", ARG)
+		LOCALS = 刚刚放尿的
+	;直前にＡ絶頂
+	ELSEIF PREVEX("尿道絶頂", ARG) && RAND:3 == 0
+		LOCALS = 因快感而顫抖的
+	;今回調教ではまだ尿道経験増加０
+	ELSEIF EXP_GAIN("尿道経験", ARG) == 0
+		IF ABL:ARG:尿道拡張 >= 2 && (ABL:ARG:尿道拡張 >= 3 || EXP:ARG:尿道経験 >= 300) && RANDIF(2, TALENT:ARG:常時尿道塞)
+			IF RAND:2 && TALENT:ARG:男性 == 0 && TALENT:ARG:処女 == 0 && EXP:ARG:尿道経験 >= MAX(EXP:ARG:Ｖ経験*2, 200) && EXP:ARG:尿道性交経験 >= MAX(EXP:ARG:Ｖ性交経験*2, 100) && EXP:ARG:尿道経験 >= MAX(EXP:ARG:Ａ経験*2, 200) && EXP:ARG:尿道性交経験 >= MAX(EXP:ARG:Ａ性交経験*2, 100)
+				LOCALS = 与%TEXTR("膣/前穴")%相比経験豊富的
+			ELSE
+				LOCALS = %TEXTR("一眼就能看出是被经常使用的/一眼就能看到内部被使用状况的")%
+			ENDIF
+		ELSEIF CHECK_CLO("Ａ露出", ARG) && !CHECK_CLO("Ｖ露出", ARG) && RANDIF(1, TALENT:ARG:常時尿道塞)
+			LOCALS = 仅此一处暴露著的
+		ELSEIF TALENT:ARG:常時尿道塞
+			IF RAND:2
+				LOCALS = 由于常時拡張\@ TALENT:ARG:常時尿道塞 >= 3 ? 而松弛的 # 而些许放松的 \@
+			ELSE
+				LOCALS = \@ TALENT:ARG:常時尿道塞 >= 3 ? 完全松弛的 # 没有閉合的 \@
+			ENDIF
+		ENDIF
+	;直前に肛門系調教なら、その描写優先
+	ELSE
+		;尿道系調教や尿道経験300or150以上にあわせて乱数分岐
+		SELECTCASE PREVCOM
+		CASE 15, TNUM("尿道正常位") TO TNUM("尿道騎乗位"), 138, 151, 152, 202
+			IF ABL:ARG:尿道拡張 >= 4 && RAND:3
+				LOCALS = 妩媚张開\@ PREVEX("尿道中出し", ARG) ? 内部滴落精液 # \@的
+			ELSEIF ABL:ARG:尿道拡張 >= 3 && RAND:3
+				LOCALS = 綻放開\@ PREVEX("尿道中出し", ARG) ? 精液慢慢滲出 # 的 \@
+			ELSEIF ABL:ARG:Ａ拡張 >= 2 || TALENT:ARG:尿道性感
+				LOCALS = 来回妖艷抽動\@ PREVEX("尿道中出し", ARG) ? 缓缓漏出精液的 # 的 \@
+			;尿道中出し直後
+			ELSEIF PREVEX("尿道中出し", ARG)
+				LOCALS = 中出过的
+			ENDIF
+		ENDSELECT
+
+		IF SELECTCOM != PREVCOM && RAND:2
+			SELECTCASE PREVCOM
+			CASE 152
+				SIF TEQUIP:ARG:尿道振動棒 == 0
+					LOCALS = 刚刚抜出異物的
+			CASE 149
+				SIF TEQUIP:ARG:浣腸 == 0
+					LOCALS = 刚刚抜出导管的
+			CASE TNUM("尿道正常位") TO TNUM("尿道騎乗位")
+				SIF COND("前Ｔ調教者") == PLAYER && PENIS(PLAYER) && INSERT("尿道挿入", ARG) == 0
+					LOCALS = 刚刚抜出陰莖的
+			CASE 15
+				SIF COND("前Ｔ調教者") == PLAYER
+					LOCALS = 刚刚抜出手指的
+			ENDSELECT
+		ENDIF
+	ENDIF
+
+	;特に描写无なら汎用文
+	IF LOCALS == ""
+		IF PREVEX("尿道中出し", ARG) && RAND:2
+			LOCALS = 刚刚注入精液的
+		ELSEIF EXP_GAIN("膀胱精液経験", ARG) && (RAND:3 == 0 || PREVEX("尿道中出し", ARG) )
+			LOCALS = 精液溢出的
+		ELSEIF PREVEX("絶頂数合計", ARG) && ABL:ARG:尿道拡張 >= 2
+			LOCALS = 沉浸在絶頂余韻松弛的
+		;要去了
+		ELSEIF EX:ARG:绝顶忍耐 && RAND:3 == 0
+			LOCALS = 因临近絶頂的快感而顫抖著的
+		ELSEIF TALENT:ARG:尿道性感 && RAND:3 == 0
+			IF RAND:2
+				LOCALS = 不斷激烈地痙攣著的
+			ELSE
+				LOCALS = 来回妖艷抽動著的
+			ENDIF
+		ELSEIF AGE(ARG) == 1 && COND("池面", ARG) == 0 && RAND:3 == 0
+			LOCALS = %TEXTR("可愛い/小小的")%
+		ELSEIF RAND:2
+			IF ABL:ARG:尿道拡張 >= 4 && EXP:ARG:尿道経験 >= 150
+				IF RAND:2
+					LOCALS = 経験豊富的
+				ELSE
+					LOCALS = 经常使用的
+				ENDIF
+			ELSEIF ABL:ARG:尿道拡張 >= 2 && EXP:ARG:尿道経験 >= 50
+				LOCALS = 柔軟的
+			ELSEIF AGE(ARG) < 3 && COND("池面", ARG) == 0
+				LOCALS = 可愛的
+			ENDIF
+		ELSE
+			IF ABL:ARG:尿道拡張 >= 5
+				LOCALS = 妩媚张開的
+			ELSEIF ABL:ARG:尿道拡張 >= 4
+				LOCALS = 微妙打開的
+			ELSEIF ABL:ARG:尿道拡張 >= 2
+				LOCALS = 稍微松弛的
+			ELSE
+				LOCALS = 緊張地收縮著的
+			ENDIF
+		ENDIF
+	ENDIF
+
+CASE "胸部", "胸部：描写"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	IF TALENT:ARG:男性
+		RETURNF "胸"
+	ENDIF
+
+	IF TALENT:ARG:妊娠 && RAND:3 == 0
+		IF GETBITS(CFLAG:ARG:妊娠で巨乳化, 0, 1) && RAND:2
+			LOCALS = 因妊娠而变大的
+		ELSE
+			LOCALS = 因充滿母乳而鼓脹起來的
+		ENDIF
+	ELSEIF TALENT:ARG:巨乳
+		;爆乳
+		IF TALENT:ARG:巨乳 >= 2 && RAND:3 == 0
+			IF RAND:2
+				LOCALS = 丰满到晃动的
+			ELSE
+				LOCALS = 擁有沉甸甸重量感的
+			ENDIF
+		ELSEIF RAND:5 == 0 && SELECTCOM == 5
+			LOCALS = 比手掌还大的
+		ELSEIF RAND:4 == 0
+			LOCALS = 肉感又有张力的
+		ELSEIF RAND:3 == 0
+			LOCALS = 像年糕一样柔软的
+		ELSEIF RAND:2
+			LOCALS = 富有弾力的
+		ELSE
+			LOCALS = 丰满到摇摇晃晃的
+		ENDIF
+	ELSEIF TALENT:ARG:貧乳
+		IF RAND:4 == 0
+			LOCALS = 可愛的
+		ELSEIF RAND:3 == 0
+			LOCALS = 微微膨胀的
+		ELSEIF RAND:2
+			LOCALS = 曲线平滑的
+		ELSE
+			LOCALS = 幼小的
+		ENDIF
+	ELSE
+		IF RAND:4 == 0 && SELECTCOM == 5
+			LOCALS = 手感极佳的
+		ELSEIF RAND:3 == 0 && SELECTCOM == 5
+			LOCALS = 具有恰當的彈性的
+		ELSEIF RAND:2
+			LOCALS = 有张力的
+		ELSE
+			LOCALS = 形状优美的
+		ENDIF
+	ENDIF
+
+	IF ARGS == "胸部"
+		IF TALENT:ARG:巨乳 && RAND:3 == 0
+			LOCALS = %LOCALS%%TOFULL(CONDS("罩杯尺寸", ARG) )%罩杯%TALENT_NAME(GETNUM(TALENT, "巨乳"), TALENT:ARG:巨乳, ARG)%
+		ELSEIF RAND:2
+			LOCALS = %LOCALS%乳房
+		ELSE
+			LOCALS = %LOCALS%胸
+		ENDIF
+	ENDIF
+
+CASE "乳頭：描写"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	SELECTCASE CALCF("Ｂ発情", ARG)
+	CASE IS >= 4
+		IF RAND:3 == 0
+			LOCALS = 坚硬地立起来的
+		ELSEIF RAND:2
+			LOCALS = 连着乳輪一起高涨的
+		ELSE
+			LOCALS = 將因快感而鼓脹起來的
+		ENDIF
+	CASE 3
+		IF RAND:3 == 0
+			LOCALS = 立起的
+		ELSEIF RAND:2
+			LOCALS = 整体变硬的
+		ELSE
+			LOCALS = 勃起的
+		ENDIF
+	CASE 2
+		IF RAND:3 == 0
+			LOCALS = 硬起来的
+		ELSEIF RAND:2
+			LOCALS = 漸漸勃起的
+		ELSE
+			LOCALS = 正在充血的
+		ENDIF
+	CASE 1
+		IF RAND:2 && COND("乳頭肥大", ARG)
+			LOCALS = 大
+		ELSEIF RAND:2
+			LOCALS = 桃色的
+		ELSE
+			LOCALS = 粉紅的
+		ENDIF
+	CASEELSE
+		IF RAND:3 == 0 && COND("真性陥没乳頭", ARG)
+			LOCALS = 陷沒在乳肉中的
+		ELSEIF RAND:3 == 0
+			LOCALS = 埋藏的
+		ELSEIF RAND:2
+			LOCALS = 陥没的
+		ELSE
+			LOCALS = 陥没状態的
+		ENDIF
+	ENDSELECT
+
+CASE "太股：描写"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	IF TALENT:ARG:大力士 && RAND:3 == 0
+		LOCALS = 绷紧的
+	ELSEIF AGE(ARG) >= 3 && TALENT:ARG:大力士 == 0 && RAND:3 == 0
+		LOCALS = 有肉的
+	ELSEIF RAND:2
+		LOCALS = 柔软的
+	ELSE
+		LOCALS = 光滑的
+	ENDIF
+
+CASE "接吻継続", "接吻継続助詞付き"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	SIF TEQUIP:ARG:接吻 == 0
+		RETURNF LOCALS
+
+	IF TEQUIP:ARG:推倒
+		LOCAL = MIN(LIMIT(TEQUIP:ARG:接吻 - 1, 0, ABL:ARG:舌靈活) + TALENT:ARG:蕩唇, 4)
+	ELSE
+		LOCAL = MIN(LIMIT(TEQUIP:ARG:接吻 - 1, 0, ABL:PLAYER:舌靈活) + TALENT:ARG:蕩唇, 4)
+	ENDIF
+	LOCAL += RAND:3
+
+	SELECTCASE LOCAL
+	CASE 6
+		IF ARGS == "接吻継続助詞付き"
+			LOCALS = 的口腔各个角落来回舔舐的同时
+		ELSE
+			LOCALS = 口腔各个角落来回舔舐的同时
+		ENDIF
+	CASE 5
+		IF ARGS == "接吻継続助詞付き"
+			LOCALS = 濃厚接吻的同时
+		ELSE
+			LOCALS = 彼此把嘴边弄得黏黏糊糊的同时
+		ENDIF
+	CASE 4
+		IF ARGS == "接吻継続助詞付き"
+			LOCALS = 的舌頭缠绕着交换唾液的同时
+		ELSE
+			LOCALS = 用舌頭缠绕着交换唾液的同时
+		ENDIF
+	CASE 3
+		IF ARGS == "接吻継続助詞付き"
+			LOCALS = 的舌頭缠绕着的同时
+		ELSE
+			LOCALS = 舌頭缠绕着的同时
+		ENDIF
+	CASE 2
+		IF ARGS == "接吻継続助詞付き"
+			LOCALS = 的唇亲吻着的同时
+		ELSE
+			LOCALS = 在熱情地親吻著的同時
+		ENDIF
+	CASEELSE
+		IF ARGS == "接吻継続助詞付き"
+			LOCALS = 进行接吻的同时
+		ELSE
+			LOCALS = KISS的同时
+		ENDIF
+	ENDSELECT
+
+CASE "挿入準備脱衣"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+
+	IF CHECK_CLO("泳装姿", ARG) == 0
+		IF COND("胖次形状確認", ARG) == 0 && EQUIP:ARG:胖次
+			IF COND("自撮りと同じ胖次", ARG)
+				LOCALS:1 = （是与发来的自拍相同的%PANTIES(ARG)%）
+			ELSE
+				LOCALS:1 = （今天是%PANTIES(ARG)%）
+			ENDIF
+			;FUNCTION中なので"胖次形状確認"を手打ち
+			CFLAG:ARG:内衣確認済 = SETBITS(CFLAG:ARG:内衣確認済, 0, 2)
+		ENDIF
+	ENDIF
+
+	SELECTCASE CONDS("体位", ARG)
+	CASE "騎乗位"
+		IF CHECK_CLO("帯拉链的Ｖ露出可能", ARG)
+			LOCALS = %TEXTR(@"%CLO("股間", ARG)%の帯拉链的を下ろした/開洞の帯拉链的を下ろして準備を整えた")%
+		ELSEIF CHECK_CLO("泳装姿", ARG)
+			LOCALS = 错開泳装底部、整理完毕
+		ELSEIF CHECK_CLO("体操服姿", ARG) && EQUIP:ARG:下身衣装
+			;穴開き胖次
+			IF EQUIP:ARG:胖次 && CHECK_PANTIES(@"%NAMES("性処理ジャンル")%開洞", ARG) == 0
+				LOCALS = 放下%BOTTOM(ARG, "略")%后穿着的%PANTIES(ARG)%露了出来
+			ELSE
+				IF EQUIP:ARG:胖次
+					LOCALS = 脱掉了%BOTTOM(ARG, "略")%和胖次%LOCALS:1%
+				ELSE
+					LOCALS = 脱掉了%BOTTOM(ARG, "略")%
+				ENDIF
+				IF EQUIP:ARG:靴
+					LOCALS += @"、腰以下只留下了\@ EQUIP:ARG:襪子 ? %SOCKS(ARG, "略")%和 # \@%SHOES(ARG, "略")%"
+				ELSE
+					LOCALS += "、下半身完全暴露着"
+				ENDIF
+			ENDIF
+		ELSEIF CHECK_SKIRT("裙", ARG) && CHECK_SHIRT("連衣裙", ARG) == 0 && TALENT:ARG:不知羞恥 + TALENT:ARG:小悪魔 && RAND:3
+			;穴開き胖次
+			IF EQUIP:ARG:胖次 && CHECK_PANTIES(@"%NAMES("性処理ジャンル")%開洞", ARG) == 0
+				LOCALS = 脱掉裙子后里面的%PANTIES(ARG)%露了出来
+			ELSE
+				LOCALS = 脱下裙子\@ EQUIP:ARG:胖次 ? 和胖次%LOCALS:1% # \@
+				IF EQUIP:ARG:靴
+					LOCALS += @"、腰以下只留下了\@ EQUIP:ARG:襪子 ? %SOCKS(ARG, "略")%和 # \@%SHOES(ARG, "略")%"
+				ELSE
+					LOCALS += "、下半身完全暴露着"
+				ENDIF
+			ENDIF
+		ELSEIF EQUIP:ARG:胖次
+			;穴開き胖次
+			IF CHECK_PANTIES(@"%NAMES("性処理ジャンル")%開洞", ARG) == 0
+				IF COND("胖次形状確認", ARG)
+					SELECTCASE NAMES("性処理ジャンル")
+					CASE "Ｖ"
+						LOCALS = %PANTIES(ARG)%洞里的\@ TALENT:ARG:男性 ? 股間 # 阴部 \@露了出来
+					CASE "Ａ"
+						LOCALS = %PANTIES(ARG)%洞里的尻穴露了出来
+					CASE "尿"
+						LOCALS = %PANTIES(ARG)%洞里的\@ TALENT:ARG:男性 ? 阴茎 # 排尿口 \@露了出来
+					ENDSELECT
+				ELSE
+					LOCALS = 表示现在穿着的%PANTIES(ARG, "内衣")%%LOCALS:1%不脱也没问题的
+				ENDIF
+			ELSEIF (TALENT:ARG:好色 || EXP:ARG:性処理経験 >= 20) && CHECK_PANTIES("男物", ARG) == 0 && RANDIF(1, ABL:ARG:露出癖 >= 5)
+				LOCALS = 将脱下的%PANTIES(ARG, "内衣")%%LOCALS:1%以熟练的动作缠到脚裸上的
+			ELSEIF ABL:ARG:露出癖 >= 5
+				LOCALS = 将脱下的%PANTIES(ARG, "内衣")%%LOCALS:1%放在了旁边能看到的位置的
+			ELSE
+				LOCALS = 脱下了%PANTIES(ARG, "内衣")%%LOCALS:1%的
+			ENDIF
+		ENDIF
+		;テ接吻トが無い場合は格好を描写
+		SIF LOCALS == ""
+			LOCALS = %CLO("現在的格好＆の")%
+	CASEELSE
+		IF CHECK_CLO("帯拉链的Ｖ露出可能", ARG)
+			LOCALS = %CLO("股間", ARG)%の帯拉链的を下ろして
+		ELSEIF CHECK_CLO("泳装姿", ARG)
+			IF CHECK_CLO("Micro比基尼姿", ARG)
+				LOCALS = 保持着%TEXTR("煽情的泳装/肉感的泳装/Micro比基尼")%姿
+			ELSE
+				LOCALS = 穿着泳装
+			ENDIF
+		ELSEIF CHECK_CLO("体操服姿", ARG)
+			IF CHECK_CLO("Ｖ露出", ARG) == 0
+				SIF ABL:ARG:露出癖 >= 3 && RAND:2
+					LOCALS = %TEXTR("在眼前/当场")%
+				LOCALS += @"脱掉下半身的体操服%LOCALS:1%"
+			ENDIF
+		ELSEIF EQUIP:ARG:胖次
+			;穴開き胖次
+			IF CHECK_PANTIES(@"%NAMES("性処理ジャンル")%開洞", ARG) == 0
+				LOCALS = 现在穿着的%PANTIES(ARG, "内衣")%即使不脱也没有问题%LOCALS:1%
+			ELSEIF (TALENT:ARG:好色 || EXP:ARG:性処理経験 >= 20) && TFLAG:进行性処理 == 0 && CHECK_PANTIES("男物", ARG) == 0 && RANDIF(1, ABL:ARG:露出癖 >= 5)
+				LOCALS = 以熟练的动作将脱下的%PANTIES(ARG, "内衣")%%LOCALS:1%缠到脚裸上
+			ELSEIF ABL:ARG:露出癖 >= 3 && RAND:2
+				LOCALS = 在你眼前脱下胖次%LOCALS:1%
+			ELSEIF ABL:ARG:露出癖 >= 5
+				LOCALS = 将脱下的%PANTIES(ARG, "内衣")%%LOCALS:1%放到旁边
+			ELSE
+				LOCALS = 脱下了%PANTIES(ARG, "内衣")%%LOCALS:1%
+			ENDIF
+		ENDIF
+	ENDSELECT
+
+CASE "Ｖ挿入前"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	;綻び具合
+	IF ABL:Ｖ拡張 >= 2 && PALAM:欲情 >= PALAM_LV(6 - ABL:Ｖ拡張/2) && RAND:4
+		LOCAL = 1
+	ELSE
+		LOCAL = 0
+	ENDIF
+	;LOCAL:1は挿入するものの過不足。-2以下で緩い、1以上でキツい。
+	LOCAL:1 = SIZE("阴茎", PLAYER) - ABL:Ｖ拡張
+	IF LOCAL:1 <= -2
+		LOCAL:1 = MIN(LOCAL:1 + CALCF("阴茎好き度", TARGET), -1)
+	ELSEIF LOCAL:1 >= 1
+		LOCAL:1 = MAX(LOCAL:1 - CALCF("阴茎好き度", TARGET), -1)
+	ENDIF
+
+	IF TALENT:処女 == 1
+		LOCALS = 不识男人滋味的
+	ELSEIF LOCAL:1 <= -2 && LOCAL
+		LOCALS = 有些松懈的
+	ELSEIF TALENT:陰唇環 && LOCAL == 0 && RAND:3 == 0
+		LOCALS = 被穿環装饰着的
+	;前回CV絶頂or中出し
+	ELSEIF PREVEX("Ｃ絶頂") + PREVEX("Ｖ絶頂") + PREVEX("Ｖ中出し") && RAND:2
+		IF PREVEX("Ｖ中出し") && RAND:3
+			IF EXP_GAIN("膣内精液経験") >= 4
+				LOCALS = 充分中出过的
+			ELSE
+				LOCALS = 精液溢出的
+			ENDIF
+		ELSEIF PREVEX("Ｃ絶頂") + PREVEX("Ｖ絶頂")
+			IF RAND:2 || PREVEX("Ｖ絶頂") == 0
+				LOCALS = 快感荡漾的
+			ELSEIF TEQUIP:推倒
+				LOCALS = 剛剛迎來高潮的
+			ELSE
+				LOCALS = 剛剛被強迫推上高潮的
+			ENDIF
+		ENDIF
+	;液体描写
+	ELSE
+		SELECTCASE PREVCOM
+		CASE 31
+			LOCALS = 刚刚拔出振動棒的
+		CASE 141
+			LOCALS = 刚刚被手腕搅动的
+		CASEELSE
+			IF EX:Ｖ絶頂 > 3 && RAND:3 == 0
+				IF EX:Ｖ絶頂 > 10
+					LOCALS = 不斷溢出白濁淫汁的
+				ELSE
+					LOCALS = 剛剛不斷迎來高潮的
+				ENDIF
+			ELSEIF PALAM:欲情 >= 3000 && PALAM:Ｖ潤 >= 30000 && RAND:2
+				LOCALS = 不断流下愛液的
+			ELSEIF PALAM:Ｖ潤 >= 3000
+				LOCALS = 充分湿润的
+			ELSEIF PALAM:Ｖ潤 >= 500
+				LOCALS = 湿润的
+			ELSE
+				LOCALS = 準備不足的
+			ENDIF
+		ENDSELECT
+	ENDIF
+	IF LOCAL == 0
+		IF AGE(TARGET) == 1
+			LOCALS = %LOCALS%幼嫩秘縫
+		ELSE
+			LOCALS = %LOCALS%秘裂
+		ENDIF
+	ELSE
+		LOCALS = %LOCALS%膣
+	ENDIF
+CASE "合体中"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	VARSET LOCALS
+	;挿入側と犯されてる側を判別
+	IF INSERT("挿入", PLAYER)
+		LOCALS:9 = 逆転中
+		SWAP PLAYER, TARGET
+	ENDIF
+
+	IF INSERT("Ｖ挿入")
+		LOCALS:1 = 膣
+		LOCALS:2 = 膣
+		LOCALS:3 = 膣穴
+		LOCAL:1 = ABL:Ｖ拡張
+		LOCAL:2 = PREVEX("Ｖ中出し")
+		LOCAL:3 = ABL:Ｖ名器度
+	ELSEIF INSERT("Ａ挿入")
+		LOCALS:1 = 肛門
+		LOCALS:2 = 腸
+		LOCALS:3 = 尻穴
+		LOCAL:1 = ABL:Ａ拡張
+		LOCAL:2 = PREVEX("Ａ中出し")
+		LOCAL:3 = ABL:Ａ名器度
+	ELSEIF INSERT("尿道挿入")
+		LOCALS:1 = 尿道
+		IF PENIS(TARGET)
+			LOCALS:2 = 尿道
+			LOCALS:3 = 阴茎
+		ELSE
+			LOCALS:2 = 膀胱
+			LOCALS:3 = 小便的穴
+		ENDIF
+		LOCAL:1 = ABL:尿道拡張
+		LOCAL:2 = PREVEX("尿道内射精")
+		LOCAL:3 = ABL:尿道名器度
+	ENDIF
+
+	;TARGETが主導している
+	IF ARG == TARGET
+		IF INSERT("Ｖ挿入") && PREVCOM == 67 && RAND:2
+			LOCALS = 子宮口与阴茎接触的同时、
+		ELSEIF INSERT("Ｖ挿入") && PREVCOM == 66 && RAND:2
+			LOCALS = 敏感的部分被阴茎摩擦着、
+		ELSEIF LOCAL:2 && RAND:3 == 0
+			LOCALS = \@ RAND:2 ? 陶醉在 # 在享受 \@%LOCALS:1%被中出后的余韻的同时、
+		ELSEIF RAND:3 == 0
+			IF (RAND:3 == 0 || COND("脚の使用") == 0) && INSERT("Ｖ挿入")
+				LOCALS = 享受着%LOCALS:1%内最重要的地方被侵入的感覚的同时、
+			ELSE
+				SELECTCASE CONDS("体位", PLAYER)
+				CASE "正常位"
+					LOCALS = 挺着腰品味深深的挿入感的同时、
+				CASE "後背位"
+					LOCALS = 伸着臀部期待着更激烈的突进的同时、
+				CASE "騎乗位"
+					IF ABL:施虐属性 >= 3 && RAND:2
+						LOCALS = 用騎乗位侵犯的同时、
+					ELSE
+						LOCALS = 腰部按照节奏\@ RAND:2 ? 上下摆动 # 扭动 \@的同时、
+					ENDIF
+				CASEELSE
+					LOCALS = 享受%LOCALS:1%的满足感的同时、
+				ENDSELECT
+			ENDIF
+		ELSEIF RAND:2
+			LOCALS = %LOCALS:1%把阴茎\@ LOCAL:1 > SIZE("阴茎", PLAYER) ? 从根部 # \@吞入、
+		ELSE
+			IF SIZE("阴茎", PLAYER) > LOCAL:1 && RAND:2
+				LOCALS = %LOCALS:1%被推開的感覚
+			ELSEIF SIZE("阴茎", PLAYER) >= LOCAL:1 && RAND:2
+				LOCALS = %LOCALS:1%被填满的感覚
+			ELSE
+				LOCALS = 腹中的感触
+			ENDIF
+			LOCALS = %TEXTR("享受/盡情享受/仔細品味著")%%LOCALS%的同时、
+		ENDIF
+	ELSE
+		IF INSERT("騎乗位") && RAND:3 == 0
+			LOCALS = %CALLNAME:TARGET%搖擺著腰肢的同时、
+		ELSEIF PREVCOM == 67 && RAND:2
+			LOCALS = 按住壓迫著子宮口的同时、
+		ELSEIF PREVCOM == 66 && RAND:2
+			LOCALS = 刺激着Ｇ點的同时、
+		ELSEIF RAND:3 == 0 && LOCAL:2
+			LOCALS = 在%LOCALS:2%内撹拌著中出的精液的同时、
+		ELSEIF RAND:4 == 0 && PENIS(PLAYER)
+			IF RAND:2
+				SELECTCASE CONDS("体位", PLAYER)
+				CASE "正常位", "後背位", "屈曲位", "対面立位", "立后背位"
+					LOCALS = 强有力地晃动腰部将阴茎埋入%LOCALS:2%内的同时、
+				CASEELSE
+					LOCALS = 强有力地挺动腰部将阴茎埋入%LOCALS:2%内的同时、
+				ENDSELECT
+			ELSE
+				LOCALS = 将肉棒埋入%LOCALS:1%最深处的同时、
+			ENDIF
+		ELSEIF RAND:3 == 0 && PENIS(PLAYER)
+			IF RAND:2
+				LOCALS = 陰莖在%LOCALS:2%内
+			ELSEIF LOCAL:1 == 0 && SIZE("阴茎", PLAYER)
+				LOCALS = \@ AGE(TARGET) >= 3 ? 难以想象的狭窄的 # 狭窄的 \@%LOCALS:1%
+			ELSEIF LOCAL:1 > MAX(SIZE("阴茎", PLAYER), 2) && LOCAL:3 < 20
+				LOCALS = \@ AGE(TARGET) <= 2 ? 因拡張而过度松弛的 # 松弛的 \@%LOCALS:1%
+			ELSEIF RAND:2
+				LOCALS = 絶妙的閉合着的肉穴
+			ELSE
+				LOCALS = 纠缠在一起的肉穴
+			ENDIF
+			LOCALS = 品味着%LOCALS%的同时、
+		ELSEIF RAND:2
+			IF INSERT("Ｖ挿入") && SIZE("阴茎", PLAYER) && RAND:2
+				LOCALS = 向\@ ABL:Ｖ拡張 >= 2 ? 柔软的 # \@膣深处进行突击的同时、
+			ELSEIF INSERT("Ａ挿入") && RAND:2
+				LOCALS = 摩擦着光滑的腸壁的同时、
+			ELSEIF RAND:2 && SIZE("阴茎", PLAYER) >= 2
+				LOCALS = 撑開%LOCALS:3%的同时、
+			ELSE
+				LOCALS = 贯穿%LOCALS:3%的同时、
+			ENDIF
+		ELSE
+			LOCALS = 在激烈地用腰肢頂撞著\@ AGE(TARGET) == 1 ? 幼小身体的深处 # \@的同時、
+		ENDIF
+	ENDIF
+
+	SIF LOCALS:9 == "逆転中"
+		SWAP PLAYER, TARGET
+
+CASE "６９"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	SELECTCASE SELECTCOM
+	;奉仕系
+	CASE 90 TO 98, 105, 150
+		IF RAND:3 == 0
+			IF TALENT:女性 && RAND:2
+				IF CHECK_CLO("胖次露出") && CHECK_PANTIES("湿的")
+					IF RAND:2
+						LOCALS = 胖次被涌出的愛液染上的污点被看见这件事
+					ELSE
+						LOCALS = %CLO("股間")%染上的污点被看见这件事
+					ENDIF
+				ELSEIF CHECK_CLO("Ｖ露出") == 0
+					LOCALS = 闷热的股間被看见这件事
+				ELSE
+					LOCALS = 陰部愛液滴垂的様子被看见这件事
+				ENDIF
+			ELSE
+				LOCALS = 极近距離的性器観察
+			ENDIF
+		ELSEIF RAND:2
+			LOCALS = 互相侵犯羞耻部分的PLAY
+		ELSE
+			LOCALS = 下半身襲来的快感
+		ENDIF
+		IF RAND:3
+			SELECTCASE TRAINNAME:(TEQUIP:PLAYER:六九式)
+			CASE "愛撫"
+			CASE "舐陰"
+				IF PREVCOM == 13
+					LOCALS = 陰部所有角落都被看见这件事
+				ELSEIF RAND:2
+					IF TALENT:陰蒂環 && RAND:2
+						LOCALS = 隔着穿環影响到淫核的快感
+					ELSE
+						LOCALS = 给予淫核的快感
+					ENDIF
+				ELSE
+					LOCALS = 膣内搅动着的舌頭
+				ENDIF
+			CASE "肛門愛撫"
+				IF RAND:3 == 0
+					LOCALS = 施加给原本不是用来挿入的孔的刺激
+				ELSEIF RAND:2
+					LOCALS = 腸内痒痒的感覚
+				ELSE
+					LOCALS = \@ ABL:Ａ拡張 >= 2 ? 从根部 # \@侵入屁穴的\@ TEQUIP:肛用振動棒 ? 振動棒 # 手指 \@
+				ENDIF
+			CASE "舐陰莖"
+			CASE "阴部愛撫"
+			CASE "指挿入"
+				IF RAND:3 == 0
+					LOCALS = 演奏着黏性音乐不断进出的\@ TEQUIP:振動棒 ? 振動棒 # 手指 \@
+				ELSEIF RAND:2
+					LOCALS = 膣内被\@ TEQUIP:振動棒 ? 振動棒 # 手指 \@摩擦的感覚
+				ELSE
+					LOCALS = \@ ABL:Ｖ拡張 ? 从根部 # \@侵入蜜穴的\@ TEQUIP:振動棒 ? 振動棒 # 手指 \@
+				ENDIF
+			CASE "尿道指挿入"
+				IF RAND:3 == 0
+					LOCALS = 侵入\@ PENIS(TARGET) ? 阴茎根部 # 無遠慮的膀胱 \@的\@ TEQUIP:尿道振動棒 ? 振動棒 # 手指 \@
+				ELSEIF RAND:2
+					LOCALS = 敏感的粘膜上痒痒的感覚
+				ELSE
+					LOCALS = 来回玩弄\@ PENIS(TARGET) ? 阴茎内部 # 尿道 \@的感覚
+				ENDIF
+			CASE "舐肛"
+				IF RAND:3 == 0
+					LOCALS = 不浄的穴被舔着这件事
+				ELSEIF RAND:2
+					LOCALS = 侵入尻穴的舌頭
+				ELSE
+					LOCALS = 伸展着褶皱的肛門被来回舔舐的羞恥
+				ENDIF
+			CASE "跳蛋"
+				IF RAND:3 == 0
+					LOCALS = 正在责备淫核的跳蛋
+				ELSEIF RAND:2
+					LOCALS = 跳蛋像瘙痒一样的刺激
+				ELSE
+					LOCALS = 袭击敏感部分的振動
+				ENDIF
+			CASE "打屁股"
+			CASEELSE
+			ENDSELECT
+		ENDIF
+		IF RAND:6 == 0
+			LOCALS = 一边将身体交给%LOCALS%的同时、
+		ELSEIF RAND:5 == 0
+			LOCALS = 因%LOCALS%而颤动身体的同时、
+		ELSEIF RAND:4 == 0
+			LOCALS = 因%LOCALS%激動不已的同时、
+		ELSEIF RAND:3 == 0
+			LOCALS = 因%LOCALS%而身体发热的同时、
+		ELSEIF RAND:2
+			LOCALS = 因%LOCALS%而興奮的同时、
+		ELSE
+			LOCALS = 享受着%LOCALS%的同时、
+		ENDIF
+	CASEELSE
+		LOCALS = 在眼前毫無防備地暴露着
+	ENDSELECT
+CASE "Ｗ推倒中"
+	SIF ARG == 0 && TARGET
+		ARG = TARGET
+	SELECTCASE SELECTCOM:1
+	CASE 1
+		IF RAND:3 == 0 && CHECK_CLO("Ｖ露出", TARGET:1) && PALAM:(TARGET:1):Ｖ潤 >= 1000 && PALAM:(TARGET:1):欲情 >= 10000
+			LOCALS = 舔舐着%CALLNAME:(TARGET:1)%的愛液
+		ELSEIF ABL:(TARGET:1):自慰中毒 >= 3 && RAND:3 == 0
+			LOCALS = 的面前、%CALLNAME:(TARGET:1)%開始了自慰
+		ELSE
+			LOCALS = 的脸被强行贴近%CALLNAME:(TARGET:1)%的阴部
+		ENDIF
+	CASE 4
+		LOCALS = 被激烈地侵犯着口腔
+	CASE 6
+		LOCALS = 热情地接吻
+	CASE 9
+		LOCALS = 被%CALLNAME:(TARGET:1)%舔舐着肛門
+	CASE TNUM("騎乗位")
+		IF RAND:2
+			LOCALS = 被%CALLNAME:(TARGET:1)%用騎乗位侵犯着
+		ELSE
+			LOCALS = 被%CALLNAME:(TARGET:1)%痴迷地侵犯着
+		ENDIF
+	CASE TNUM("肛門騎乗位")
+		IF RAND:2
+			LOCALS = 被%CALLNAME:(TARGET:1)%用肛門騎乗位侵犯着
+		ELSE
+			LOCALS = 用後穴侍奉着%CALLNAME:(TARGET:1)%的阴茎
+		ENDIF
+	CASE TNUM("尿道騎乗位")
+		IF RAND:2
+			LOCALS = 被%CALLNAME:(TARGET:1)%用騎乗位侵犯着
+		ELSE
+			LOCALS = 用尿道含着%CALLNAME:(TARGET:1)%的阴茎
+		ENDIF
+	CASE 90, 97
+		LOCALS = 侍奉着%CALLNAME:(TARGET:1)%的阴茎
+	CASE 91
+		IF RAND:2
+			LOCALS = 含住%CALLNAME:(TARGET:1)%的阴茎
+		ELSE
+			LOCALS = 黏糊糊地纠缠着%CALLNAME:(TARGET:1)%的阴茎
+		ENDIF
+	CASE 92
+		IF RAND:2
+			LOCALS = 给%CALLNAME:(TARGET:1)%进行乳交
+		ELSE
+			LOCALS = 用胸取悦%CALLNAME:(TARGET:1)%
+		ENDIF
+	CASE 93
+		LOCALS = 被%CALLNAME:(TARGET:1)%的阴部弄得咯哧咯哧的
+	CASE 94
+		LOCALS = %CALLNAME:(TARGET:1)%的全是泡泡的身体
+		IF TALENT:(TARGET:1):貧乳 || TALENT:(TARGET:1):男性
+			LOCALS = 被%LOCALS%弄得咯哧咯哧的
+		ELSE
+			LOCALS = 被%LOCALS%又搓又揉
+		ENDIF
+	CASE 95
+		IF PENIS(PLAYER)
+			LOCALS:1 = 阴茎
+		ELSE
+			LOCALS:1 = 阴部
+		ENDIF
+		LOCALS = 用脚踏在%CALLNAME:(TARGET:1)%的%LOCALS:1%上
+		IF RAND:3 == 0
+			LOCALS = %LOCALS%欺负着
+		ELSEIF RAND:2
+			LOCALS = %LOCALS%玩弄着
+		ELSE
+			LOCALS = %LOCALS%压迫着
+		ENDIF
+	CASE 96
+		LOCALS = 舔舐着%CALLNAME:(TARGET:1)%的肛門
+	CASE 98
+		LOCALS = 舔舐着%CALLNAME:(TARGET:1)%的阴部
+	CASE 101
+		LOCALS = %CALLNAME:(TARGET:1)%のお尻でゴシゴシされて
+	CASE 104
+		LOCALS = 将%CALLNAME:(TARGET:1)%的脸埋进自己的胸口
+	CASE 120 TO 124
+		IF RAND:2
+			LOCALS = 被%CALLNAME:(TARGET:1)%激烈地侵犯着
+		ELSE
+			LOCALS = 被%CALLNAME:(TARGET:1)%痴迷地侵犯着
+		ENDIF
+	CASE 125 TO 129
+		LOCALS = 被%CALLNAME:(TARGET:1)%侵犯着肛門
+	CASE 0
+		LOCALS = 被%CALLNAME:(TARGET:1)%擁抱着
+	ENDSELECT
+
+	SELECTCASE SELECTCOM
+	CASE 95
+		IF PENIS(PLAYER) == 0
+			LOCALS = %LOCALS%就这么湿了
+		ELSEIF RAND:3 == 0
+			LOCALS = %LOCALS%逐渐硬起来
+		ELSEIF RAND:2
+			LOCALS = %LOCALS%逐渐勃起
+		ELSE
+			LOCALS = %LOCALS%逐渐变大
+		ENDIF
+	CASE 96, 98, 120 TO 129
+		LOCALS = %LOCALS%いる
+	CASE TNUM("騎乗位"), TNUM("肛門騎乗位"), 90 TO 97
+		IF RAND:3 == 0
+			LOCALS = %LOCALS%逐渐硬起来
+		ELSEIF RAND:2
+			LOCALS = %LOCALS%逐渐勃起
+		ELSE
+			LOCALS = %LOCALS%逐渐变大
+		ENDIF
+	CASEELSE
+		IF RAND:3 == 0
+			LOCALS = %LOCALS%興奮起来了
+		ELSEIF RAND:2
+			LOCALS = %LOCALS%いる
+		ELSE
+			LOCALS = %LOCALS%漏出了喘息声
+		ENDIF
+	ENDSELECT
+CASE "夢中"
+	SELECTCASE SAVESTR:夢中
+	CASE "スマホ"
+		LOCALS = %TEXTR("操作智能手机/滑动智能手机屏幕")%
+	CASE "游戏"
+		LOCALS = %TEXTR("游戏/操作游戏機")%
+	CASE "読書"
+		LOCALS = %TEXTR("翻書/読書")%
+	CASE "漫画本"
+		LOCALS = %TEXTR("翻書/読漫画")%
+	CASE "勉強"
+		LOCALS = %TEXTR("教科書/参考書/学习")%
+	CASE "SNS"
+		LOCALS = %TEXTR("操作智能手机/SNS的对话")%
+	CASE "WEB配信"
+		LOCALS = %TEXTR("操作智能手机/WEB配信/观看网上的POST")%
+	CASEELSE
+		LOCALS = %SAVESTR:夢中%
+	ENDSELECT
+CASE "射精部位の表示"
+	SELECTCASE FLAG:ARG
+	CASE 0
+		LOCALS = 每次都選択
+	CASE 1
+		LOCALS = 髪
+	CASE 2
+		LOCALS = 顔
+	CASE 3
+		LOCALS = 口
+	CASE 4
+		LOCALS = 胸
+	CASE 5
+		LOCALS = 股間
+	CASE 6
+		LOCALS = 在腹部或者屁股上
+	CASE 20
+		LOCALS = 就这様射精
+	CASE 30
+		LOCALS = 随机
+	CASE 40
+		LOCALS = 有余裕的话就選択
+	ENDSELECT
+CASE "日期表示"
+	;-------------------------------------------------
+	;日期の内、四季と曜日、昼夜を出力
+	;-------------------------------------------------
+	LOCALS = {FLAG:年}年{FLAG:日}日 %TEXTS("季節詳細")% %TEXTS("曜日")%曜(%TEXTS("時間")%)
+	;LOCALS = {FLAG:年}年 %TEXTS("季節")%の{(DAY - 1)%30 + 1} %TEXTS("曜日")%曜(%TEXTS("時間")%)
+CASE "季節"
+	SELECTCASE FLAG:季節
+	CASE 0
+		LOCALS = 春
+	CASE 1
+		LOCALS = 夏
+	CASE 2
+		LOCALS = 秋
+	CASE 3
+		LOCALS = 冬
+	ENDSELECT
+CASE "季節詳細"
+	SELECTCASE FLAG:季節
+	CASE 0
+		SELECTCASE (FLAG:日 - 1) % (NUM("１年の長さ")/4)
+		CASE IS >= (NUM("１年の長さ")/4)*4/7
+			LOCALS = 初夏
+		CASEELSE
+			LOCALS = 春
+		ENDSELECT
+	CASE 1
+		SELECTCASE (FLAG:日 - 1) % (NUM("１年の長さ")/4)
+		CASE IS >= (NUM("１年の長さ")/4)*5/7
+			LOCALS = 初秋
+		CASEELSE
+			LOCALS = 夏
+		ENDSELECT
+	CASE 2
+		SELECTCASE (FLAG:日 - 1) % (NUM("１年の長さ")/4)
+		CASE IS >= (NUM("１年の長さ")/4)*5/7
+			LOCALS = 晩秋
+		CASEELSE
+			LOCALS = 秋
+		ENDSELECT
+	CASE 3
+		LOCALS = 冬
+	ENDSELECT
+CASE "曜日"
+	SELECTCASE (DAY - 1)%7
+	CASE 0
+		LOCALS = 日
+	CASE 1
+		LOCALS = 月
+	CASE 2
+		LOCALS = 火
+	CASE 3
+		LOCALS = 水
+	CASE 4
+		LOCALS = 木
+	CASE 5
+		LOCALS = 金
+	CASE 6
+		LOCALS = 土
+	ENDSELECT
+CASE "時間"
+	SELECTCASE TIME
+	CASE 0
+		LOCALS = 朝
+	CASE 1
+		IF COND("约会中")
+			LOCALS = 夕
+		ELSEIF COND("周日")
+			LOCALS = 朝
+		ELSE
+			LOCALS = 昼
+		ENDIF
+	CASE 3
+		LOCALS = 夕
+	CASEELSE
+		LOCALS = 夜
+	ENDSELECT
+CASE "干支：かな"
+	IF DAYEV("ねずみ")
+		LOCALS = ねずみ
+	ELSEIF DAYEV("うし")
+		LOCALS = うし
+	ELSEIF DAYEV("とら")
+		LOCALS = とら
+	ELSEIF DAYEV("うさぎ")
+		LOCALS = うさぎ
+	ELSEIF DAYEV("たつ")
+		LOCALS = たつ
+	ELSEIF DAYEV("へび")
+		LOCALS = へび
+	ELSEIF DAYEV("うま")
+		LOCALS = うま
+	ELSEIF DAYEV("ひつじ")
+		LOCALS = ひつじ
+	ELSEIF DAYEV("さる")
+		LOCALS = さる
+	ELSEIF DAYEV("とり")
+		LOCALS = とり
+	ELSEIF DAYEV("いぬ")
+		LOCALS = いぬ
+	ELSEIF DAYEV("いのしし")
+		LOCALS = いのしし
+	ENDIF
+CASE "調教パラメータのＬＶ"
+	SELECTCASE ARG
+	CASE 0 TO 9
+		LOCALS = Lv%TOSTR(ARG)%
+	CASE 10
+		LOCALS = LvA
+	CASE 11
+		LOCALS = LvB
+	CASE 12
+		LOCALS = LvC
+	CASE 13
+		LOCALS = LvD
+	CASE 14
+		LOCALS = LvE
+	CASE 15
+		LOCALS = LvF
+	CASEELSE
+		LOCALS = Max
+	ENDSELECT
+
+;50までということで
+CASE "ローマ数字"
+	SELECTCASE ARG/10
+	CASE 0
+		LOCALS = 
+	CASE 1
+		LOCALS = Ⅹ
+	CASE 2
+		LOCALS = ⅩⅩ
+	CASE 3
+		LOCALS = ⅩⅩⅩ
+	CASE 4
+		LOCALS = ⅩＬ
+	CASE 5
+		LOCALS = Ｌ
+	ENDSELECT
+
+	SELECTCASE ARG%10
+	CASE 9
+		LOCALS += "Ⅸ"
+	CASE 8
+		LOCALS += "Ⅷ"
+	CASE 7
+		LOCALS += "Ⅶ"
+	CASE 6
+		LOCALS += "Ⅵ"
+	CASE 5
+		LOCALS += "Ⅴ"
+	CASE 4
+		LOCALS += "Ⅳ"
+	CASE 3
+		LOCALS += "Ⅲ"
+	CASE 2
+		LOCALS += "Ⅱ"
+	CASE 1
+		LOCALS += "Ⅰ"
+	ENDSELECT
+
+CASE "漢数字概数"
+	SELECTCASE ARG
+	CASE 0
+		LOCALS = 零
+		RETURNF LOCALS
+	CASE 1
+		LOCALS = 一
+		RETURNF LOCALS
+	CASE IS >= 10000
+		LOCALS = 万
+		ARG /= 10000
+	CASE IS >= 1000
+		LOCALS = 千
+		ARG /= 1000
+	CASE IS >= 100
+		LOCALS = 百
+		ARG /= 100
+	CASE IS >= 10
+		LOCALS = 十
+		ARG /= 10
+	ENDSELECT
+
+	SELECTCASE ARG
+	CASE 9
+		LOCALS = 九%LOCALS%
+	CASE 8
+		LOCALS = 八%LOCALS%
+	CASE 7
+		LOCALS = 七%LOCALS%
+	CASE 6
+		LOCALS = 六%LOCALS%
+	CASE 5
+		LOCALS = 五%LOCALS%
+	CASE 4
+		LOCALS = 四%LOCALS%
+	CASE 3
+		LOCALS = 三%LOCALS%
+	CASE 2
+		LOCALS = 二%LOCALS%
+	ENDSELECT
+
+CASE "道具解説"
+	SELECTCASE ARG
+	CASE 30
+		LOCALS = 可以增加潤滑的粘稠液体
+	CASE 31
+		LOCALS = 可以增加10,000欲情并提升感度的薬
+	CASE 32
+		LOCALS = 让人变得非常想要小便的薬
+	CASE 35
+		LOCALS = 促进女性排卵的提高受精確率的薬
+	CASE 37
+		LOCALS = 让肌肉变得无力的劇薬。请注意用法用量
+	ENDSELECT
+
+
+CASE "制服"
+	IF GETBIT(FLAG:401, 0)
+		LOCALS = 侍者服領帯プ
+	ELSEIF GETBIT(FLAG:401, 1)
+		LOCALS = 女仆領帯プ
+	ELSEIF GETBIT(FLAG:401, 2)
+		LOCALS = 巫女風
+	ELSEIF GETBIT(FLAG:401, 5)
+		LOCALS = 兔女郎制服
+	ENDIF
+	SIF GETBITS(FLAG:401, 10, 63)
+		LOCALS = %LOCALS%(
+
+	IF GETBIT(FLAG:401, 10)
+		LOCALS = %LOCALS%露脐装超短裙,
+	ELSEIF GETBIT(FLAG:401, 11)
+		LOCALS = %LOCALS%長,
+	ENDIF
+
+	SIF GETBIT(FLAG:401, 20)
+		LOCALS = %LOCALS%帯拉链的,
+	SIF GETBIT(FLAG:401, 30)
+		LOCALS = %LOCALS%腿环,
+
+	SIF GETBITS(FLAG:401, 10, 63)
+		LOCALS = %SUBSTRING(LOCALS, 0, STRLENS(LOCALS) - 1)%)
+CASE "日期対応イベント"
+	VARSET LOCALS
+	IF DAYEV("新年")
+		LOCALS = 新年
+	ELSEIF DAYEV("大晦日")
+		LOCALS = 大晦日
+	ELSEIF DAYEV("情人節")
+		LOCALS = 情人節
+	ELSEIF DAYEV("情人節翌日")
+		LOCALS = 情人節翌日
+	ELSEIF DAYEV("猫の日")
+		LOCALS = 猫の日
+	ELSEIF DAYEV("白色情人節")
+		LOCALS = 白色情人節
+	ELSEIF DAYEV("女仆の日")
+		LOCALS = 女仆の日
+	ELSEIF DAYEV("比基尼の日")
+		LOCALS = 比基尼の日
+	ELSEIF DAYEV("七夕")
+		LOCALS = 七夕
+	ELSEIF DAYEV("海の日")
+		LOCALS = 海の日
+	ELSEIF DAYEV("兔女郎の日")
+		LOCALS = 兔女郎の日
+	ELSEIF DAYEV("万圣节")
+		LOCALS = 万圣节
+	ELSEIF DAYEV("即将到来文化祭")
+		LOCALS = 即将到来文化祭
+	ELSEIF DAYEV("文化祭")
+		LOCALS = 文化祭
+	ELSEIF DAYEV("圣诞节前夕")
+		LOCALS = 圣诞节前夕
+	ELSEIF DAYEV("圣诞节")
+		LOCALS = 圣诞节
+	ELSEIF DAYEV("圣诞节翌日")
+		LOCALS = 圣诞节翌日
+	;ELSEIF DAYEV("圣诞节期間")
+	;	LOCALS = 圣诞节期間
+	ELSEIF DAYEV("夏服開始")
+		LOCALS = 换衣季(夏)
+	ELSEIF DAYEV("夏服終了")
+		LOCALS = 换衣季(冬)
+	ELSEIF DAYEV("周考")
+		LOCALS = 周考
+	ELSE
+		IF DAYEV("新年", "リアル日時")
+			LOCALS = 新年
+		ELSEIF DAYEV("大晦日", "リアル日時")
+			LOCALS = 大晦日
+		ELSEIF DAYEV("情人節", "リアル日時")
+			LOCALS = 情人節
+		ELSEIF DAYEV("情人節翌日", "リアル日時")
+			LOCALS = 情人節翌日
+		ELSEIF DAYEV("猫の日", "リアル日時")
+			LOCALS = 猫の日
+		ELSEIF DAYEV("白色情人節", "リアル日時")
+			LOCALS = 白色情人節
+		ELSEIF DAYEV("女仆の日", "リアル日時")
+			LOCALS = 女仆の日
+		ELSEIF DAYEV("比基尼の日", "リアル日時")
+			LOCALS = 比基尼の日
+		ELSEIF DAYEV("七夕", "リアル日時")
+			LOCALS = 七夕
+		ELSEIF DAYEV("海の日", "リアル日時")
+			LOCALS = 海の日
+		ELSEIF DAYEV("兔女郎の日", "リアル日時")
+			LOCALS = 兔女郎の日
+		ELSEIF DAYEV("万圣节", "リアル日時")
+			LOCALS = 万圣节
+		ELSEIF DAYEV("圣诞节", "リアル日時")
+			LOCALS = 圣诞节
+		ELSEIF DAYEV("圣诞节翌日", "リアル日時")
+			LOCALS = 圣诞节翌日
+		ELSE
+			LOCALS = 
+		ENDIF
+	ENDIF
+ENDSELECT
+RETURNF LOCALS
+
+
+;-------------------------------------------------
+;特殊な名称を管理する
+;-------------------------------------------------
+@NAMES(ARGS, ARG, ARG:1)
+#FUNCTIONS
+#DIM LCOUNT
+;どっちが年上かで使用
+#DIM ELDER
+#DIM YOUNGER
+
+VARSET LOCALS
+
+SELECTCASE ARGS
+CASE "partner"
+	RETURNF CALLNAME:PARTNER()
+CASE "同伴者"
+	RETURNF SAVESTR:同伴者
+CASE "约会相手"
+	RETURNF CALLNAME:TO_NUMBER(CFLAG:MASTER:约会的约定)
+;ARGとARG:1の兄弟姉妹や関係
+CASE "兄弟"
+	IF ARG == 0 && TARGET
+		ARG = TARGET
+		ARG:1 = MASTER
+	ENDIF
+	VARSET LOCAL
+	;まず学年を元に、どっちが年上か判定
+	FOR LCOUNT, 1 , CHARANUM
+		SELECTCASE CSTR:LCOUNT:学年
+		CASE "初等部"
+			LOCAL:LCOUNT = 1
+		CASE "中等部"
+			LOCAL:LCOUNT = 2
+		CASE "１年生"
+			LOCAL:LCOUNT = 3
+		CASE "２年生"
+			LOCAL:LCOUNT = 4
+		CASE "３年生"
+			LOCAL:LCOUNT = 5
+		CASE "研究生"
+			LOCAL:LCOUNT = 6
+		CASEELSE
+			IF COND("教員", LCOUNT)
+				LOCAL:LCOUNT = 7
+			ELSE
+				LOCAL:LCOUNT = 99
+			ENDIF
+		ENDSELECT
+	NEXT
+	;ARGの方が年上
+	IF LOCAL:ARG >= LOCAL:(ARG:1)
+		ELDER = ARG
+		YOUNGER = ARG:1
+	ELSE
+		ELDER = ARG:1
+		YOUNGER = ARG
+	ENDIF
+
+	SELECTCASE TRUE_SEX(ELDER)
+	CASE "男性"
+		LOCALS = 兄
+	CASEELSE
+		LOCALS = 姉
+	ENDSELECT
+	SELECTCASE TRUE_SEX(YOUNGER)
+	CASE "男性"
+		LOCALS += "弟"
+	CASEELSE
+		LOCALS += "妹"
+	ENDSELECT
+CASE "対話可能角色一覧"
+	FOR LCOUNT, 2, CHARANUM
+		SIF LCOUNT == ARG
+			CONTINUE
+		SIF COND("対話可能", LCOUNT)
+			LOCALS = %LOCALS%%CSVCALLNAME(NO:LCOUNT)%\/
+	NEXT
+CASE "現在存在角色一覧"
+	FOR LCOUNT, 2, CHARANUM
+		SIF LCOUNT == ARG
+			CONTINUE
+		SIF COND("現在存在", LCOUNT)
+			LOCALS = %LOCALS%%CSVCALLNAME(NO:LCOUNT)%\/
+	NEXT
+CASE "入部角色一覧"
+	FOR LCOUNT, 2, CHARANUM
+		SIF LCOUNT == ARG
+			CONTINUE
+		LOCALS = %LOCALS%%CSVCALLNAME(NO:LCOUNT)%\/
+	NEXT
+;これは主にＶ開洞orＡ開洞の判定に使う
+CASE "性処理ジャンル"
+	SELECTCASE SELECTCOM
+	CASE 1, 4, TNUM("正常位") TO 69, 120 TO 124
+		LOCALS = Ｖ
+	CASE TNUM("肛門正常位") TO 79, 125 TO 129
+		LOCALS = Ａ
+	CASE TNUM("尿道正常位") TO TNUM("尿道騎乗位")
+		LOCALS = 尿
+	CASEELSE
+		LOCALS = 奉仕
+	ENDSELECT
+CASE "性処理"
+	SELECTCASE SELECTCOM
+	CASE TNUM("正常位") TO 69
+		LOCALS = Ｖ性交
+	CASE TNUM("肛門正常位") TO 79
+		LOCALS = Ａ性交
+	CASE TNUM("尿道正常位") TO TNUM("尿道騎乗位")
+		LOCALS = 尿道性交
+	CASE 120 TO 122
+		LOCALS = Ｖ性交する
+	CASE 125 TO 127
+		LOCALS = Ａ性交する
+	CASE GETNUM(TRAINNAME, "自慰")
+		IF STR:PLAY内容 != ""
+			LOCALS = %STR:PLAY内容%
+		ELSE
+			LOCALS = 見抜き
+		ENDIF
+	CASEELSE
+		SIF SELECTCOM >= 0
+			LOCALS = %TRAINNAME:SELECTCOM%
+	ENDSELECT
+;これは你が相手にして要指令
+CASE "性処理の採用指令"
+	SELECTCASE ARG
+	CASE 0
+		LOCALS = 手淫
+	CASE 1
+		LOCALS = 口交
+	CASE 2
+		LOCALS = 乳交
+	CASE 3
+		LOCALS = 正常位
+	CASE 4
+		LOCALS = 肛門後背位
+	CASE 5
+		LOCALS = 尿道正常位
+	CASE 6
+		LOCALS = 乳頭奸
+	CASE 7
+		LOCALS = 奉仕舐陰
+	CASE 8
+		LOCALS = 正常位奉仕
+	ENDSELECT
+CASE "性処理的类型"
+	SELECTCASE ARG
+	CASE 0
+		LOCALS = 手淫
+	CASE 1
+		LOCALS = 口交
+	CASE 2
+		LOCALS = 乳交
+	CASE 3
+		LOCALS = Ｖ性交
+	CASE 4
+		LOCALS = Ａ性交
+	CASE 5
+		LOCALS = 尿道性交
+	CASE 6
+		LOCALS = 乳頭奸
+	CASE 7
+		LOCALS = 奉仕舐陰
+	CASE 8
+		LOCALS = Ｖ性交して要
+	ENDSELECT
+CASE "床"
+	SELECTCASE SAVESTR:現在位置
+	CASE "体育倉庫"
+		LOCALS = 体操垫
+	CASE "更衣室"
+		LOCALS = 沙发床
+	CASE "公園"
+		LOCALS = 草丛
+	CASE "車内"
+		LOCALS = シート
+	CASEELSE
+		LOCALS = 床
+	ENDSELECT
+CASE "ソファ"
+	SELECTCASE SAVESTR:現在位置
+	CASE "体育倉庫"
+		LOCALS = 跳び箱
+	CASE "更衣室"
+		LOCALS = 沙发床
+	CASE "公園"
+		LOCALS = ベンチ
+	CASE "車内"
+		LOCALS = シート
+	CASEELSE
+		LOCALS = ソファ
+	ENDSELECT
+CASE "サイズ別阴茎名"
+	SIF ARG == 0
+		ARG = TARGET
+	SELECTCASE SIZE("基本阴茎尺寸", PLAYER)
+	CASE 0
+		LOCALS = 短小阴茎
+	CASE 1
+		LOCALS = 陰莖
+	CASE 2
+		LOCALS = 巨根
+	CASE 3
+		LOCALS = 馬根阴茎
+	CASE 4
+		LOCALS = 腕並阴茎
+	CASEELSE
+		LOCALS = 規格外の巨根
+	ENDSELECT
+CASE "阴茎"
+	SIF ARG == 0
+		ARG = TARGET
+	IF PENIS(ARG)
+		SIF CONFIG("包茎阴茎的称呼") == 0
+			RETURNF "阴茎"
+
+		;包茎の場合
+		IF COND("真性包茎",ARG)
+			IF CHECK_STAIN(STAIN:ARG:Ｐ, "Ｐ恥垢")
+				LOCALS = %TEXTR("还没洗过的鸡鸡/恥垢袋")%
+			ELSEIF CHECK_STAIN(STAIN:ARG:Ｐ, "Ａ")
+				LOCALS = %TEXTR("脏污鸡鸡/脏污肉棒")%
+			ELSE
+				LOCALS = %TEXTR("包皮阴茎/包皮过长的阴茎/包茎阴茎")%
+			ENDIF
+		ELSEIF COND("假性包茎",ARG)
+			IF CHECK_STAIN(STAIN:ARG:Ｐ, "Ｐ恥垢")
+				LOCALS = %TEXTR("还没洗过的鸡鸡/恥垢阴茎/带有乳酪的阴茎")%
+			ELSEIF CHECK_STAIN(STAIN:ARG:Ｐ, "Ａ")
+				LOCALS = %TEXTR("脏污鸡鸡/脏污肉棒")%
+			ELSE
+				LOCALS = 包茎阴茎
+			ENDIF
+		ELSE
+			LOCALS = 陰莖
+		ENDIF
+	ELSE
+		LOCALS = 陰莖バンド
+	ENDIF
+CASE "振動棒", "尿道振動棒"
+	SIF ARG == 0
+		ARG = TARGET
+	SELECTCASE SIZE(ARGS, ARG)
+	CASE IS >= 4
+		IF RAND:3 == 0
+			LOCALS = 極其凶悪的
+		ELSEIF RAND:2
+			LOCALS = 非常大的
+		ELSE
+			LOCALS = 不太可能的粗细的
+		ENDIF
+	CASE 3
+		IF RAND:3 == 0
+			LOCALS = 凶悪的
+		ELSEIF RAND:2
+			LOCALS = 很大号的
+		ELSE
+			LOCALS = 極太
+		ENDIF
+	CASE 2
+		IF RAND:2
+			LOCALS = 粗大的
+		ELSE
+			LOCALS = 大号的
+		ENDIF
+	CASEELSE
+		LOCALS = 
+	ENDSELECT
+	LOCALS = %LOCALS%振動棒
+CASE "Ａ振動棒", "肛塞"
+	SIF ARG == 0
+		ARG = TARGET
+	SELECTCASE SIZE(ARGS, ARG)
+	CASE IS >= 4
+		IF RAND:3 == 0
+			LOCALS = 極其凶悪的
+		ELSEIF RAND:2
+			LOCALS = 非常大的
+		ELSE
+			LOCALS = 不太可能的粗细的
+		ENDIF
+	CASE 3
+		IF RAND:3 == 0
+			LOCALS = 凶悪的
+		ELSEIF RAND:2
+			LOCALS = 很大号的
+		ELSE
+			LOCALS = 極太の
+		ENDIF
+	CASE 2
+		IF RAND:2
+			LOCALS = 粗大的
+		ELSE
+			LOCALS = 大号的
+		ENDIF
+	CASE 0
+		RETURNF ARGS
+	ENDSELECT
+
+	SELECTCASE ARGS
+	CASE "Ａ振動棒"
+		LOCALS += "振動棒"
+	CASEELSE
+		LOCALS += "肛塞"
+	ENDSELECT
+CASE "動物の種類"
+	SELECTCASE ARG
+	CASE 1
+		LOCALS = 猫
+	CASE 2
+		LOCALS = 狼
+	CASE 3
+		LOCALS = 狐
+	CASE 4
+		LOCALS = 兔
+	CASE 5
+		LOCALS = 馬
+	CASE 6
+		LOCALS = 悪魔
+	CASE 7
+		LOCALS = 蜥蜴
+	CASE 8
+		LOCALS = 颊脖龙
+	CASE 9
+		LOCALS = 鬼
+	CASE 12
+		LOCALS = 天使
+	CASEELSE
+		LOCALS = 
+	ENDSELECT
+CASE "素質一覧"
+	LOCALS = /
+	FOR LCOUNT, 0, VARSIZE("TALENT")
+		SELECTCASE TALENTNAME:LCOUNT
+		CASE ""
+		CASEELSE
+			LOCALS += @"%TALENTNAME:LCOUNT%\/"
+		ENDSELECT
+	NEXT
+CASE "体質属性"
+	LOCALS = 萝莉/少女/萝莉老太婆/大姐姐/大人/伪娘/正太/貧乳/巨乳/褐色肌/色白/青肌/脇/腋/性器穿環/陥没乳頭/
+CASE "性格属性"
+	LOCALS = 内気/強気/坦率/傲慢/高慢/謙虚/開朗/冷静/温柔/坏心眼/害羞/不知羞恥/高贵/粗野/聰慧/笨蛋/
+CASE "属性"
+	;番号は選択画面以外では関係ない
+	SELECTCASE ARG
+	CASE 0
+		LOCALS = 内気
+	CASE 1
+		LOCALS = 強気
+	CASE 2
+		LOCALS = 坦率
+	CASE 3
+		LOCALS = 傲慢
+	CASE 4
+		LOCALS = 高慢
+	CASE 5
+		LOCALS = 謙虚
+	CASE 6
+		LOCALS = 開朗
+	CASE 7
+		LOCALS = 冷静
+	CASE 8
+		LOCALS = 温柔
+	CASE 9
+		LOCALS = 坏心眼
+	CASE 10
+		LOCALS = 害羞
+	CASE 11
+		LOCALS = 不知羞恥
+	CASE 12
+		LOCALS = 高贵
+	CASE 13
+		LOCALS = 粗野
+	CASE 14
+		LOCALS = 聰慧
+	CASE 15
+		LOCALS = 笨蛋
+	CASE 16
+		LOCALS = 萝莉
+	CASE 17
+		LOCALS = 少女
+	CASE 18
+		LOCALS = 萝莉老太婆
+	CASE 19
+		LOCALS = 大姐姐
+	CASE 20
+		LOCALS = 大人
+	CASE 21
+		LOCALS = 伪娘
+	CASE 22
+		LOCALS = 正太
+	CASE 23
+		LOCALS = 貧乳
+	CASE 24
+		LOCALS = 巨乳
+	CASE 25
+		LOCALS = 褐色肌
+	CASE 26
+		LOCALS = 色白
+	CASE 27
+		LOCALS = 青肌
+	CASE 28
+		LOCALS = 施虐狂
+	CASE 29
+		LOCALS = 受虐狂
+	CASE 30
+		SELECTCASE GETFONT()
+		CASE "しねきゃぷしょん"
+			LOCALS = 脇
+		CASEELSE
+			LOCALS = 腋
+		ENDSELECT
+	CASE 31
+		LOCALS = 性器穿環
+	CASE 32
+		LOCALS = 陥没乳頭
+	CASE 33
+		LOCALS = 人妻
+	CASE 34
+		LOCALS = 有男朋友
+
+	CASEELSE
+		LOCALS = 
+	ENDSELECT
+CASE "弱点"
+	SELECTCASE ARG
+	CASE 0
+		LOCALS = 手弱点
+	CASE 1
+		LOCALS = 口弱点
+	CASE 2
+		LOCALS = 胸弱点
+	CASE 3
+		LOCALS = 脚弱点
+	CASE 4
+		LOCALS = ♀弱点
+	CASE 5
+		LOCALS = 接吻弱点
+	CASE 6
+		LOCALS = 肛門弱点
+	CASE 7
+		LOCALS = ♂弱点
+	CASE 8
+		LOCALS = 尿道弱点
+	CASE 9
+		LOCALS = 气味弱点
+	CASEELSE
+		LOCALS = 
+	ENDSELECT
+CASE "兒童の名前"
+	VARSET LOCALS
+	SELECTCASE ARG
+	CASE 0 TO 9
+		SPLIT "娘、アケビ、カンナ、メイコ、卡艾蒂、サヤカ、ノドカ、サヤ、サラ、ユウ", "、", LOCALS
+	CASE 10 TO 19
+		SPLIT "ナノハ、カンナ、タ真妃、ミズホ、スズカ、シオリ、アカネ、アズサ、アヤノ、レン", "、", LOCALS
+	CASE 20 TO 29
+		SPLIT "カスミ、エリカ、ナツメ、キクコ、カスミ、ナツメ、ツキ、シズカ、メイ、ユイ", "、", LOCALS
+	CASE 30 TO 39
+		SPLIT "ヒナ、ホノカ、アオイ、コハル、サクラ、ミオ、ナナミ、ユウナ、ユヅキ、ミサキ", "、", LOCALS
+	CASE 40 TO 49
+		SPLIT "アヤカ、ナナ、アヤネ、クルミ、ユミ、アスカ、ヒナノ、マリ、カオルコ、アゲハ", "、", LOCALS
+	CASE 50 TO 59
+		SPLIT "サキ、サツキ、ヤヨイ、カナコ、ユズ、ハヅキ、ナツキ、タマオ、ミコト、ハルカ", "、", LOCALS
+	CASE 100 TO 109
+		SPLIT "レイラ、エル、キャサリン、サラ、カーリー、リヨン、サテラ、ミレーヌ、サリー、リリー", "、", LOCALS
+	CASE 110 TO 119
+		SPLIT "玛丽、イレーヌ、ミミ、ルミナ、エイミー、安娜、ファミィ、ミーティア、グリシーヌ、愛麗絲", "、", LOCALS
+	CASE 120 TO 129
+		SPLIT "エリカ、アールグレイ、モモ、ルル、ターシャ、ミーシャ、アリア、シャーナ、イブ、エリス", "、", LOCALS
+	CASE 130 TO 139
+		SPLIT "玛丽、エルザ、メイシア、アリサ、アレクシア、三明治ラ、アイーダ、マリアナ、リサ、シャクティ", "、", LOCALS
+	CASE 140 TO 149
+		SPLIT "ラクシュミ、ソニア、プルル、布丁、エイダ、アデレード、アデル、アガサ、アイリーン、アレク三明治ラ", "、", LOCALS
+	CASE 150 TO 159
+		SPLIT "アリシア、アルマ、アマンダ、アメリア、アナ、アンジェラ、アンジェリカ、アンジェリーナ、アニタ、アン", "、", LOCALS
+	CASE 160 TO 169
+		SPLIT "アナベル、アニー、エイプリル、エーリアル、オードリー、バー蔷薇、ベアトリス、ベッキー、ベティ、ビアンカ", "、", LOCALS
+	CASE 170 TO 179
+		SPLIT "ブリジット、ブリトニー、カミラ、カーラ、セシリア、セシリー、セレスティア、セリア、シャーロット、チェルシー", "、", LOCALS
+	CASE 180 TO 189
+		SPLIT "シェリー、シェリル、阴蒂スティーナ、シンディー、クレア、クララ、クラリッサ、クローディア、コニー、コーデリア", "、", LOCALS
+	CASE 190 TO 199
+		SPLIT "阴蒂スタル、シンディー、シンシア、デイジー、ディアナ、ダイアナ、エディス、アイリーン、イライザ、エリザベス", "、", LOCALS
+	CASE 200 TO 209
+		SPLIT "エレン、エルマ、エミリア、エミリー、エマ、エミー、エリン、エステル、ユーニス、ユーフェ米娅", "、", LOCALS
+	CASE 210 TO 219
+		SPLIT "エヴァ、エヴァンジェリン、イヴ、フェリシア、フィオナ、フローラ、フランチェスカ、グ萝莉ア、グ蕾丝、ヘイゼル", "、", LOCALS
+	CASE 220 TO 229
+		SPLIT "ヘンリエッタ、ハーマイオニー、ヒルダ、イングリッド、ジャスミン、ジーン、ジェシカ、ジェシー、ジョ安娜、ジュディス", "、", LOCALS
+	CASE 230 TO 239
+		SPLIT "ジュディ、ジュリア、ジュリー、ジュリエット、ジューン、カレン、ケイト、キャサリン、キャシー、ケイティ", "、", LOCALS
+	CASE 240 TO 249
+		SPLIT "カトリーナ、キティ、ラナ、ラヴィニア、リーラ、レオノーラ、リリアン、リリー、リサ、ローラ", "、", LOCALS
+	CASE 250 TO 259
+		SPLIT "ロレッタ、ルシール、莉迪亚、リネット、メイベル、マーガレット、マリア、マライア、マリリン、マーサ", "、", LOCALS
+	CASE 260 TO 269
+		SPLIT "マルティナ、梅莉、マティルダ、メイ、ミッシェル、モニカ、ナタリア、ナタリー、ニーナ、オリヴィア", "、", LOCALS
+	CASE 270 TO 279
+		SPLIT "オフィーリア、プリシラ、レイチェル、レベッカ、レジーナ、リタ、ルビー、セリーナ、セラフィーナ、シェーラ", "、", LOCALS
+	CASE 280 TO 289
+		SPLIT "シェリー、ソフィア、ソフィー、シルヴィア、タバサ、テレサ、ティファニー、ティナ、ヴァレリー、ヴィクトリア", "、", LOCALS
+	CASE 290 TO 291
+		SPLIT "ヴァージニア、ヴィヴィアン", "、", LOCALS
+	;CASE 
+	;	RETURNF ""
+	CASEELSE
+		RETURNF "娘"
+	ENDSELECT
+	RETURNF LOCALS:(ARG%10)
+CASE "口枷"
+	SELECTCASE TEQUIP:口枷
+	CASE 1
+		LOCALS = 口球
+	CASE 2
+		LOCALS = 環形口枷
+	CASEELSE
+		LOCALS = 口枷
+	ENDSELECT
+CASEELSE
+	;それ以外ならARGSを返す
+	RETURNF ARGS
+ENDSELECT
+RETURNF LOCALS
+
+
+;-------------------------------------------------
+;頻出のUNICODEを使いやすくする試み
+;PRINT_STRにここを参考する場所があるので、増やしたらそっちも増やす事
+;-------------------------------------------------
+@UNI(ARGS)
+#FUNCTIONS
+
+LOCALS = 
+SELECTCASE ARGS
+CASE "便当", "ドラゴン", "創口貼", "男性", "女性", "扶她", "伪娘", "H"
+	PRINT_IMG ARGS
+;パラレル日本語
+CASE "そそ", "つん", "なお", "まふ", "はよ", "ひに", "やよ", "ゐに", "ゐん", "逆あ", "にす", "もむ", "をね", "小ゐ", "亜漢字1", "亜漢字2", "亜漢字3", "亜漢字4"
+	PRINT_IMG ARGS
+ENDSELECT
+
+RETURNF LOCALS

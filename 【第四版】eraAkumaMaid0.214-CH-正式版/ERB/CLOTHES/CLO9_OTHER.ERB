@@ -1,0 +1,314 @@
+﻿;-------------------------------------------------
+;角色ARGに飾品ARGSをつける。ARGS == "" なら全部取下
+;これだけは / で区切って10個程度まで装備可能
+;他のものと異なり各装備に追加の属性などは無く、記号的な意味が非常に很强
+;既に着けている飾品に区分が被った物がある場合には上書きする
+;-------------------------------------------------
+@SET_OTHER, ARGS, ARG
+#DIM LCOUNT
+#DIMS MEMO_CLO
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+MEMO_CLO = %CSTR:ARG:飾品%
+
+SELECTCASE ARGS
+CASE ""
+	CSTR:ARG:飾品 = 
+CASEELSE
+	VARSET LOCALS
+	SPLIT ARGS, "/", LOCALS
+
+	;すでに装備している物から区分被りを消す
+	FOR LCOUNT, 0, 10
+		SELECTCASE LOCALS:LCOUNT
+		CASE ""
+			CONTINUE
+		CASEELSE
+			CALL RESET_OTHER, LOCALS:LCOUNT, ARG
+		ENDSELECT
+	NEXT
+	CSTR:ARG:飾品 += @"%ARGS%\/"
+	;念のため "/" の整理
+	CALL RESET_OTHER, "", ARG
+ENDSELECT
+
+EQUIP:ARG:飾品 = STRLENS(CSTR:ARG:飾品)
+SIF MEMO_CLO != CSTR:ARG:飾品
+	TFLAG:着替えた = 1
+RETURN 1
+
+
+;-------------------------------------------------
+;ARGが身に着けているARGSをはずし、順番を区分依存で揃える
+;身に着けていない場合は何も起きない…のでARGSに""を入れる事で不要な "/" の整理も出来る
+;-------------------------------------------------
+@RESET_OTHER, ARGS, ARG
+#DIM LCOUNT
+#DIMS ORDER_OTHER, 10
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+VARSET LOCALS
+SPLIT CSTR:ARG:飾品, "/", LOCALS
+CSTR:ARG:飾品 = 
+
+VARSET ORDER_OTHER
+FOR LCOUNT, 0, 10
+
+	SELECTCASE LOCALS:LCOUNT
+	;ARGSと一致する場合は飛ばす
+	CASE "", ARGS
+		CONTINUE
+	;ARGSが"其他"以外の区分ならばARGSと同じ区分のものを飛ばす
+	CASEELSE
+		SIF TYPE_OTHER(ARGS) != "" && TYPE_OTHER(LOCALS:LCOUNT) == TYPE_OTHER(ARGS)
+			CONTINUE
+	ENDSELECT
+
+	SELECTCASE TYPE_OTHER(LOCALS:LCOUNT)
+	CASE "首"
+		ORDER_OTHER:0 += @"%LOCALS:LCOUNT%\/"
+	CASE "眼鏡"
+		ORDER_OTHER:1 += @"%LOCALS:LCOUNT%\/"
+	CASE "帽子"
+		ORDER_OTHER:2 += @"%LOCALS:LCOUNT%\/"
+	CASE "饰耳"
+		ORDER_OTHER:3 += @"%LOCALS:LCOUNT%\/"
+	CASE "髪飾"
+		ORDER_OTHER:4 += @"%LOCALS:LCOUNT%\/"
+	CASE "外套"
+		ORDER_OTHER:5 += @"%LOCALS:LCOUNT%\/"
+	CASE "耳罩"
+		ORDER_OTHER:6 += @"%LOCALS:LCOUNT%\/"
+	CASE "顔"
+		ORDER_OTHER:7 += @"%LOCALS:LCOUNT%\/"
+	CASEELSE
+		SIF LOCALS:LCOUNT != ""
+			ORDER_OTHER:7 += @"%LOCALS:LCOUNT%\/"
+	ENDSELECT
+NEXT
+
+FOR LCOUNT, 0, 10
+	SELECTCASE ORDER_OTHER:LCOUNT
+	CASE ""
+		CONTINUE
+	CASEELSE
+		CSTR:ARG:飾品 += @"%ORDER_OTHER:LCOUNT%"
+	ENDSELECT
+NEXT
+
+EQUIP:ARG:飾品 = STRLENS(CSTR:ARG:飾品)
+
+;-------------------------------------------------
+;CSTR:ARG:飾品にARGSと完全一致するものがある場合には外し、そうでないなら装備させる
+;-------------------------------------------------
+@INVERTSET_OTHER, ARGS, ARG
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+IF STRCOUNT(@"\/%CSTR:ARG:飾品%", @"\/%ARGS%\/")
+	CALL RESET_OTHER, ARGS, ARG
+ELSE
+	CALL SET_OTHER, ARGS, ARG
+ENDIF
+
+;-------------------------------------------------
+;飾品ARGSの区分を返す。其他など特定区分に属さないものの場合は空文字が返る
+;区分は　首/眼鏡/帽子/饰耳/髪飾/外套/耳罩/顔/
+;-------------------------------------------------
+@TYPE_OTHER(ARGS)
+#FUNCTIONS
+
+SIF STRCOUNTS(ARGS, "首", "吊坠", "項鏈", "領帯", "颈环", "围巾", "披肩", "牛铃")
+	RETURNF "首"
+SIF STRCOUNTS(ARGS, "眼鏡", "单片眼鏡", "鏡", "眼罩", "顔面包帯")
+	RETURNF "眼鏡"
+SIF STRCOUNTS(ARGS, "帽子", "礼帽", "帽", "礼服頭花", "高礼帽", "帽", "婚礼頭纱", "面")
+	RETURNF "帽子"
+SIF STRCOUNTS(ARGS, "耳罩", "頭戴式耳机", "机器耳")
+	RETURNF "耳罩"
+SIF STRCOUNTS(ARGS, "饰耳", "耳")
+	RETURNF "饰耳"
+SIF STRCOUNTS(ARGS, "髪飾", "髮箍", "蝴蝶結", "頭箍", "頭冠", "簪子", "髪", "发卡", "飾り")
+	RETURNF "髪飾"
+SIF STRCOUNTS(ARGS, "外套", "斗篷", "外套", "夹克", "夹克", "連帽風衣", "褞袍", "羽織", "披风", "运动衫", "V领毛衣", "圍裙", "裤吊帯", "前開")
+	RETURNF "外套"
+SIF STRCOUNTS(ARGS, "顔", "口罩")
+	RETURNF "顔"
+RETURNF ""
+
+;-------------------------------------------------
+;角色ARGが身に着ける飾品内の、ARGS区分の飾品の名前。基本的に一つしか身に着けないものが対象
+;ARGS区分のものを身に着けているか否かの判定にも使える。
+;-------------------------------------------------
+@OTHER(ARG, ARGS)
+#FUNCTIONS
+#DIM LCOUNT
+
+VARSET LOCALS
+SPLIT CSTR:ARG:飾品, "/", LOCALS
+
+FOR LCOUNT, 0, 10
+	SELECTCASE LOCALS:LCOUNT
+	CASE ""
+		BREAK
+	CASEELSE
+		SELECTCASE TYPE_OTHER(LOCALS:LCOUNT)
+		CASE ARGS
+			RETURNF LOCALS:LCOUNT
+		ENDSELECT
+	ENDSELECT
+NEXT
+RETURNF ""
+
+;-------------------------------------------------
+;ARG番の飾品の名称。換装などで表を作る際に使う
+;-------------------------------------------------
+@NAME_OTHER(ARG)
+#FUNCTIONS
+VARSET LOCALS
+
+SELECTCASE ARG
+CASE 0
+	LOCALS = 領帯
+CASE 1
+	LOCALS = 蝴蝶結領帯丝巾
+CASE 2
+	LOCALS = 褶边領帯
+CASE 3
+	LOCALS = 蝶形領帯
+
+CASE 5
+	LOCALS = 围巾
+CASE 6
+	LOCALS = 披肩
+
+CASE 10
+	LOCALS = 颈环
+CASE 11
+	LOCALS = 项圈
+CASE 12
+	LOCALS = 海豚吊坠
+
+CASE 20
+	LOCALS = 眼鏡
+CASE 21
+	LOCALS = 专家眼鏡
+CASE 22
+	LOCALS = 黑框眼鏡
+CASE 23
+	LOCALS = 金丝眼鏡
+CASE 24
+	LOCALS = 玳瑁眼鏡
+CASE 25
+	LOCALS = 单片眼鏡
+CASE 26
+	LOCALS = 太阳鏡
+CASE 27
+	LOCALS = 眼罩
+
+CASE 30
+	LOCALS = 絲綢礼帽
+CASE 31
+	LOCALS = 魔女の帽子
+CASE 32
+	LOCALS = 贝雷帽
+CASE 33
+	LOCALS = 礼服頭花
+CASE 34
+	LOCALS = 女仆帽
+CASE 35
+	LOCALS = 妇人礼帽
+CASE 36
+	LOCALS = 草帽
+CASE 37
+	LOCALS = 针织帽
+CASE 38
+	LOCALS = 护士帽
+CASE 39
+	LOCALS = 半遮帽
+CASE 40
+	LOCALS = 鸭舌帽
+CASE 41
+	LOCALS = 修女帽
+CASE 42
+	LOCALS = 聖誕帽
+
+CASE 50
+	LOCALS = 猫耳
+CASE 51
+	LOCALS = 兔耳
+CASE 52
+	LOCALS = 狐耳
+CASE 53
+	LOCALS = 犬耳
+CASE 54
+	LOCALS = 牛耳
+
+CASE 60
+	LOCALS = 髮箍
+CASE 61
+	LOCALS = 蝴蝶結
+CASE 62
+	LOCALS = 頭箍
+CASE 63
+	LOCALS = 頭冠
+CASE 64
+	LOCALS = 簪子
+CASE 65
+	LOCALS = 頭上太阳鏡
+
+CASE 70
+	LOCALS = 披风
+CASE 71
+	LOCALS = 斗篷
+CASE 72
+	LOCALS = 厚外套
+CASE 73
+	LOCALS = 织布外套
+CASE 74
+	LOCALS = 风衣外套
+CASE 75
+	LOCALS = 粗呢外套
+CASE 76
+	LOCALS = 披风外套
+CASE 77
+	LOCALS = 羽绒夹克
+CASE 78
+	LOCALS = 露肩夹克
+CASE 79
+	LOCALS = 运动衫
+
+CASE 80
+	LOCALS = 腿环
+CASE 81
+	LOCALS = 裤吊帯
+CASE 82
+	LOCALS = 褶边裙吊帯
+ENDSELECT
+
+RETURNF LOCALS
+
+;-------------------------------------------------
+;ARGの身につけている小物が条件ARGSを満たすか確認する
+;-------------------------------------------------
+@CHECK_OTHER(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+SIF EQUIP:ARG:飾品 == 0
+	RETURNF 0
+
+SELECTCASE ARGS
+CASE "首", "眼鏡", "帽子", "饰耳", "髪飾", "外套", "耳罩", "顔"
+	SIF OTHER(ARG, ARGS) != ""
+		RETURNF 1
+CASE "髪飾蝴蝶結"
+	SIF STRCOUNTS(@"\/%CSTR:ARG:飾品%", "/蝴蝶結/", "/両側蝴蝶結/", "/单側蝴蝶結/", "/頭後蝴蝶結/", "/頭上蝴蝶結/")
+		RETURNF 1
+CASEELSE
+	SIF STRCOUNT(CSTR:ARG:飾品, ARGS)
+		RETURNF 1
+ENDSELECT
+RETURNF 0
+

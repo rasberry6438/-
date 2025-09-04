@@ -1,0 +1,266 @@
+﻿;-------------------------------------------------
+;角色ARGに贴身制服ARGSを着せる。ARGS == ""なら脱がす
+;-------------------------------------------------
+@SET_BODYS, ARGS, ARG
+#DIMS MEMO_CLO
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+MEMO_CLO = %CSTR:ARG:贴身制服%
+;汚れ＆移開たりしたフラグ等を初期化して新品にする
+STAIN:ARG:贴身制服下身衣装 = 0
+STAIN:ARG:贴身制服トップ = 0
+
+CALL PALAM_BODYS, ARGS, ARG
+;コモンフラグを設定する
+CSTR:ARG:贴身制服 = %SET_CLO_COMMON(CSTR:ARG:贴身制服, ARG)%
+
+EQUIP:ARG:贴身制服 = STRLENS(CSTR:ARG:贴身制服)
+
+;内衣は脱がす。紧身短褲も脱がす
+IF EQUIP:ARG:贴身制服
+	CALL SET_PANTIES, "", ARG
+	CALL SET_BRA, "", ARG
+	SIF CHECK_BOTTOM("紧身短褲", ARG)
+		CALL SET_BOTTOM, "", ARG
+ENDIF
+SIF MEMO_CLO != CSTR:ARG:贴身制服
+	TFLAG:着替えた = 1
+
+;-------------------------------------------------
+;ARGの贴身制服の名前。ARGSに"略"と入れると略称になる
+;-------------------------------------------------
+@BODYS(ARG, ARGS)
+#FUNCTIONS
+#DIMS CIPTYPE
+
+VARSET LOCALS
+SELECTCASE ARGS
+CASE "CIP正面"
+	IF CHECK_BODYS("兔", ARG)
+		SIF CHECK_BODYS("高開衩", ARG)
+			RETURNF "正面高開衩兔女郎制服"
+		LOCALS = 正面兔女郎制服
+	ELSEIF CHECK_BODYS("彈弓泳衣", ARG)
+		LOCALS = 正面彈弓泳衣
+	ELSEIF CHECK_BODYS("競泳泳装", ARG)
+		SIF CHECK_BODYS("高開衩", ARG)
+			RETURNF "正面高開衩競泳泳装"
+		LOCALS = 正面競泳泳装
+	ELSEIF CHECK_BODYS("紧身短褲型死库水", ARG)
+		LOCALS = 正面紧身短褲型死库水
+	ELSEIF CHECK_BODYS("新死库水", ARG)
+		LOCALS = 正面新死库水
+	ELSEIF CHECK_BODYS("死库水", ARG)
+		LOCALS = 正面死库水
+	ELSE
+		RETURNF ""
+	ENDIF
+CASE "CIP背面"
+	RETURNF ""
+CASE "CIP正面カラー", "CIP背面カラー"
+	SELECTCASE ARGS
+	CASE "CIP正面カラー"
+		CIPTYPE = CIP正面
+	CASE "CIP背面カラー"
+		CIPTYPE = CIP背面
+	ENDSELECT
+	RETURNF CLOCOLOR_MAIDFACE(BODYS(ARG, CIPTYPE), CHECK_CLOCOLOR(CSTR:ARG:贴身制服), ARG)
+CASE "略"
+	IF CHECK_BODYS("競泳泳装", ARG)
+		LOCALS = 競泳泳装
+	ELSEIF CHECK_BODYS("死库水", ARG)
+		LOCALS = 死库水
+	ELSEIF CHECK_BODYS("連体泳装", ARG)
+		IF CHECK_BODYS("勒紧的", ARG)
+			LOCALS = 高開衩泳装
+		ELSE
+			LOCALS = 連体泳装
+		ENDIF
+	ELSEIF CHECK_BODYS("彈弓泳衣", ARG)
+		LOCALS = 彈弓泳衣
+	ELSEIF CHECK_CLO("拘束衣", ARG)
+		LOCALS = 拘束衣
+	ELSEIF CHECK_BODYS("兔", ARG)
+		LOCALS = 兔女郎制服
+	ELSEIF CHECK_BODYS("緊身内衣", ARG)
+		LOCALS = 緊身内衣
+	ELSEIF CHECK_BODYS("泳装", ARG)
+		LOCALS = 泳装
+	ELSE
+		LOCALS = 贴身制服
+	ENDIF
+CASE "種類"
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:贴身制服, "/", LOCALS
+CASE ""
+	;LOCALSに名称が入る
+	SPLIT CSTR:ARG:贴身制服, "/", LOCALS
+	RETURNF @"%CLOCOLOR(CSTR:ARG:贴身制服, "形容詞")%%LOCALS%"
+ENDSELECT
+RETURNF LOCALS
+
+;-------------------------------------------------
+;ARG番の贴身制服の名称。換装などで表を作る際に使う
+;-------------------------------------------------
+@NAME_BODYS(ARG)
+#FUNCTIONS
+VARSET LOCALS
+
+SELECTCASE ARG
+CASE 0
+	LOCALS = 緊身内衣
+CASE 1
+	LOCALS = 性感緊身内衣
+CASE 2
+	LOCALS = 漆皮緊身内衣
+CASE 3
+	LOCALS = 兔女郎制服
+CASE 4
+	LOCALS = 高開衩兔女郎
+CASE 5
+	LOCALS = 拘束衣
+CASE 6
+	LOCALS = 死库水
+CASE 7
+	LOCALS = 連体泳装
+CASE 8
+	LOCALS = 高開衩泳装
+CASE 9
+	LOCALS = 競泳泳装
+CASE 10
+	LOCALS = 彈弓泳衣
+ENDSELECT
+
+RETURNF LOCALS
+
+;-------------------------------------------------
+;角色ARGに贴身制服ARGSを着せた場合のCSTR処理
+;-------------------------------------------------
+@PALAM_BODYS, ARGS, ARG
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+STR_ADD = %EXTSTR(ARGS, "/")%
+ARGS = %EXTSTR(ARGS, "", "/")%
+
+SELECTCASE ARGS
+CASE "", "没有"
+	CSTR:ARG:贴身制服 = 
+CASE "緊身内衣"
+	CSTR:ARG:贴身制服 = 緊身内衣/
+CASE "性感緊身内衣"
+	CSTR:ARG:贴身制服 = 性感緊身内衣/高開衩/谷間露出/大陰唇露出/
+CASE "漆皮緊身内衣"
+	CSTR:ARG:贴身制服 = 漆皮緊身内衣/高開衩/Ｔ字褲/帯拉链的/谷間露出/
+CASE "兔女郎制服"
+	CSTR:ARG:贴身制服 = 兔女郎制服/Ｔ字褲/谷間露出/半杯/
+CASE "高開衩兔女郎制服"
+	CSTR:ARG:贴身制服 = 高開衩兔女郎制服/Ｔ字褲/漆皮/谷間露出/半杯/大陰唇露出/
+CASE "拘束衣"
+	CSTR:ARG:贴身制服 = 拘束衣/皮革/帯拉链的/谷間露出/乳頭露出/露脐/
+CASE "紐拘束衣"
+	CSTR:ARG:贴身制服 = 紐拘束衣/皮革/帯拉链的/谷間露出/乳頭露出/露脐/
+CASE "紧身短褲型死库水"
+	CSTR:ARG:贴身制服 = 紧身短褲型死库水/泳装/紺色/不可移開/
+CASE "新死库水"
+	CSTR:ARG:贴身制服 = 新死库水/泳装/紺色/
+CASE "死库水"
+	CSTR:ARG:贴身制服 = 死库水/泳装/
+CASE "連体泳装"
+	CSTR:ARG:贴身制服 = 連体泳装/
+CASE "高開衩連衣裙"
+	CSTR:ARG:贴身制服 = 高開衩連衣裙/高開衩/連体泳装/
+CASE "高開衩泳装"
+	CSTR:ARG:贴身制服 = 高開衩泳装/Ｔ字褲/連体泳装/大陰唇露出/
+CASE "競泳泳装"
+	CSTR:ARG:贴身制服 = 競泳泳装/鼠径部露出/
+CASE "高開衩競泳泳装"
+	CSTR:ARG:贴身制服 = 高開衩競泳泳装/高開衩/大陰唇露出/
+CASE "彈弓泳衣"
+	CSTR:ARG:贴身制服 = 彈弓泳衣/泳装/高開衩/Ｔ字褲/谷間露出/露脐/大陰唇露出/
+CASEELSE
+	CSTR:ARG:贴身制服 = %ARGS%/
+ENDSELECT
+
+CSTR:ARG:贴身制服 = %MERGE_STR(CSTR:ARG:贴身制服, STR_ADD)%
+
+
+;-------------------------------------------------
+;ARGの贴身制服が条件ARGSを満たすか確認する
+;-------------------------------------------------
+@CHECK_BODYS(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+SIF EQUIP:ARG:贴身制服 == 0
+	RETURNF 0
+SELECTCASE ARGS
+CASE "休闲褲型"
+	SIF STRCOUNT(CSTR:ARG:贴身制服, "紧身短褲")
+		RETURNF 1
+CASE "半脱可"
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "半脱的", "半脱不可")
+		RETURNF 0
+	RETURNF 1
+;主に"阴部のチラ見せ撮影"の判定で使う
+CASE "めくり可能"
+	;めくれなさそうなもの
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "帯拉链的", "皮革")
+		RETURNF 0
+	RETURNF 1
+;不可移開でなく、ずらしていない
+CASE "ずらし可", "可以移開"
+	SIF STRCOUNT(CSTR:ARG:贴身制服, "Ｖ露出")
+		RETURNF 0
+	IF STRCOUNT(CSTR:ARG:贴身制服, "帯拉链的")
+		SIF STRCOUNT(CSTR:ARG:贴身制服, "帯拉链的開")
+			RETURNF 0
+		RETURNF 1
+	ENDIF
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "移開的", "不可移開")
+		RETURNF 0
+	RETURNF 1
+;帯拉链的が有、あけていない
+CASE "帯拉链的閉"
+	SIF STRCOUNT(CSTR:ARG:贴身制服, "帯拉链的開")
+		RETURNF 0
+	SIF STRCOUNT(CSTR:ARG:贴身制服, "帯拉链的")
+		RETURNF 1
+CASE "ＶＡ露出"
+	SIF STRCOUNT(CSTR:ARG:贴身制服, "Ｖ露出") && STRCOUNT(CSTR:ARG:贴身制服, "Ａ露出")
+		RETURNF 1
+CASE "開洞"
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "帯拉链的開", "移開的", "破開的", "Ｖ露出", "開衩")
+		RETURNF 0
+	RETURNF 1
+CASE "Ａ開洞"
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "帯拉链的開", "移開的", "破開的", "Ａ露出", "開衩")
+		RETURNF 0
+	RETURNF 1
+CASE "勒紧的"
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "移開的", "帯拉链的開", "Ｖ露出", "開衩", "破開的")
+		RETURNF 0
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "高開衩")
+		RETURNF 1
+CASE "鼠径部露出"
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "高開衩", "鼠径部露出")
+		RETURNF 1
+CASE "闷热的"
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "移開的", "帯拉链的開", "Ｖ露出", "開衩", "破開的")
+		RETURNF 0
+	SIF CHECK_STAIN(STAIN:ARG:贴身制服下身衣装, "闷热的")
+		RETURNF 1
+CASE "湿的"
+	SIF STRCOUNTS(CSTR:ARG:贴身制服, "移開的", "帯拉链的開", "Ｖ露出", "開衩", "破開的", "通気性没有")
+		RETURNF 0
+	SIF CHECK_STAIN(STAIN:ARG:贴身制服下身衣装, "湿的")
+		RETURNF 1
+CASEELSE
+	SIF STRCOUNT(CSTR:ARG:贴身制服, ARGS)
+		RETURNF 1
+ENDSELECT
+
+RETURNF 0

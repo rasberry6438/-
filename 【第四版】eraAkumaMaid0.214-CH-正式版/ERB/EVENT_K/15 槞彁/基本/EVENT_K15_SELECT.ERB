@@ -1,0 +1,571 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;X1は角色番号に置換してください
+;-------------------------------------------------
+;お願い・交易での選択肢を追加。番号は60～89を使ってよい
+;ここで TFLAG:交易可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K15_ADDSELECT
+	SIF CEVENT("槞彁：Demsolaviya20XX呼び出し可", MASTER)
+		STR:選択肢 = %STR:選択肢% [61] %TEXT_LJ(@"%NAME:TARGET%の母国へ行く", 16)% … ：Демославия20XXを開始します/
+	[IF_DEBUG]
+		STR:選択肢 = %STR:選択肢% [62] %TEXT_LJ(@"DEBUG用", 16)% /
+	[ENDIF]
+		;IF TALENT:恋慕
+	;	STR:選択肢 = %STR:選択肢% [62] %TEXT_LJ("資金援助を行う", 16)% … %NAME:TARGET%にお金を渡します/
+	;	STR:選択肢 = %STR:選択肢% [63] %TEXT_LJ("魂を提供する", 16)% … %NAME:TARGET%に魂を１渡します/
+	;ENDIF
+
+	;STR:選択肢 = %STR:選択肢% [64] %TEXT_LJ("カツアゲする", 16)% … %NAME:TARGET%からカツアゲしてお金を貰います/
+
+;お願い・交易で増やした選択肢の地の文と台詞
+@KOJO_WISH_K15_ADDSELECT, ARGS
+	SELECTCASE ARGS
+	CASE "機械翻訳ＯＮ"
+		CALL DEL_CEVENT, "槞彁：機械翻訳OFF", MASTER
+		CALL PRINT_STRW, "機械翻訳变成_黄色_ＯＮ_了。"
+	CASE "機械翻訳ＯＦＦ"
+		CALL SET_CEVENT, "槞彁：機械翻訳OFF", MASTER
+		CALL PRINT_STRW, "機械翻訳を_青_ＯＦＦ_にしました。"
+	;CASE @"%NAME:TARGET%の母国へ行く"
+	;	IF CEVENT("迷你游戏：初回イベ済")
+	;		CALL CALL_LIB("迷你游戏開始：通常")
+	;	ELSE
+	;		CALL CALL_LIB("迷你游戏開始：初")
+	;		CALL SET_CEVENT("迷你游戏：初回イベ済")
+	;	ENDIF
+	;	CALL D20XX_Start
+
+	CASE "DEBUG用"
+		CALL CALL_LIBFW("魔界語講座：な")
+	ENDSELECT
+
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K15_ADDSELECT
+
+	[IF_DEBUG]
+		STR:選択肢 += "デバッグターミナル/"
+	[ENDIF]
+	IF CEVENT("産卵障害")
+		STR:選択肢 += "おまけ1立ち絵シム/"
+		STR:選択肢 += "おまけ2添い寝シム/"
+	ENDIF
+	;STR:選択肢 += "颜绘会話テスト/表示テスト/"
+	;[IF_DEBUG]
+	;	STR:選択肢 += "立ち絵シミュレータ/"
+	;	STR:選択肢 += "イェニェル立ち絵シム/"
+	;	STR:選択肢 += "電話/"
+
+	;[ENDIF]
+	;SIF CEVENT("槞彁：Demsolaviya20XX呼び出し可", MASTER)
+	;	STR:選択肢 += "電話/"
+	
+
+	;STR:選択肢 += "立ち絵会話シミュ/"
+	;STR:選択肢 += "添い寝テスト/"
+	;STR:選択肢 += "添い寝グラテスト/"
+	;STR:選択肢 += "ストーリーイベントテスト/"
+
+	;STR:選択肢 += "ターンを終わらせる/"
+	;STR:選択肢 += "追加選択肢その１/"
+	;STR:選択肢 += "追加選択肢之２/"
+
+;Talk指令で増颜绘会話やした選択肢の地の文と台詞
+@KOJO_DAILY1_K15_ADDSELECT, ARGS
+	
+	SELECTCASE ARGS
+		CASE "おまけ1立ち絵シム"
+			CALL 槞彁_TachieGenerate_Sim
+		CASE "おまけ2添い寝シム"
+			CALL K15_添い寝背景描画_Sim
+		CASE "デバッグターミナル"
+			CALL K15_DebugTerminal(ARGS)
+		CASE "電話"
+
+			CALL D20XX_Generate_UniqueFcsv, "イェニェル"
+			CALL D20XX_FACE_FcsvToSprite(RESULTS)
+			CALL D20XX_FACE_Packaging(RESULTS)
+			RESULTS = %CONVERTSTR(RESULTS)%
+			CALL D20XX_NO_NOBR(RESULTS)
+			CALL D20XX_OS_SpriteYposReverse(RESULTS)
+			CALL D20XX_OS_WindowInput_Constructor
+
+			RESULTS:1 = %RESULTS:0%
+
+			;#region
+				D20XX_OS_WindowInput:0 += @"<nonbutton pos='1100'>- <font color = 'Yellow'>耶涅尔</font> -</nonbutton>"
+				D20XX_OS_WindowInput:1 += @"<nonbutton pos='1100'>%PRINT_NamariF("おう、你かどうした？")%</nonbutton>"
+				D20XX_OS_WindowInput:2 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:3 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:4 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:5 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:6 += @"<button pos='1100' value = '100'><font color = 'Yellow'>[魔界に行きたい]</font></button>"
+				D20XX_OS_WindowInput:7 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:8 += @"%RESULTS:1%<button pos='1100' value = '200'><font color = 'Yellow'>[何でもない]</font></button>"
+			;#endregion
+
+
+			CALL D20XX_OS_Window(500,12,4000,10)
+			$PhoneLoop
+				INPUT
+				SELECTCASE RESULT
+					CASE 100
+						CALL D20XX_Generate_UniqueFcsv, "イェニェル"
+						CALL D20XX_FACE_FcsvToSprite(RESULTS)
+						CALL D20XX_FACE_Packaging(RESULTS)
+						RESULTS = %CONVERTSTR(RESULTS)%
+						CALL D20XX_NO_NOBR(RESULTS)
+						CALL D20XX_OS_SpriteYposReverse(RESULTS)
+						CALL D20XX_OS_WindowInput_Constructor
+							RESULTS:1 = %RESULTS:0%
+						;#region
+							D20XX_OS_WindowInput:0 += @"<nonbutton pos='1100'>- <font color = 'Yellow'>耶涅尔</font> -</nonbutton>"
+							D20XX_OS_WindowInput:1 += @"<nonbutton pos='1100'>%PRINT_NamariF("分かった、今転送する")%</nonbutton>"
+							D20XX_OS_WindowInput:2 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:3 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:4 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:5 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:6 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:7 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:8 += @"%RESULTS:1%<nonbutton pos='1100'></nonbutton>"
+						;#endregion
+						CALL D20XX_OS_Window(500,12,4000,10)
+						WAIT
+						CALL D20XX_Start
+						RETURN
+					CASE 200
+						CALL D20XX_Generate_UniqueFcsv, "イェニェル"
+						CALL D20XX_FACE_FcsvToSprite(RESULTS,"憤怒/本")
+						CALL D20XX_FACE_Packaging(RESULTS)
+						RESULTS = %CONVERTSTR(RESULTS)%
+						CALL D20XX_NO_NOBR(RESULTS)
+						CALL D20XX_OS_SpriteYposReverse(RESULTS)
+						CALL D20XX_OS_WindowInput_Constructor
+							RESULTS:1 = %RESULTS:0%
+						;#region
+							D20XX_OS_WindowInput:0 += @"<nonbutton pos='1100'>- <font color = 'Yellow'>耶涅尔</font> -</nonbutton>"
+							D20XX_OS_WindowInput:1 += @"<nonbutton pos='1100'>%PRINT_NamariF("用もないのに電話してくるな ボケ")%</nonbutton>"
+							D20XX_OS_WindowInput:2 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:3 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:4 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:5 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:6 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:7 += @"<nonbutton pos='1100'></nonbutton>"
+							D20XX_OS_WindowInput:8 += @"%RESULTS:1%<nonbutton pos='1000'></nonbutton>"
+						;#endregion
+						CALL D20XX_OS_Window(500,12,4000,10)
+						WAIT
+						RETURN
+				ENDSELECT
+				CLEARLINE 1
+				GOTO PhoneLoop
+		CASE "颜绘会話テスト"
+			CALL CALL_LIBFW("魔界語講座：な")
+		CASE "立ち絵会話テスト"
+			CFLAG:非フラグ変動指令 = 1
+			;CALL K15_StoryEvents("自己紹介")
+			CALL K15_StoryEvents("出会い")
+		CASE "表示テスト"
+			CALL K15_NuclearTestSite_A4
+			;CALL CALL_LIBFW("刺身")
+		CASE "立ち絵シミュレータ"
+			CALL 槞彁_TachieGenerate_Sim
+		CASE "イェニェル立ち絵シム"
+			CALL イェニェル_TachieGenerate_Sim
+		CASE "添い寝テスト"
+			;前編
+			IF CEVENTS("追加選択肢から结束回合") == ""
+				FLAG:SELECT_USERSHOP = 0 ;念のためね
+				CALL K15_添い寝_main
+				CALL SET_CEVENT, @"追加選択肢から结束回合：%ARGS%"
+				FLAG:SELECT_USERSHOP = 998
+			ELSE
+				IF TFLAG:结束回合
+					
+				ELSE
+					CALL K15_添い寝_main
+				ENDIF
+				;#region ABLUP_CHARA_MAIN出やってる事の模倣
+				CLEARLINE LINECOUNT
+				CALL EFFECT_ALLRESET
+				FONTREGULAR
+				$添い寝ABLUP_Loop
+				CALL SHOW_JUEL
+				CALL SHOW_ABLUP_SELECT
+				INPUT
+				SELECTCASE RESULT
+				CASE 0 TO 99
+					TRYCALLFORM ABLUP{RESULT}
+				CASE 100
+					CALL AUTO_LVUP
+				CASE 200
+					CALL JUEL_TO_EXP, 10000
+				CASE 999
+					;終了するでよ
+					RETURN 1
+				CASEELSE
+				ENDSELECT
+				GOTO 添い寝ABLUP_Loop
+				;#endregion
+			ENDIF
+		CASE "添い寝グラテスト"
+			CALL K15_添い寝背景描画_Sim
+		CASE "ストーリーイベントテスト"
+			CALL K15_StoryEventDebug
+		CASE "追加選択肢之２"
+			PRINTFORMW %CALLNAME:MASTER%做了%ARGS%。
+			PRINTL 
+			PRINTFORMW 「台詞」
+			PRINTL 
+			PRINTFORMW 受到%ARGS%后%CALLNAME:TARGET%的反応
+		;直接Ｈしたい場合
+		CASE "追加選択肢からＨ：Talk"
+			;前編
+			IF CEVENTS("追加選択肢からＨ") == ""
+				PRINTFORMW 文本
+				PRINTL [0]選択肢１(これを選ぶとＨします)
+				PRINTL [1]選択肢２(これを選ぶとＨしません)
+				CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+				FLAG:SELECT_USERSHOP = 100
+			ELSE
+				IF TFLAG:床イン
+					PRINTFORMW Ｈする場合の展開です
+				ELSE
+					PRINTFORMW こっちはＨしない場合の展開です
+				ENDIF
+			ENDIF
+		;直接结束回合したい場合
+		CASE "ターンを終わらせる"
+			;前編
+			IF CEVENTS("追加選択肢から结束回合") == ""
+				PRINTFORMW 文本
+				PRINTL [0]選択肢１(これを選ぶと结束回合します)
+				PRINTL [1]選択肢２(これを選ぶと结束回合しません)
+				CALL SET_CEVENT, @"追加選択肢から结束回合：%ARGS%"
+				FLAG:SELECT_USERSHOP = 998
+			ELSE
+				IF TFLAG:结束回合
+					PRINTFORMW 结束回合する場合の展開です
+				ELSE
+					PRINTFORMW こっちは结束回合しない場合の展開です
+				ENDIF
+			ENDIF
+	ENDSELECT
+@K15_DebugTerminal(ARGS)
+	$K15DebugTerminalLoop
+	PRINTFORML [100]ストーリーイベントテスト
+	PRINTFORML [101]添い寝テスト
+	PRINTFORML [102]LINE風表示テスト
+	PRINTFORML 
+	PRINTFORML [200]立ち絵シミュレータ
+	PRINTFORML [201]イェニェル立ち絵シミュレータ
+	PRINTFORML [202]添い寝グラシミュレータ
+	PRINTFORML 
+	PRINTFORML [300]迷你游戏テスト
+	PRINTFORML 
+	PRINTFORML [400]簡易テスト枠
+	PRINTFORML 
+	PRINTFORML [999]返回
+	INPUT
+
+	SELECTCASE RESULT
+		CASE 100;ストーリーイベントテスト
+			CALL K15_StoryEventDebug
+		CASE 101;添い寝テスト
+			;前編
+			IF CEVENTS("追加選択肢から结束回合") == ""
+				FLAG:SELECT_USERSHOP = 0 ;念のためね
+				CALL K15_添い寝_main
+				CALL SET_CEVENT, @"追加選択肢から结束回合：%ARGS%"
+				FLAG:SELECT_USERSHOP = 998
+			ELSE
+				IF TFLAG:结束回合
+				ELSE
+					CALL K15_添い寝_main
+				ENDIF
+				CLEARLINE LINECOUNT
+				CALL EFFECT_ALLRESET
+				FONTREGULAR
+				$添い寝ABLUP_Loop2
+				CALL SHOW_JUEL
+				CALL SHOW_ABLUP_SELECT
+				INPUT
+				SELECTCASE RESULT
+				CASE 0 TO 99
+					TRYCALLFORM ABLUP{RESULT}
+				CASE 100
+					CALL AUTO_LVUP
+				CASE 200
+					CALL JUEL_TO_EXP, 10000
+				CASE 999
+					;終了するでよ
+					RETURN 1
+				CASEELSE
+				ENDSELECT
+				GOTO 添い寝ABLUP_Loop2
+			ENDIF
+		CASE 102;LINE風表示テスト
+			CALL K15_NuclearTestSite_A4
+		
+		CASE 200;立ち絵シミュレータ
+			CALL 槞彁_TachieGenerate_Sim
+		CASE 201;イェニェル立ち絵シミュレータ
+			CALL イェニェル_TachieGenerate_Sim
+		CASE 202;添い寝グラシミュレータ
+			CALL K15_添い寝背景描画_Sim
+
+		CASE 300;迷你游戏テスト
+			CALL D20XX_Generate_UniqueFcsv, "イェニェル"
+			CALL D20XX_FACE_FcsvToSprite(RESULTS)
+			CALL D20XX_FACE_Packaging(RESULTS)
+			RESULTS = %CONVERTSTR(RESULTS)%
+			CALL D20XX_NO_NOBR(RESULTS)
+			CALL D20XX_OS_SpriteYposReverse(RESULTS)
+			CALL D20XX_OS_WindowInput_Constructor
+
+			RESULTS:1 = %RESULTS:0%
+
+			;#region
+				D20XX_OS_WindowInput:0 += @"<nonbutton pos='1100'>- <font color = 'Yellow'>耶涅尔</font> -</nonbutton>"
+				D20XX_OS_WindowInput:1 += @"<nonbutton pos='1100'>%PRINT_NamariF("おう、你かどうした？")%</nonbutton>"
+				D20XX_OS_WindowInput:2 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:3 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:4 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:5 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:6 += @"<button pos='1100' value = '100'><font color = 'Yellow'>[魔界に行きたい]</font></button>"
+				D20XX_OS_WindowInput:7 += @"<nonbutton pos='1100'></nonbutton>"
+				D20XX_OS_WindowInput:8 += @"%RESULTS:1%<button pos='1100' value = '200'><font color = 'Yellow'>[何でもない]</font></button>"
+			;#endregion
+			CALL D20XX_OS_Window(500,12,4000,10)
+		CASE 400;簡易テスト枠
+			;ここはデバッグに多用するVERUP.ERBに追記する作業の代替だよ
+			CALL K15_Tachietica_tutorial
+
+			
+		CASE 999
+			;終了
+			RETURN 1
+		CASEELSE
+			GOTO K15DebugTerminalLoop
+	ENDSELECT
+	GOTO K15DebugTerminalLoop
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K15_ADDSELECT
+	;STR:選択肢 += "互动指令追加選択肢その１/"
+	;STR:選択肢 += "追加選択肢之２/"
+	SIF CEVENT("添い寝解禁")
+		STR:選択肢 += "添い寝して给/"
+;睡眠時の互动指令の選択肢を追加
+@DAILY2_SLEEP_K15_ADDSELECT
+	;STR:選択肢 += "睡眠時追加選択肢その１/"
+	;STR:選択肢 += "睡眠時追加選択肢之２/"
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K15_ADDSELECT, ARGS
+	SELECTCASE ARGS
+		CASE "添い寝して给"
+			;前編
+			IF CEVENTS("追加選択肢から结束回合") == ""
+				FLAG:SELECT_USERSHOP = 0 ;念のためね
+				CALL K15_添い寝_main
+				CALL SET_CEVENT, @"追加選択肢から结束回合：%ARGS%"
+				FLAG:SELECT_USERSHOP = 998
+			ELSE
+				IF TFLAG:结束回合
+					
+				ELSE
+					CALL K15_添い寝_main
+				ENDIF
+				;#region ABLUP_CHARA_MAIN出やってる事の模倣
+				CLEARLINE LINECOUNT
+				CALL EFFECT_ALLRESET
+				FONTREGULAR
+				$添い寝ABLUP_Loop
+				CALL SHOW_JUEL
+				CALL SHOW_ABLUP_SELECT
+				INPUT
+				SELECTCASE RESULT
+				CASE 0 TO 99
+					TRYCALLFORM ABLUP{RESULT}
+				CASE 100
+					CALL AUTO_LVUP
+				CASE 200
+					CALL JUEL_TO_EXP, 10000
+				CASE 999
+					;終了するでよ
+					RETURN 1
+				CASEELSE
+				ENDSELECT
+				GOTO 添い寝ABLUP_Loop
+				;#endregion
+			ENDIF
+		
+		CASE "追加選択肢その１"
+			PRINTFORMW %CALLNAME:MASTER%做了%ARGS%。
+			PRINTL 
+			PRINTFORMW 「台詞」
+			PRINTL 
+			PRINTFORMW 受到%ARGS%后%CALLNAME:TARGET%的反応
+		CASE "追加選択肢之２"
+			PRINTFORMW %CALLNAME:MASTER%做了%ARGS%。
+			PRINTL 
+			PRINTFORMW 「台詞」
+			PRINTL 
+			PRINTFORMW 受到%ARGS%后%CALLNAME:TARGET%的反応
+
+		;直接Ｈしたい場合
+		CASE "追加選択肢からＨ：もて无"
+			;前編
+			IF CEVENTS("追加選択肢からＨ") == ""
+				PRINTFORMW 文本
+				PRINTL [0]選択肢１(これを選ぶとＨします)
+				PRINTL [1]選択肢２(これを選ぶとＨしません)
+				CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+				FLAG:SELECT_USERSHOP = 100
+			ELSE
+				IF TFLAG:床イン
+					PRINTFORMW Ｈする場合の展開です
+				ELSE
+					PRINTFORMW こっちはＨしない場合の展開です
+				ENDIF
+			ENDIF
+
+
+		CASE "睡眠時追加選択肢その１"
+			PRINTFORMW %CALLNAME:MASTER%做了%ARGS%。
+			PRINTL 
+			PRINTFORMW 「台詞」
+			PRINTL 
+			PRINTFORMW 受到%ARGS%后%CALLNAME:TARGET%的反応
+		CASE "睡眠時追加選択肢之２"
+			PRINTFORMW %CALLNAME:MASTER%做了%ARGS%。
+			PRINTL 
+			PRINTFORMW 「台詞」
+			PRINTL 
+			PRINTFORMW 受到%ARGS%后%CALLNAME:TARGET%的反応
+	ENDSELECT
+
+;-------------------------------------------------
+;约会行き先の選択肢を追加。
+@DATE_K15_ADDSELECT
+	;ここで増やした選択肢を選ぶと、それがSAVESTR:约会 に代入される仕組みです
+	;STR:選択肢 += "追加選択肢その１/"
+	;STR:選択肢 += "追加選択肢之２/"
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+@KOJO_DATE_K15_ADDSELECT
+	SELECTCASE SAVESTR:约会
+		CASE "追加選択肢その１"
+			PRINTFORMW 「台詞」
+			;地の文
+			PRINTFORMW %CALLNAME:TARGET%对%SAVESTR:约会%的反応
+			;地の文を用意していない場合には汎用のものを使う
+			;CALL DAILY_MESSAGE, "约会本番"
+			PRINTL 
+			;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+			FLAG:情緒 += 30
+			;それぞれ可能なもののコメントアウトを取下
+			;TFLAG:约会中H可能 = 1
+			;TFLAG:约会中牵手可能 = 1
+			;TFLAG:偷瞄内衣可能 = 1
+			;TFLAG:泳装约会 = 1
+		CASE "追加選択肢之２"
+			PRINTFORMW 「台詞」
+			;地の文
+			PRINTFORMW %CALLNAME:TARGET%对%SAVESTR:约会%的反応
+			;地の文を用意していない場合には汎用のものを使う
+			;CALL DAILY_MESSAGE, "约会本番"
+			PRINTL 
+			;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+			FLAG:情緒 += 30
+			;それぞれ可能なもののコメントアウトを取下
+			;TFLAG:约会中H可能 = 1
+			;TFLAG:约会中牵手可能 = 1
+			;TFLAG:偷瞄内衣可能 = 1
+			;TFLAG:泳装约会 = 1
+	ENDSELECT
+
+
+
+@DAILY_ADDBLOCK_K15_ADDSELECT
+	STR:選択肢 += "口上側追加選択欄/"
+@KOJO_DAILY101_K15_ADDSELECT, ARGS
+	SELECTCASE ARGS
+		CASE "口上側追加選択欄"
+			PRINTFORMW 追加ブロック指令が押されたよ！
+	ENDSELECT
+
+
+@DAILY_SECRET_K15_ADDSELECT
+	;これは一番上に必ずおく事(タブ変更とか出来なくなるよ)
+	STR:選択肢 += "UI切替/" ;DAILY_SC+0
+	STR:選択肢 += "タブ１/" ;DAILY_SC+1
+	STR:選択肢 += "タブ２/" ;DAILY_SC+2
+	STR:選択肢 += "タブ３/" ;DAILY_SC+3
+	STR:選択肢 += "システム/" ;DAILY_SC+4
+	
+	STR:選択肢 += "他の角色へ/" ;DAILY_SC+5
+	STR:選択肢 += "ウィンドウを関閉/" ;DAILY_SC+6
+	STR:選択肢 += "データ/" ;DAILY_SC+7
+
+	STR:選択肢 += "UUI_IsCBG_True/" ;DAILY_SC+8
+	
+	IF UUI_Window == "槞彁詳細"
+		STR:選択肢 += "詳細画面通常衣装/" ;DAILY_SC+9
+		STR:選択肢 += "詳細画面肌着衣装/" ;DAILY_SC+10
+		STR:選択肢 += "詳細画面全裸/" ;DAILY_SC+11
+	ENDIF 
+
+@KOJO_DAILY102_K15_ADDSELECT, ARGS
+	SELECTCASE ARGS
+		CASE "UI切替"
+			IF CFLAG:UUI == 1
+				CFLAG:UUI = 0
+				UUI_IsCBG = True
+			ELSE
+				CFLAG:UUI = 1
+			ENDIF
+			CFLAG:非フラグ変動指令 = 1
+		CASE "タブ１"
+			UUI_タブ = タブ１
+			CFLAG:非フラグ変動指令 = 1
+		CASE "タブ２"
+			UUI_タブ = タブ２
+			CFLAG:非フラグ変動指令 = 1
+		CASE "タブ３"
+			UUI_タブ = タブ３
+			CFLAG:非フラグ変動指令 = 1
+		CASE "システム"
+			UUI_タブ = システム
+			CFLAG:非フラグ変動指令 = 1
+		CASE "他の角色へ"
+			UUI_Window = 他の角色へ
+			CFLAG:非フラグ変動指令 = 1
+		CASE "ウィンドウを関閉"
+			UUI_Window = 
+			CFLAG:非フラグ変動指令 = 1
+		CASE "データ"
+			UUI_Window = 槞彁詳細
+			CFLAG:非フラグ変動指令 = 1
+		CASE "UUI_IsCBG_True"
+			UUI_IsCBG = True
+			CFLAG:非フラグ変動指令 = 1
+		CASE "詳細画面通常衣装"
+			K15_Tachietica_Prifile衣装 = いつもの服/
+			CFLAG:非フラグ変動指令 = 1
+		CASE "詳細画面肌着衣装"
+			K15_Tachietica_Prifile衣装 = 吊帯衫/会話口/困扰眉/笑颜/赤面２/
+			CFLAG:非フラグ変動指令 = 1
+		CASE "詳細画面全裸"
+			K15_Tachietica_Prifile衣装 = 全裸/半開４/困扰眉/混乱/赤面２/
+			CFLAG:非フラグ変動指令 = 1
+	ENDSELECT
+
+;-------------------------------------------------
+;换地方指令の選択肢を追加
+@MOVE_K15_ADDSELECT
+	;PRINTFORML ※ごめんね、背景グラが無いから未対応な場所が大半なんだ
+	;STR:選択肢 = 
+	;STR:選択肢 += "居間/"
+	;STR:選択肢 += @"%CALLNAME:MASTER%的房間/"

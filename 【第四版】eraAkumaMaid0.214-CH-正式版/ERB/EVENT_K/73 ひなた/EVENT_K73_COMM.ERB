@@ -1,0 +1,1168 @@
+﻿;-------------------------------------------------
+;部員同士での交流。自分はTARGETとして呼ばれ、話相手の部員はPARTNER()として呼ばれる
+;話相手への呼びかけはCNAME("partner")で出来る
+;TFLAG:台詞スキップ = 1で話している相手のセリフのスキップ、TFLAG:地の文スキップ = 1で続く地の文のスキップをする事が出来る
+;-------------------------------------------------
+@KOJO_COMM_K73, ARGS
+#DIM MEMO_LINECOUNT
+;対話相手にしたい角色の名前を/区切りでこれに突っ込んでFIND_TaiTa(EVENT_TABLE)とするとそのうち一人が選ばれる
+#DIMS EVENT_TABLE
+#DIM MEMO_TARGET
+#DIM LCOUNT
+#DIM MEMO_PLAYER
+EVENT_TABLE = 
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE ARGS
+;話しかける側のセリフ。COND("対話可能")を満たす相手を選んでPARTNER()にする事で、特定の相手に話しかけることもできる
+CASE "お誘いする"
+	;特定の相手に話しかける場合はEVENT_TABLEに対話相手の呼び名(CALLNAME)を / 区切りで並べて ; を消す
+	;例１）弗理希艾尔or濡烏の君or杏珠から一人選ぶ場合
+	;EVENT_TABLE = 弗理希艾尔/濡烏の君/杏珠
+	;例２）部員全てから一人選ぶ場合
+	;EVENT_TABLE = 全員
+	TFLAG:地の文スキップ = 1
+	IF FIND_TaiTa(EVENT_TABLE)
+		;話し相手をpartnerにする
+		CALL SET_PARTNER, FIND_TaiTa(EVENT_TABLE)
+		
+	ENDIF
+	MEMO_TARGET = TARGET
+	MEMO_PLAYER = PLAYER
+	PLAYER = FINDCHARA(NO, 73)
+	TARGET = PARTNER()
+	IF TALENT:PARTNER():男性 || COND("只和你Ｈ", PARTNER() ) || NO:PARTNER() == 54 || NO:PARTNER() == 6 || NO:PARTNER() == 56 || NO:PARTNER() == 44 || NO:PARTNER()== 39
+		$TADANOKAIWA
+		CALL EMOTION_PLUS, "交流中", PLAYER, PARTNER()
+		SELECTCASE RAND:3
+		CASE 0
+			PRINTFORMW 日向と%CALLNAME:TARGET%通过談笑しているようだ…
+		CASE 1
+			PRINTFORMW 日向と%CALLNAME:TARGET%通过、普段你とどんな風にしているのか語り合ったようだ…
+		CASE 2
+			PRINTFORMW 日向は%CALLNAME:TARGET%を誘ってみたが、断られたようだ…
+		ENDSELECT	
+	ELSEIF NO:PARTNER() == 15 || NO:PARTNER() == 51
+		IF !TALENT:PARTNER():恋慕
+			GOTO KOURYU
+		ENDIF
+		GOTO TADANOKAIWA
+	ELSEIF NO:PARTNER() == 55
+		IF !CEVENT("I love you, my dear.", PARTNER())
+			GOTO KOURYU
+		ENDIF
+		GOTO TADANOKAIWA
+	ELSEIF NO:PARTNER() == 55
+		IF !CEVENT("I love you, my dear.", PARTNER())
+			GOTO KOURYU
+		ENDIF
+		GOTO TADANOKAIWA
+	ELSEIF NO:PARTNER() == 19
+		IF !CEVENT("淫魔覚醒：万音", PARTNER()) == 0
+			GOTO KOURYU
+		ENDIF
+		GOTO TADANOKAIWA
+	ELSEIF NO:PARTNER() == 42
+		IF CFLAG:PARTNER():好感度 < 1500 || TALENT:PARTNER():処女
+		ELSE
+			GOTO KOURYU
+		ENDIF
+		GOTO TADANOKAIWA
+	ELSE
+		$KOURYU
+		CALL EMOTION_PLUS, "对话框爱心/红潮恍惚", PARTNER(), PLAYER
+		SELECTCASE RAND:2
+			CASE 0
+				CALL PRINT_STRW, @"「ねぇ、%CALLNAME:TARGET%酱…_BBHH_」"
+				CALL PRINT_STRW, @"「後輩酱…どこかに行っちゃったし、僕と楽しいことしようよ_BBHH_」"
+			CASE 1
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%ちゃ～ん_BBHH_」"
+				CALL PRINT_STRW, @"「一緒に赤酱作ろ♪いいでしょ_BBHH_」"
+		ENDSELECT
+		EJAC:TARGET = 1
+		CALL MESSAGE_PLAY_K73
+		PRINTFORML
+		PRINTFORM 你が
+		IF FLAG:休憩
+			PRINTFORM 在消磨时间时、、
+		ELSEIF PLACE("情人旅館")
+			PRINTFORM 在与%CALLNAME:TO_NUMBER(FLAG:昼の相手)%一起休憩的时候、
+		ELSE
+			PRINTFORM 在与%CALLNAME:TO_NUMBER(FLAG:昼の相手)%做Ｈ的事情的时候、
+		ENDIF
+		SELECTCASE RAND:6
+			CASE 0
+				PRINTFORMW 日向は%CALLNAME:TARGET%に種付けをしていたようだ…
+			CASE 1
+				PRINTFORMW 日向と%CALLNAME:TARGET%通过子作りに励んでいるようだ…
+			CASE 2
+				PRINTFORMW 日向と%CALLNAME:TARGET%通过生での行為を楽しんだようだ…
+			CASE 3
+				PRINTFORMW 日向と%CALLNAME:TARGET%通过互相用体液を交換したようだ…
+			CASE 4
+				PRINTFORMW 日向は%CALLNAME:TARGET%を孕ませるために腰をふったようだ…
+			CASE 5	
+				IF RAND:2
+					CALL PRINT_STRW, @"日向と%CALLNAME:TARGET%が一緒に楽しんでいたようです_BBHH_"
+				ELSE
+					CALL PRINT_STRW, @"日向と%CALLNAME:TARGET%が親交を深めていたようです_BBHH_"
+				ENDIF
+		ENDSELECT
+	ENDIF
+	TARGET = MEMO_TARGET
+	PLAYER = MEMO_PLAYER
+	TFLAG:地の文スキップ = 1
+;話しかけられる側のセリフ。括弧は『』を使うのが望ましい
+CASE "誘われた"
+
+
+ENDSELECT
+;-------------------------------------------------
+;この角色とのやり取りで使う路人角色を記述する
+;-------------------------------------------------
+@CREATE_MOB_K73, ARGS
+
+SELECTCASE ARGS
+	CASE "路人A"
+	TALENT:筋肉 = 0
+	BASE:TARGET:身高 = 166
+	BASE:TARGET:腰圍 = 74
+	NICKNAME:TARGET = 行きずりの相手
+	TALENT:容易妊娠 = 299
+	EXP:Ｖ経験 += 20 + RAND:20
+	EXP:Ｖ性交経験 += 10 + RAND:10
+	EXP:Ａ経験 += RAND:10
+	EXP:Ａ性交経験 += RAND:5
+	EXP:口交経験 += 5
+	EXP:手淫経験 += 5
+	EXP:精液経験 += 5
+	EXP:精飲経験 += 5
+	EXP:奉仕快楽経験 += 5
+	EXP:膣内精液経験 += RAND:10
+	EXP:童貞狩猎経験 += RAND:5
+	CASE "無人"
+	CSTR:颜绘変化 = 無人
+	BASE:TARGET:身高 = 53
+	BASE:TARGET:腰圍 = 32
+	BASE:胸圍 = 30
+	BASE:臀圍 = 34
+	BASE:罩杯 = 1
+;	CASE ""
+;	CSTR:髪色 = 随机颜色
+;	CFLAG:髪Ｒ = 
+;	CFLAG:髪Ｇ = 
+;	CFLAG:髪Ｂ = 
+;	CFLAG:髪主線Ｒ = 
+;	CFLAG:髪主線Ｇ = 
+;	CFLAG:髪主線Ｂ = 
+;	CFLAG:髪高光Ｒ = 
+;	CFLAG:髪高光Ｇ = 
+;	CFLAG:髪高光Ｂ = 
+;	TALENT:容易妊娠 = 2
+	CASE "稚夏"
+	TALENT:肤色 = 2
+	TALENT:常時晒痕 = 1
+	TALENT:角 = 11
+	TALENT:耳穿環 = 1
+	TALENT:性器年齢 = 2
+	CSTR:晒痕 = 比基尼＆比基尼胸罩
+	CSTR:陰毛的喜好 = 保养完毕
+	CSTR:種族 = 人类
+	CSTR:髪色 = 白金髪
+	CSTR:髪長 = 中等長度
+	CSTR:前髪 = 乱髪２
+	CSTR:後髪 = 自然
+	CSTR:改髪 = 无特殊髪型
+	CSTR:まつ毛の色 = 白金
+	CSTR:瞳色 = 焦茶
+	CSTR:眼形 = 斜眼５
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉３
+	CSTR:嘴形 = ni↘
+	CSTR:高光 = 高光有
+	CSTR:痣 = 泪痣左
+	CSTR:CEVENT = 耳穿環：イヤーカフス/
+	BASE:TARGET:身高 = 149
+	BASE:TARGET:腰圍 = 62
+	BASE:胸圍 = 81
+	BASE:臀圍 = 75
+	BASE:罩杯 = 3
+	TALENT:容易妊娠 = 2
+	CALL SET_SHIRT, "宽松女式衬衫/白"
+	CALL SET_SKIRT, "迷你百褶裙/黒"
+	CALL SET_PANTIES, "內褲/白"
+	CALL SET_BRA, "蕾丝胸罩/白"
+	CALL SET_OTHER, "黑色顎口罩"
+	CASE "サツキ"
+	TALENT:肤色 = 2
+	TALENT:動物耳 = 6
+	CSTR:種族 = 人类
+	CSTR:髪色 = 黒髪
+	CSTR:髪長 = 披肩
+	CSTR:前髪 = 外八刘海２
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 侧盘頭
+	CSTR:まつ毛の色 = 黒
+	CSTR:瞳色 = 黒
+	CSTR:眼形 = 垂眼５
+	CSTR:白眼 = 黒目
+	CSTR:眉形 = 斜眉短２
+	CSTR:嘴形 = ω
+	BASE:TARGET:身高 = 155
+	BASE:TARGET:腰圍 = 63
+	BASE:胸圍 = 80
+	BASE:臀圍 = 87
+	BASE:罩杯 = 5
+	TALENT:容易妊娠 = 2
+	CALL SET_SHIRT, "V领毛衣/濃紫"
+	CALL SET_SKIRT, "迷你格子裙/黄色"
+	CALL SET_PANTIES, "比基尼/紫"
+	CALL SET_BRA, "褶边比基尼胸罩/紫"
+	CALL SET_OTHER, "黑色前開V领毛衣"
+	CASE "結菜"
+	TALENT:肤色 = 2
+	CSTR:種族 = 人类
+	CSTR:髪色 = 黒髪
+	CSTR:髪長 = 披肩
+	CSTR:前髪 = 乱髪５
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 无特殊髪型
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:まつ毛の色 = 黒茶
+	CSTR:瞳色 = 黒
+	CSTR:眼形 = 垂眼５半目
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉３
+	CSTR:嘴形 = 微笑４
+	CSTR:高光 = 高光有
+	CSTR:痣 = 泪痣左
+	CALL SET_SHIRT, "領帶西装/茶色"
+	CALL SET_SKIRT, "迷你格子裙"
+	CALL SET_PANTIES, "內褲/白"
+	CALL SET_BRA, "蕾丝胸罩/白"
+	CALL SET_SOCKS, "膝下襪"
+	CALL SET_SHOES, "小皮靴"
+	BASE:TARGET:身高 = 152
+	BASE:TARGET:腰圍 = 60
+	BASE:胸圍 = 72
+	BASE:臀圍 = 66
+	BASE:罩杯 = 2
+	TALENT:容易妊娠 = 2
+	CASE "結実"
+	TALENT:容易妊娠 = 2
+	BASE:TARGET:身高 = 151
+	BASE:TARGET:腰圍 = 61
+	BASE:胸圍 = 73
+	BASE:臀圍 = 65
+	BASE:罩杯 = 2
+	TALENT:肤色 = 2
+	CSTR:種族 = 人类
+	CSTR:髪色 = 黒髪
+	CSTR:髪長 = 披肩
+	CSTR:前髪 = 乱髪５
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 无特殊髪型
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:まつ毛の色 = 黒茶
+	CSTR:瞳色 = 黒
+	CSTR:眼形 = 普通眼５半目
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉３
+	CSTR:嘴形 = 微笑４
+	CSTR:高光 = 高光有
+	CSTR:痣 = 泪痣右
+	CALL SET_SHIRT, "蝴蝶結領帯丝巾西装外衣/茶色"
+	CALL SET_SKIRT, "迷你格子裙"
+	CALL SET_PANTIES, "內褲/白"
+	CALL SET_BRA, "蕾丝胸罩/白"
+	CALL SET_SOCKS, "膝下襪"
+	CALL SET_SHOES, "小皮靴"
+	CASE "愛麗絲"
+	NICKNAME:TARGET = 愛麗絲
+	TALENT:容易妊娠 = 2
+	TALENT:肤色 = 2
+	CSTR:種族 = 人类
+	CSTR:髪色 = 白金髪
+	CSTR:髪長 = 長
+	CSTR:前髪 = 短刘海２
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 无特殊髪型
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 頭上蝴蝶結
+	CSTR:渐变颜色 = 氷水
+	CSTR:まつ毛の色 = 白金
+	CSTR:瞳色 = 氷水
+	CSTR:眼形 = 垂眼３
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 斜眉
+	CSTR:嘴形 = 小口３
+	CSTR:高光 = 高光有
+	CSTR:痣 = 痣无
+	CALL SET_SHIRT, "女仆装/水色"
+	CALL SET_PANTIES, "內褲/正面蝴蝶結三角黒/緑色"
+	CALL SET_SOCKS, "吊帯襪"
+	CALL SET_SHOES, "小皮靴"
+	BASE:TARGET:身高 = 149
+	BASE:TARGET:腰圍 = 57
+	BASE:胸圍 = 70
+	BASE:臀圍 = 65
+	BASE:罩杯 = 2
+	CASE "椿"
+	NICKNAME:TARGET = 椿
+	TALENT:肤色 = 2
+	CSTR:種族 = 一目
+	CSTR:髪色 = 墨髪
+	CSTR:髪長 = 披肩
+	CSTR:前髪 = 短刘海２
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 妹妹頭
+	CSTR:渐变颜色 = 紅
+	CSTR:まつ毛の色 = 墨
+	CSTR:瞳色 = 黒
+	CSTR:眼形 = 普通眼
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉
+	CSTR:嘴形 = 微笑４
+	CSTR:高光 = 高光有
+	CSTR:痣 = 泪痣左
+	CALL SET_SHIRT, "振袖/紫"
+	CALL SET_SOCKS, "短布襪"
+	CALL SET_SHOES, "草履"
+	CALL SET_OTHER, "簪子"
+	BASE:TARGET:身高 = 153
+	BASE:TARGET:腰圍 = 65
+	BASE:胸圍 = 71
+	BASE:臀圍 = 69
+	BASE:罩杯 = 2
+	TALENT:容易妊娠 = 2
+	CASE "シグローバ"
+	NICKNAME:TARGET = シグローバ
+	TALENT:肤色 = 4
+	TALENT:精灵耳 = 1
+	CSTR:種族 = 精灵
+	CSTR:髪色 = 白髪
+	CSTR:髪長 = 長
+	CSTR:前髪 = 乱髪８
+	CSTR:後髪 = 直髪
+	CSTR:改髪 = 三股辫
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = = 无蝴蝶結
+	CSTR:まつ毛の色 = 白
+	CSTR:瞳色 = 緑
+	CSTR:眼形 = 普通眼５
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 斜眉２
+	CSTR:嘴形 = 得意２
+	CSTR:高光 = 高光有
+	BASE:TARGET:身高 = 178
+	BASE:TARGET:腰圍 = 68
+	BASE:胸圍 = 75
+	BASE:臀圍 = 78
+	BASE:罩杯 = 3
+	CALL SET_SHIRT, "水手服/紺色"
+	CALL SET_SKIRT, "迷你百褶裙"
+	CALL SET_PANTIES, "內褲/白"
+	CALL SET_BRA, "蕾丝胸罩/白"
+	CALL SET_SOCKS, "膝下襪"
+	CALL SET_SHOES, "小皮靴"
+	CALL SET_OTHER, "青い水兵帽"
+	TALENT:容易妊娠 = 2
+	CASE "蛭海"
+	NICKNAME:TARGET = 蛭海
+	TALENT:肤色 = 2
+	CSTR:種族 = 人类
+	CSTR:髪色 = 白髪
+	CSTR:髪長 = 長
+	CSTR:前髪 = 大半遮盖３
+	CSTR:後髪 = 自然
+	CSTR:改髪 = 无特殊髪型
+	CSTR:呆毛 = 呆毛３
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染１_白
+	CSTR:渐变颜色 = 銀
+	CSTR:まつ毛の色 = 灰
+	CSTR:瞳色 = 黒
+	CSTR:眼形 = 陰
+	CSTR:白眼 = 无眼白
+	CSTR:眉形 = 通常眉短３
+	CSTR:嘴形 = 笑顔３
+	CSTR:高光 = 高光无
+	CSTR:痣 = 痣无
+	BASE:TARGET:身高 = 53
+	BASE:TARGET:腰圍 = 32
+	BASE:胸圍 = 30
+	BASE:臀圍 = 34
+	BASE:罩杯 = 1
+	CALL SET_SHIRT, "夏日礼服/黒"
+	CALL SET_PANTIES, "襯褲/黒"
+	CALL SET_OTHER, "白色眼罩"
+	TALENT:容易妊娠 = 2
+	CASE "みにょこ"
+	TALENT:容易妊娠 = 299
+	NICKNAME:TARGET = みにょこ
+	TALENT:肤色 = 2
+	CSTR:種族 = 人类
+	CSTR:髪色 = カスタム
+	CSTR:髪長 = 披肩
+	CSTR:前髪 = 長鬓角２
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 団子頭
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染无_白金
+	CSTR:渐变颜色 = 栗
+	CSTR:まつ毛の色 = 栗
+	CSTR:瞳色 = 碧
+	CSTR:眼形 = 垂眼３
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉３
+	CSTR:嘴形 = 微笑２
+	CSTR:高光 = 高光有
+	CSTR:痣 = 痣无
+	BASE:TARGET:身高 = 149
+	BASE:TARGET:腰圍 = 73
+	BASE:胸圍 = 87
+	BASE:臀圍 = 79
+	BASE:罩杯 = 6
+	CALL SET_SHIRT, "V领毛衣/橙色"
+	CALL SET_SKIRT, "百褶裙"
+	CALL SET_PANTIES, "內褲/白"
+	CALL SET_BRA, "蕾丝胸罩/白"
+	CALL SET_OTHER, "緑色の前開V领毛衣"
+	CFLAG:髪Ｒ = 155
+	CFLAG:髪Ｇ = 255
+	CFLAG:髪Ｂ = 232
+	CFLAG:髪主線Ｒ = 126
+	CFLAG:髪主線Ｇ = 86
+	CFLAG:髪主線Ｂ = 44
+	CFLAG:髪高光Ｒ = 170
+	CFLAG:髪高光Ｇ = 95
+	CFLAG:髪高光Ｂ = 45
+	CASE "典子"
+	TALENT:容易妊娠 = 299
+	NICKNAME:TARGET = 典子
+	CSTR:種族 = 人类
+	CSTR:髪色 = 黒髪
+	CSTR:髪長 = セミロン
+	CSTR:前髪 = 齐刘海
+	CSTR:後髪 = 直髪
+	CSTR:改髪 = 麻花辫２
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:瞳色 = 黒
+	CSTR:眼形 = 〇〇
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 斜眉
+	CSTR:嘴形 = 栗口２
+	CSTR:高光 = 高光有
+	CSTR:痣 = 痣无
+	CALL SET_SHIRT, "蝴蝶結領帯丝巾西装外衣/黒"
+	CALL SET_SKIRT, "迷你格子裙/青"
+	CALL SET_BOTTOM, "褲襪/黒"
+	CALL SET_PANTIES, "內褲/白"
+	CALL SET_BRA, "蕾丝胸罩/白"
+	CALL SET_SHOES, "小皮靴"
+	CALL SET_OTHER, "瓶底眼鏡"
+	BASE:TARGET:身高 = 150
+	BASE:TARGET:腰圍 = 63
+	BASE:胸圍 = 80
+	BASE:臀圍 = 70
+	BASE:罩杯 = 5
+	CASE "巴"
+	NICKNAME:TARGET = 巴
+	TALENT:肤色 = 2
+	CSTR:種族 = 悪魔
+	CSTR:髪色 = 黒
+	CSTR:髪長 = 中等長度
+	CSTR:前髪 = Ｍ字刘海
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 无特殊髪型
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染无
+	CSTR:渐变颜色 = 墨
+	CSTR:瞳色 = 青
+	CSTR:眼形 = 垂眼５半目
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉２
+	CSTR:嘴形 = 微笑４
+	TALENT:容易妊娠 = 299
+	BASE:TARGET:身高 = 169
+	BASE:TARGET:腰圍 = 65
+	BASE:胸圍 = 69
+	BASE:臀圍 = 72
+	BASE:罩杯 = 2
+	CALL SET_SHIRT, "男子西装/青"
+	CALL SET_SKIRT, "迷你格子裙/青"
+	CALL SET_BOTTOM, "西褲/黒"
+	CALL SET_PANTIES, "蕾丝的胖次/純白"
+	CALL SET_BRA, "蕾丝胸罩/純白"
+	CALL SET_OTHER, "黑色前開V领毛衣"
+	CASE "雫"
+	NICKNAME:TARGET = 雫
+	TALENT:肤色 = 2
+	TALENT:容易妊娠 = 299
+	CSTR:種族 = 人类
+	CSTR:髪色 = 氷水髪
+	CSTR:髪長 = 披肩
+	CSTR:前髪 = 自然刘海４
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 无特殊髪型
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染无
+	CSTR:まつ毛の色 = 氷水
+	CSTR:瞳色 = 氷水
+	CSTR:眼形 = 垂眼３
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉
+	CSTR:嘴形 = ڡ
+	BASE:TARGET:身高 = 152
+	BASE:胸圍 = 77
+	BASE:腰圍 = 65
+	BASE:臀圍 = 72
+	BASE:罩杯 = 3
+	CALL SET_BODYS, "死库水/紺色"
+	CASE "楼"
+	NICKNAME:TARGET = 楼
+	BASE:TARGET:腰圍 = 74
+	TALENT:容易妊娠 = 299
+	TALENT:肤色 = 2
+	TALENT:動物耳 = 10
+	CSTR:種族 = 吸血鬼
+	CSTR:髪色 = 空髪
+	CSTR:髪長 = 長
+	CSTR:前髪 = 斜刘海
+	CSTR:後髪 = 直髪
+	CSTR:改髪 = 侧盘頭
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染无
+	CSTR:まつ毛の色 = 氷水
+	CSTR:瞳色 = 氷水
+	CSTR:眼形 = 普通眼４
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉３
+	CSTR:嘴形 = ワ
+	BASE:TARGET:身高 = 170
+	BASE:TARGET:腰圍 = 66
+	BASE:胸圍 = 80
+	BASE:臀圍 = 73
+	BASE:罩杯 = 4
+	CALL SET_SHIRT, "水手服/白"
+	CALL SET_SKIRT, "百褶裙/白"
+	CALL SET_PANTIES, "內褲/正面蝴蝶結紐黒/桃色"
+	CALL SET_OTHER, "青い前開V领毛衣"
+
+	CASE "紺"
+	NICKNAME:TARGET = 紺
+	TALENT:動物耳 = 1
+	CSTR:種族 = 妖狐
+	TALENT:容易妊娠 = 299
+	CSTR:髪色 = 白金髪
+	CSTR:髪長 = 中等長度
+	CSTR:前髪 = 短刘海２
+	CSTR:後髪 = 直髪
+	CSTR:改髪 = 侧盘頭
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染无
+	CSTR:渐变颜色 = 空
+	CSTR:まつ毛の色 = 真紅
+	CSTR:瞳色 = 金
+	CSTR:眼形 = 垂眼３
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 蹙眉
+	CSTR:嘴形 = ヮ
+	CSTR:頬 = 脸谱赤/
+	TALENT:性器年齢 = 1
+	CSTR:陰毛的喜好 = 还没長出来
+	BASE:TARGET:身高 = 157
+	BASE:TARGET:腰圍 = 54
+	BASE:胸圍 = 76
+	BASE:臀圍 = 69
+	BASE:罩杯 = 4
+	CALL SET_SHIRT, "女式衬衫/白"
+	CALL SET_SKIRT, "百褶裙/赤"
+	CALL SET_PANTIES, "三角胖次/正面蝴蝶結紐黄/黄色"
+	CALL SET_BRA, "Micro比基尼胸罩/赤"
+	CALL SET_OTHER, "狐面"
+
+	CASE "ラディ一ネ"
+	NICKNAME:TARGET = ラディ一ネ
+	CSTR:種族 = 竜人
+	TALENT:精灵耳 = 1
+	TALENT:性器年齢 = 3
+	CSTR:陰毛的喜好 = 自然
+	CSTR:髪色 = 紅髪
+	CSTR:髪長 = 披肩
+	CSTR:前髪 = 大半遮盖２
+	CSTR:後髪 = 自然
+	CSTR:改髪 = 无特殊髪型
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染无
+	CSTR:瞳色 = 紅_銀
+	CSTR:眼形 = 吊眼２
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉２
+	CSTR:嘴形 = ni↘
+	CSTR:頬 = 頬傷左
+	CSTR:高光 = 頬傷鼻
+	CSTR:痣 = 頬傷右
+	TALENT:Ｖ妊娠不能 = 1
+	TALENT:角 = 21
+	TALENT:筋肉 = 1
+	BASE:身高 = 187
+	BASE:胸圍 = 125
+	BASE:腰圍 = 70
+	BASE:臀圍 = 130
+	BASE:罩杯 = 12
+	BASE:腋毛 = 100
+	BASE:陰毛 = 200
+	CALL SET_SHIRT, "无袖高領毛衣/黒"
+	CALL SET_BOTTOM, "休闲褲/黒"
+	CALL SET_SHOES, "凉鞋"
+	CALL SET_OTHER, "眼罩/泪痣右"
+	CALL SET_OTHER, "白色眼罩"
+
+	CASE "琴音"
+	NICKNAME:TARGET = 琴音
+	TALENT:耳穿環 = 1
+	CSTR:種族 = 人类
+	CSTR:髪色 = 焦茶髪
+	CSTR:髪長 = 中等長度
+	CSTR:前髪 = 大半遮盖２
+	CSTR:後髪 = 直髪
+	TALENT:容易妊娠 = 299
+	CSTR:改髪 = 单辫
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染无
+	CSTR:まつ毛の色 = 黒茶
+	CSTR:瞳色 = 黒
+	CSTR:眼形 = 斜眼２
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉３
+	CSTR:嘴形 = 半開２
+	CSTR:頬 = 脸谱青/
+	CSTR:CEVENT = 耳穿環：イヤーカフ右/
+	BASE:TARGET:身高 = 155
+	BASE:TARGET:腰圍 = 60
+	BASE:胸圍 = 77
+	BASE:臀圍 = 80
+	BASE:罩杯 = 3
+	CALL SET_SHIRT, "水手服/白"
+	CALL SET_SKIRT, "百褶裙/白"
+	CALL SET_PANTIES, "內褲/正面蝴蝶結紐黒/桃色"
+	CALL SET_SOCKS, "膝下襪"
+	CALL SET_SHOES, "小皮靴"
+	CALL SET_OTHER, "青い前開V领毛衣"
+
+	CASE "クァピチュレ"
+	NICKNAME:TARGET = クァピチュレ
+	TALENT:肤色 = 2
+	TALENT:容易妊娠 = 299
+	TALENT:精灵耳 = 1
+	TALENT:角 = 20
+	CSTR:種族 = 人类
+	CSTR:髪色 = 青髪
+	CSTR:髪長 = 披肩
+	CSTR:前髪 = 乱髪５
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = 钻頭双马尾ール
+	CSTR:呆毛 = 无呆毛
+	CSTR:蝴蝶結 = 頭後蝴蝶結
+	CSTR:挑染 = 挑染无_白金
+	CSTR:渐变颜色 = 墨
+	CSTR:まつ毛の色 = 黒茶
+	CSTR:瞳色 = 青
+	CSTR:眼形 = 吊眼半目
+	CSTR:白眼 = 白眼
+	CSTR:眉形 = 通常眉２
+	CSTR:嘴形 = 小口２
+	CSTR:高光 = 高光有
+	BASE:身高 = 151
+	BASE:胸圍 = 88
+	BASE:臀圍 = 79
+	BASE:罩杯 = 5
+	BASE:TARGET:腰圍 = 63
+	TALENT:性器年齢 = 2
+	CSTR:陰毛的喜好 = 保养完毕
+	CSTR:CEVENT = 陰毛の名称：心型/
+	CALL SET_SHIRT, "女仆装/青"
+	CALL SET_PANTIES, "衝浪胖次/黒"
+	CALL SET_SOCKS, "吊帯襪"
+	CALL SET_SHOES, "小皮靴"
+	CALL SET_OTHER, "黑色玳瑁眼鏡"
+
+	CASE "楓花"
+	NICKNAME:TARGET = 楓花
+	TALENT:肤色 = 2
+	CSTR:種族 = 人类
+	CSTR:髪色 = 金髪
+	CSTR:髪長 = 披肩
+	TALENT:容易妊娠 = 299
+	CSTR:前髪 = 自然刘海４
+	CSTR:後髪 = 卷髪
+	CSTR:改髪 = おしゃれ三股辫
+	CSTR:呆毛 = 触角
+	CSTR:蝴蝶結 = 无蝴蝶結
+	CSTR:挑染 = 挑染无_白金
+	CSTR:渐变颜色 = 墨
+	CSTR:まつ毛の色 = 黒茶
+	CSTR:瞳色 = 金
+	CSTR:眼形 = 斜眼３
+	CSTR:白眼 = 黒目
+	CSTR:眉形 = 通常眉３
+	CSTR:嘴形 = 半開４
+	BASE:TARGET:身高 = 156
+	BASE:TARGET:腰圍 = 53
+	BASE:胸圍 = 66
+	BASE:臀圍 = 60
+	BASE:罩杯 = 1
+	CALL SET_SHIRT, "水手服/黒"
+	CALL SET_SKIRT, "百褶裙/黒"
+	CALL SET_PANTIES, "衝浪胖次/黒"
+ENDSELECT
+@CREATE_MOBS_KAOGURA_K73
+		IF RAND:6
+			CSTR:TARGET:種族 = 人类
+		ELSEIF RAND:2
+			CSTR:TARGET:種族 = 天使
+		ELSE
+			CSTR:TARGET:種族 = 堕天使_天使
+		ENDIF
+		IF RAND:3
+		ELSEIF RAND:2
+			SELECTCASE RAND:10
+			CASE 0
+				TALENT:動物耳 = 1
+			CASE 1
+				TALENT:精灵耳 = 1
+			CASE 2
+				TALENT:動物耳 = 2
+			CASE 3
+				TALENT:動物耳 = 3
+			CASE 4
+				TALENT:精灵耳 = 2
+			CASE 5
+				TALENT:動物耳 = 4
+			CASE 6
+				TALENT:動物耳 = 5
+			CASE 7
+				TALENT:動物耳 = 6
+			CASE 8
+				TALENT:動物耳 = 10
+			CASE 9
+				TALENT:頭羽 = 1
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:7
+			CASE 0
+				TALENT:角 = 1
+			CASE 1
+				TALENT:角 = 4
+			CASE 2
+				TALENT:角 = 10
+			CASE 3				
+				TALENT:角 = 20
+			CASE 4
+				TALENT:角 = 3
+			CASE 5
+				TALENT:角 = 2
+			CASE 6	
+				TALENT:角 = 21	
+			ENDSELECT
+		ENDIF
+		SELECTCASE RAND:2
+			CASE 0
+				CSTR:TARGET:髪長 = 長
+			CASE 1
+				CSTR:TARGET:髪長 = 披肩
+		ENDSELECT
+		IF RAND:2
+			TALENT:肤色 = 2
+		ELSE
+		ENDIF
+		SELECTCASE RAND:4
+			CASE 0
+				CSTR:TARGET:後髪 = 外八
+			CASE 1
+				CSTR:TARGET:後髪 = 卷髪
+			CASE 2
+				CSTR:TARGET:後髪 = 直髪
+			CASE 3
+				CSTR:TARGET:後髪 = 自然
+		ENDSELECT
+		SELECTCASE RAND:10
+			CASE 0
+				CSTR:TARGET:髪色 = 墨髪
+			CASE 1
+				CSTR:TARGET:髪色 = 金髪
+			CASE 2
+				CSTR:TARGET:髪色 = 白金髪	
+			CASE 3
+				CSTR:TARGET:髪色 = 黒髪
+			CASE 4
+				CSTR:TARGET:髪色 = 白髪
+			CASE 5
+				CSTR:TARGET:髪色 = 銀髪
+			CASE 6
+				CSTR:TARGET:髪色 = 焦茶髪
+			CASE 7
+				CSTR:TARGET:髪色 = 栗髪
+			CASE 8
+				CSTR:TARGET:髪色 = 亜麻髪
+			CASE 9
+				CSTR:TARGET:髪色 = 茶髪
+		ENDSELECT
+		SELECTCASE RAND:15
+		CASE 0
+			CSTR:TARGET:前髪 = 自然刘海４
+		CASE 1
+			CSTR:TARGET:前髪 = 大半遮盖２
+		CASE 2
+			CSTR:TARGET:前髪 = 大半遮盖３
+		CASE 3
+			CSTR:TARGET:前髪 = 編髪２
+		CASE 4
+			CSTR:TARGET:前髪 = 乱髪３
+		CASE 5
+			CSTR:TARGET:前髪 = 乱髪４
+		CASE 6
+			CSTR:TARGET:前髪 = 乱髪５
+		CASE 7
+			CSTR:TARGET:前髪 = 乱髪６
+		CASE 8
+			CSTR:TARGET:前髪 = 長鬓角２
+		CASE 9
+			CSTR:TARGET:前髪 = 交叉前发
+		CASE 10
+			CSTR:TARGET:前髪 = 交叉前发２
+		CASE 11
+			CSTR:TARGET:前髪 = 半遮眼
+		CASE 12
+			CSTR:TARGET:前髪 = 乱髪７
+		CASE 13
+			CSTR:TARGET:前髪 = 乱髪８	
+		CASE 14
+			CSTR:TARGET:前髪 = 編髪２
+		ENDSELECT
+		SELECTCASE RAND:8
+			CASE 0
+				CSTR:TARGET:改髪 = 无特殊髪型
+			CASE 1
+				CSTR:TARGET:改髪 = サイドシニョン
+			CASE 2
+				CSTR:TARGET:改髪 = 双马尾
+			CASE 3
+				CSTR:TARGET:改髪 = 短双马尾
+			CASE 4
+				CSTR:TARGET:改髪 = 马尾辫
+			CASE 5
+				CSTR:TARGET:改髪 = 三股辫
+			CASE 6
+				CSTR:TARGET:改髪 = 侧边马尾
+			CASE 7
+				CSTR:TARGET:改髪 = 三股辫耳後ろ
+		ENDSELECT
+		SELECTCASE RAND:3
+			CASE 0
+				CSTR:TARGET:呆毛 = 呆毛６
+			CASE 1
+				CSTR:TARGET:呆毛 = 呆毛
+			CASE 2
+				CSTR:TARGET:呆毛 = 
+		ENDSELECT
+		SELECTCASE CONDS("髪色")
+			CASE "墨髪"
+			SELECTCASE RAND:3
+			CASE 0
+				CSTR:TARGET:渐变颜色 = 紺
+			CASE 1
+				CSTR:TARGET:渐变颜色 = 黒
+			CASE 2
+				CSTR:TARGET:渐变颜色 = 焦茶
+			ENDSELECT
+			CASE "黒髪"
+			SELECTCASE RAND:6
+			CASE 0
+				CSTR:TARGET:渐变颜色 = 灰
+			CASE 1
+				CSTR:TARGET:渐变颜色 = 青
+			CASE 2
+				CSTR:TARGET:渐变颜色 = 赤
+			CASE 3
+				CSTR:TARGET:渐变颜色 = 銀
+			CASE 4
+				CSTR:TARGET:渐变颜色 = 緑
+			CASE 5
+				CSTR:TARGET:渐变颜色 = 紫
+			ENDSELECT
+			CASE "銀髪"
+			SELECTCASE RAND:2
+			CASE 0
+				CSTR:TARGET:渐变颜色 = 白
+			CASE 1
+				CSTR:TARGET:渐变颜色 = 灰
+			ENDSELECT
+			CASE "白髪"
+				CSTR:TARGET:渐变颜色 = 銀
+			CASE "金髪"
+			SELECTCASE RAND:2
+			CASE 0
+				CSTR:TARGET:渐变颜色 = 空
+			CASE 1
+				CSTR:TARGET:渐变颜色 = 棕
+			ENDSELECT
+			CASE "白金髪"
+			SELECTCASE RAND:2
+			CASE 0
+				CSTR:TARGET:渐变颜色 = 桃金
+			CASE 1
+				CSTR:TARGET:渐变颜色 = 氷水
+			ENDSELECT
+			CASE "栗髪"
+				CSTR:TARGET:渐变颜色 = 焦茶
+			CASE "焦茶髪"
+				CSTR:TARGET:渐变颜色 = 紅
+			CASE "茶髪"
+				CSTR:TARGET:渐变颜色 = 亜麻
+		ENDSELECT
+		IF RAND:3 == 0
+			CSTR:TARGET:渐变颜色 = 无
+		ELSE
+		ENDIF
+		IF RAND:3
+		ELSE
+			MARK:TARGET:淫紋 = 1
+			SELECTCASE RAND:10
+			CASE 0
+				CSTR:TARGET:CEVENT = 淫紋：基本/
+			CASE 1
+				CSTR:TARGET:CEVENT = 淫紋：隷属/
+			CASE 2
+				CSTR:TARGET:CEVENT = 淫紋：羽化/
+			CASE 3
+				CSTR:TARGET:CEVENT = 淫紋：改造/
+			CASE 4
+				CSTR:TARGET:CEVENT = 淫紋：開花/
+			CASE 5
+				CSTR:TARGET:CEVENT = 淫紋：寄生/
+			CASE 6
+				CSTR:TARGET:CEVENT = 淫紋：浸食/
+			CASE 7
+				CSTR:TARGET:CEVENT = 淫紋：堕落/
+			CASE 8
+				CSTR:TARGET:CEVENT = 淫紋：封入/
+			CASE 9
+				CSTR:TARGET:CEVENT = 淫紋：聖翼/
+			ENDSELECT
+		ENDIF
+		BASE:TARGET:身高 = 166
+		BASE:TARGET:腰圍 = 74
+		CSTR:瞳色 = 黒
+		CSTR:眼形 = 普通眼
+		CSTR:白眼 = 白眼
+		SELECTCASE RAND:6
+			CASE 0
+				CSTR:TARGET:眉形 = 通常眉
+			CASE 1
+				CSTR:TARGET:眉形 = 通常眉２
+			CASE 2
+				CSTR:TARGET:眉形 = 通常眉３
+			CASE 3
+				CSTR:TARGET:眉形 = 斜眉
+			CASE 4
+				CSTR:TARGET:眉形 = 斜眉２
+			CASE 5
+				CSTR:TARGET:眉形 = 困扰眉
+		ENDSELECT
+		SELECTCASE RAND:8
+			CASE 0
+				CSTR:TARGET:嘴形 = 微笑２
+			CASE 1
+				CSTR:TARGET:嘴形 = 微笑３
+			CASE 3
+				CSTR:TARGET:嘴形 = 微笑４
+			CASE 4
+				CSTR:TARGET:嘴形 = へ字３
+			CASE 5
+				CSTR:TARGET:嘴形 = へ字４
+			CASE 6
+				CSTR:TARGET:嘴形 = 小口２
+			CASE 7
+				CSTR:TARGET:嘴形 = 会話口３
+		ENDSELECT
+		CSTR:高光 = 
+		IF RAND:2
+			CSTR:痣 = 泪痣左
+		ELSE
+		ENDIF
+		IF RAND:3
+			SELECTCASE RAND:6
+			CASE 0
+				SELECTCASE RAND:6
+				CASE 0
+					CALL SET_COSTUME, "露脐装超短裙領帶西装/灰色" , TARGET
+				CASE 1
+					CALL SET_COSTUME, "露脐装超短裙領帶西装/茶色" , TARGET
+				CASE 2
+					CALL SET_COSTUME, "露脐装超短裙領帶西装/緑色" , TARGET
+				CASE 3
+					CALL SET_COSTUME, "露脐装超短裙領帶西装/黒" , TARGET	
+				CASE 4
+					CALL SET_COSTUME, "露脐装超短裙領帶西装/青" , TARGET
+				CASE 5
+					CALL SET_COSTUME, "露脐装超短裙領帶西装/赤" , TARGET
+				ENDSELECT
+			CASE 1
+				SELECTCASE RAND:6
+				CASE 0
+					CALL SET_COSTUME, "露脐装超短裙西装外衣/灰色" , TARGET
+				CASE 1
+					CALL SET_COSTUME, "露脐装超短裙西装外衣/茶色" , TARGET
+				CASE 2
+					CALL SET_COSTUME, "露脐装超短裙西装外衣/緑色" , TARGET
+				CASE 3
+					CALL SET_COSTUME, "露脐装超短裙西装外衣/黒" , TARGET	
+				CASE 4
+					CALL SET_COSTUME, "露脐装超短裙西装外衣/青" , TARGET
+				CASE 5
+					CALL SET_COSTUME, "露脐装超短裙西装外衣/赤" , TARGET
+				ENDSELECT
+			CASE 2
+				SELECTCASE RAND:6
+				CASE 0
+					CALL SET_COSTUME, "露脐装超短裙水手服/赤" , TARGET
+				CASE 1
+					CALL SET_COSTUME, "露脐装超短裙水手服/灰色" , TARGET
+				CASE 2
+					CALL SET_COSTUME, "露脐装超短裙水手服/紺色" , TARGET
+				CASE 3
+					CALL SET_COSTUME, "露脐装超短裙水手服/白" , TARGET
+				CASE 4
+					CALL SET_COSTUME, "露脐装超短裙水手服/黒" , TARGET
+				CASE 5
+					CALL SET_COSTUME, "露脐装超短裙水手服/青" , TARGET
+				ENDSELECT
+			CASE 3
+				SELECTCASE RAND:10
+				CASE 0
+					CALL SET_COSTUME, "背心/赤" , TARGET
+				CASE 1
+					CALL SET_COSTUME, "背心/緑色" , TARGET
+				CASE 2
+					CALL SET_COSTUME, "背心/濃紫" , TARGET
+				CASE 3
+					CALL SET_COSTUME, "背心/桃色" , TARGET
+				CASE 4
+					CALL SET_COSTUME, "背心/黒" , TARGET
+				CASE 5
+					CALL SET_COSTUME, "背心/青" , TARGET
+				CASE 6
+					CALL SET_COSTUME, "背心/橙色" , TARGET
+				CASE 7
+					CALL SET_COSTUME, "背心/灰色" , TARGET
+				CASE 8
+					CALL SET_COSTUME, "背心/紺色" , TARGET
+				CASE 9
+					CALL SET_COSTUME, "背心/白" , TARGET
+				ENDSELECT
+			CASE 4
+				SELECTCASE RAND:9
+				CASE 0
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/赤" , TARGET
+				CASE 1
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/緑色" , TARGET
+				CASE 2
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/濃紫" , TARGET
+				CASE 3
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/桃色" , TARGET
+				CASE 4
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/黒" , TARGET
+				CASE 5
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/青" , TARGET
+				CASE 6
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/橙色" , TARGET
+				CASE 7
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/灰色" , TARGET
+				CASE 8
+					CALL SET_COSTUME, "露脐装超短裙V领毛衣/白" , TARGET
+				ENDSELECT
+			CASE 5
+				SELECTCASE RAND:2
+				CASE 0
+					CALL SET_SHIRT, "領帯女式衬衫" , TARGET
+				CASE 1
+					CALL SET_SHIRT, "蝴蝶結女式衬衫" , TARGET
+				ENDSELECT
+			ENDSELECT
+			IF RAND:2
+				SELECTCASE KABURAND(9)
+				CASE 0
+					CALL SET_OTHER, "红色前開V领毛衣" , TARGET
+				CASE 1
+					CALL SET_OTHER, "緑色の前開V领毛衣" , TARGET
+				CASE 2
+					CALL SET_OTHER, "濃紫の前開V领毛衣" , TARGET
+				CASE 3
+					CALL SET_OTHER, "桃色の前開V领毛衣" , TARGET
+				CASE 4
+					CALL SET_OTHER, "黑色前開V领毛衣", TARGET
+				CASE 5
+					CALL SET_OTHER, "青い前開V领毛衣" , TARGET
+				CASE 6
+					CALL SET_OTHER, "橙色の前開V领毛衣" , TARGET
+				CASE 7
+					CALL SET_OTHER, "灰色の前開V领毛衣" , TARGET
+				CASE 8
+					CALL SET_OTHER, "白色前開V领毛衣" , TARGET
+				ENDSELECT
+			ELSE
+				CALL SET_OTHER, "" , TARGET
+			ENDIF
+		ELSE
+			SELECTCASE RAND:10
+			CASE 0
+				SELECTCASE RAND:4
+				CASE 0
+					CALL SET_COSTUME, "旗袍/赤" , TARGET
+				CASE 1
+					CALL SET_COSTUME, "旗袍/緑" , TARGET
+				CASE 2
+					CALL SET_COSTUME, "旗袍/青" , TARGET
+				CASE 3
+					CALL SET_COSTUME, "旗袍/黒" , TARGET
+				ENDSELECT
+			CASE 1
+				CALL SET_SHIRT, "针织毛衣/" , TARGET
+			CASE 2
+				CALL SET_SHIRT, "洛丽塔連衣裙" , TARGET
+			CASE 3
+				CALL SET_SHIRT, "哥特連衣裙" , TARGET
+			CASE 4
+				CALL SET_SHIRT, "哥特礼服" , TARGET
+			CASE 5
+				CALL SET_SHIRT, "夏日礼服" , TARGET
+			CASE 6
+				CALL SET_COSTUME, "美式校服" , TARGET
+			CASE 7
+				CALL SET_SHIRT, "露肩連衣裙" , TARGET
+			CASE 8
+				CALL SET_SHIRT, "褶边女式衬衫" , TARGET
+			CASE 9 
+				CALL SET_SHIRT, "蕾丝女式衬衫" , TARGET
+			ENDSELECT
+		ENDIF
+@MOBJUSEIK73
+IF RAND:6 == 0
+	CFLAG:TARGET:要受精確率 = 90
+ELSE
+	CFLAG:TARGET:要受精確率 = 1
+ENDIF
+SETBIT BASE:TARGET:バイオリズム, 12
+PRINTFORML

@@ -1,0 +1,119 @@
+﻿;TRYCALLFORMするのでFUNCTIONSしたいけどしちゃだめ
+@イェニェル_TachieGenerate(ImgParam, Size = 4000, Xpos = 2250, Ypos = 0)
+	#DIMS DYNAMIC ImgParam
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Ypos
+	#DIM DYNAMIC Size
+	#DIMS DYNAMIC ResultHTML
+	#DIMS DYNAMIC Layers,300
+	#DIM DYNAMIC LCount
+	#DIM DYNAMIC height
+
+	;#region 基本素体
+		Layers:0 = <nonbutton pos='{Xpos}'><img src='イェニェル_ベース' height='{Size}' ypos='{Ypos}'></nonbutton>
+	;#endregion 
+	
+	;#region 顔差分
+	IF STRCOUNT(ImgParam,"通常")
+		Layers:10 = <nonbutton pos='{Xpos}'><img src='イェニェル_通常' height='{Size}' ypos='{Ypos}'></nonbutton>
+	ELSEIF STRCOUNT(ImgParam,"ムッ")
+		Layers:10 = <nonbutton pos='{Xpos}'><img src='イェニェル_ムッ' height='{Size}' ypos='{Ypos}'></nonbutton>
+	ELSEIF STRCOUNT(ImgParam,"目陰")
+		Layers:10 = <nonbutton pos='{Xpos}'><img src='イェニェル_目陰' height='{Size}' ypos='{Ypos}'></nonbutton>
+	ELSE 
+		Layers:10 = <nonbutton pos='{Xpos}'><img src='イェニェル_通常' height='{Size}' ypos='{Ypos}'></nonbutton>
+	ENDIF 
+	;#region 立ち絵非表示
+		IF STRCOUNT(ImgParam,"非表示/")
+			VARSET Layers:0,
+		ENDIF
+	;#endregion 
+
+	ResultHTML = 
+	FOR LCount,0,300
+		ResultHTML += @"%Layers:LCount%"
+	NEXT
+	RESULTS = 
+	RESULTS += @"%ResultHTML%"
+	RETURN 1
+
+;立ち絵シミュレータ
+@イェニェル_TachieGenerate_Sim
+	#DIM DYNAMIC LCount
+	
+	#DIMS DYNAMIC Emotion
+
+	#DIMS DYNAMIC InputTags
+	
+	InputTags = 
+
+	$K15T_SIM_LOOP
+
+	CLEARLINE LINECOUNT
+	
+	InputTags = 
+	InputTags += @"%Emotion%"
+	CALL イェニェル_TachieGenerate(InputTags,4000,3500,300)
+	CALL D20XX_NO_NOBR2(RESULTS)
+	RESULTS:1 = %RESULTS%
+	CALL 槞彁_TachieGenerate(InputTags,4000,1000,00)
+	HTML_PRINT @"<nobr>%RESULTS%%RESULTS:1%</nobr>"
+
+	CALL D20XX_Generate_UniqueFcsv, "イェニェル"
+	CALL D20XX_FACE_FcsvToSprite(RESULTS,@"%InputTags%")
+	CALL D20XX_FACE_Packaging(RESULTS)
+	RESULTS = %CONVERTSTR(RESULTS)%
+	CALL D20XX_NO_NOBR(RESULTS)
+	CALL D20XX_OS_WindowInput_Constructor
+	HTML_PRINT @"<nobr>%RESULTS%</nobr>"
+
+	FOR Lcount,0,33
+		PRINTL 
+	NEXT
+
+	PRINTFORML 背景 [99]初期化
+	PRINTFORML [1]住宅街 [2]部屋
+	PRINTFORML 
+	PRINTFORML 表情 [199]初期化
+	PRINTFORML [100]通常 [101]ムッ [102]目陰
+	PRINTFORML 
+	PRINTFORML 現在的タグ:%InputTags%
+	PRINTFORML [998]コピペする [999]終了する
+	INPUT 
+
+	SELECTCASE RESULT/100
+		CASE 0
+			SELECTCASE RESULT
+				CASE 1
+					CALL OVERLAY_GCREATE, 600, "BG住宅街+0x70000000", MIN(1100,CLIENTWIDTH()), 850
+					CBGSETG 600, 0, 0, 5
+				CASE 2
+					CALL OVERLAY_GCREATE, 600, "BG自室+0x70000000", MIN(1100,CLIENTWIDTH()), 850
+					CBGSETG 600, 0, 0, 5
+				CASE 99
+					CALL EFFECT_ALLRESET
+			ENDSELECT
+		CASE 1
+			SELECTCASE RESULT%100
+				CASE 0
+					Emotion = 通常/
+				CASE 1
+					Emotion = ムッ/
+				CASE 2
+					Emotion = 目陰/
+				CASE 99
+					Emotion = 
+			ENDSELECT
+	ENDSELECT
+	
+	IF RESULT == 998
+		CLEARLINE LINECOUNT
+		PRINTFORML %InputTags%
+		WAIT
+	ELSEIF RESULT == 999
+		CALL EFFECT_ALLRESET
+		RETURN
+	ENDIF
+
+	GOTO K15T_SIM_LOOP
+	

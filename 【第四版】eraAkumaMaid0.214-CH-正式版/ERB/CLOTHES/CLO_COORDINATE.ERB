@@ -1,0 +1,1015 @@
+﻿;-------------------------------------------------
+;角色ARGに装扮ARGSを着せる
+;衣装を変えた場合は着替えたとみなす
+;-------------------------------------------------
+@SET_COORDINATE, ARGS, ARG
+#DIM LCOUNT
+;換装前の衣装の記録
+#DIMS BEFORE_CLO
+#DIMS AFTER_CLO
+#DIM MEMO_TARGET
+#DIMS BEFORE_UNDERWEAR
+#DIMS AFTER_UNDERWEAR
+#DIM FLAG_EVENTDAY
+
+MEMO_TARGET = TARGET
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+TARGET = ARG
+FLAG_EVENTDAY = 0
+
+SELECTCASE ARGS
+CASE "内衣"
+	IF CEVENT("内衣固定") == 0
+		IF COND("所持内衣数")
+			CALL SETFLAG, "所持内衣に更衣", TARGET
+		ELSE
+			TRYCALLFORM CLOTHES_K{NO:TARGET}, "内衣"
+		ENDIF
+		TFLAG:换上了自己的内衣 = 1
+		;换上了自己的内衣場合には色を合わせる
+		CALL EQ_CLOCOLOR, TARGET
+	ENDIF
+CASEELSE
+	VARSET BEFORE_CLO
+	VARSET AFTER_CLO
+	CALL DEL_CEVENT, "内衣固定"
+	;着ていた服を記憶する。一致するかを見るだけなので文字列コピーで良い
+	STR:変更衣装 = %ARGS%
+	CALL SETFLAG, "衣装の記録", TARGET
+
+	;内衣以外のフラグは消去
+	CALL SETFLAG, "内衣以外全脱ぎ", TARGET
+	CALL SET_OTHER, ""
+
+	;常につけている飾品があるならそれをつける
+	TRYCALLFORM CLOTHES_K{NO:TARGET}, "飾品"
+
+	BEFORE_CLO = %CSTR:胖次%_%CSTR:胸罩%_%CSTR:服%_%CSTR:裙%_%CSTR:贴身制服%_%CSTR:下身衣装%_%CSTR:襪子%_%CSTR:靴%_%CSTR:手套%_%CSTR:飾品%_
+	BEFORE_UNDERWEAR = %CSTR:胖次%_%CSTR:胸罩%_
+
+	TFLAG:着替えた = 0
+	CFLAG:CIP発生済 = 0
+
+	SELECTCASE ARGS
+	;角色衣装
+	CASE "制服", "体操服", "泳装", "便装", "居家服", "外出装", "约会衣装", "朝袭衣装", "夜袭衣装"
+		TRYCALLFORM CLOTHES_K{NO:TARGET}, ARGS
+
+		SELECTCASE ARGS
+		CASE "制服", "便装", "外出装"
+			;服装ごとの固定内衣がある場合
+			IF @"%CSTR:胖次%_%CSTR:胸罩%_" != BEFORE_UNDERWEAR
+			;所持内衣の設定有
+			ELSEIF COND("所持内衣数") && COND("内衣穿き替え領帯ミング") && RAND:3
+				CALL SETFLAG, "所持内衣に更衣", TARGET
+			;内衣を変えないことも
+			ELSEIF COND("内衣穿き替え領帯ミング") == 0 && RAND:4
+				STR:換装衣装 = %BEFORE_UNDERWEAR%
+				CALL SETFLAG, "内衣の換装", TARGET
+			ENDIF
+		CASE "体操服"
+			IF CHECK_PANTIES("布鲁马")
+			;内衣を変えないことも
+			ELSEIF COND("内衣穿き替え領帯ミング") == 0 || STRCOUNT(BEFORE_UNDERWEAR, "所持内衣")
+				STR:換装衣装 = %BEFORE_UNDERWEAR%
+				CALL SETFLAG, "内衣の換装", TARGET
+			;所持内衣の設定有
+			ELSEIF COND("所持内衣数") && COND("内衣穿き替え領帯ミング")
+				CALL SETFLAG, "所持内衣に更衣", TARGET
+			ENDIF
+		ENDSELECT
+		AFTER_CLO = %CSTR:胖次%_%CSTR:胸罩%_%CSTR:服%_%CSTR:裙%_%CSTR:贴身制服%_%CSTR:下身衣装%_%CSTR:襪子%_%CSTR:靴%_%CSTR:手套%_%CSTR:飾品%_
+
+		;着替えが起きていない場合は適当なものを呼び出して着せる
+		IF BEFORE_CLO == AFTER_CLO && TFLAG:着替えた == 0
+			SELECTCASE ARGS
+			CASE "制服", "体操服", "泳装", "居家服"
+				TRYCALLFORM CLOTHES_K{NO:TARGET}, "便装"
+			CASE "外出装"
+				IF COND("夜") || PLACE("自宅") || PLACE("野外") || PLACE("情人旅館")
+					TRYCALLFORM CLOTHES_K{NO:TARGET}, "便装"
+				ELSE
+					TRYCALLFORM CLOTHES_K{NO:TARGET}, "制服"
+				ENDIF
+			CASE "约会衣装"
+				TRYCALLFORM CLOTHES_K{NO:TARGET}, "便装"
+			CASE "朝袭衣装"
+				IF CFLAG:夜型
+					TRYCALLFORM CLOTHES_K{NO:TARGET}, "便装"
+				ELSE
+					TRYCALLFORM CLOTHES_K{NO:TARGET}, "制服"
+					SIF BEFORE_CLO == AFTER_CLO && TFLAG:着替えた == 0
+						TRYCALLFORM CLOTHES_K{NO:TARGET}, "便装"
+				ENDIF
+				SIF COND("外套脱衣発生")
+					CALL RESET_OTHER, "外套", TARGET
+			CASE "夜袭衣装"
+				TRYCALLFORM CLOTHES_K{NO:TARGET}, "便装"
+				SIF COND("外套脱衣発生")
+					CALL RESET_OTHER, "外套", TARGET
+			ENDSELECT
+		ENDIF
+	;イベントデーの特別な衣装
+	CASE "新年", "猫の日", "女仆の日", "比基尼の日", "七夕", "兔女郎の日", "万圣节", "圣诞节", "情人節", "白色情人節"
+		TRYCALLFORM CLOTHES_K{NO:TARGET}, ARGS
+		AFTER_CLO = %CSTR:胖次%_%CSTR:胸罩%_%CSTR:服%_%CSTR:裙%_%CSTR:贴身制服%_%CSTR:下身衣装%_%CSTR:襪子%_%CSTR:靴%_%CSTR:手套%_%CSTR:飾品%_
+
+		;着替えが起きていない場合は適当なものを呼び出して着せる
+		IF BEFORE_CLO == AFTER_CLO && TFLAG:着替えた == 0
+			SELECTCASE ARGS
+			CASE "女仆の日"
+				IF TALENT:男性 && COND("伪娘") == 0
+					CALL SETFLAG, "衣装記録からの復元", TARGET
+				ELSE
+					CALL SET_COSTUME, "女仆装"
+				ENDIF
+			CASE "比基尼の日"
+				IF TALENT:男性 && COND("伪娘") == 0
+					CALL SETFLAG, "衣装記録からの復元", TARGET
+				ELSE
+					CALL SET_COSTUME, "比基尼"
+				ENDIF
+			CASE "兔女郎の日"
+				IF TALENT:男性 && COND("伪娘") == 0
+					CALL SETFLAG, "衣装記録からの復元", TARGET
+				ELSEIF COND("合意：露出PLAY") && RAND:3 == 0
+					CALL SET_COSTUME, "逆兔女郎"
+				ELSE
+
+					IF (TALENT:魅力 || TALENT:喜歡引人注目 || ABL:露出癖 >= 5) && RAND:2
+						CALL SET_COSTUME, "高開衩兔女郎制服"
+					ELSE
+						CALL SET_COSTUME, "兔女郎制服"
+					ENDIF
+
+					;変化を付ける事も
+					SIF TALENT:小悪魔 || TALENT:好色
+						CSTR:贴身制服 += "帯拉链的/"
+				ENDIF
+			CASE "新年"
+				IF TALENT:男性
+					CALL SETFLAG, "衣装記録からの復元", TARGET
+				ELSE
+					CALL SET_COSTUME, "振袖"
+				ENDIF
+			CASE "七夕"
+				IF TALENT:男性
+					CALL SETFLAG, "衣装記録からの復元", TARGET
+				ELSE
+					CALL SET_COSTUME, "浴衣"
+				ENDIF
+			CASE "圣诞节"
+				IF TALENT:男性 || COND("夜") == 0
+					CALL SETFLAG, "衣装記録からの復元", TARGET
+				ELSE
+					CALL SET_COSTUME, "聖誕服"
+				ENDIF
+			CASEELSE
+				SIF BEFORE_CLO == AFTER_CLO && TFLAG:着替えた == 0
+					CALL SETFLAG, "衣装記録からの復元", TARGET
+			ENDSELECT
+		ENDIF
+
+		FLAG_EVENTDAY = 1
+
+	;それ以外はコスチュームARGSを着せる
+	CASEELSE
+		CALL SET_COSTUME, ARGS, TARGET
+	ENDSELECT
+
+	;共通属性を着けて、EQUIPを見る
+	CALL CHECK_ALLCLOFLAG, TARGET
+
+	;着替えた後の衣装
+	AFTER_CLO = %CSTR:胖次%_%CSTR:胸罩%_%CSTR:服%_%CSTR:裙%_%CSTR:贴身制服%_%CSTR:下身衣装%_%CSTR:襪子%_%CSTR:靴%_%CSTR:手套%_%CSTR:飾品%_
+	AFTER_UNDERWEAR = %CSTR:胖次%_%CSTR:胸罩%_
+
+	;胖次と胸罩の変更が起きた場合はロックする
+	SIF BEFORE_UNDERWEAR != AFTER_UNDERWEAR
+		CALL SET_CEVENT, "内衣固定"
+
+
+
+	;着替えた場合はフラグON
+	IF STR:衣装記録 != AFTER_CLO
+		CALL SETFLAG, "着替えをした"
+
+		;泳装などに着替えた場合はそれまでの内衣をしまう
+		IF CHECK_CLO("泳装姿") || EQUIP:贴身制服
+			CALL SETFLAG, "内衣をしまう"
+		ELSE
+			;しまった内衣があるなら身に着ける
+			CALL SETFLAG, "しまった内衣を身に着ける"
+		ENDIF
+
+		;イベントデーの着替えの設定
+		IF FLAG_EVENTDAY
+			CFLAG:Cosplay中 = 1
+			;着替えたら拭汗
+			CALL SETFLAG_DAILY, "拭汗", TARGET
+		ENDIF
+	ENDIF
+	;连褲襪指定してる？
+	SIF CHECK_BOTTOM("连褲襪")
+		CALL SETFLAG, "请求换上连褲襪", TARGET
+ENDSELECT
+
+;胖次の着用禁止
+SIF CHECK_CLO("泳装姿") == 0 && COND("身嗜み：没穿内褲")
+	CALL SET_PANTIES, ""
+SIF CFLAG:電源BOX && CHECK_CLO("電源BOX保持可能") == 0
+	CFLAG:電源BOX = 0
+
+TARGET = MEMO_TARGET
+
+;-------------------------------------------------
+;角色ARGにコスチュームARGSを着せる。ARGSは/で区切って追加属性をくっつける事も出来る
+;例）CALL SET_COSTUME, "水手服/白" とすると、水手服に対応したCSTRに本来の文字列に加えて 白/ が追加される
+;（色を変更する場合には、元からあったものを上書きするので複数の色を持つ衣装になる心配はしなくてよい）
+;主にコスチュームの色を変更したい時に使うと良い
+;-------------------------------------------------
+@SET_COSTUME, ARGS, ARG
+#DIMS MEMO_COS
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+STR_ADD = %EXTSTR(ARGS, "/")%
+ARGS = %EXTSTR(ARGS, "", "/")%
+
+
+SELECTCASE ARGS
+CASE "女教師"
+	CALL SET_SHIRT, @"蝴蝶結領帯丝巾女式衬衫/女教師/%STR_ADD%", ARG
+	CALL SET_SKIRT, "紧身裙", ARG
+	CALL SET_BOTTOM, "開放型连褲襪", ARG
+	CALL SET_SHOES, "平底鞋", ARG
+CASE "和服"
+	CALL SET_SHIRT, @"和服/%STR_ADD%", ARG
+	CALL SET_SOCKS, "短布襪", ARG
+	CALL SET_SHOES, "草履", ARG
+CASE "紋付袴"
+	CALL SET_SHIRT, @"紋付袴/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "馬上袴", ARG
+	CALL SET_SOCKS, "短布襪", ARG
+	CALL SET_SHOES, "草履", ARG
+
+CASE "執事服"
+	CALL SET_SHIRT, @"執事服/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "西褲", ARG
+	CALL SET_GLOVE, "絹手套", ARG
+	CALL SET_SOCKS, "襪子", ARG
+	CALL SET_SHOES, "革靴", ARG
+
+CASE "女仆装"
+	CALL SET_SHIRT, @"女仆装/%STR_ADD%", ARG
+	CALL SET_SOCKS, "吊帯襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+	CALL SET_OTHER, "颈环/礼服頭花", ARG
+CASE "法式女仆装"
+	CALL SET_SHIRT, @"法式女仆装/%STR_ADD%", ARG
+	CALL SET_SOCKS, "吊帯襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+	CALL SET_OTHER, "颈环/礼服頭花", ARG
+CASE "圍裙"
+	CALL SET_SHIRT, @"圍裙/%STR_ADD%", ARG
+CASE "修女服"
+	CALL SET_SHIRT, @"修道服/%STR_ADD%", ARG
+	CALL SET_SOCKS, "吊帯長筒襪", ARG
+	CALL SET_SHOES, "短靴", ARG
+	CALL SET_OTHER, "修女帽", ARG
+CASE "护士"
+	CALL SET_SHIRT, @"护士服/%STR_ADD%", ARG
+	CALL SET_SOCKS, "長筒襪", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+	CALL SET_OTHER, "护士帽", ARG
+CASE "旗袍"
+	CALL SET_SHIRT, @"旗袍/%STR_ADD%", ARG
+	CALL SET_SHOES, "高跟鞋", ARG
+CASE "開胸旗袍"
+	CALL SET_SHIRT, @"開胸旗袍/%STR_ADD%", ARG
+	CALL SET_SHOES, "高跟鞋", ARG
+CASE "巫女"
+	CALL SET_SHIRT, @"巫女服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "緋袴", ARG
+	CALL SET_SOCKS, "短布襪", ARG
+	CALL SET_SHOES, "草履", ARG
+CASE "婚纱礼服"
+	CALL SET_SHIRT, @"婚纱礼服/%STR_ADD%", ARG
+	CALL SET_SOCKS, "吊帯長筒襪", ARG
+	CALL SET_GLOVE, "絲綢手套", ARG
+	CALL SET_SHOES, "平底鞋", ARG
+	CALL SET_OTHER, "頭冠/頭纱", ARG
+
+CASE "啦啦队制服"
+	CALL SET_SHIRT, @"啦啦队制服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你百褶裙/赤", ARG
+	CALL SET_SOCKS, "褶边襪", ARG
+	CALL SET_SHOES, "運動鞋", ARG
+CASE "拘束衣"
+	CALL SET_PANTIES, @"拘束衣胖次/%STR_ADD%", ARG
+	CALL SET_BRA, @"拘束衣胸罩/%STR_ADD%", ARG
+	CALL SET_GLOVE, "皮革手套", ARG
+	CALL SET_SHOES, "靴", ARG
+CASE "紐拘束衣"
+	CALL SET_PANTIES, @"開放型拘束衣胖次/%STR_ADD%", ARG
+	CALL SET_BRA, @"紐拘束衣胸罩/%STR_ADD%", ARG
+	CALL SET_GLOVE, "皮革手套", ARG
+	CALL SET_SHOES, "靴", ARG
+;兔女郎制服
+CASE "兔女郎制服", "兔", "高開衩兔女郎制服", "高開衩兔女郎", "生足兔女郎制服", "连褲襪兔女郎制服", "裤襪兔女郎制服", "開放型连褲襪兔女郎制服", "開放型裤襪兔女郎制服", "開放型网纹裤襪兔女郎制服"
+	SELECTCASE ARGS
+	CASE "兔女郎制服", "兔"
+		CALL SET_BODYS, @"兔女郎制服/%STR_ADD%", ARG
+		CALL SET_BOTTOM, "网纹裤襪", ARG
+	CASE "高開衩兔女郎制服", "高開衩兔女郎"
+		CALL SET_BODYS, @"高開衩兔女郎制服/%STR_ADD%", ARG
+		CALL SET_BOTTOM, "网纹裤襪", ARG
+	CASE "生足兔女郎制服"
+		CALL SET_BODYS, @"兔女郎制服/%STR_ADD%", ARG
+	CASE "连褲襪兔女郎制服"
+		CALL SET_BODYS, @"兔女郎制服/%STR_ADD%", ARG
+		CALL SET_BOTTOM, "连褲襪", ARG
+	CASE "裤襪兔女郎制服"
+		CALL SET_BODYS, @"兔女郎制服/%STR_ADD%", ARG
+		CALL SET_BOTTOM, "裤襪", ARG
+	CASE "開放型连褲襪兔女郎制服"
+		CALL SET_BODYS, @"兔女郎制服/%STR_ADD%", ARG
+		CALL SET_BOTTOM, "開放型连褲襪", ARG
+	CASE "開放型裤襪兔女郎制服"
+		CALL SET_BODYS, @"兔女郎制服/%STR_ADD%", ARG
+		CALL SET_BOTTOM, "開放型裤襪", ARG
+	CASE "開放型网纹裤襪兔女郎制服"
+		CALL SET_BODYS, @"兔女郎制服/%STR_ADD%", ARG
+		CALL SET_BOTTOM, "開放型网纹裤襪", ARG
+	ENDSELECT
+
+	CALL SET_SHOES, "高跟鞋", ARG
+
+	SELECTCASE CHECK_CLOCOLOR(STR_ADD)
+	CASE ""
+		CALL SET_OTHER, "红色蝶形領帯/黑色兔耳", ARG
+	CASE "赤", "青", "黒", "白"
+		CALL SET_OTHER, @"%CHECK_CLOCOLOR(STR_ADD)%い蝶形領帯/%CHECK_CLOCOLOR(STR_ADD)%い兔耳", ARG
+	CASEELSE
+		CALL SET_OTHER, @"%CHECK_CLOCOLOR(STR_ADD)%の蝶形領帯/%CHECK_CLOCOLOR(STR_ADD)%の兔耳", ARG
+	ENDSELECT
+
+
+CASE "全裸兔"
+	CALL SETFLAG, "扒成裸体", ARG
+	IF CONDS("顔の色") == "色白"
+		CALL SET_GLOVE, "絲綢手套/黒"
+	ELSE
+		CALL SET_GLOVE, "絲綢手套"
+	ENDIF
+	CALL SET_SOCKS, "褶边短襪", ARG
+	CALL SET_SHOES, "高跟鞋", ARG
+
+	SELECTCASE CHECK_CLOCOLOR(STR_ADD)
+	CASE ""
+		CALL SET_OTHER, "红色蝶形領帯/黑色兔耳/腿环", ARG
+	CASE "赤", "青", "黒", "白"
+		CALL SET_OTHER, @"%CHECK_CLOCOLOR(STR_ADD)%い蝶形領帯/%CHECK_CLOCOLOR(STR_ADD)%い兔耳/腿环", ARG
+	CASEELSE
+		CALL SET_OTHER, @"%CHECK_CLOCOLOR(STR_ADD)%の蝶形領帯/%CHECK_CLOCOLOR(STR_ADD)%の兔耳/腿环", ARG
+	ENDSELECT
+
+;他にもいろいろバリエーションあるかも…？
+CASE "逆兔女郎", "逆兔女郎套装"
+	CALL SET_SHIRT, @"逆兔女郎套装/%STR_ADD%", ARG
+	CALL SET_GLOVE, "礼服手套/黒", ARG
+	CALL SET_SOCKS, "逆兔女郎裤襪", ARG
+	CALL SET_SHOES, "高跟鞋", ARG
+	CALL SET_OTHER, "兔耳", ARG
+	IF TALENT:ARG:男性
+		CALL SET_PANTIES, "丁字褲", ARG
+	ELSE
+		CALL SET_PANTIES, "Ｃ胖次", ARG
+	ENDIF
+	CALL SET_BRA, "心形乳貼", ARG
+
+CASE "猫内衣"
+	CALL SET_PANTIES, @"肉球印花胖次/%STR_ADD%", ARG
+	CALL SET_BRA, "猫型胸罩", ARG
+	SIF TALENT:ARG:動物耳 == 0
+		CALL SET_OTHER, "猫耳", ARG
+CASE "浴衣"
+	CALL SET_SHIRT, @"浴衣/%STR_ADD%", ARG
+	CALL SET_SHOES, "木屐", ARG
+CASE "振袖"
+	CALL SET_SHIRT, @"振袖/%STR_ADD%", ARG
+	CALL SET_SOCKS, "短布襪", ARG
+	CALL SET_SHOES, "草履", ARG
+	CALL SET_OTHER, "簪子", ARG
+CASE "羽織袴"
+	CALL SET_SHIRT, @"和服/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "馬上袴", ARG
+	CALL SET_OTHER, "羽織", ARG
+	CALL SET_SOCKS, "短布襪", ARG
+	CALL SET_SHOES, "草履", ARG
+
+CASE "聖誕服"
+	CALL SET_SHIRT, @"聖誕服/%STR_ADD%", ARG
+	CALL SET_SOCKS, "及膝襪", ARG
+	CALL SET_SHOES, "靴", ARG
+	CALL SET_OTHER, "聖誕帽", ARG
+CASE "聖誕服男"
+	CALL SET_SHIRT, @"聖誕服/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "圣诞休闲褲", ARG
+	CALL SET_SOCKS, "短襪", ARG
+	CALL SET_SHOES, "靴", ARG
+	CALL SET_OTHER, "聖誕帽", ARG
+
+CASE "水手服"
+	CALL SET_SHIRT, @"水手服/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐装超短裙水手服"
+	CALL SET_SHIRT, @"水手服/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "超短水手服"
+	CALL SET_SHIRT, @"超短水手服/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro百褶裙", ARG
+	CALL SET_SOCKS, "及膝襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "无袖水手服"
+	CALL SET_SHIRT, @"无袖水手服/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+
+CASE "西装外衣"
+	CALL SET_SHIRT, @"蝴蝶結領帯丝巾西装外衣/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐装超短裙西装外衣"
+	CALL SET_SHIRT, @"蝴蝶結領帯丝巾西装外衣/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "超短迷你西装外衣"
+	CALL SET_SHIRT, @"蝴蝶結領帯丝巾西装外衣/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+
+CASE "領帶西装"
+	CALL SET_SHIRT, @"領帶西装/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐装超短裙領帶西装"
+	CALL SET_SHIRT, @"領帶西装/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "超短迷你領帶西装"
+	CALL SET_SHIRT, @"領帶西装/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+
+CASE "男子西装"
+	CALL SET_SHIRT, @"男子西装/学生服/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "西褲", ARG
+	CALL SET_SOCKS, "襪子", ARG
+	CALL SET_SHOES, "運動鞋", ARG
+
+CASE "女式衬衫"
+	CALL SET_SHIRT, @"女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐装超短裙女式衬衫"
+	CALL SET_SHIRT, @"女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "超短迷你女式衬衫"
+	CALL SET_SHIRT, @"女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+
+CASE "領帯女式衬衫"
+	CALL SET_SHIRT, @"領帯女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐装超短裙領帯女式衬衫"
+	CALL SET_SHIRT, @"領帯女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "超短迷你領帯女式衬衫"
+	CALL SET_SHIRT, @"領帯女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+
+CASE "蝴蝶結領帯丝巾女式衬衫"
+	CALL SET_SHIRT, @"蝴蝶結領帯丝巾女式衬衫/%STR_ADD%", ARG
+	CALL SET_SKIRT, "紧身裙", ARG
+	CALL SET_SOCKS, "吊帯長筒襪", ARG
+	CALL SET_SHOES, "高跟鞋", ARG
+
+CASE "宽松女式衬衫"
+	CALL SET_SHIRT, @"宽松女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐装超短裙宽松女式衬衫"
+	CALL SET_SHIRT, @"宽松女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "超短迷你宽松女式衬衫"
+	CALL SET_SHIRT, @"宽松女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐女式衬衫"
+	CALL SET_SHIRT, @"露脐女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你格子裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+
+CASE "背心"
+	CALL SET_SHIRT, @"背心/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐装超短裙背心"
+	CALL SET_SHIRT, @"背心/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "超短迷你背心"
+	CALL SET_SHIRT, @"背心/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "男子背心"
+	CALL SET_SHIRT, @"男子背心/学生服/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "休闲褲", ARG
+	CALL SET_SOCKS, "襪子", ARG
+	CALL SET_SHOES, "運動鞋", ARG
+
+CASE "V领毛衣"
+	CALL SET_SHIRT, @"V领毛衣/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "露脐装超短裙V领毛衣"
+	CALL SET_SHIRT, @"V领毛衣/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "迷你百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+CASE "超短迷你V领毛衣"
+	CALL SET_SHIRT, @"V领毛衣/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro百褶裙", ARG
+	CALL SET_SOCKS, "膝下襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+
+CASE "美式校服"
+	CALL SET_SHIRT, @"美式校服女式衬衫/学生服/%STR_ADD%", ARG
+	CALL SET_SKIRT, "Micro格子裙", ARG
+	CALL SET_SOCKS, "及膝襪", ARG
+	CALL SET_SHOES, "小皮靴", ARG
+	CALL SET_OTHER, "領帯", ARG
+
+CASE "校服"
+	CALL SET_SHIRT, @"校服/学生服/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "学生休闲褲", ARG
+	CALL SET_SOCKS, "襪子", ARG
+	CALL SET_SHOES, "運動鞋", ARG
+
+CASE "体操服布鲁马", "体操服高開衩布鲁马", "体操服五分褲", "体操服紧身短褲", "体操服运动衫"
+	SELECTCASE ARGS
+	CASE "体操服高開衩布鲁马"
+		CALL SET_SHIRT, @"体操服(短)/%STR_ADD%", ARG
+	CASEELSE
+		CALL SET_SHIRT, @"体操服/%STR_ADD%", ARG
+	ENDSELECT
+
+	SELECTCASE ARGS
+	CASE "体操服布鲁马"
+		CALL SET_BOTTOM, "布鲁马", ARG
+	CASE "体操服高開衩布鲁马"
+		CALL SET_PANTIES, "高開衩布鲁马", ARG
+	CASE "体操服五分褲"
+		CALL SET_BOTTOM, "五分褲", ARG
+	CASE "体操服紧身短褲"
+		CALL SET_BOTTOM, "紧身短褲", ARG
+	CASE "体操服运动衫"
+		CALL SET_BOTTOM, "运动衫休闲褲", ARG
+	ENDSELECT
+	CALL SET_SOCKS, "短襪", ARG
+	CALL SET_SHOES, "運動鞋", ARG
+
+CASE "运动衫布鲁马", "运动衫高開衩布鲁马", "运动衫五分褲", "运动衫紧身短褲", "上下运动衫"
+	CALL SET_SHIRT, @"运动衫/%STR_ADD%", ARG
+	SELECTCASE ARGS
+	CASE "运动衫布鲁马"
+		CALL SET_BOTTOM, "布鲁马", ARG
+	CASE "运动衫高開衩布鲁马"
+		CALL SET_PANTIES, "高開衩布鲁马", ARG
+	CASE "运动衫五分褲"
+		CALL SET_BOTTOM, "五分褲", ARG
+	CASE "运动衫紧身短褲"
+		CALL SET_BOTTOM, "紧身短褲", ARG
+	CASE "上下运动衫"
+		CALL SET_BOTTOM, @"运动衫休闲褲/%STR_ADD%", ARG
+	ENDSELECT
+	CALL SET_SOCKS, "短襪", ARG
+	CALL SET_SHOES, "運動鞋", ARG
+
+CASE "前開运动衫布鲁马"
+	CALL SET_SHIRT, @"体操服/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "布鲁马", ARG
+	CALL SET_SOCKS, "短襪", ARG
+	CALL SET_SHOES, "運動鞋", ARG
+	CALL SET_OTHER, "前開运动衫", ARG
+CASE "Ｔ恤运动衫"
+	CALL SET_SHIRT, @"Ｔ恤/%STR_ADD%", ARG
+	CALL SET_BOTTOM, "运动衫休闲褲", ARG
+	CALL SET_SOCKS, "短襪", ARG
+	CALL SET_SHOES, "運動鞋", ARG
+
+CASE "工装裤"
+	CALL SET_BOTTOM, @"工装裤/%STR_ADD%", ARG
+	CALL SET_SHIRT, @"Ｔ恤", ARG
+CASE "死库水"
+	CALL SET_BODYS, @"死库水/%STR_ADD%", ARG
+CASE "新死库水"
+	CALL SET_BODYS, @"新死库水/%STR_ADD%", ARG
+CASE "紧身短褲型死库水"
+	CALL SET_BODYS, @"紧身短褲型死库水/%STR_ADD%", ARG
+CASE "競泳泳装"
+	CALL SET_BODYS, @"競泳泳装/%STR_ADD%", ARG
+CASE "高開衩競泳泳装"
+	CALL SET_BODYS, @"高開衩競泳泳装/%STR_ADD%", ARG
+CASE "比基尼"
+	CALL SET_PANTIES, @"比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "褶边比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "紐比基尼"
+	CALL SET_PANTIES, @"紐比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "Ｔ字褲比基尼"
+	CALL SET_PANTIES, @"Ｔ字褲比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "褶边比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "紐Ｔ字褲比基尼"
+	CALL SET_PANTIES, @"紐Ｔ字褲比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "丁字褲比基尼"
+	CALL SET_PANTIES, @"丁字褲比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "褶边比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "紐丁字褲比基尼"
+	CALL SET_PANTIES, @"紐丁字褲比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "白比基尼"
+	CALL SET_PANTIES, @"白色比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "白色比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "黒比基尼"
+	CALL SET_PANTIES, @"黑色比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "黑色比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "Micro比基尼"
+	CALL SET_PANTIES, @"Micro比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "Micro比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+CASE "淚珠泳衣比基尼", "淚珠泳衣"
+	CALL SET_PANTIES, @"淚珠泳衣比基尼/%STR_ADD%", ARG
+	CALL SET_BRA, "Micro比基尼胸罩", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+
+CASE "衝浪胖次"
+	CALL SET_PANTIES, @"衝浪胖次/%STR_ADD%", ARG
+	CALL SET_BRA, "", ARG
+	CALL SET_SHOES, "凉鞋", ARG
+
+CASE @"%CALLNAME:MASTER%の衬衫"
+	CALL SET_SHIRT, @"%CALLNAME:MASTER%の衬衫/%STR_ADD%", ARG
+
+;これは今年の泳装を用意してあるのが前提
+CASE "今年の泳装"
+	CALL SETFLAG, "今年の泳装の復元", ARG
+ENDSELECT
+SIF CHECK_BOTTOM("休闲褲", ARG) && CHECK_SHIRT("和裤子颜色搭配", ARG) && CHECK_CUSEABLE(BOTTOM(ARG, "種類"), CLOCOLOR(CSTR:ARG:服), ARG)
+	CSTR:ARG:下身衣装 = %MERGE_STR(CSTR:ARG:下身衣装, CLOCOLOR(CSTR:ARG:服) )%
+
+;-------------------------------------------------
+;服装ARGSのパターンがあるならそれを並べる
+;ARGSにはNAME_LASTCHOICE, ARGS:1にはTYPE_LASTCHOICEが入ってるのを想定
+;-------------------------------------------------
+@CLO_PAT(ARGS, ARGS:1)
+#FUNCTIONS
+#DIMS NAME_LASTCHOICE
+#DIMS TYPE_LASTCHOICE
+
+NAME_LASTCHOICE = %ARGS%
+TYPE_LASTCHOICE = %ARGS:1%
+
+
+SELECTCASE NAME_LASTCHOICE
+CASE "水手服", "无袖水手服", "露脐装超短裙水手服", "超短水手服"
+	SELECTCASE TYPE_LASTCHOICE
+	CASE "装扮"
+		RETURNF "水手服/无袖水手服/露脐装超短裙水手服/超短水手服"
+	CASEELSE
+		RETURNF "水手服/无袖水手服/超短水手服"
+	ENDSELECT
+CASE "西装外衣", "領帶西装", "露脐装超短裙西装外衣", "露脐装超短裙領帶西装", "男子西装"
+	SELECTCASE TYPE_LASTCHOICE
+	CASE "装扮"
+		RETURNF "西装外衣/領帶西装/露脐装超短裙西装外衣/露脐装超短裙領帶西装/男子西装"
+	CASEELSE
+		RETURNF "西装外衣/領帶西装/男子西装"
+	ENDSELECT
+CASE "女式衬衫", "領帯女式衬衫", "蝴蝶結領帯丝巾女式衬衫", "宽松女式衬衫", "褶边女式衬衫", "蕾丝女式衬衫", "露脐女式衬衫"
+	SELECTCASE TYPE_LASTCHOICE
+	CASE "装扮"
+		RETURNF "女式衬衫/領帯女式衬衫/蝴蝶結領帯丝巾女式衬衫/宽松女式衬衫/露脐女式衬衫"
+	CASEELSE
+		RETURNF "女式衬衫/領帯女式衬衫/蝴蝶結領帯丝巾女式衬衫/宽松女式衬衫/露脐女式衬衫/褶边女式衬衫/蕾丝女式衬衫"
+	ENDSELECT
+
+CASE "无袖女式衬衫", "无袖女式衬衫Ｂ", "露脐无袖女式衬衫", "領帯无袖女式衬衫", "露脐領帯无袖女式衬衫"
+	RETURNF "无袖女式衬衫/无袖女式衬衫Ｂ/露脐无袖女式衬衫/領帯无袖女式衬衫/露脐領帯无袖女式衬衫"
+
+CASE "背心", "露脐装超短裙背心", "男子背心"
+	SELECTCASE TYPE_LASTCHOICE
+	CASE "装扮"
+		RETURNF "背心/露脐装超短裙背心/男子背心"
+	CASEELSE
+
+	ENDSELECT
+CASE "V领毛衣", "露脐装超短裙V领毛衣"
+	SELECTCASE TYPE_LASTCHOICE
+	CASE "装扮"
+		RETURNF "V领毛衣/露脐装超短裙V领毛衣"
+	CASEELSE
+
+	ENDSELECT
+CASE "体操服布鲁马", "体操服高開衩布鲁马", "前開运动衫布鲁马", "运动衫布鲁马"
+	RETURNF "体操服布鲁马/体操服高開衩布鲁马/前開运动衫布鲁马/运动衫布鲁马"
+CASE "体操服五分褲", "运动衫五分褲"
+	RETURNF "体操服五分褲/运动衫五分褲"
+CASE "体操服紧身短褲", "运动衫紧身短褲"
+	RETURNF "体操服紧身短褲/运动衫紧身短褲"
+CASE "体操服运动衫", "上下运动衫"
+	RETURNF "体操服运动衫/上下运动衫"
+CASE "体操服", "露脐体操服"
+	RETURNF "体操服/露脐体操服"
+
+CASE "連衣裙", "褶边連衣裙", "露肩連衣裙", "哥特連衣裙", "洛丽塔連衣裙"
+	RETURNF "連衣裙/褶边連衣裙/露肩連衣裙/哥特連衣裙/洛丽塔連衣裙"
+CASE "格子連衣裙", "格子連衣裙黒蝴蝶結", "格子連衣裙Ｂ", "格子連衣裙Ｂ黒蝴蝶結"
+	RETURNF "格子連衣裙/格子連衣裙黒蝴蝶結/格子連衣裙Ｂ/格子連衣裙Ｂ黒蝴蝶結"
+
+CASE "拘束衣", "紐拘束衣"
+	RETURNF "拘束衣/紐拘束衣"
+CASE "兔女郎制服", "高開衩兔女郎制服"
+	RETURNF "兔女郎制服/高開衩兔女郎制服"
+CASE "競泳泳装", "高開衩競泳泳装"
+	RETURNF "競泳泳装/高開衩競泳泳装"
+
+CASE "旗袍", "開胸旗袍"
+	RETURNF "旗袍/開胸旗袍"
+CASE "Ｔ恤", "宽大的Ｔ恤", "怪图案Ｔ恤"
+	RETURNF "Ｔ恤/宽大的Ｔ恤/怪图案Ｔ恤"
+CASE "皮革夹克", "恤皮革夹克"
+	RETURNF "皮革夹克/恤皮革夹克"
+CASE "中世紧身長袍", "紧身長袍"
+	RETURNF "中世紧身長袍/紧身長袍"
+CASE "运动衫", "詰襟运动衫"
+	RETURNF "运动衫/詰襟运动衫"
+CASE "吊帯背心", "露脐吊帯背心", "運動胸罩"
+	SELECTCASE TYPE_LASTCHOICE
+	CASE "外衣"
+		RETURNF "吊帯背心/露脐吊帯背心"
+	CASE "胸罩"
+		RETURNF "吊帯背心/運動胸罩"
+	ENDSELECT
+CASE "吊帯衫", "露脐吊帯衫"
+	RETURNF "吊帯衫/露脐吊帯衫"
+CASE "連帽風衣", "无袖連帽風衣", "長連帽風衣"
+	RETURNF "連帽風衣/无袖連帽風衣/長連帽風衣"
+
+CASE "针织毛衣", "縦毛衣", "无袖毛衣", "露背针织毛衣", "萌袖毛衣"
+	RETURNF "针织毛衣/縦毛衣/无袖毛衣/露背针织毛衣/萌袖毛衣"
+CASE "高領毛衣", "開胸高領毛衣"
+	RETURNF "高領毛衣/開胸高領毛衣"
+
+CASE "热褲", "牛仔热褲", "迷你热褲", "前開热褲"
+	RETURNF "热褲/牛仔热褲/迷你热褲/前開热褲"
+CASE "休闲褲", "西褲", "前開休闲褲"
+	RETURNF "休闲褲/西褲/前開休闲褲"
+CASE "牛仔褲", "前開牛仔褲", "低腰牛仔褲"
+	RETURNF "牛仔褲/前開牛仔褲/低腰牛仔褲"
+
+CASE "连褲襪", "開放型连褲襪"
+	RETURNF "连褲襪/開放型连褲襪"
+CASE "网纹裤襪", "開放型网纹裤襪"
+	RETURNF "网纹裤襪/開放型网纹裤襪"
+CASE "裤襪", "開放型裤襪"
+	RETURNF "裤襪/開放型裤襪"
+
+CASE "百褶裙", "長百褶裙", "迷你百褶裙", "Micro百褶裙"
+	RETURNF "百褶裙/長百褶裙/迷你百褶裙/Micro百褶裙"
+CASE "格子裙", "長格子裙", "迷你格子裙", "Micro格子裙"
+	RETURNF "格子裙/長格子裙/迷你格子裙/Micro格子裙"
+CASE "紧身裙", "長紧身裙", "迷你紧身裙", "Micro紧身裙"
+	RETURNF "紧身裙/長紧身裙/迷你紧身裙/Micro紧身裙"
+CASE "荷葉邊", "花柄荷葉邊"
+	RETURNF "荷葉邊/花柄荷葉邊"
+
+CASE "內褲", "简约內褲"
+	RETURNF "內褲/简约內褲"
+CASE "蕾丝的胖次", "総蕾丝的胖次"
+	RETURNF "総蕾丝的胖次/蕾丝的胖次"
+
+CASE "褶边の胖次", "褶边高開衩"
+	RETURNF "褶边の胖次/褶边高開衩"
+
+CASE "比基尼", "紐比基尼", "Ｔ字褲比基尼", "紐Ｔ字褲比基尼"
+	SELECTCASE TYPE_LASTCHOICE
+	CASE "装扮"
+		RETURNF "比基尼/紐比基尼/Ｔ字褲比基尼/紐Ｔ字褲比基尼/丁字褲比基尼/紐丁字褲比基尼"
+	CASEELSE
+		RETURNF "紐比基尼/比基尼/Ｔ字褲比基尼/紐Ｔ字褲比基尼"
+	ENDSELECT
+
+CASE "丁字褲", "紐丁字褲"
+	RETURNF "紐丁字褲/丁字褲"
+CASE "丁字褲比基尼", "紐丁字褲比基尼"
+	SELECTCASE TYPE_LASTCHOICE
+	CASE "装扮"
+		RETURNF "比基尼/紐比基尼/Ｔ字褲比基尼/紐Ｔ字褲比基尼/丁字褲比基尼/紐丁字褲比基尼"
+	CASEELSE
+		RETURNF "紐丁字褲比基尼/丁字褲比基尼"
+	ENDSELECT
+
+CASE "四角内褲", "四角褲"
+	RETURNF "四角内褲/四角褲"
+
+CASE "满杯胸罩", "简约胸罩", "條紋胸罩"
+	RETURNF "简约胸罩/满杯胸罩/條紋胸罩"
+CASE "開放型胸罩", "１／４杯胸罩"
+	RETURNF "開放型胸罩/１／４杯胸罩"
+CASE "比基尼胸罩", "褶边比基尼胸罩", "Micro比基尼胸罩"
+	RETURNF "比基尼胸罩/褶边比基尼胸罩/Micro比基尼胸罩"
+CASE "抹胸", "裹胸布"
+	RETURNF "抹胸/裹胸布"
+CASE "乳贴", "心形乳貼", "圆形乳贴", "×型乳贴", "星型乳贴"
+	RETURNF "乳贴/心形乳貼/圆形乳贴/×型乳贴/星型乳贴"
+CASE "拘束衣胸罩", "紐拘束衣胸罩"
+	RETURNF "拘束衣胸罩/紐拘束衣胸罩"
+
+CASE "手套", "絹手套", "革手套"
+	RETURNF "手套/絹手套/革手套"
+CASE "礼服袖套", "皮革袖套"
+	RETURNF "礼服袖套/皮革袖套"
+
+CASE "襪子", "短襪"
+	RETURNF "襪子/短襪"
+CASE "褶边短襪", "褶边襪", "褶边过膝襪"
+	RETURNF "褶边短襪/褶边襪/褶边过膝襪"
+CASE "吊帯長筒襪", "吊帯襪"
+	RETURNF "吊帯長筒襪/吊帯襪"
+
+CASE "革靴", "莫卡辛软皮鞋"
+	RETURNF "革靴/莫卡辛软皮鞋"
+CASE "凉鞋", "无后跟鞋"
+	RETURNF "凉鞋/无后跟鞋"
+CASE "靴", "長靴", "短靴", "短筒女靴"
+	RETURNF "靴/長靴/短靴/短筒女靴"
+
+CASE "眼鏡", "专家眼鏡", "黑框眼鏡", "金丝眼鏡", "玳瑁眼鏡", "瓶底眼鏡", "圈圈眼鏡", "瓶底胡须眼鏡", "圈圈胡须眼鏡"
+	RETURNF "眼鏡/专家眼鏡/黑框眼鏡/金丝眼鏡/玳瑁眼鏡/瓶底眼鏡/圈圈眼鏡/瓶底胡须眼鏡/圈圈胡须眼鏡"
+CASE "太阳鏡", "頭上太阳鏡"
+	RETURNF "太阳鏡/頭上太阳鏡"
+
+CASE "前開連帽風衣", "前開无袖連帽風衣"
+	RETURNF "前開連帽風衣/前開无袖連帽風衣"
+CASE "外套", "粗呢外套"
+	RETURNF "外套/粗呢外套"
+CASE "工作围裙", "厨房围裙", "打工围裙", "圍裙"
+	RETURNF "工作围裙/厨房围裙/打工围裙/圍裙"
+CASE "裤吊帯", "褶边裙吊帯"
+	RETURNF "裤吊帯/褶边裙吊帯"
+ENDSELECT
+RETURNF ""
+
+
+
+;-------------------------------------------------
+;ARG番の装扮の名称。換装などで表を作る際に使う
+;-------------------------------------------------
+@NAME_COORDINATE(ARG)
+#FUNCTIONS
+VARSET LOCALS
+
+SELECTCASE ARG
+;0～19 Cosplay
+CASE 0
+	LOCALS = 女教師
+CASE 1
+	LOCALS = 和服
+CASE 2
+	LOCALS = 女仆装
+CASE 3
+	LOCALS = 护士
+CASE 4
+	LOCALS = 旗袍
+CASE 5
+	LOCALS = 巫女
+CASE 6
+	LOCALS = 婚纱礼服
+CASE 7
+	LOCALS = 啦啦队制服
+CASE 8
+	LOCALS = 拘束衣
+CASE 9
+	LOCALS = 兔女郎制服
+CASE 10
+	LOCALS = 猫蕾丝情趣内衣
+CASE 11
+	LOCALS = Micro比基尼
+CASE 12
+	LOCALS = 振袖
+CASE 13
+	LOCALS = 浴衣
+CASE 14
+	LOCALS = 淚珠泳衣比基尼
+CASE 15
+	LOCALS = 聖誕服
+CASE 16
+	LOCALS = 逆兔女郎
+
+;20～39 制服
+CASE 20
+	LOCALS = 水手服
+CASE 21
+	LOCALS = 露脐装超短裙水手服
+CASE 22
+	LOCALS = 超短水手服
+
+CASE 25
+	LOCALS = 西装外衣
+CASE 26
+	LOCALS = 露脐装超短裙西装外衣
+
+CASE 30
+	LOCALS = 美式校服
+
+CASE 35
+	LOCALS = 蝴蝶結領帯丝巾女式衬衫
+
+CASE 38
+	LOCALS = 校服
+CASE 39
+	LOCALS = 男子西装
+
+;40～59 体操服
+CASE 40
+	LOCALS = 体操服布鲁马
+CASE 41
+	LOCALS = 体操服五分褲
+CASE 42
+	LOCALS = 体操服紧身短褲
+CASE 43
+	LOCALS = 体操服运动衫
+
+;60～79 泳装
+CASE 60
+	LOCALS = 死库水
+CASE 61
+	LOCALS = 競泳泳装
+CASE 62
+	LOCALS = 白比基尼
+CASE 63
+	LOCALS = 黒比基尼
+CASE 64
+	LOCALS = 奶牛比基尼
+CASE 65
+	LOCALS = 虎紋比基尼
+ENDSELECT
+RETURNF LOCALS
+

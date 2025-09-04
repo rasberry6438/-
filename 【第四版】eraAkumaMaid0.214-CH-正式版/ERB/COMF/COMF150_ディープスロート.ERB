@@ -1,0 +1,243 @@
+﻿@COM150
+;深喉
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+IF TEQUIP:深喉 == 0
+	CALL SHOW_COM_ORDER_COM, 150
+	;実行できない
+	SIF TCVAR:干劲 == 0
+		RETURN 0
+ENDIF
+;-------------------------------------------------
+;実行決定
+;-------------------------------------------------
+
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+;-------------------------------------------------
+;射精格子
+;-------------------------------------------------
+CALL SAMEN_CHECK
+
+RETURN 1
+
+
+@FLAG_COM150, ARG
+CALL SETFLAG, "口交フラグ", TARGET
+;対象の口⇔調教者のＰ的污垢が移動
+CALL EQ_STAIN, TARGET, "Ｍ", PLAYER, "Ｐ"
+
+@SOURCE_COM150, ARG
+;口交と強制口交の合わせ技
+IF TEQUIP:深喉
+	CALL SOURCE_COM91, 30
+	CALL SOURCE_COM140, 50
+ELSE
+	CALL SOURCE_COM91, 20
+	CALL SOURCE_COM140, 20
+ENDIF
+
+
+@TRAIN_MESSAGE_COM150
+;深喉解除(今のところは死に分岐)
+IF TEQUIP:深喉
+	;前回は強制口交
+	IF PREVCOM == 140 && COND("前Ｔ調教者") == PLAYER && TEQUIP:推倒 == 0
+		PRINTFORM %CALLNAME:PLAYER%將%CALLNAME:TARGET%的
+		IF RAND:2
+			PRINTFORM 口腔中衝刺的陰莖停下、挺直腰肢、
+		ELSE
+			;角が有ますか？
+			PRINTFORM \@ COND("角ハンドル") ? 犄角緊緊抓住 # 頭顱輕輕按住 \@挺直腰肢、
+		ENDIF
+		;大きいと食道にまで行ってしまう
+		IF SIZE("阴茎", PLAYER) >= 3
+			PRINTFORMW 將深深侵入食道的陰莖慢慢地抽出……
+		ELSE
+			PRINTFORMW 將侵犯著口腔深處的陰莖慢慢地抽出……
+		ENDIF
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%輕輕後仰、將直到根部也被完全嚥下的%CALLNAME:PLAYER%的陰莖解放出來……
+	ENDIF
+	TEQUIP:深喉 = 0
+	RETURN 0
+ENDIF
+
+PRINTFORM %CALLNAME:TARGET%
+;前回口交or強制口交
+IF (PREVCOM == 91 || PREVCOM == 140) && COND("前Ｔ調教者") == PLAYER
+	IF RAND:2 && CHECK("喉姦") >= 2
+		IF RAND:3 == 0 && SIZE("阴茎", PLAYER) >= 3
+			PRINTFORM 蹂躪著食道的
+		ELSE
+			PRINTFORM %TEXTR("毫無顧慮的使用著整個口腔的/在柔韌的舌頭上滑動著的")%
+		ENDIF
+	ELSEIF TEQUIP:推倒
+		PRINTFORM 臉頰深深埋在股間的
+	ELSEIF PREVCOM == 140 && RAND:2
+		PRINTFORM 主動搖動腰肢來配合的
+	ELSE
+		PRINTFORM 不禁露出恍惚神情的
+	ENDIF
+	PRINTFORM %CALLNAME:PLAYER%の
+;被逆推ているとき
+ELSEIF TEQUIP:推倒
+	;直前の調教と汚れで分岐
+	IF COND("Ｐ汚れ", PLAYER)
+		SIF (PREVCOM >= 70 && PREVCOM <= 79) && COND("前Ｔ調教者") == PLAYER && TEQUIP:眼罩 == 0
+			PRINT 從自己的肛門剛剛拔出、
+		;容易濕で追加
+		SIF TALENT:容易濕 && RAND:3 && TEQUIP:眼罩 == 0
+			PRINT べっとりと
+		SIF (PREVCOM >= 60 && PREVCOM <= 69) && COND("前Ｔ調教者") == PLAYER && TEQUIP:眼罩 == 0
+			PRINT 被自己的甜膩愛液弄髒的、
+		PRINT 染上淫靡污漬的、
+	;淫乱or施虐狂or施虐属性Lv.5以上で「害羞」を持たない
+	;ELSEIF (TALENT:淫乱 || TALENT:小悪魔 || ABL:施虐属性 >= 5) && TALENT:害羞 == 0
+	;	PRINT 滴落著透明唾液的
+	ELSEIF RAND:3 == 0
+		PRINTFORM 散發著異臭的
+	ELSE
+		PRINTFORM %TEXTS("阴茎：視覚", PLAYER)%
+	ENDIF
+ELSE
+	;六九式
+	IF TEQUIP:六九式
+		PRINTFORM %TEXTS("６９")%
+	;眼罩で分岐。ところで、Ｍ字開脚座りってもっといい名称無いですかね？
+	ELSEIF TEQUIP:眼罩 || TEQUIP:拘束
+		PRINT 、被嘴唇慢慢摸索到位置的
+	ENDIF
+
+	;直前の調教と汚れで分岐
+	IF PREVEX("放尿", PLAYER)
+		IF RAND:2
+			PRINTFORM 散發著撲鼻而來的強烈臭味的
+		ELSE
+			PRINTFORM 殘留著濁黃尿液的
+		ENDIF
+	ELSEIF PREVPLAY("挿入中", PLAYER)
+		CALL ADD_TEXT, "性器から口へ"
+	ELSEIF RAND:3 == 0
+		PRINTFORM 散發著異臭的
+	ELSE
+		PRINTFORM %TEXTS("阴茎：視覚", PLAYER)%
+	ENDIF
+ENDIF
+
+PRINTFORM 陰莖直到根部都%TEXTR("一口氣/深深吸入/輕而易舉地")%吞入咽喉、
+IF TALENT:恋慕 && RAND:4 == 0
+	IF RAND:2 && COND("陰毛", PLAYER) >= 5 && TEQUIP:六九式 == 0
+		PRINTFORM 將鼻尖埋入陰毛中細嗅摩擦著的同時、
+	ELSE
+		PRINTFORM 因口中的觸感與味道而陶醉的同時
+	ENDIF
+ELSEIF ABL:奉仕精神 >= 3 && TEQUIP:推倒 == 0 && TEQUIP:六九式 == 0 && RAND:3 == 0
+	PRINTFORM 用%TEXTR("不住上翻的眼珠/濕潤的瞳孔")%仰視著神情的同時、
+ELSEIF ABL:技巧 >= 3 && TEQUIP:口枷 == 0 && RAND:2
+	PRINTFORM %TEXTR("控制著緩急/用雙唇緊緊捆緊")%的同時、
+ELSEIF TALENT:嘔吐反射耐性 == 0 && RAND:2
+	PRINTFORM 無法抑制的肉體反射讓瞳孔痛苦的濕潤的同時、
+ELSE
+	PRINTFORM 從嘴角%TEXTR("充溢這細末的白沫的唾液/黏稠發亮的大量涎水")%慢慢垂落的同時、
+ENDIF
+;技巧４かつ奉仕精神３
+IF ABL:技巧 >= 4 && ABL:奉仕精神 >= 3
+	IF RAND:2
+		PRINTFORMW 將整個咽喉驅使著刺激深入口中的陰莖……
+	ELSE
+		PRINTFORMW 用輕輕抽搐的喉嚨擠壓並吮吸著陰莖……
+	ENDIF
+ELSEIF RAND:2
+	PRINTFORMW 用不住發出嗚咽的喉嚨盡力吮吸著……
+ELSE
+	PRINTFORMW 用喉咙\@ TEQUIP:推倒 ? 責弄 # 奉仕 \@着…
+ENDIF
+
+;TEQUIP:深喉の値で誰のものを咥えているかを記録
+TEQUIP:深喉 = PLAYER
+;フラグとTEQUIPが分かれているのは、射精後などにTEQUIP:深喉が０となっている時でも参照するため
+CALL SETFLAG, "深喉フラグ", TARGET
+
+
+@COM_ORDER_COM150, ARG
+#DIM MEMO_STAIN
+VARSET LOCAL
+LOCALS = 
+
+;すべての命令に共通の要素を考慮
+;(信頼が高いと命令に従いやすいなど)
+CALL COM_ORDER, ARG
+
+LOCAL = RESULT
+
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	LOCAL += MIN(ABL:奉仕精神, 10) * 2
+	LOCALS = %LOCALS% + 奉仕精神LV{ABL:奉仕精神}({MIN(ABL:奉仕精神, 10) * 2})
+ENDIF
+;ABL:受虐属性
+IF ABL:受虐属性
+	LOCAL += MIN(ABL:受虐属性, 5) * 3
+	LOCALS = %LOCALS% + 受虐属性LV{ABL:受虐属性}({MIN(ABL:受虐属性, 5) * 3})
+ENDIF
+;ABL:精液中毒
+IF ABL:精液中毒
+	LOCAL += MIN(ABL:精液中毒, 5) * 3
+	LOCALS = %LOCALS% + 精液中毒LV{ABL:精液中毒}({MIN(ABL:精液中毒, 5) * 3})
+ENDIF
+;害羞
+IF TALENT:害羞
+	LOCAL -= 1
+	LOCALS = %LOCALS% - 害羞(1)
+ENDIF
+;献身的
+IF TALENT:献身
+	LOCAL += 6
+	LOCALS = %LOCALS% + 献身(6)
+ENDIF
+;否定快感
+IF TALENT:否定快感
+	LOCAL -= 1
+	LOCALS = %LOCALS% - 否定快感(1)
+ENDIF
+;Ｍ性向
+IF TALENT:Ｍ性向
+	LOCAL += 10
+	LOCALS = %LOCALS% + Ｍ性向(10)
+ENDIF
+;嘔吐反射耐性
+IF TALENT:嘔吐反射耐性
+	LOCAL += 20
+	LOCALS = %LOCALS% + 嘔吐反射耐性(20)
+ENDIF
+
+MEMO_STAIN = COM_ORDER_STAIN("Ｐ", "Ｍ")
+;施虐狂なら、汚れていても、かまわずに突っ込みます
+SIF ABL:PLAYER:施虐属性 >= 3
+	MEMO_STAIN /= 3
+
+;汚れ有
+IF MEMO_STAIN
+	LOCAL -= MEMO_STAIN
+	LOCALS = %LOCALS% - 汚れ有
+	;汚臭鈍感
+	SIF TALENT:汚臭鈍感 || TALENT:汚臭敏感
+		LOCALS = %LOCALS%、\@TALENT:汚臭鈍感 ? 汚臭鈍感 # 汚臭敏感\@
+	SIF COND("陶酔")
+		LOCALS = %LOCALS%、陶酔で半減
+	LOCALS = %LOCALS%({MEMO_STAIN})
+ENDIF
+
+;合計を表示(60以上で実行。強制口交よりも高難易度)
+CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 60
+
+RETURN RESULT

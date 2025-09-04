@@ -1,0 +1,173 @@
+﻿;喘ぎ声の使い方
+;喘ぎ声は%CNAME()%や%CALLNAME:〇〇%と同じく、半角の%で囲って使います
+;最初は誰が喘ぐのかCALLNAME（呼び名）を書いて、次に何回喘がせたいかの回数を半角数字で書いてください（最大50回まで）
+;※名前を書いた後は必ず,（コンマ）を半角で入力し、その後半角スペースを入れてください！
+;例：弗理希艾尔を３回喘がせたいときは「%PANT("弗理希艾尔", 3)%」と書く
+;詳しい慣れた人用の説明はテ接吻トファイルを閲覧してください
+
+@PANT(LIM_LOOP, S_NAME, HEARTS, PARTS)
+#FUNCTIONS
+;関数の引数。触るのは口上制作やプログラムに慣れてきてから良いです
+#DIM DYNAMIC LIM_LOOP				;喘いでほしい回数を入力する場所。3回喘ぎたいときは二個目に3と入力する
+#DIMS DYNAMIC S_NAME				;角色クターの名前を入力する場所。弗理希艾尔小姐を喘がせる時は最初に"弗理希艾尔"と書く（ダブルクオーテーションふたつは必須なので注意！）
+#DIMS DYNAMIC PARTS			;角色クターにどこで喘いでほしいのか指定できる変数。例えばお尻で喘いでほしいときは4個目に"肛門"と入力する
+#DIMS DYNAMIC HEARTS		;爱心喘息をしてほしいかどうかを指定できる変数。ここで"爱心要"、あるいは"要"と書くと語尾に爱心が付くようになる
+;ここからは関数内で用いる変数。ここは慣れても一切触らなくてOK
+#DIM SN_NUM					;S_NAMEで書かれた文字列から変換した数値を保管する変数
+#DIM LCOUNT					;回数をカウントする変数
+#DIMS JUDGE_FLAG			;喘ぎの種類を選択する変数。プログラムの都合上使わざるをえなかった
+#DIMS DYNAMIC PANT			;喘ぎ声を格納する変数
+
+;ここからが実際の命令文
+
+;回数が多すぎるとエラーが出ます
+SIF LIM_LOOP > 20
+	RETURNF "回数が多すぎます！　1回以上20回以下で入力してください！"
+
+;回数が0より下のときもエラーが出ます
+SIF LIM_LOOP <= -1
+	RETURNF "回数が負の数値です！　1回以上20回以下で入力してください！"
+
+;eraの游戏内では角色クターは名前ではなく、固有の番号を与えられて管理されています
+;ここでは角色クターの名前から固有の番号を引き出し、変数SN_NUMに格納しています
+;TARGETが入力された時は就这様TARGETをSN_NUMに入れる。また、S_NAMEが設定されていない時も同じ処理をする
+SELECTCASE S_NAME
+CASE "TARGET"
+	SN_NUM = TARGET
+CASE "ASSI"
+	SN_NUM = ASSI
+CASE "PLAYER"
+	SN_NUM = PLAYER
+CASEELSE
+	SN_NUM = CNUM(S_NAME)
+ENDSELECT
+
+;LIM_LOOPが設定されていない場合、1から5までの数字を随机で代入する
+SIF LIM_LOOP == 0
+	LIM_LOOP = 3 + RAND:3
+
+;TARGETという変数、とSN_NUMの数字に入れられた数値、つまり角色クターが一緒ではない場合、SN_NUMとTARGETの中身を入れ替えます
+;絶対に必須という訳ではないのですが、TARGETは色々と便利なのでこうしています
+SWAP SN_NUM, TARGET
+
+;実際に動かす時、どこが刺激されているのかを決める命令文
+;固定されている時は中を入れ替え、そうでないときは就这様利用する
+JUDGE_FLAG = 通常/
+
+SIF JUDGE("肛門")
+	JUDGE_FLAG += "肛門/"
+
+SIF JUDGE("ヴァギナ")
+	JUDGE_FLAG += "ヴァギナ/"
+
+SIF JUDGE("Ａ挿入")
+	JUDGE_FLAG += "Ａ挿入/"
+
+SIF JUDGE("Ｖ挿入")
+	JUDGE_FLAG += "Ｖ挿入/"
+
+SIF JUDGE("尿道挿入")
+	JUDGE_FLAG += "尿道挿入/"
+
+SIF JUDGE("胸")
+	JUDGE_FLAG += "胸/"
+
+SIF JUDGE("接吻")
+	JUDGE_FLAG += "接吻/"
+
+SIF JUDGE("オーラル性交")
+	JUDGE_FLAG += "オーラル性交"
+
+;ここから実際に喘ぎ声を組み合わせる
+FOR LCOUNT, 0, LIM_LOOP
+
+	;引数PARTSで喘ぎ声が固定された時、されていない時がここで分岐します
+	IF PARTS != ""
+		;PARTSに書かれた文字列に合わせてどこの部位での喘ぎ声に固定するのか決める
+		;長くなってしまうので、どの文字がどの場所扱いなのかはSET_PARTSという別の関数に
+		JUDGE_FLAG = %SET_PARTS(PARTS)%
+	ELSE
+		JUDGE_FLAG = %TEXTR(JUDGE_FLAG)%
+	ENDIF
+
+	STR:0 = %JUDGE_FLAG%
+	STR:1 = %SET_PARTS(PARTS)%
+
+	PANT += @"%PANT_COMMON(JUDGE_FLAG)%"
+
+	;爱心を付けるかどうかをここで決める。
+	IF HEARTS == "爱心要" || HEARTS == "要" || CFLAG:爱心喘息
+		PANT += "_H_"
+	ELSE
+		;爱心が無い場合は、可読性を上げるために半角スペースを入力
+		PANT += " "
+	ENDIF
+
+;ここから一番上に、設定された回数に達するまでループします
+NEXT
+
+;ここでもう一度SN_NUMとTARGETを入れ替えます
+;ここで入れ替えない場合、調教対象じゃなかった喘いでいた子が急に調教対象になるというとんでもないバグの発生源になるので絶対にいじらないでください
+SWAP SN_NUM, TARGET
+
+RETURNF PANT
+
+;どの指令がどの扱いに対応するのかを決める関数
+@JUDGE(ARGS)
+#FUNCTION
+
+SELECTCASE ARGS
+CASE "肛門"
+	SIF TEQUIP:肛用振動棒 || TEQUIP:浣腸 || INSERT("Ａ挿入") || GROUPMATCH(SELECTCOM, 2, 9, 14, 33, 70, 71, 72, 73, 74, 75, 136, 142, 143)
+		RETURNF 1
+CASE "ヴァギナ"
+	SIF TEQUIP:振動棒 || INSERT("Ｖ挿入") || GROUPMATCH(SELECTCOM, 1, 7, 8, 31, 60, 61, 62, 63, 64, 65, 66, 67, 68, 141, 143)
+		RETURNF 1
+CASE "Ａ挿入"
+	SIF INSERT("Ａ挿入") || TEQUIP:肛用振動棒 || TEQUIP:肛塞 || GROUPMATCH(SELECTCOM, 70, 71, 72, 73, 74, 75)
+		RETURNF 1
+CASE "Ｖ挿入"
+	SIF INSERT("Ｖ挿入") || TEQUIP:振動棒 || GROUPMATCH(SELECTCOM, 60, 61, 62, 63, 64, 65, 66, 67, 68)
+		RETURNF 1
+CASE "尿道挿入"
+	SIF INSERT("尿道挿入") || TEQUIP:尿道振動棒 || GROUPMATCH(SELECTCOM, 84, 85, 86, 87, 88)
+		RETURNF 1
+CASE "胸"
+	SIF GROUPMATCH(SELECTCOM, 5, 81, 82)
+		RETURNF 1
+CASE "接吻"
+	SIF TEQUIP:接吻 || SELECTCOM == 6
+		RETURNF 1
+CASE "オーラル性交"
+	SIF GROUPMATCH(SELECTCOM, 91, 96, 98, 99, 100)
+		RETURNF 1
+ENDSELECT
+
+RETURNF 0
+
+@SET_PARTS(ARGS)
+#FUNCTIONS
+#DIMS PARTS
+
+SELECTCASE ARGS
+CASE "肛門", "菊花", "お尻", "尻"
+	PARTS = 肛門
+CASE "ヴァギナ", "おまんこ", "まんこ", "マンコ", "オマンコ", "膣"
+	PARTS = ヴァギナ
+CASE "Ａ挿入", "肛門性交", "Ａ性交"
+	PARTS = Ａ挿入
+CASE "Ｖ挿入", "性交", "Ｖ性交"
+	PARTS = Ｖ挿入
+CASE "尿道挿入", "尿道性交"
+	PARTS = 尿道挿入
+CASE "胸", "胸部", "オッ餡餅"
+	PARTS = 胸
+CASE "接吻", "接吻"
+	PARTS = 接吻
+CASE "オーラル性交", "口交", "舐陰", "六九式"
+	PARTS = オーラル性交
+CASEELSE
+	PARTS = 通常
+ENDSELECT
+
+RETURNF PARTS

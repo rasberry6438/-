@@ -1,0 +1,531 @@
+﻿@EVENTEND
+#PRI
+REDRAW 1
+;二人推倒の時には、きちんと二回ここに来るのに注意
+
+SIF FLAG:助手を調教した == 0
+	FLAG:助手の調教で終了 = ASSIPLAY
+
+;PLAYERをMASTERに直す
+SIF PLAYER != MASTER
+	CALL SETFLAG, "調教者交代", 1
+
+;恋慕を外した時に戻し忘れているなら、ここで復帰
+CALL SETFLAG, "助手相手の恋慕外し終了"
+
+CALL CHECK_SATISFACTION, TARGET
+CALL CHECK_SATISFACTION, ASSI
+
+CALL SETFLAG, "調教終了", TARGET
+CALL SETFLAG, "調教終了", MASTER
+SIF ASSI
+	CALL SETFLAG, "調教終了", ASSI
+
+
+@EVENTEND
+#LATER
+
+;調教中フラグOFF
+FLAG:状況判定 = 0
+FLAG:助手の調教で終了 = 0
+IF FLAG:助手を調教した != 2
+
+	CALL BLANKLINE
+	IF EQUIP:Ｈ的奖励
+		PRINTFORML 和%CALLNAME:TARGET%的奖励Ｈ結束了。
+	ELSEIF FLAG:放課後Ｈ
+		PRINTFORML 和%CALLNAME:TARGET%的放課後Ｈ結束了。
+	ELSE
+		PRINTFORML 和%CALLNAME:TARGET%的秘事结束了。
+	ENDIF
+
+	;録画したビデオを売却
+	CALL SELL_VIDEO
+
+	;調教後行為の格子
+	CALL SELF_CHECK
+
+	;助手の調教終了時特典
+	CALL AFTERTRA_BONUS_ADVISER
+ENDIF
+
+CALL EVENT_AFTER_TRAIN
+
+BEGIN ABLUP
+
+
+@EVENT_AFTER_TRAIN
+;体力の上昇格子
+CALL EVENT_GROWTH
+
+;体力と精力が減り過ぎていたら回復させる
+BASE:精力 = MAX(BASE:精力, MAXBASE:精力/4)
+BASE:体力 = MAX(BASE:体力, MAXBASE:体力/4)
+
+;Ｈ的写真
+CALL SHOW_TRAINPHOTO
+
+;何の珠を得られたか
+CALL JUEL_CHECK
+
+;TFLAG初期化
+VARSET TFLAG
+
+;調教経験を増やす
+EXP:Ｈ回数 += 1
+
+;日期の記録
+CFLAG:前回Ｈ日 = DAY
+CFLAG:前回お相手日 = DAY
+
+@EVENT_AFTER_TRAIN_COS, ARG
+#DIM MEMO_TIME
+#DIM MEMO_DAY
+#DIMS MEMO_PLACE
+
+;PRINTFORM %SAVESTR:現在位置%, %TEXTS("時間")% → 
+
+MEMO_TIME = TIME
+MEMO_DAY = DAY
+MEMO_PLACE = %SAVESTR:現在位置%
+
+CALL SETFLAG, "次の時間帯のＴＰＯ"
+
+;PRINTFORML %SAVESTR:現在位置%, %TEXTS("時間")%
+
+;汚れを初期化
+CALL RESET_STAIN_EX, "老廃物以外全部", ARG
+
+;便装に着替えてもらう。ここでは次の時間の衣装になる
+CALL SET_COORDINATE, "内衣", ARG
+CALL SET_COORDINATE, "便装", ARG
+
+
+TIME = MEMO_TIME
+DAY = MEMO_DAY
+SAVESTR:現在位置 = %MEMO_PLACE%
+
+@SHOW_TRAINPHOTO
+#DIM LCOUNT
+#DIMS PHOTOS, 100
+#DIM NUM_PHOTO
+
+VARSET PHOTOS
+NUM_PHOTO = 0
+VARSET LOCALS
+SPLIT SAVESTR:Ｈ中の撮影履歴, "/", LOCALS
+
+FOR LCOUNT, 0, 100
+	SIF LOCALS:LCOUNT == ""
+		BREAK
+	;partnerが写っているか判別
+	SIF STRCOUNT(LOCALS:LCOUNT, CALLNAME:TARGET) == 0
+		CONTINUE
+	PHOTOS:NUM_PHOTO = 『%LOCALS:LCOUNT%』
+	NUM_PHOTO += 1
+NEXT
+;一枚も撮っていない場合はここで終わり
+SIF NUM_PHOTO == 0
+	RETURN 0
+
+DRAWLINE
+PRINTFORML 今回撮影的%CALLNAME:TARGET%的Ｈ的写真、
+FOR LCOUNT, 0, NUM_PHOTO
+	SIF PHOTOS:LCOUNT == ""
+		BREAK
+	PRINTFORML %PHOTOS:LCOUNT%
+NEXT
+PRINTFORMW 共{NUM_PHOTO}枚（類似・重複除外）。
+
+@JUEL_CHECK
+#DIM LCOUNT
+#DIM BONUS
+;指导者能力などでのBOUNS
+#DIM EX_BONUS, 16
+#DIM MEMO_LV
+#DIM MEMO_TEC
+#DIM MEMO_LINECOUNT
+#DIM MEMO_REDRAW
+#DIM A_JUST
+#DIM V_JUST
+#DIM U_JUST
+
+DRAWLINE
+VARSET LOCAL
+BONUS = 0
+VARSET EX_BONUS
+;性欲などの充足BOUNS
+IF COND("性欲大満足")
+	PRINT 性欲大満足
+	BONUS += MIN(ABL:欲望, 10) + 5
+ELSEIF COND("性欲満足")
+	PRINT 性欲満足
+	BONUS += MIN(ABL:欲望/2, 4) + 1
+ENDIF
+IF COND("精液欲大満足")
+	SIF BONUS
+		PRINT ＆
+	PRINT 精液欲大満足
+	BONUS += MIN(ABL:精液中毒*2, 10) + 5
+ELSEIF COND("精液欲満足")
+	SIF BONUS
+		PRINT ＆
+	PRINT 精液欲満足
+	BONUS += MIN(ABL:精液中毒, 4) + 1
+ENDIF
+IF EX:連続絶頂 >= 3
+	SIF BONUS
+		PRINT ＆
+	PRINTFORM 連続絶頂{EX:連続絶頂}COMBO
+	BONUS += LIMIT(EX:連続絶頂 - 2, 1, 5)
+ENDIF
+
+IF BONUS
+	PRINTL BOUNS！
+	PRINTFORML 獲得的珠增加了{BONUS}％（反感の珠减少了{BONUS}％）
+	CALL BLANKLINE
+ENDIF
+IF EXP_GAIN("媚薬経験")
+	SETCOLOR DEF_COLOR("イエロー")
+	PRINTL ※因为使用了媚薬、所以獲得的珠的量減少了※
+	RESETCOLOR
+	CALL BLANKLINE
+ENDIF
+;-------------------------------------------------
+;指导者BOUNS
+;-------------------------------------------------
+SIF CADV("天才肌")
+	EX_BONUS:3 = 5
+SIF CADV("好奇の視線")
+	EX_BONUS:4 = 5
+IF CADV("急成長") && TARGET == ASSI:1
+	IF COND("性欲大満足")
+		EX_BONUS:3 += 10
+	ELSEIF COND("性欲満足")
+		EX_BONUS:3 += 5
+	ENDIF
+	IF COND("精液欲大満足")
+		EX_BONUS:3 += 10
+	ELSEIF COND("精液欲満足")
+		EX_BONUS:3 += 5
+	ENDIF
+ENDIF
+;-------------------------------------------------
+;反感の珠の打ち消し格子
+;-------------------------------------------------
+CALL VARSET_DENIAL_CHECK
+FOR LCOUNT, 0, 16
+	SELECTCASE PALAMNAME:LCOUNT
+	CASE ""
+		CONTINUE
+	CASE "反感"
+		GOTJUEL:LCOUNT = MULTIPLY(GET_JUEL(LCOUNT), 100 - BONUS)
+		JUEL:0:LCOUNT = JUEL:LCOUNT + GOTJUEL:LCOUNT
+	CASEELSE
+		GOTJUEL:LCOUNT = MULTIPLY(GET_JUEL(LCOUNT), 100 + BONUS + EX_BONUS:LCOUNT)
+		JUEL:0:LCOUNT = JUEL:LCOUNT + GOTJUEL:LCOUNT
+	ENDSELECT
+NEXT
+CALL DENIAL_CHECK
+;-------------------------------------------------
+
+PRINTL 調教の結果：
+SELECTCASE CFLAG:好感度 - TCVAR:好感度開始前
+CASE IS > 0
+	CALL PRINT_STRW, @"好感度到達{CFLAG:好感度}_爱心粉紅_(+{CFLAG:好感度 - TCVAR:好感度開始前})_。"
+CASE IS < 0
+	CALL PRINT_STRW, @"好感度到達{CFLAG:好感度}_青_(-{TCVAR:好感度開始前 - CFLAG:好感度})_。"
+CASE 0
+	CALL PRINT_STRW, @"好感度{CFLAG:好感度}沒有變化。"
+ENDSELECT
+
+SELECTCASE BASE:魂 - TCVAR:收集的魂開始前
+CASE IS > 0
+	CALL PRINT_STRW, @"收集的魂到達%TEXTS("0.01", BASE:魂)%_爱心粉紅_(+%TEXTS("0.01", BASE:魂 - TCVAR:收集的魂開始前)%)_。"
+ENDSELECT
+
+CALL BLANKLINE
+FOR LCOUNT, 0, 16
+	SIF PALAMNAME:LCOUNT == ""
+		CONTINUE
+
+	PRINTFORM %PALAMNAME:LCOUNT%の珠：({JUEL:LCOUNT, 10} \@ GOTJUEL:LCOUNT >= 0 ? + # - \@ 
+	IF GOTJUEL:LCOUNT > 0
+		SETCOLOR DEF_COLOR("黄色")
+	ELSEIF GOTJUEL:LCOUNT < 0
+		SETCOLOR DEF_COLOR("青")
+	ENDIF
+	PRINTFORM {ABS(GOTJUEL:LCOUNT), 10} 
+	RESETCOLOR
+
+	JUEL:LCOUNT += GOTJUEL:LCOUNT
+
+	PRINTFORML = {JUEL:LCOUNT, 10}\)
+NEXT
+
+PRINTW 獲得了以上的珠。
+
+;絶頂BOUNSはここで重置
+JUEL:快ＣBOUNS = 0
+JUEL:快ＶBOUNS = 0
+JUEL:快ＡBOUNS = 0
+JUEL:快ＢBOUNS = 0
+JUEL:快ＭBOUNS = 0
+JUEL:快尿BOUNS = 0
+
+CALL BLANKLINE
+MEMO_LINECOUNT = LINECOUNT
+
+FOR LCOUNT, 0, 100
+	SELECTCASE LCOUNT
+	CASE 4 TO 7
+		CONTINUE
+	ENDSELECT
+
+	SIF EXPNAME:LCOUNT != "" && EXP_GAIN(EXPNAME:LCOUNT)
+		PRINTFORML %TEXT_RJ(EXPNAME:LCOUNT, 16)%＋{EXP_GAIN(EXPNAME:LCOUNT), 3}
+NEXT
+
+IF LINECOUNT > MEMO_LINECOUNT
+	PRINTFORMW 以上的経験\@ EXP_GAIN("経験値") ? 和、経験値{EXP_GAIN("経験値")}Ｐ #  \@獲得了。
+ELSEIF EXP_GAIN("経験値")
+	PRINTFORMW 獲得了経験値{EXP_GAIN("経験値")}Ｐ。
+ELSE
+	CLEARLINE 1
+ENDIF
+
+;精液のやり取り
+CALL BLANKLINE
+IF EX:絶対搾精量 && EX:主人への絶対射精量
+	PRINTFORMW 这次%CALLNAME:TARGET%被%TEXTS("間柄の", MASTER)%%CALLNAME:MASTER%射进了{EX:絶対搾精量}ml精液、并反过来射出了{EX:主人への絶対射精量}ml的精液。
+ELSEIF EX:絶対搾精量
+	PRINTFORM %CALLNAME:TARGET%被%TEXTS("間柄の", MASTER)%%CALLNAME:MASTER%给
+	IF COND("避孕套搾精量")
+		IF COND("避孕套搾精量") != EX:絶対搾精量
+			PRINTFORMW 注入了{EX:絶対搾精量 - COND("避孕套搾精量")}ml精液、在避孕套里射出了{COND("避孕套搾精量")}ml精液。
+		ELSE
+			PRINTFORMW 在避孕套里射出了{COND("避孕套搾精量")}ml精液。
+		ENDIF
+	ELSE
+		PRINTFORMW 注入了{EX:絶対搾精量}ml精液。
+	ENDIF
+ELSEIF EX:主人への絶対射精量
+	PRINTFORMW %CALLNAME:TARGET%向%TEXTS("間柄の", MASTER)%的%CALLNAME:MASTER%注入了{EX:主人への絶対射精量}ml的精液。
+ELSE
+	CLEARLINE 1
+ENDIF
+
+;完美契合のアナウンス
+V_JUST = 0
+A_JUST = 0
+U_JUST = 0
+
+IF EXP_GAIN("Ｖ性交経験")
+	SIF COND("Ｖ完美契合")
+		V_JUST = 1
+	CLEARBIT TALENT:完美契合, 0
+
+	CALL CALC, "Ｖ履歴：記憶母数", TARGET
+	SIF CHECK("Ｖ完美契合", TARGET, MASTER)
+		SETBIT TALENT:完美契合, 0
+	SIF V_JUST == 0 && COND("Ｖ完美契合")
+		CALL PRINT_STRW, @"UH_%CALLNAME:TARGET%獲得了_黄色_[Ｖ完美契合]_ _UH"
+ENDIF
+IF EXP_GAIN("Ａ性交経験")
+	SIF COND("Ａ完美契合")
+		A_JUST = 1
+	CLEARBIT TALENT:完美契合, 1
+
+	CALL CALC, "Ａ履歴：記憶母数", TARGET
+	SIF CHECK("Ａ完美契合", TARGET, MASTER)
+		SETBIT TALENT:完美契合, 1
+	SIF A_JUST == 0 && COND("Ａ完美契合")
+		CALL PRINT_STRW, @"UH_%CALLNAME:TARGET%獲得了_黄色_[Ａ完美契合]_ _UH"
+ENDIF
+IF EXP_GAIN("尿道性交経験")
+	SIF COND("尿道完美契合")
+		U_JUST = 1
+	CLEARBIT TALENT:完美契合, 2
+
+	CALL CALC, "尿道履歴：記憶母数", TARGET
+	SIF CHECK("尿道完美契合", TARGET, MASTER)
+		SETBIT TALENT:完美契合, 2
+	SIF U_JUST == 0 && COND("尿道完美契合")
+		CALL PRINT_STRW, @"UH_%CALLNAME:TARGET%獲得了_黄色_[Ｕ完美契合]_ _UH"
+ENDIF
+
+;欲求不満の解消
+LOCAL = 0
+SELECTCASE BASE:性欲
+CASE IS >= MAXBASE:性欲 * 2
+	LOCAL += 99
+CASE IS >= MAXBASE:性欲
+	LOCAL += 75
+CASE IS >= 1
+	LOCAL += 25
+CASEELSE
+	LOCAL += 5
+ENDSELECT
+
+SELECTCASE BASE:精液欲
+CASE IS >= MAXBASE:精液欲 * 2
+	LOCAL += 75
+CASE IS >= MAXBASE:精液欲
+	LOCAL += 50
+CASE IS >= 1
+	LOCAL += 25
+ENDSELECT
+
+;欲望と精液欲を同時に満足させると、欲求不満が大幅に解消される
+SIF COND("性欲満足") && COND("精液欲満足")
+	LOCAL += 100
+
+;欲求不満の解消
+IF BASE:欲求不満 && COND("性欲満足") + COND("精液欲満足")
+	CALL BLANKLINE
+	MEMO_LINECOUNT = LINECOUNT
+
+	SETCOLOR DEF_COLOR("黄色")
+	IF COND("性欲満足") && COND("精液欲満足")
+		PRINTFORMW %CALLNAME:TARGET%的欲求不満完全解消了！
+	ELSEIF COND("性欲満足") || COND("精液欲満足")
+		PRINTFORMW %CALLNAME:TARGET%的欲求不満大幅解消了。
+	ENDIF
+	RESETCOLOR
+
+	SIF LINECOUNT == MEMO_LINECOUNT
+		CLEARLINE 1
+ENDIF
+
+CALL CALC, "欲求不満解消", TARGET, LOCAL
+
+MEMO_REDRAW = CURRENTREDRAW()
+REDRAW 0
+
+DRAWLINE
+MEMO_LINECOUNT = LINECOUNT
+
+;ＶＡ拡張レベルを自動レベルアップにしているならそれの判定と表示
+;ちなみに開始時のABLはTCVARの800番台で全て記録されている
+FOR LCOUNT, 0, 32
+	;性別の問題などで表示されないものを選別
+	SELECTCASE ABLNAME:LCOUNT
+	CASE "Ｖ拡張"
+		SIF TALENT:男性
+			CONTINUE
+		;上限を上回っている場合には戻す
+		ABL:Ｖ拡張 = MIN(CALCF("Ｖ拡張の上限", TARGET), ABL:Ｖ拡張)
+		;ＶＡ拡張度を手動で不给場合は、自動的に最大レベルになる
+		SIF CONFIG("ＶＡ拡張の手動ＬＶＵＰ") == 0
+			ABL:Ｖ拡張 = CALCF("Ｖ拡張の上限", TARGET)
+		SIF TCVAR:Ｖ拡張 >= ABL:Ｖ拡張
+			CONTINUE
+		REDRAW 1
+		PRINTFORMW %CALLNAME:TARGET%通过积累経験、%ABLNAME:LCOUNT%变成了LV{ABL:Ｖ拡張}。
+	CASE "Ａ拡張"
+		;上限を上回っている場合には戻す
+		ABL:Ａ拡張 = MIN(CALCF("Ａ拡張の上限", TARGET), ABL:Ａ拡張)
+		;ＶＡ拡張度を手動で不给場合は、自動的に最大レベルになる
+		SIF CONFIG("ＶＡ拡張の手動ＬＶＵＰ") == 0
+			ABL:Ａ拡張 = CALCF("Ａ拡張の上限", TARGET)
+		SIF TCVAR:Ａ拡張 >= ABL:Ａ拡張
+			CONTINUE
+		REDRAW 1
+		PRINTFORMW %CALLNAME:TARGET%通过积累経験、%ABLNAME:LCOUNT%变成了LV{ABL:Ａ拡張}。
+	CASE "喉拡張"
+		SIF TCVAR:喉拡張 >= ABL:喉拡張
+			CONTINUE
+		REDRAW 1
+		PRINTFORMW %CALLNAME:TARGET%通过积累経験、%ABLNAME:LCOUNT%变成了LV{ABL:喉拡張}。
+	CASE "尿道拡張"
+		SIF TCVAR:尿道拡張 >= ABL:尿道拡張
+			CONTINUE
+		REDRAW 1
+		PRINTFORMW %CALLNAME:TARGET%通过积累経験、%ABLNAME:LCOUNT%变成了LV{ABL:尿道拡張}。
+	ENDSELECT
+NEXT
+
+IF LINECOUNT == MEMO_LINECOUNT
+	CLEARLINE 1
+ELSE
+	DRAWLINE
+ENDIF
+
+;縦深菊穴の自動取得
+IF CONFIG("使い込まれ素質の自動獲得")
+	IF TALENT:縦深菊穴 == 0
+		IF EXP:Ａ経験 >= 300 + RAND:200 && EXP:Ａ拡張経験 >= 20 + RAND:30 && ABL:Ａ拡張 >= 3 + RAND:3
+			CALL PRINT_STRW, @"%CALLNAME:TARGET%的尻穴、由于过度的使用变成了_黄色_[縦深菊穴]_。"
+			TALENT:縦深菊穴 = 1
+		ENDIF
+	ENDIF
+ENDIF
+
+REDRAW MEMO_REDRAW
+
+RETURN 0
+
+
+;反感の珠の打ち消し処理でドッペル你のパラメーターを判定に用いる
+@VARSET_DENIAL_CHECK
+;JUELの20番までを初期化
+VARSET JUEL:0:0, 0, 0, 20
+
+@DENIAL_CHECK
+#DIM LCOUNT
+#DIM NO_JUEL
+;各珠の減少量
+#DIM LOSE_JUEL, 16
+;減らす量
+#DIM VALUE_LOSE
+SIF JUEL:0:反感 == 0
+	RETURN 0
+
+PRINTL 発生反感の珠抵消其他珠的事件。
+
+VARSET LOSE_JUEL
+
+FOR LCOUNT, 0, 100
+	;欲情・恭順・屈服の珠が無いなら、恥情・苦痛・恐怖の珠を減らす
+	IF JUEL:0:恭順 + JUEL:0:欲情 + JUEL:0:屈服
+		IF JUEL:0:恭順 && RANDIF(1, JUEL:0:欲情, JUEL:0:屈服)
+			NO_JUEL = 0
+		ELSEIF JUEL:0:欲情 && RANDIF(1, JUEL:0:屈服)
+			NO_JUEL = 1
+		ELSE
+			NO_JUEL = 2
+		ENDIF
+	ELSEIF JUEL:0:恥情 + JUEL:0:苦痛 + JUEL:0:恐怖
+		IF JUEL:0:恥情 && RANDIF(1, JUEL:0:苦痛, JUEL:0:恐怖)
+			NO_JUEL = 4
+		ELSEIF JUEL:0:苦痛 && RANDIF(1, JUEL:0:恐怖)
+			NO_JUEL = 5
+		ELSE
+			NO_JUEL = 6
+		ENDIF
+	ELSE
+		BREAK
+	ENDIF
+
+	VALUE_LOSE = LIMIT(JUEL:0:反感 / 2, 1, JUEL:0:NO_JUEL)
+
+	LOSE_JUEL:NO_JUEL += VALUE_LOSE
+
+	JUEL:0:NO_JUEL -= VALUE_LOSE
+	JUEL:0:反感 -= VALUE_LOSE
+
+	GOTJUEL:NO_JUEL -= VALUE_LOSE
+	GOTJUEL:反感 -= VALUE_LOSE
+
+	SIF JUEL:0:反感 <= 0
+		BREAK
+NEXT
+;減少量表示
+FOR LCOUNT, 0, 16
+	SIF LOSE_JUEL:LCOUNT == 0
+		CONTINUE
+	PRINTFORML %PALAMNAME:LCOUNT%の珠×{LOSE_JUEL:LCOUNT}個減少
+NEXT
+
+CALL BLANKLINE
+

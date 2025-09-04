@@ -1,0 +1,469 @@
+﻿@COM148
+;穿环
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+RETURN 1
+
+@FLAG_COM148, ARG
+;性器付近の穿環なら、阴部を露出させる
+IF COND("陰蒂環フラグ") + COND("陰唇環フラグ") + COND("尿道穿環フラグ") + COND("恥丘穿環フラグ")
+	CALL SET_BODYS, ""
+	CALL SET_BOTTOM, ""
+	CALL SET_SKIRT, ""
+	SIF CHECK_PANTIES("開放型開洞") == 0
+		CALL SET_PANTIES, ""
+ENDIF
+
+STAIN:PLAYER:手 = 0
+IF COND("陰蒂環フラグ") || COND("陰唇環フラグ") || COND("尿道穿環フラグ") || COND("恥丘穿環フラグ")
+	STAIN:Ｖ = SET_STAIN(0, "Ｖ")
+ELSEIF COND("乳环フラグ")
+	STAIN:Ｂ = 0
+ENDIF
+
+@SOURCE_COM148, ARG
+;外した場合
+SIF COND("穿環ＯＮフラグ") == 0
+	RETURN 1
+
+CALL SOURCE_SMPLAY, "穿环", ARG
+
+CALL VARSET_COMF
+
+CALL SOURCE_DOWNBASE_HP, 148
+
+;基本は肚脐环の時
+;初めてつける時は疼痛のせいで、体力消費が凄いことになります
+
+SOURCE:0:疼痛 = 3000
+SOURCE:0:屈従 = 1000
+SOURCE:0:逸脱 = 3000
+
+IF COND("陰蒂環フラグ")
+	SOURCE:0:疼痛 += 17000
+	SOURCE:0:屈従 += 9000
+	SOURCE:0:逸脱 += 17000
+ELSEIF COND("陰唇環フラグ") || COND("尿道穿環フラグ")
+	SOURCE:0:疼痛 += 7000
+	SOURCE:0:屈従 += 9000
+	SOURCE:0:逸脱 += 12000
+ELSEIF COND("乳环フラグ")
+	SOURCE:0:疼痛 += 12000
+	SOURCE:0:屈従 += 9000
+	SOURCE:0:逸脱 += 12000
+ELSEIF COND("恥丘穿環フラグ")
+	SOURCE:0:疼痛 += 2000
+	SOURCE:0:屈従 += 5000
+	SOURCE:0:逸脱 += 7000
+ELSEIF COND("肚脐环フラグ")
+
+ENDIF
+
+;ABL:受虐属性をみる
+SELECTCASE ABL:受虐属性
+CASE 0
+CASE 1
+	TIMES SOURCE:0:屈従, 1.20
+	TIMES SOURCE:0:逸脱, 0.90
+CASE 2
+	TIMES SOURCE:0:屈従, 1.40
+	TIMES SOURCE:0:逸脱, 0.80
+CASE 3
+	TIMES SOURCE:0:屈従, 1.60
+	TIMES SOURCE:0:逸脱, 0.50
+CASE 4
+	TIMES SOURCE:0:屈従, 1.80
+	TIMES SOURCE:0:逸脱, 0.30
+CASEELSE
+	TIMES SOURCE:0:屈従, 2.00
+	TIMES SOURCE:0:逸脱, 0.10
+ENDSELECT
+
+;麻酔を使ったら疼痛激減
+SIF COND("鎮痛麻酔フラグ")
+	TIMES SOURCE:0:疼痛, 0.01
+
+;视频拍摄中
+IF TEQUIP:攝像機
+	TIMES SOURCE:0:屈従, 1.50
+	TIMES SOURCE:0:逸脱, 1.50
+ENDIF
+
+CALL CALC, "調教ソース", ARG
+
+
+@TRAIN_MESSAGE_COM148
+CALL SET_PIERCE, TARGET
+;-------------------------------------------------
+;ソースの計算(確定値)
+;-------------------------------------------------
+CALL CALC, "調教ソースの計算"
+
+
+;地の文スキップは不可能としておく
+@SET_PIERCE, ARG
+;まずは穿環関係のフラグに重置をかける
+TCVAR:ARG:イベント = CLEARBITS(TCVAR:ARG:イベント, 11, 20)
+
+CALL SET_PIERCE_MAIN, ARG
+
+
+@SET_PIERCE_MAIN, ARG
+#DIM MEMO_LINECOUNT
+#DIM LCOUNT
+;穿環の形状
+#DIMS PIERCES
+;穿環の場所
+#DIMS PART_PIERCES
+#DIM CHOICE
+
+PART_PIERCES = 
+
+REDRAW 0
+MEMO_LINECOUNT = LINECOUNT
+
+IF ARG != MASTER && ABL:ARG:受虐属性 < 3 && FIRSTCOM(SELECTCOM, ARG) == 0
+	PRINTFORML 這種激烈的PLAY對她來說還太早了點吧？……也好。這次、又要怎麼做呢……？
+ELSE
+	PRINTFORML 所以、這次要怎麼做呢……？
+ENDIF
+
+IF COND("陰蒂環可能", ARG) == 0
+	CALL PRINT_STRL, @"灰色_ [×] \@ PENIS(ARG) ? 阴茎穿環　　 # 阴蒂穿環 \@　（要:[淫核]or[淫乱]or[倒錯的]or受虐属性3LV）"
+ELSE
+	PRINTFORML  [ 0] 將\@ PENIS(ARG) ? 阴茎 # 阴蒂 \@\@ TALENT:ARG:陰蒂環 ? 上的穿環取下 # 用金屬穿環装飾起來 \@
+ENDIF
+
+IF TALENT:ARG:男性
+	CALL PRINT_STRL, @"灰色_ [×] 小陰唇穿環　　　（※男性是不行的※）"
+ELSEIF COND("陰唇環可能", ARG) == 0
+	CALL PRINT_STRL, @"灰色_ [×] 小陰唇穿環　　　（要:[淫壷]or[淫乱]or[倒錯的]or受虐属性2LV）"
+ELSE
+	PRINTFORML  [ 1] 將小陰唇\@ TALENT:ARG:陰唇環 ? 上的穿環取下 # 用金屬穿環装飾起來 \@
+ENDIF
+
+IF COND("恥丘穿環可能", ARG) == 0
+	CALL PRINT_STRL, @"灰色_ [×] 將恥丘用金屬穿環装飾起來　　　　（要:[淫核]or[淫乱]or[倒錯的]or受虐属性1LV）"
+ELSE
+	SELECTCASE CONDS("陰毛")
+	CASE "白虎", "無毛", "脱毛処理", "光滑无毛"
+		PRINTFORML  [ 2] 將恥丘\@ TALENT:ARG:恥丘穿環 ? 上的穿環取下 # 用金屬穿環装飾起來 \@　　　　（着ける前に剃毛を行います）
+	CASEELSE
+		PRINTFORML  [ 2] 將恥丘\@ TALENT:ARG:恥丘穿環 ? 上的穿環取下 # 用金屬穿環装飾起來 \@
+	ENDSELECT
+ENDIF
+
+IF COND("真性陥没乳頭", ARG)
+	CALL PRINT_STRL, @"灰色_ [×] 乳頭穿環　　　　（※真性陥没乳頭是不行的※）"
+ELSEIF COND("乳环可能", ARG) == 0
+	CALL PRINT_STRL, @"灰色_ [×] 乳頭穿環　　　　（要:[淫乳]or[淫乱]or[倒錯的]or受虐属性1LV）"
+ELSE
+	PRINTFORML  [ 3] 將乳頭\@ TALENT:ARG:乳环 ? 上的穿環取下 # 用金屬穿環装飾起來 \@
+ENDIF
+
+IF COND("尿道穿環可能", ARG) == 0
+	CALL PRINT_STRL, @"灰色_ [×] 尿道口穿環　　　（要:尿道拡張0LVに加えて[尿道狂]or[淫乱]or[倒錯的]or受虐属性4LV）"
+ELSE
+	PRINTFORML  [ 4] 將尿道口\@ TALENT:ARG:尿道穿環 ? 上的穿環取下 # 用金屬穿環装飾起來 \@
+ENDIF
+
+PRINTFORML  [ 5] 將肚臍\@ TALENT:ARG:肚脐环 ? 上的穿環取下 # 用金屬穿環装飾起來 \@
+PRINTFORML [100] 不、再考慮一下吧。
+
+CALL INPUT_SELECT, 6, 100
+
+SELECTCASE RESULT
+CASE 100
+	TFLAG:指令中止 = 1
+	REDRAW 1
+	RETURN 0
+CASE 0
+	IF COND("陰蒂環可能", ARG)
+		CALL SETFLAG, "陰蒂環フラグ", ARG
+		SIF TALENT:ARG:陰蒂環 == 0
+			CALL SETFLAG, "穿環ＯＮフラグ", ARG
+		CALL DEL_CEVENT_GROUP, "陰蒂環", ARG
+		IF PENIS(ARG)
+			PART_PIERCES = 阴茎
+		ELSE
+			PART_PIERCES = 阴蒂
+		ENDIF
+	ENDIF
+CASE 1
+	IF TALENT:ARG:男性
+		PRINTFORMW ※男性怎么想都不可能吧※
+	ELSEIF COND("陰唇環可能", ARG)
+		CALL SETFLAG, "陰唇環フラグ", ARG
+		SIF TALENT:ARG:陰唇環 == 0
+			CALL SETFLAG, "穿環ＯＮフラグ", ARG
+		CALL DEL_CEVENT_GROUP, "陰唇環", ARG
+		PART_PIERCES = 小陰唇
+	ENDIF
+CASE 2
+	IF COND("恥丘穿環可能", ARG)
+		CALL SETFLAG, "恥丘穿環フラグ", ARG
+		SIF TALENT:ARG:恥丘穿環 == 0
+			CALL SETFLAG, "穿環ＯＮフラグ", ARG
+		CALL DEL_CEVENT_GROUP, "恥丘穿環", ARG
+		PART_PIERCES = 恥丘
+	ENDIF
+CASE 3
+	IF COND("真性陥没乳頭", ARG)
+		PRINTFORMW ※真性陥没乳頭无法装着※
+	ELSEIF COND("乳环可能", ARG)
+		CALL SETFLAG, "乳环フラグ", ARG
+		SIF TALENT:ARG:乳环 == 0
+			CALL SETFLAG, "穿環ＯＮフラグ", ARG
+		CALL DEL_CEVENT_GROUP, "乳环", ARG
+		PART_PIERCES = 乳頭
+	ENDIF
+CASE 4
+	IF ABL:ARG:尿道拡張 < 0
+		PRINTFORMW ※需要尿道拡張LV0以上才可以装着※
+	ELSEIF COND("尿道穿環可能", ARG)
+		CALL SETFLAG, "尿道穿環フラグ", ARG
+		SIF TALENT:ARG:尿道穿環 == 0
+			CALL SETFLAG, "穿環ＯＮフラグ", ARG
+		CALL DEL_CEVENT_GROUP, "尿道穿環", ARG
+		PART_PIERCES = 尿道
+	ENDIF
+CASE 5
+	CALL SETFLAG, "肚脐环フラグ", ARG
+	SIF TALENT:ARG:肚脐环 == 0
+		CALL SETFLAG, "穿環ＯＮフラグ", ARG
+	CALL DEL_CEVENT_GROUP, "肚脐环", ARG
+	PART_PIERCES = 肚脐
+ENDSELECT
+IF PART_PIERCES == ""
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+ENDIF
+
+
+$INPUT_LOOP
+
+;穿環の詳細を文字列で記録
+PIERCES = 
+
+;穿環をつけた
+IF COND("穿環ＯＮフラグ", ARG)
+	;性器付近の穿環なら、阴部を露出させる
+	IF COND("陰蒂環フラグ", ARG) + COND("陰唇環フラグ", ARG) + COND("尿道穿環フラグ", ARG) + COND("恥丘穿環フラグ", ARG) && !CHECK_CLO("Ｖ露出", ARG)
+		CALL SET_PANTIES, "", ARG
+		CALL SET_BODYS, "", ARG
+		CALL SET_BOTTOM, "", ARG
+	ENDIF
+
+	SELECTCASE PART_PIERCES
+	CASE "恥丘"
+		SELECTCASE CONDS("陰毛")
+		CASE "白虎", "無毛", "脱毛処理", "光滑无毛"
+		CASEELSE
+			BASE:陰毛 = 300
+		ENDSELECT
+
+		PRINTFORML 用什么颜色的穿環呢？
+		PRINTFORML  [ 0] 銀色
+		PRINTFORML  [ 1] 金色
+		PRINTFORML  [ 2] 赤
+		PRINTFORML  [ 3] 緑
+		PRINTFORML  [ 4] 紫
+		PRINTFORML  [ 5] 青
+		PRINTFORML [100] 不拘泥於特定的形態（通常無記述）
+
+		CALL INPUT_SELECT, 6, 100
+
+		SELECTCASE RESULT
+		CASE 100
+		CASE 0
+			PIERCES = 銀色
+		CASE 1
+			PIERCES = 金色
+		CASE 2
+			PIERCES = 赤
+		CASE 3
+			PIERCES = 緑
+		CASE 4
+			PIERCES = 紫
+		CASE 5
+			PIERCES = 青
+		ENDSELECT
+
+		CALL SET_CEVENT, @"恥丘穿環：%PIERCES%", ARG
+		TALENT:ARG:恥丘穿環 = 1
+		CALL PRINT_CUTIN, "贴身", ARG
+		PRINTFORML ……装上的预想图大概是这个样子、这样可以吗？
+		CALL PRINT_SELECT, "ＯＫ！/重新选择"
+		CHOICE = RESULT
+
+		CALL DEL_CEVENT, @"恥丘穿環：%PIERCES%", ARG
+		TALENT:ARG:恥丘穿環 = 0
+		SIF CHOICE
+			GOTO INPUT_LOOP
+	CASEELSE
+		PRINTFORML 這次、要安装上那種穿環呢？
+		PRINTFORML  [ 0] 圓環型
+		PRINTFORML  [ 1] 啞鈴型
+		PRINTFORML  [ 2] 正十字型
+		PRINTFORML  [ 3] ♂型
+		PRINTFORML  [ 4] ♀型
+		PRINTFORML  [90] 直接輸入
+		PRINTFORML [100] 不拘泥於特定的形態（通常無記述）
+
+		CALL INPUT_SELECT, 5, 90, 100
+
+		SELECTCASE RESULT
+		CASE 100
+		CASE 0
+			PIERCES = 圓環型
+		CASE 1
+			PIERCES = 啞鈴型
+		CASE 2
+			PIERCES = 十字架型
+		CASE 3
+			PIERCES = ♂型
+		CASE 4
+			PIERCES = ♀型
+		CASE 90
+			PRINTL 請將全角８文字（半角則16文字）以下的字符串輸入。
+			PRINTL (像是"耳環"之類被使用也不會產生不協感的記錄是推薦選項。)
+			PRINTL 另外、如果是什麼也不輸入的場合就會被視作不算特別拘泥的場合（也即是無記述）。
+			CALL INPUTS_SELECT, 16
+			PIERCES = %RESULTS%
+		ENDSELECT
+	ENDSELECT
+
+	IF ARG != MASTER
+		PRINTL 使用麻醉劑嗎？
+		PRINTL [0] 是
+		PRINTL [1] 否
+		CALL INPUT_SELECT, 2
+		SIF RESULT == 0
+			CALL SETFLAG, "鎮痛麻酔フラグ", ARG
+	ENDIF
+
+	IF ARG == MASTER
+		PRINTFORM %CALLNAME:MASTER%自己的
+	ELSE
+		PRINTFORM %CALLNAME:PLAYER%将%CALLNAME:ARG%の
+	ENDIF
+	IF COND("陰蒂環フラグ", ARG)
+		IF PENIS(ARG)
+			PRINT 陰莖
+		ELSE
+			IF COND("陰核肥大", ARG)
+				PRINT 腫脹肥大的
+			ELSEIF TALENT:ARG:淫核
+				PRINT 興奮勃起的
+			ELSEIF TALENT:ARG:Ｃ性向
+				PRINT 敏感而淫亂的
+			ELSEIF TALENT:ARG:娇小
+				PRINT 小小的
+			ENDIF
+			PRINT 阴蒂
+		ENDIF
+	ELSEIF COND("陰唇環フラグ", ARG)
+		IF TALENT:ARG:淫壷
+			PRINT 淫亂地顫抖著的
+		ELSEIF TALENT:ARG:Ｖ性向
+			PRINT 敏感而淫亂的
+		ELSEIF AGE(ARG) == 1
+			PRINT 幼嫩的
+		ELSEIF TALENT:ARG:娇小
+			PRINT 小小的
+		ENDIF
+		PRINT 小陰唇
+	ELSEIF COND("恥丘穿環フラグ", ARG)
+		PRINT 恥丘の下端に
+	ELSEIF COND("乳环フラグ", ARG)
+		IF COND("陥没乳頭", ARG)
+			PRINTFORM 陷沒在乳肉中的\@ COND("乳頭肥大", ARG) ? 碩大的 # \@乳頭剝出
+		ELSE
+			IF COND("乳頭肥大", ARG)
+				PRINT 腫脹肥大的
+			ELSEIF TALENT:ARG:淫乳
+				PRINT 興奮勃起的
+			ELSEIF TALENT:ARG:Ｂ性向
+				PRINT 敏感而淫亂的
+			ELSEIF AGE(ARG) == 1
+				PRINT 幼嫩的
+			ELSEIF TALENT:ARG:娇小
+				PRINT 小小的
+			ENDIF
+			PRINT 乳頭
+		ENDIF
+	ELSEIF COND("尿道穿環フラグ", ARG)
+		PRINTFORM 広開的尿道口
+	ELSEIF COND("肚脐环フラグ", ARG)
+		PRINT 肚臍
+	ENDIF
+	SELECTCASE PIERCES
+	CASE ""
+	CASE "赤", "青"
+		PRINTFORM %PIERCES%い
+	CASEELSE
+		PRINTFORM %PIERCES%の
+	ENDSELECT
+	PRINTFORMW 穿環装上了。
+
+	IF COND("陰蒂環フラグ", ARG)
+		IF PENIS(ARG)
+
+		ELSE
+			PRINTFORMW %CALLNAME:ARG%的\@ COND("陰核肥大", ARG) ? 大号的 # \@陰蒂在金屬穿環的牽引下使包皮外卷、成為每時每刻都裸露在外的狀態了……
+			IF TALENT:容易濕 == 0
+				TALENT:容易濕 = 1
+				PRINTFORMW ＜%NAME:TARGET%獲得了[%TALENT_NAME(GETNUM(TALENT, "容易濕"), TALENT:容易濕)%]＞
+			ENDIF
+		ENDIF
+		PIERCES = 陰蒂環：%PIERCES%
+	ELSEIF COND("陰唇環フラグ", ARG)
+		SIF AGE(ARG) >= 3
+			PRINTFORMW %CALLNAME:ARG%的小陰唇因被装上的金屬穿環的重量所拉扯、即使不特地撥開大陰唇也能一目了然地看見了……
+		PIERCES = 陰唇環：%PIERCES%
+	ELSEIF COND("恥丘穿環フラグ", ARG)
+		PIERCES = 恥丘穿環：%PIERCES%
+	ELSEIF COND("乳环フラグ", ARG)
+		SIF COND("陥没乳頭", ARG)
+			PRINTFORMW %CALLNAME:ARG%經常陷沒在乳肉中的乳頭在金屬穿環的阻隔下變得不能返回、被矯正成為平常也裸露在外的狀態了……
+		PIERCES = 乳环：%PIERCES%
+	ELSEIF COND("尿道穿環フラグ", ARG)
+		PIERCES = 尿道穿環：%PIERCES%
+	ELSEIF COND("肚脐环フラグ", ARG)
+		PIERCES = 肚脐环：%PIERCES%
+	ENDIF
+
+	;穿環の形状フラグセット
+	SIF PIERCES != ""
+		CALL SET_CEVENT, PIERCES, ARG
+;穿環を外した
+ELSE
+	IF ARG == MASTER
+		PRINTFORMW %CALLNAME:MASTER%将自己%PART_PIERCES%上的穿環摘了下来
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%将%CALLNAME:ARG%的%PART_PIERCES%上的穿環摘了下来
+	ENDIF
+ENDIF
+
+;つけたり外したり
+IF COND("陰蒂環フラグ", ARG)
+	INVERTBIT TALENT:ARG:陰蒂環, 0
+ELSEIF COND("陰唇環フラグ", ARG)
+	INVERTBIT TALENT:ARG:陰唇環, 0
+ELSEIF COND("恥丘穿環フラグ", ARG)
+	INVERTBIT TALENT:ARG:恥丘穿環, 0
+ELSEIF COND("乳环フラグ", ARG)
+	INVERTBIT TALENT:ARG:乳环, 0
+ELSEIF COND("尿道穿環フラグ", ARG)
+	INVERTBIT TALENT:ARG:尿道穿環, 0
+ELSEIF COND("肚脐环フラグ", ARG)
+	INVERTBIT TALENT:ARG:肚脐环, 0
+ENDIF
+

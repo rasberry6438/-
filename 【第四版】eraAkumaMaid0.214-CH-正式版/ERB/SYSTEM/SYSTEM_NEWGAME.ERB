@@ -1,0 +1,1144 @@
+﻿@EVENTFIRST
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+;Verを最新にする
+FLAG:VER_eraAkumaMaid = GAMEBASE_VERSION
+;フラグに使う現実時間を取得
+CALL GET_REALTIMEFORFLAG
+
+ASSI = 0
+DAY = 1
+TIME = 2
+FLAG:オープニング = 1
+
+DELCHARA 0
+;[0]番はドッペル你
+;この人の変数を対応した変数の一時保存用に使いまくるので重要な人です
+ADDCHARA 99
+
+;[1]番は你
+ADDCHARA 0
+MASTER = 1
+
+MONEY = 5000
+
+;グローバル変数の読み込み
+LOADGLOBAL
+
+$SELECT_MODE
+
+REDRAW 0
+MEMO_LINECOUNT = LINECOUNT
+
+PRINTL 
+;モード選択
+PRINTL ★★選択模式与設定★★
+PRINTL 
+PRINTFORML  [ 0] NORMAL
+PRINTFORML  [ 1] BILLIONAIRE (所持金100倍。除此之外没有区别) 
+PRINTFORML  [10] Config
+SIF GLOBAL > 0 && FLAG:VER_Config != GLOBAL
+	PRINTFORML  [11] Config設定 加载（記録日:{GLOBAL/10000}年{(GLOBAL%10000)/100}月{GLOBAL%100}日）
+PRINTFORML [100] 返回
+
+$INPUT_LOOP
+INPUT
+
+IF RESULT == 100
+	REDRAW 1
+	BEGIN TITLE
+ELSEIF RESULT == 11 && GLOBAL > 0
+	CALL LOAD_CONFIGURE
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	GOTO SELECT_MODE
+ELSEIF RESULT == 10
+	CALL SET_CONFIGURE
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	GOTO SELECT_MODE
+ELSEIF RESULT == 1
+	MONEY *= 100
+	PRINTW 以BILLIONAIRE模式開始
+ELSEIF RESULT == 0
+ELSE
+	GOTO INPUT_LOOP
+ENDIF
+
+CALL SETFLAG_OPENING
+
+BEGIN SHOP
+
+
+@SETFLAG_OPENING
+REDRAW 1
+FLAG:項目OFF = 0
+;バージョン格子はしたものと扱う
+FLAG:VERUP格子 = 1
+
+;角色メイク中フラグON
+SETBIT FLAG:状況判定, 13
+
+CALL CREATE_MASTER
+
+PLAYER = MASTER
+SAVESTR:現在位置 = %CSVCALLNAME(NO:MASTER)%的房間
+
+CALL EVENT_OPENING
+
+ASSI:1 = TARGET
+ASSI = TARGET
+
+CALL SETFLAG, "同居：一直", TARGET
+
+
+@EVENT_OPENING
+;オープニングのはじまりはじまり
+PRINTL 
+DRAWLINE
+PRINTFORMW 「…………来。……起来。请起来、主人様」
+PRINTFORMW 在床上睡觉的%CALLNAME:MASTER%被摇晃着睁開了眼睛、映入眼中的是正看着自己的女仆
+PRINTFORMW 带着頭巾、身着整洁的女仆装、还穿着吊带袜……不这个就不太女仆了吧
+PRINTFORMW 在眼前站立着的有点焦躁的她……
+
+CALL PRINT_STRW, "黄色_※突然的就開始女仆的角色定制了※"
+
+CALL CHARA_MANUAL, 1
+DRAWLINE
+TARGET = 2
+CFLAG:優先順位 = 1
+
+PRINTL 
+DRAWLINE
+PRINTFORMW 「早上好。一直到我叫您起床之前都在熟睡什么的、还真是够散漫呢」
+PRINTFORMW 「………………莫非、您忘了吗？」
+PRINTL 
+SETCOLOR DEF_COLOR("粉紅")
+FONTSTYLE 1
+PRINTFORMW 「今天可是、%CNAME("二人称")%来袭击还没有醒来的%CNAME("一人称")%的日子呦」
+FONTSTYLE 0
+RESETCOLOR
+PRINTL 
+PRINTFORMW 時间稍微的向前回退
+DRAWLINE
+PRINTFORMW 眼前的这个女仆模様的女性其实是……以人的魂为食粮的悪魔！
+PRINTFORMW 一切的起因、差不多要从在長期休闲马上要结束、新学期就要開始的数日前
+PRINTFORMW %CALLNAME:TARGET%用甜言蜜语让%CALLNAME:MASTER%签订了契約这件事開始
+PRINTFORMW ……一般来说、现在应该变成了『因为没几天可活了所以干脆就对眼前的女性自由地做各种各様的事情好了』之类的情况
+PRINTL 
+PRINTFORMW 一般来说的话。
+PRINTL 
+CALL PRINT_STRW, @"然而%CALLNAME:MASTER%、拥有着非常稀少的、可以回復魂的损傷的特殊異能_黄色_[復活]_！"
+PRINTFORMW 于是注意到这件事的%CALLNAME:TARGET%和%CALLNAME:MASTER%签订了新的契约
+PRINTL 
+PRINTFORMW 「如果%CNAME("二人称")%愿意的话……要不要和%CNAME("一人称")%换成長期的魂的交易契约？」
+PRINTL 
+;一番最初の仲間は系统信息役も担う
+CFLAG:初期仲間 = 1
+CALL SETFLAG, "同居解消禁止の自動設定", TARGET
+;炮友契約
+TALENT:炮友 = 2
+ABL:信頼 += 1
+CALL PRINT_STRW, @"于是%CALLNAME:MASTER%就和%CALLNAME:TARGET%签订了_黄色_[炮友契約]"
+CALL CHECK_GOUI, "汎用", TARGET
+PRINTL 
+PRINTFORMW 就这様、我们之间的関係以一个新的起点開始了
+PRINTL 
+PRINTFORMW ……诶？你问什么是魂的交易？
+PRINTFORML %CALLNAME:TARGET%曾曰道：
+PRINTFORMW 「%CNAME("二人称")%和%CNAME("一人称")%一起变得舒服起来的時候、以及进行交易仪式的時候就可以交易魂了」
+PRINTFORMW 大概是这个意思
+;PRINTFORMW あとは分かるな！？
+DRAWLINE
+PRINTFORMW 那么、就请享受和悪魔女仆的快乐故事吧
+PRINTFORMW ……要是有余裕的话可以去看看ReadMeの"该同人作独自的Rule等"
+DRAWLINE
+
+;これはサービスだ！
+ITEM:避孕套 += 3
+ITEM:潤滑液 += 1
+
+
+@CREATE_MASTER
+PRINTL 
+CALL RENEWAL_MASTER
+CALL PRINT_STRL, "请选择性別（♀和Futanari会自動的变成_黄色_[兩面通吃]_）"
+PRINTL [ 0] ♂
+PRINTL [ 1] 伪娘(看上去就像女性一様可愛、行为也非常女性化的少年)
+PRINTL [ 2] ♀
+PRINTL [ 3] 扶她
+CALL INPUT_SELECT, 4
+
+SELECTCASE RESULT
+CASE 0
+	TALENT:MASTER:高大 = 1
+CASE 1
+	TALENT:MASTER:伪娘 = 1
+CASE 2
+	TALENT:MASTER:男性 = 0
+	TALENT:MASTER:女性 = 1
+	TALENT:MASTER:兩面通吃 = 1
+CASE 3
+	TALENT:MASTER:男性 = 0
+	TALENT:MASTER:扶她 = 1
+	TALENT:MASTER:兩面通吃 = 1
+ENDSELECT
+
+IF TALENT:MASTER:伪娘
+	TALENT:MASTER:外見年齢 = 2
+ELSE
+	TALENT:MASTER:外見年齢 = 3
+ENDIF
+;初期ちんこは並＆假性にしておく
+TALENT:MASTER:阴茎 = 1
+TALENT:MASTER:包茎 = 1
+
+;こいつはサービスだぜ
+TALENT:MASTER:性豪 = 1
+TALENT:MASTER:復活 = MAX(COND("最強復活"), 100)
+
+;MASTERの感度は全て3LV。尿道感覚以外はね
+ABL:MASTER:Ｃ感覚 = 3
+ABL:MASTER:Ｖ感覚 = 3
+ABL:MASTER:Ａ感覚 = 3
+ABL:MASTER:Ｂ感覚 = 3
+ABL:MASTER:Ｍ感覚 = 3
+ABL:MASTER:技巧 = 2
+
+TFLAG:过滤器 = 0
+TFLAG:LINECOUNT記録 = 0
+CALL SET_DETAIL, MASTER
+
+SIF CONDS("陰毛", MASTER) == "保养完毕"
+	CALL SET_PUBIC_HAIR, MASTER
+
+CALL SETCONFIG, "弱点"
+CALL SETCONFIG, "性癖"
+
+;調教知識の選択
+CALL SETFLAG, "調教知識の選択", MASTER
+
+CALL CREATE_MASTER_MANUAL
+SIF RESULT == 1
+	RESTART
+
+;初期变量をここで記録
+CALL SETFLAG, "初期变量記録", MASTER
+
+
+@SET_DETAIL, ARG
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+#DIM MEMO_LINECOUNT2
+#DIM MEMO_USELINE, 2
+#DIM CHOICE
+#DIM IS_SELECT, 101
+
+MEMO_LINECOUNT = LINECOUNT
+REDRAW 0
+
+;色々設定
+EXP:ARG:Ｖ経験 = MAX(EXP:ARG:Ｖ経験, EXP:ARG:Ｖ性交経験, EXP:ARG:Ｖ拡張経験)
+IF EXP:ARG:Ｖ経験
+	TALENT:ARG:処女 = 0
+ELSEIF TALENT:ARG:男性 == 0
+	SIF TALENT:ARG:処女 == 0
+		TALENT:ARG:処女 = 1
+ENDIF
+
+EXP:ARG:Ａ経験 = MAX(EXP:ARG:Ａ経験, EXP:ARG:Ａ性交経験, EXP:ARG:Ａ拡張経験)
+IF EXP:ARG:Ａ性交経験
+	TALENT:ARG:Ａ処女 = 0
+ELSE
+	TALENT:ARG:Ａ処女 = 1
+ENDIF
+
+TALENT:ARG:尿道処女 = 1
+
+IF EXP:ARG:Ｖ挿入経験
+	TALENT:ARG:童貞 = 0
+ELSEIF TALENT:ARG:男性
+	TALENT:ARG:童貞 = 1
+ENDIF
+
+SIF CONFIG("陰毛") && COND("陰毛", ARG) == 0
+	CALL SETFLAG, "陰毛と腋毛", ARG
+
+CFLAG:ARG:身嗜み = 0
+SELECTCASE COND("陰毛", ARG)
+CASE 3
+	SETBIT CFLAG:ARG:身嗜み, 1
+CASE 5
+	SETBIT CFLAG:ARG:身嗜み, 2
+CASE 7
+	SETBIT CFLAG:ARG:身嗜み, 3
+ENDSELECT
+
+SELECTCASE COND("腋毛", ARG)
+CASE 3
+	SETBIT CFLAG:ARG:身嗜み, 6
+CASE 7
+	SETBIT CFLAG:ARG:身嗜み, 7
+ENDSELECT
+
+CALL SETFLAG, "性器年齢", ARG
+
+VARSET IS_SELECT
+PRINTL 
+CALL PRINT_STRL, "请决定素質和経験。每次按下选项相应的值都会增加、表示为_黄色_MAX_时再按下就会变回最小值"
+CALL PRINT_STRL, "（每按下一次経験的变化顺序为 1→5→20→50、其他的值每次增加1、一部分的素質会变化名字）"
+SIF COND("池面", ARG)
+	PRINTFORML "身材"是女性视角的、对于男性[高大]应该是最适合的
+SIF FLAG:オープニング
+	CALL PRINT_STRL, "顺便_黄色_Ｖ挿入経験_、_黄色_阴茎尺寸_、_黄色_包皮_、_黄色_技巧_的重要度比较高"
+PRINTL 
+
+MEMO_LINECOUNT2 = LINECOUNT
+IF TFLAG:过滤器 == 0 || TFLAG:LINECOUNT記録 == 0
+	;素質
+	PRINTFORM  [ 0]　　　　身材:
+	IF TALENT:ARG:高大
+		CALL PRINT_STRL, "高大 _黄色_MAX"
+	ELSEIF TALENT:ARG:娇小
+		PRINTFORML 娇小
+	ELSEIF TALENT:ARG:伪娘
+		CALL PRINT_STRL, "普通 _黄色_MAX"
+	ELSE
+		PRINTFORML 普通
+	ENDIF
+	IS_SELECT:0 = 1
+	CALL PRINT_STRL, @" [ 1]　　　　肤色:%CONDS("肤色", ARG)% \@ COND("肤色", ARG) >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:1 = 1
+	PRINTFORM  [ 2]　　　外見年齢:
+	SELECTCASE AGE(ARG)
+	CASE 1
+		PRINTFORML 兒童
+	CASE 2
+		IF TALENT:ARG:伪娘
+			CALL PRINT_STRL, "少年 _黄色_MAX"
+		ELSEIF TALENT:ARG:男性
+			PRINTFORML 少年
+		ELSE
+			PRINTFORML ＪＫ
+		ENDIF
+	CASE 3
+		IF TALENT:ARG:男性
+			PRINTFORML 青年
+		ELSE
+			PRINTFORML ＪＤ
+		ENDIF
+	CASE 4
+		CALL PRINT_STRL, "大人 _黄色_MAX"
+	ENDSELECT
+	IS_SELECT:2 = 1
+	PRINTFORM  [ 3]　　　智力:
+	IF TALENT:ARG:聰慧
+		CALL PRINT_STRL, "聰慧 _黄色_MAX"
+	ELSEIF TALENT:ARG:笨蛋
+		PRINTFORML 笨蛋
+	ELSE
+		PRINTFORML 普通
+	ENDIF
+	IS_SELECT:3 = 1
+
+	IF TALENT:ARG:男性 == 0
+		PRINTFORM  [ 4]　　胸の尺寸:
+		IF TALENT:ARG:巨乳 >= 3
+			CALL PRINT_STRL, "超乳 _黄色_MAX"
+		ELSEIF TALENT:ARG:巨乳 >= 2
+			PRINTFORML 爆乳
+		ELSEIF TALENT:ARG:巨乳
+			PRINTFORML 巨乳
+		ELSEIF TALENT:ARG:貧乳
+			PRINTFORML 貧乳
+		ELSE
+			PRINTFORML 普通
+		ENDIF
+		IS_SELECT:4 = 1
+	ENDIF
+
+	IF TALENT:ARG:男性 == 0 && CONFIG("乳頭肥大")
+		CALL PRINT_STRL, @" [ 5]　　　乳頭肥大:{TALENT:ARG:乳頭肥大, 2} \@ TALENT:ARG:乳頭肥大 >= 3 ? _黄色_MAX # \@"
+		IS_SELECT:5 = 1
+	ENDIF
+	IF TALENT:ARG:男性 == 0 && CONFIG("陥没乳頭")
+		CALL PRINT_STRL, @" [ 6]　　　陥没乳頭:{TALENT:ARG:陥没乳頭, 2} \@ TALENT:ARG:陥没乳頭 >= 3 ? _黄色_MAX # \@"
+		IS_SELECT:6 = 1
+	ENDIF
+	IF TALENT:ARG:男性 == 0 && CONFIG("巨乳輪")
+		CALL PRINT_STRL, @" [ 7]　　　　巨乳輪:{TALENT:ARG:巨乳輪, 2} \@ TALENT:ARG:巨乳輪 >= 3 ? _黄色_MAX # \@"
+		IS_SELECT:7 = 1
+	ENDIF
+	IF PENIS(ARG) == 0 && CONFIG("陰核肥大")
+		CALL PRINT_STRL, @" [ 8]　　　陰核肥大:{TALENT:ARG:陰核肥大, 2} \@ TALENT:ARG:陰核肥大 >= 3 ? _黄色_MAX # \@"
+		IS_SELECT:8 = 1
+	ENDIF
+	IF PENIS(ARG) == 0 && CONFIG("陰核包茎")
+		CALL PRINT_STRL, @" [ 9]　　　陰核包茎:\@ COND("陰核包茎", ARG) ? 包茎 # 露出 \@ \@ TALENT:ARG:陰核包茎 ? _黄色_MAX # \@"
+		IS_SELECT:9 = 1
+	ENDIF
+	IF PENIS(ARG)
+		PRINTFORM  [10]　阴茎尺寸:
+		SELECTCASE TALENT:ARG:阴茎
+		CASE IS >= 3
+			CALL PRINT_STRL, "馬根 _黄色_MAX"
+		CASE 2
+			PRINTFORML 巨根
+		CASE 1
+			PRINTFORML 普通
+		CASE 0
+			PRINTFORML 短小
+		ENDSELECT
+		IS_SELECT:10 = 1
+		PRINTFORM  [11]　　　　包皮:
+		IF COND("真性包茎", ARG)
+			CALL PRINT_STRL, "真性包茎 _黄色_MAX"
+		ELSEIF COND("假性包茎", ARG)
+			PRINTFORML 假性包茎
+		ELSE
+			PRINTFORML 无包皮
+		ENDIF
+		IS_SELECT:11 = 1
+
+		PRINTFORM  [12]　　　我慢強さ:
+		IF TALENT:ARG:遅漏
+			CALL PRINT_STRL, "遅漏 _黄色_MAX"
+		ELSEIF TALENT:ARG:早漏
+			PRINTFORML 早漏
+		ELSE
+			PRINTFORML 普通
+		ENDIF
+		IS_SELECT:12 = 1
+	ENDIF
+
+	PRINTFORM  [13]　　尻の尺寸:
+	IF TALENT:ARG:巨尻 >= 3
+		CALL PRINT_STRL, "超尻 _黄色_MAX"
+	ELSEIF TALENT:ARG:巨尻 >= 2
+		PRINTFORML 爆尻
+	ELSEIF TALENT:ARG:巨尻
+		PRINTFORML 巨尻
+	ELSEIF TALENT:ARG:小尻
+		PRINTFORML 小尻
+	ELSE
+		PRINTFORML 普通
+	ENDIF
+	IS_SELECT:13 = 1
+
+	IF TALENT:ARG:男性 == 0
+		PRINTFORM  [14]　　湿的やすさ:
+		IF TALENT:ARG:容易濕
+			CALL PRINT_STRL, "容易濕 _黄色_MAX"
+		ELSEIF TALENT:ARG:不易濕
+			PRINTFORML 不易濕
+		ELSE
+			PRINTFORML 普通
+		ENDIF
+		IS_SELECT:14 = 1
+	ENDIF
+
+	IF CONFIG("陰毛")
+		CALL PRINT_STRL, @" [15]　　　　　陰毛:%CONDS("陰毛", ARG)% \@ COND("陰毛", ARG) >= 7 ? _黄色_MAX # \@"
+		IS_SELECT:15 = 1
+	ENDIF
+	IF CONFIG("腋毛")
+		CALL PRINT_STRL, @" [16]　　　　　%TEXTS("腋")%毛:%CONDS("腋毛", ARG)% \@ COND("腋毛", ARG) >= 7 ? _黄色_MAX # \@"
+		IS_SELECT:16 = 1
+	ENDIF
+	IF CONFIG("性器年齢") && TALENT:ARG:男性 == 0
+		CALL PRINT_STRL, @" [17]　　　性器年齢:{TALENT:ARG:性器年齢, 2} %TALENT_NAME(GETNUM(TALENT, "性器年齢"), TALENT:ARG:性器年齢)% \@ COND("黑木耳", ARG) ? _黄色_MAX # \@"
+		IS_SELECT:17 = 1
+	ENDIF
+
+	;ABL
+	CALL PRINT_STRL, @" [20]　　　　　技巧:{ABL:ARG:技巧, 2} \@ ABL:ARG:技巧 >= 5 ? _黄色_MAX # \@"
+	IS_SELECT:20 = 1
+	CALL PRINT_STRL, @" [21]　　　施虐属性:{ABL:ARG:施虐属性, 2} \@ ABL:ARG:施虐属性 >= 5 ? _黄色_MAX # \@"
+	IS_SELECT:21 = 1
+	CALL PRINT_STRL, @" [22]　　　受虐属性:{ABL:ARG:受虐属性, 2} \@ ABL:ARG:受虐属性 >= 5 ? _黄色_MAX # \@"
+	IS_SELECT:22 = 1
+
+	;経験
+	CALL PRINT_STRL, @" [30]　　　　Ａ経験:{EXP:ARG:Ａ経験, 2} \@ EXP:ARG:Ａ経験 >= 50 ? _黄色_MAX # \@"
+	IS_SELECT:30 = 1
+	CALL PRINT_STRL, @" [31]　　Ａ性交経験:\@ TALENT:ARG:Ａ処女 ? Ａ処女 # {EXP:ARG:Ａ性交経験, 2} \@ \@ EXP:ARG:Ａ性交経験 >= 50 ? _黄色_MAX # \@"
+	IS_SELECT:31 = 1
+	CALL PRINT_STRL, @" [32]　　Ａ拡張経験:{EXP:ARG:Ａ拡張経験, 2} \@ EXP:ARG:Ａ拡張経験 >= 20 ? _黄色_MAX # \@"
+	IS_SELECT:32 = 1
+	IF TALENT:ARG:男性 == 0
+		CALL PRINT_STRL, @" [35]　　　　Ｖ経験:\@ TALENT:ARG:処女 ? 処女 # {EXP:ARG:Ｖ経験, 2} \@ \@ EXP:ARG:Ｖ経験 >= 50 ? _黄色_MAX # \@"
+		IS_SELECT:35 = 1
+		CALL PRINT_STRL, @" [36]　　Ｖ性交経験:{EXP:ARG:Ｖ性交経験, 2} \@ EXP:ARG:Ｖ性交経験 >= 50 ? _黄色_MAX # \@"
+		IS_SELECT:36 = 1
+		CALL PRINT_STRL, @" [37]　　Ｖ拡張経験:{EXP:ARG:Ｖ拡張経験, 2} \@ EXP:ARG:Ｖ拡張経験 >= 20 ? _黄色_MAX # \@"
+		IS_SELECT:37 = 1
+	ENDIF
+	IF PENIS(ARG)
+		CALL PRINT_STRL, @" [40]　　Ｖ挿入経験:\@ EXP:ARG:Ｖ挿入経験 ? {EXP:ARG:Ｖ挿入経験, 2} # 童貞 \@ \@ EXP:ARG:Ｖ挿入経験 >= 50 ? _黄色_MAX # \@"
+		IS_SELECT:40 = 1
+		CALL PRINT_STRL, @" [41]　　Ａ挿入経験:{EXP:ARG:Ａ挿入経験, 2} \@ EXP:ARG:Ａ挿入経験 >= 50 ? _黄色_MAX # \@"
+		IS_SELECT:41 = 1
+	ENDIF
+ENDIF
+
+;周回専用
+IF TFLAG:过滤器 == 1 || TFLAG:LINECOUNT記録 == 0
+	CALL PRINT_STRL, @" [60]　　　謎之魅力:{TALENT:ARG:謎之魅力, 2} \@ TALENT:ARG:謎之魅力 >= COND("最強謎之魅力") ? _黄色_MAX # \@"
+	IS_SELECT:60 = 1
+	CALL PRINT_STRL, @" [61]　　　甜言蜜语:{TALENT:ARG:甜言蜜语, 2} \@ TALENT:ARG:甜言蜜语 >= COND("最強甜言蜜语") ? _黄色_MAX # \@"
+	IS_SELECT:61 = 1
+	CALL PRINT_STRL, @" [62]　　　　大力士:{TALENT:ARG:大力士, 2} \@ TALENT:ARG:大力士 >= COND("最強大力士") ? _黄色_MAX # \@"
+	IS_SELECT:62 = 1
+	CALL PRINT_STRL, @" [63]　　　　　性豪:{TALENT:ARG:性豪, 2} \@ TALENT:ARG:性豪 >= COND("最強性豪") ? _黄色_MAX # \@"
+	IS_SELECT:63 = 1
+	CALL PRINT_STRL, @" [64]　　射精量強化:{TALENT:ARG:射精量強化, 2} \@ TALENT:ARG:射精量強化 >= COND("最強射精量強化") ? _黄色_MAX # \@"
+	IS_SELECT:64 = 1
+	CALL PRINT_STRL, @" [65]　　　　　豊穣:{TALENT:ARG:豊穣, 2} \@ TALENT:ARG:豊穣 >= COND("最強豊穣") ? _黄色_MAX # \@"
+	IS_SELECT:65 = 1
+	IF PENIS(ARG)
+		CALL PRINT_STRL, @" [66]　　　小种马:{TALENT:ARG:小种马, 2} \@ TALENT:ARG:小种马 >= COND("最強小种马") ? _黄色_MAX # \@"
+		IS_SELECT:66 = 1
+		CALL PRINT_STRL, @" [67]　　　　　業物:{TALENT:ARG:業物, 2} \@ TALENT:ARG:業物 >= COND("最強業物") ? _黄色_MAX # \@"
+		IS_SELECT:67 = 1
+	ENDIF
+
+	CALL PRINT_STRL, @" [70]　天性の舌靈活:{TALENT:ARG:天性の舌靈活, 2} \@ TALENT:ARG:天性の舌靈活 >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:70 = 1
+	CALL PRINT_STRL, @" [71]　天性の指靈活:{TALENT:ARG:天性の指靈活, 2} \@ TALENT:ARG:天性の指靈活 >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:71 = 1
+	CALL PRINT_STRL, @" [72]　天性の腰靈活:{TALENT:ARG:天性の腰靈活, 2} \@ TALENT:ARG:天性の腰靈活 >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:72 = 1
+	CALL PRINT_STRL, @" [73]　　天性の魔乳:{TALENT:ARG:天性の魔乳, 2} \@ TALENT:ARG:天性の魔乳 >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:73 = 1
+
+	CALL PRINT_STRL, @" [74]　　　　Ｖ名器:{TALENT:ARG:Ｖ名器, 2} \@ TALENT:ARG:Ｖ名器 >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:74 = 1
+	CALL PRINT_STRL, @" [75]　　　　Ａ名器:{TALENT:ARG:Ａ名器, 2} \@ TALENT:ARG:Ａ名器 >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:75 = 1
+	CALL PRINT_STRL, @" [76]　　　尿道名器:{TALENT:ARG:尿道名器, 2} \@ TALENT:ARG:尿道名器 >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:76 = 1
+	CALL PRINT_STRL, @" [77]　　　　喉名器:{TALENT:ARG:喉名器, 2} \@ TALENT:ARG:喉名器 >= 3 ? _黄色_MAX # \@"
+	IS_SELECT:77 = 1
+
+	CALL PRINT_STRL, @" [80]　　淫紋刻印:{TALENT:ARG:淫紋刻印, 2} \@ TALENT:ARG:淫紋刻印 >= COND("最強淫紋刻印") ? _黄色_MAX # \@"
+	IS_SELECT:80 = 1
+	CALL PRINT_STRL, @" [81]　　　　　具現:{TALENT:ARG:具現, 2} \@ TALENT:ARG:具現 >= COND("最強具現") ? _黄色_MAX # \@"
+	IS_SELECT:81 = 1
+	CALL PRINT_STRL, @" [82]　　　認識阻害:{TALENT:ARG:認識阻害, 2} \@ TALENT:ARG:認識阻害 >= COND("最強認識阻害") ? _黄色_MAX # \@"
+	IS_SELECT:82 = 1
+ENDIF
+
+;縦の長さを測る
+IF TFLAG:LINECOUNT記録 == 0
+	VARSET MEMO_USELINE
+	FOR LCOUNT, 0, 100
+		SIF IS_SELECT:LCOUNT == 0
+			CONTINUE
+		SELECTCASE LCOUNT
+		;通常角色メイク
+		CASE IS < 60
+			MEMO_USELINE:0 += 1
+		;周回専用
+		CASEELSE
+			MEMO_USELINE:1 += 1
+		ENDSELECT
+	NEXT
+	TFLAG:LINECOUNT記録 = MAX(MEMO_USELINE:0, MEMO_USELINE:1)
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+ENDIF
+CALL MULTILINE, TFLAG:LINECOUNT記録 - (LINECOUNT - MEMO_LINECOUNT2)
+
+IF TFLAG:过滤器 == 0
+	PRINTFORML  [90]Ａ相関经验全部变成0
+	IS_SELECT:90 = 1
+	IF TALENT:ARG:男性
+		PRINTFORML  [91]插入相関经验全部变成0
+	ELSE
+		PRINTFORML  [91]Ｖ相関经验全部变成0
+	ENDIF
+	IS_SELECT:91 = 1
+ELSE
+	PRINTFORML  [96]周目专用奖励全部变成0
+	IS_SELECT:96 = 1
+	PRINTFORML  [97]周目专用奖励全部变成MAX
+	IS_SELECT:97 = 1
+ENDIF
+IF FLAG:周回数
+	IF TFLAG:过滤器 == 0
+		PRINTFORML  [98]打開周目专用奖励设定画面
+	ELSE
+		PRINTFORML  [98]返回通常画面
+	ENDIF
+	IS_SELECT:98 = 1
+ENDIF
+PRINTFORML  [99]打開角色制作相関的confige画面
+PRINTFORML [100]決定
+IS_SELECT:99 = 1
+IS_SELECT:100 = 1
+
+$INPUT_LOOP
+INPUT
+
+CHOICE = RESULT
+
+IF IS_SELECT:CHOICE == 0
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+ENDIF
+SELECTCASE CHOICE
+CASE 100
+	REDRAW 1
+	RETURN 1
+CASE 99
+	CALL SET_CONFIGURE, "角色定制関連"
+CASE 98
+	INVERTBIT TFLAG:过滤器, 0
+CASE 97
+	TALENT:ARG:謎之魅力 = COND("最強謎之魅力")
+	TALENT:ARG:甜言蜜语 = COND("最強甜言蜜语")
+	TALENT:ARG:大力士 = COND("最強大力士")
+	TALENT:ARG:性豪 = COND("最強性豪")
+	TALENT:ARG:禁断的知識 = MIN(COND("最強禁断的知識"), 1)
+	TALENT:ARG:射精量強化 = COND("最強射精量強化")
+	TALENT:ARG:豊穣 = COND("最強豊穣")
+	IF PENIS(ARG)
+		TALENT:ARG:小种马 = COND("最強小种马")
+		TALENT:ARG:業物 = COND("最強業物")
+	ENDIF
+	TALENT:ARG:天性の舌靈活 = 3
+	TALENT:ARG:天性の指靈活 = 3
+	TALENT:ARG:天性の腰靈活 = 3
+	TALENT:ARG:天性の魔乳 = 3
+	TALENT:ARG:Ｖ名器 = 3
+	TALENT:ARG:Ａ名器 = 3
+	TALENT:ARG:尿道名器 = 3
+	TALENT:ARG:喉名器 = 3
+	TALENT:ARG:淫紋刻印 = COND("最強淫紋刻印")
+	TALENT:ARG:具現 = COND("最強具現")
+	TALENT:ARG:認識阻害 = COND("最強認識阻害")
+
+
+CASE 96
+	TALENT:ARG:謎之魅力 = 0
+	TALENT:ARG:甜言蜜语 = 0
+	TALENT:ARG:大力士 = 0
+	TALENT:ARG:性豪 = 0
+	TALENT:ARG:禁断的知識 = 0
+	TALENT:ARG:射精量強化 = 0
+	TALENT:ARG:豊穣 = 0
+	TALENT:ARG:小种马 = 0
+	TALENT:ARG:業物 = 0
+	TALENT:ARG:天性の舌靈活 = 0
+	TALENT:ARG:天性の指靈活 = 0
+	TALENT:ARG:天性の腰靈活 = 0
+	TALENT:ARG:天性の魔乳 = 0
+	TALENT:ARG:Ｖ名器 = 0
+	TALENT:ARG:Ａ名器 = 0
+	TALENT:ARG:尿道名器 = 0
+	TALENT:ARG:喉名器 = 0
+	TALENT:ARG:淫紋刻印 = 0
+	TALENT:ARG:具現 = 0
+	TALENT:ARG:認識阻害 = 0
+
+CASE 90
+	EXP:ARG:Ａ経験 = 0
+	EXP:ARG:Ａ性交経験 = 0
+	EXP:ARG:Ａ拡張経験 = 0
+CASE 91
+	IF TALENT:ARG:男性
+		EXP:ARG:Ｖ挿入経験 = 0
+		EXP:ARG:Ａ挿入経験 = 0
+	ELSE
+		EXP:ARG:Ｖ経験 = 0
+		EXP:ARG:Ｖ性交経験 = 0
+		EXP:ARG:Ｖ拡張経験 = 0
+	ENDIF
+
+CASE 0
+	IF TALENT:ARG:娇小
+		TALENT:ARG:娇小 = 0
+		TALENT:ARG:高大 = 0
+	ELSEIF TALENT:ARG:高大 || TALENT:ARG:伪娘
+		TALENT:ARG:娇小 = 1
+		TALENT:ARG:高大 = 0
+	ELSE
+		TALENT:ARG:娇小 = 0
+		TALENT:ARG:高大 = 1
+	ENDIF
+CASE 1
+	TALENT:ARG:肤色 += 1
+	SIF TALENT:ARG:肤色 >= 4
+		TALENT:ARG:肤色 = 0
+CASE 2
+	TALENT:ARG:外見年齢 += 1
+	IF TALENT:ARG:伪娘
+		SIF TALENT:ARG:外見年齢 >= 3
+			TALENT:ARG:外見年齢 = 1
+	ELSEIF TALENT:ARG:外見年齢 >= 5
+		TALENT:ARG:外見年齢 = 1
+	ENDIF
+CASE 3
+	IF TALENT:ARG:聰慧
+		TALENT:ARG:聰慧 = 0
+		TALENT:ARG:笨蛋 = 1
+	ELSEIF TALENT:ARG:笨蛋
+		TALENT:ARG:聰慧 = 0
+		TALENT:ARG:笨蛋 = 0
+	ELSE
+		TALENT:ARG:聰慧 = 1
+		TALENT:ARG:笨蛋 = 0
+	ENDIF
+CASE 4
+	IF TALENT:ARG:巨乳 >= 3
+		TALENT:ARG:貧乳 = 1
+		TALENT:ARG:巨乳 = 0
+	ELSEIF TALENT:ARG:貧乳
+		TALENT:ARG:貧乳 = 0
+	ELSE
+		TALENT:ARG:巨乳 += 1
+	ENDIF
+CASE 5
+	TALENT:ARG:乳頭肥大 += 1
+	SIF TALENT:ARG:乳頭肥大 >= 4
+		TALENT:ARG:乳頭肥大 = 0
+CASE 6
+	TALENT:ARG:陥没乳頭 += 1
+	SIF TALENT:ARG:陥没乳頭 >= 4
+		TALENT:ARG:陥没乳頭 = 0
+CASE 7
+	TALENT:ARG:巨乳輪 += 1
+	SIF TALENT:ARG:巨乳輪 >= 4
+		TALENT:ARG:巨乳輪 = 0
+CASE 8
+	TALENT:ARG:陰核肥大 += 1
+	SIF TALENT:ARG:陰核肥大 >= 4
+		TALENT:ARG:陰核肥大 = 0
+CASE 9
+	TALENT:ARG:陰核包茎 += 1
+	SIF TALENT:ARG:陰核包茎 >= 2
+		TALENT:ARG:陰核包茎 = 0
+CASE 10
+	TALENT:ARG:阴茎 += 1
+	SIF TALENT:ARG:阴茎 >= 4
+		TALENT:ARG:阴茎 = 0
+CASE 11
+	TALENT:ARG:包茎 += 1
+	SIF TALENT:ARG:包茎 >= 3
+		TALENT:ARG:包茎 = 0
+CASE 12
+	IF TALENT:ARG:遅漏
+		TALENT:ARG:遅漏 = 0
+		TALENT:ARG:早漏 = 1
+	ELSEIF TALENT:ARG:早漏
+		TALENT:ARG:遅漏 = 0
+		TALENT:ARG:早漏 = 0
+	ELSE
+		TALENT:ARG:遅漏 = 1
+		TALENT:ARG:早漏 = 0
+	ENDIF
+CASE 13
+	IF TALENT:ARG:巨尻 >= 3
+		TALENT:ARG:小尻 = 1
+		TALENT:ARG:巨尻 = 0
+	ELSEIF TALENT:ARG:小尻
+		TALENT:ARG:小尻 = 0
+	ELSE
+		TALENT:ARG:巨尻 += 1
+	ENDIF
+CASE 14
+	IF TALENT:ARG:容易濕
+		TALENT:ARG:容易濕 = 0
+		TALENT:ARG:不易濕 = 1
+	ELSEIF TALENT:ARG:不易濕
+		TALENT:ARG:容易濕 = 0
+		TALENT:ARG:不易濕 = 0
+	ELSE
+		TALENT:ARG:容易濕 = 1
+		TALENT:ARG:不易濕 = 0
+	ENDIF
+CASE 15
+	BASE:ARG:陰毛 += 100
+	SIF BASE:ARG:陰毛 >= 800
+		BASE:ARG:陰毛 = 100
+CASE 16
+	BASE:ARG:腋毛 += 100
+	SIF BASE:ARG:腋毛 >= 800
+		BASE:ARG:腋毛 = 100
+CASE 17
+	IF COND("黑木耳", ARG)
+		TALENT:ARG:性器年齢 = 1
+	ELSE
+		TALENT:ARG:性器年齢 += 1
+	ENDIF
+CASE 20
+	ABL:ARG:技巧 += 1
+	SIF ABL:ARG:技巧 >= 6
+		ABL:ARG:技巧 = 0
+CASE 21
+	ABL:ARG:施虐属性 += 1
+	SIF ABL:ARG:施虐属性 >= 6
+		ABL:ARG:施虐属性 = 0
+CASE 22
+	ABL:ARG:受虐属性 += 1
+	SIF ABL:ARG:受虐属性 >= 6
+		ABL:ARG:受虐属性 = 0
+CASE 30
+	EXP:ARG:Ａ経験 = EXP_LV(GET_EXP_LV(EXP:ARG:Ａ経験) + 1)
+	SIF EXP:ARG:Ａ経験 > 50
+		EXP:ARG:Ａ経験 = 0
+	EXP:ARG:Ａ性交経験 = MIN(EXP:ARG:Ａ性交経験, EXP:ARG:Ａ経験)
+	EXP:ARG:Ａ拡張経験 = MIN(EXP:ARG:Ａ拡張経験, EXP:ARG:Ａ経験)
+CASE 31
+	EXP:ARG:Ａ性交経験 = EXP_LV(GET_EXP_LV(EXP:ARG:Ａ性交経験) + 1)
+	SIF EXP:ARG:Ａ性交経験 > 50
+		EXP:ARG:Ａ性交経験 = 0
+CASE 32
+	EXP:ARG:Ａ拡張経験 = EXP_LV(GET_EXP_LV(EXP:ARG:Ａ拡張経験) + 1)
+	SIF EXP:ARG:Ａ拡張経験 > 20
+		EXP:ARG:Ａ拡張経験 = 0
+CASE 35
+	EXP:ARG:Ｖ経験 = EXP_LV(GET_EXP_LV(EXP:ARG:Ｖ経験) + 1)
+	SIF EXP:ARG:Ｖ経験 > 50
+		EXP:ARG:Ｖ経験 = 0
+	EXP:ARG:Ｖ性交経験 = MIN(EXP:ARG:Ｖ性交経験, EXP:ARG:Ｖ経験)
+	EXP:ARG:Ｖ拡張経験 = MIN(EXP:ARG:Ｖ拡張経験, EXP:ARG:Ｖ経験)
+CASE 36
+	EXP:ARG:Ｖ性交経験 = EXP_LV(GET_EXP_LV(EXP:ARG:Ｖ性交経験) + 1)
+	SIF EXP:ARG:Ｖ性交経験 > 50
+		EXP:ARG:Ｖ性交経験 = 0
+CASE 37
+	EXP:ARG:Ｖ拡張経験 = EXP_LV(GET_EXP_LV(EXP:ARG:Ｖ拡張経験) + 1)
+	SIF EXP:ARG:Ｖ拡張経験 > 20
+		EXP:ARG:Ｖ拡張経験 = 0
+CASE 40
+	EXP:ARG:Ｖ挿入経験 = EXP_LV(GET_EXP_LV(EXP:ARG:Ｖ挿入経験) + 1)
+	SIF EXP:ARG:Ｖ挿入経験 > 50
+		EXP:ARG:Ｖ挿入経験 = 0
+CASE 41
+	EXP:ARG:Ａ挿入経験 = EXP_LV(GET_EXP_LV(EXP:ARG:Ａ挿入経験) + 1)
+	SIF EXP:ARG:Ａ挿入経験 > 50
+		EXP:ARG:Ａ挿入経験 = 0
+
+CASE 60
+	TALENT:ARG:謎之魅力 += 1
+	SIF TALENT:ARG:謎之魅力 > COND("最強謎之魅力")
+		TALENT:ARG:謎之魅力 = 0
+CASE 61
+	TALENT:ARG:甜言蜜语 += 1
+	SIF TALENT:ARG:甜言蜜语 > COND("最強甜言蜜语")
+		TALENT:ARG:甜言蜜语 = 0
+CASE 62
+	TALENT:ARG:大力士 += 1
+	SIF TALENT:ARG:大力士 > COND("最強大力士")
+		TALENT:ARG:大力士 = 0
+CASE 63
+	TALENT:ARG:性豪 += 1
+	SIF TALENT:ARG:性豪 > COND("最強性豪")
+		TALENT:ARG:性豪 = 0
+CASE 64
+	TALENT:ARG:射精量強化 += 1
+	SIF TALENT:ARG:射精量強化 > COND("最強射精量強化")
+		TALENT:ARG:射精量強化 = 0
+CASE 65
+	TALENT:ARG:豊穣 += 1
+	SIF TALENT:ARG:豊穣 > COND("最強豊穣")
+		TALENT:ARG:豊穣 = 0
+CASE 66
+	TALENT:ARG:小种马 += 1
+	SIF TALENT:ARG:小种马 > COND("最強小种马")
+		TALENT:ARG:小种马 = 0
+CASE 67
+	TALENT:ARG:業物 += 1
+	SIF TALENT:ARG:業物 > COND("最強業物")
+		TALENT:ARG:業物 = 0
+
+CASE 70
+	TALENT:ARG:天性の舌靈活 += 1
+	SIF TALENT:ARG:天性の舌靈活 > 3
+		TALENT:ARG:天性の舌靈活 = 0
+CASE 71
+	TALENT:ARG:天性の指靈活 += 1
+	SIF TALENT:ARG:天性の指靈活 > 3
+		TALENT:ARG:天性の指靈活 = 0
+CASE 72
+	TALENT:ARG:天性の腰靈活 += 1
+	SIF TALENT:ARG:天性の腰靈活 > 3
+		TALENT:ARG:天性の腰靈活 = 0
+CASE 73
+	TALENT:ARG:天性の魔乳 += 1
+	SIF TALENT:ARG:天性の魔乳 > 3
+		TALENT:ARG:天性の魔乳 = 0
+
+CASE 74
+	TALENT:ARG:Ｖ名器 += 1
+	SIF TALENT:ARG:Ｖ名器 > 3
+		TALENT:ARG:Ｖ名器 = 0
+CASE 75
+	TALENT:ARG:Ａ名器 += 1
+	SIF TALENT:ARG:Ａ名器 > 3
+		TALENT:ARG:Ａ名器 = 0
+CASE 76
+	TALENT:ARG:尿道名器 += 1
+	SIF TALENT:ARG:尿道名器 > 3
+		TALENT:ARG:尿道名器 = 0
+CASE 77
+	TALENT:ARG:喉名器 += 1
+	SIF TALENT:ARG:喉名器 > 3
+		TALENT:ARG:喉名器 = 0
+
+CASE 80
+	TALENT:ARG:淫紋刻印 += 1
+	SIF TALENT:ARG:淫紋刻印 > 1
+		TALENT:ARG:淫紋刻印 = 0
+CASE 81
+	TALENT:ARG:具現 += 1
+	SIF TALENT:ARG:具現 > 1
+		TALENT:ARG:具現 = 0
+CASE 82
+	TALENT:ARG:認識阻害 += 1
+	SIF TALENT:ARG:認識阻害 > 1
+		TALENT:ARG:認識阻害 = 0
+
+ENDSELECT
+
+IF TALENT:ARG:淫紋刻印 + TALENT:ARG:具現 + TALENT:ARG:認識阻害
+	TALENT:ARG:禁断的知識 = 1
+ELSE
+	TALENT:ARG:禁断的知識 = 0
+ENDIF
+
+CLEARLINE LINECOUNT - MEMO_LINECOUNT
+RESTART
+
+;MASTER作成用関数
+@CREATE_MASTER_MANUAL
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+#DIM CHOICE
+
+REDRAW 0
+
+MEMO_LINECOUNT = LINECOUNT
+PRINTL 
+
+IF CEVENT("同一性保持", MASTER) == 0
+	;MASTERの複製作成(いくつかの素質などを随机変更するので、変更前の角色を保存する)
+	ADDCOPYCHARA MASTER
+
+	IF FLAG:周回数 == 0
+		FOR LCOUNT, 0, 4
+			SELECTCASE RAND:10 + ABL:MASTER:技巧
+			CASE 0 TO 2
+				LOCAL = 0
+			CASE 3 TO 5
+				LOCAL = 1
+			CASE 6 TO 8
+				LOCAL = 2
+			CASEELSE
+				LOCAL = 3
+			ENDSELECT
+
+			SELECTCASE LCOUNT
+			CASE 0
+				TALENT:MASTER:天性の舌靈活 = LOCAL
+			CASE 1
+				TALENT:MASTER:天性の指靈活 = LOCAL
+			CASE 2
+				TALENT:MASTER:天性の腰靈活 = LOCAL
+			CASE 3
+				SIF TALENT:MASTER:男性 == 0
+					TALENT:MASTER:天性の魔乳 = LOCAL
+			ENDSELECT
+		NEXT
+	ENDIF
+
+	FOR LCOUNT, 0, 100
+		SIF EXP:MASTER:LCOUNT
+			EXP:MASTER:LCOUNT = MAX(MULTIPLY(EXP:MASTER:LCOUNT, 50 + (RAND:6 + RAND:6)*10), 1)
+	NEXT
+
+	CALL SETFLAG, "識別番号", MASTER
+	CALL RESET_EXP_GAIN, MASTER
+	CALL GET_EXABL, MASTER
+	CALL GET_EXTALENT, MASTER
+	CALL SET_3SIZE, MASTER
+	;これは設定済みなのでいらない
+	;CALL SETFLAG, "乳頭の詳細設定", MASTER
+	;CALL SETFLAG, "陰核の詳細設定", MASTER
+	CALL SETFLAG, "属性", MASTER
+	CALL CHECK_FAV_POSITION, MASTER
+	CALL SET_COUNTER_BASE
+	CALL VARSET_MAIDFACE, MASTER
+	CALL SET_COORDINATE, "内衣", MASTER
+	CALL SET_COORDINATE, "制服", MASTER
+	CALL SET_CEVENT, "同一性保持", MASTER
+ENDIF
+
+CALL NEW_PRINT_STATE, MASTER, "角色メイク"
+PRINTL 
+PRINTFORML 这様可以了吗？（[ 3]在变更完後也会随机属性）
+PRINTFORML [ 0]确定　[ 1]重新设定　[ 2]重新加载　[ 3]名前変更　[ 4]confige　[ 5]颜绘を\@ CFLAG:MASTER:颜绘 ? 変更 # 設定 \@する
+CALL INPUT_SELECT, 6
+CHOICE = RESULT
+
+SELECTCASE CHOICE
+CASE 0, 1
+	REDRAW 1
+	CALL DEL_CEVENT, "同一性保持", MASTER
+	DELCHARA CHARANUM-1
+	RETURN CHOICE
+CASE 2
+	CALL DEL_CEVENT, "同一性保持", MASTER
+	;現在的MASTERの各パラメータを保存されていたものに戻し、変更前角色を消す
+	COPYCHARA CHARANUM-1, MASTER
+	DELCHARA CHARANUM-1
+;[3]～を選択した場合には角色を保つようにする
+CASE 3
+	CALL NAME_CONVERT, MASTER
+
+	;変更前の保存用角色にも反映させる
+	NAME:(CHARANUM - 1) = %NAME:MASTER%
+	CALLNAME:(CHARANUM - 1) = %CALLNAME:MASTER%
+	NICKNAME:(CHARANUM - 1) = %NICKNAME:MASTER%
+CASE 4
+	CALL SET_CONFIGURE, "角色定制関連"
+CASE 5
+	CALL SIMULATE_MAIDFACE, MASTER
+	CALL SETFLAG, "髪の記録", MASTER
+	CALL SETFLAG, "表情の記録", MASTER
+
+	;変更前の保存用角色にも反映させる
+	CALL SETFLAG, "髪記録からの復元", CHARANUM - 1
+	CALL SETFLAG, "表情記録からの復元", CHARANUM - 1
+	CFLAG:(CHARANUM - 1):颜绘 = CFLAG:MASTER:颜绘
+	CSTR:(CHARANUM - 1):所持内衣 = %CSTR:MASTER:所持内衣%
+ENDSELECT
+
+CLEARLINE LINECOUNT - MEMO_LINECOUNT
+RESTART
+
+@RENEWAL_MASTER, ARGS
+#DIM LCOUNT
+#DIMS MEMO_CSTR, 200
+#DIM MEMO_CFLAG
+
+VARSET MEMO_CSTR
+VARSET MEMO_CFLAG
+
+;颜绘関係は全引継ぎ
+MEMO_CFLAG = CFLAG:MASTER:颜绘
+FOR LCOUNT, 0, 90
+	SELECTCASE CSTRNAME:LCOUNT
+	CASE "弱点", "性癖", "称号", "学年", "所持内衣"
+		MEMO_CSTR:LCOUNT = %CSTR:MASTER:LCOUNT%
+	ENDSELECT
+NEXT
+FOR LCOUNT, 90, 110
+	MEMO_CSTR:LCOUNT = %CSTR:MASTER:LCOUNT%
+NEXT
+
+SELECTCASE ARGS
+CASE "作り直し"
+	DELCHARA CHARANUM-1
+	ADDCHARA 0
+CASEELSE
+	VARSET TALENT:MASTER:0, 0
+	VARSET CFLAG:MASTER:0, 0
+	VARSET ABL:MASTER:0, 0
+	VARSET EXP:MASTER:0, 0
+	VARSET MARK:MASTER:0, 0
+	VARSET JUEL:MASTER:0, 0
+	VARSET CSTR:MASTER:0, ""
+
+	ABL:MASTER:技巧 = 0
+	TALENT:MASTER:男性 = 1
+	;妊娠イベントなど、ベースフラグの重置
+	VARSET BASE:MASTER:0, 0, 20, 60
+	VARSET TCVAR:MASTER:0
+ENDSELECT
+
+CFLAG:MASTER:颜绘 = MEMO_CFLAG
+FOR LCOUNT, 0, 110
+	CSTR:MASTER:LCOUNT = %MEMO_CSTR:LCOUNT%
+NEXT
+
+;-------------------------------------------------
+;※次の周に移行すると以下が起きます※"
+;1.日期が１年目の１日目に戻り、角色も初期化＆未勧誘に返回
+;2.你の角色メイクで周回限定の操作が追加される
+;3.周回数と、[恋慕]or[淫乱]にした人数に応じた実行値のBOUNSを得る(永続＆周回ごとに純増)
+;-------------------------------------------------
+@GAME_RENEWAL
+#DIM LCOUNT
+#DIM IS_NewGamePlus
+
+DRAWLINE
+PRINTFORMW 次の周回への移行を開始します。
+;	DRAWLINE
+;	PRINTFORML ……%CALLNAME:MASTER%と弗理希艾尔の能力を保ちますか？
+;	CALL PRINT_SELECT, "是/重置する"
+;	SELECTCASE RESULT
+;	CASE 0
+;		IS_NewGamePlus = 1
+;	CASEELSE
+;		IS_NewGamePlus = 0
+;	ENDSELECT
+
+;フラグに使う現実時間を取得
+CALL GET_REALTIMEFORFLAG
+DAY = 1
+TIME = 2
+CALL SETFLAG, "年月日"
+
+;前周の勧誘角色を記録
+SAVESTR:前周の勧誘角色 = 
+FOR LCOUNT, 2, CHARANUM
+	SAVESTR:前周の勧誘角色 += @"%CSVCALLNAME(NO:LCOUNT)%/"
+NEXT
+
+;角色消去
+;IF IS_NewGamePlus
+;	FOR LCOUNT, 3, CHARANUM
+;		DELCHARA 3
+;	NEXT
+;ELSE
+	FOR LCOUNT, 2, CHARANUM
+		DELCHARA 2
+	NEXT
+;ENDIF
+
+;FLAG消去
+FLAG:角色介绍 = 0
+FLAG:勧誘可能 = 0
+FLAG:標語 = 0
+FLAG:昼の相手 = 0
+FLAG:夜の相手 = 0
+FLAG:個室 = 0
+FLAG:季節イベントフラグ = 0
+FLAG:点心当番 = 0
+FLAG:便当制作者 = 0
+FLAG:この周での陥落人数 = 0
+;SAVESTR消去
+FOR LCOUNT, 0, 100
+	SELECTCASE LCOUNT
+	;残すもの
+	CASE 30 TO 39, GETNUM(SAVESTR, "陥落角色"), GETNUM(SAVESTR, "前周の勧誘角色")
+	CASEELSE
+		SAVESTR:LCOUNT = 
+	ENDSELECT
+NEXT
+SAVESTR:前周まででの陥落角色 = %SAVESTR:陥落角色%
+
+VARSET STR
+VARSET TFLAG
+TARGET = 1
+;你の最強パラを更新
+CALL SETFLAG, "最強パラ記録"
+CALL RENEWAL_MASTER, "作り直し"
+
+FLAG:周回数 += 1
+DRAWLINE
+CALL SETFLAG_OPENING
+
+PRINTFORMW 那么请享受第{FLAG:周回数 + 1}周目。
+
+CALL EVENTSHOP_MAIN

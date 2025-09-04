@@ -1,0 +1,388 @@
+﻿;-------------------------------------------------
+;各種打招呼
+;-------------------------------------------------
+@KOJO_GREETING_K4, ARGS
+#DIM MEMO_LINECOUNT
+;イベント発生中の角色
+#DIM ACTOR
+;イベント発生中の角色の默认のCALLNAME
+#DIMS CALLNAME_ACTOR
+
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE ARGS
+CASE "朝拘束"
+
+CASE "朝袭"
+
+CASE "打招呼"
+	SELECTCASE CSTR:朝袭
+	CASE "朝口交"
+
+	ENDSELECT
+
+	;何か発言してたらここまで
+	;SIF LINECOUNT > MEMO_LINECOUNT
+	;	RETURN 1
+
+	IF COND("体育")
+
+	ELSE
+
+	ENDIF
+CASE "一番乗り"
+	IF RAND:2
+		PRINTFORMW 「哦？真是罕见啊，我是最好的吗？」
+	ELSE
+		PRINTFORMW 「其他孩子要迟到了」
+		PRINTFORMW 「特别补习？对吗？」
+	ENDIF
+CASE "ただいま"
+	PRINTFORMW 「我回来啦」
+CASE "既に入室"
+	;家で出迎えてくれる時
+	IF COND("夜")
+
+	ELSE
+
+	ENDIF
+
+CASE "入室打招呼"
+
+CASE "抜け出された"
+
+CASE "便当"
+
+ENDSELECT
+
+;-------------------------------------------------
+;メイン画面での台詞。いわゆる一言イベント強化版
+;ちなみに画面随机属性しても同じセリフを喋ります
+;選択肢に挟まれた場所で出力するのでWAITの使用は禁止
+;-------------------------------------------------
+@KOJO_DAILY_K4, ARGS
+#DIM MEMO_LINECOUNT
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE ARGS
+;初回のセリフ
+CASE "初回台詞"
+	PRINTFORML 
+CASE "浑身是汗"
+	PRINTFORML 
+CASE "刚睡醒"
+	PRINTFORML 
+;沉眠著
+CASE "睡眠"
+	;梦话
+	CALL KOJO_SLEEP_K4
+	;梦话用の汎用地の文呼出
+	CALL DAILY_MESSAGE, "梦话"
+ENDSELECT
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;前回指令対応台詞
+SELECTCASE CONDS("直前行動")
+CASE "愛の告白"
+	PRINTFORML 
+CASE "契約成立"
+	PRINTFORML 
+CASE "摆脱"
+	PRINTFORML 
+CASE "露脐装超短裙胖次チラ"
+	PRINTFORML 
+CASE "掀起裙子"
+	PRINTFORML 
+ENDSELECT
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;イベント台詞。CFLAG:日常事件回数が10増えるたびに一つ叫醒ぐらいで良いでしょう
+IF CFLAG:日常事件回数 >= 5 && DEVENT("質問１") == 0
+	PRINTFORML 
+	CALL SET_DEVENT, "質問１"
+ENDIF
+IF CFLAG:日常事件回数 >= 15 && DEVENT("質問２") == 0
+	PRINTFORML 
+	CALL SET_DEVENT, "質問２"
+ENDIF
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;他の人といちゃついた後にpartner変更
+IF COND("いちゃいちゃ") == 0 && FIND_COND("Ｈ的いちゃつき中")
+;	PRINTFORML 
+ENDIF
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;以下は随机台詞など
+
+;時間帯と場所と関係で変化有些
+IF COND("夜")
+	PRINTFORML 
+ELSE
+	PRINTFORML 
+ENDIF
+
+;-------------------------------------------------
+;梦话。随意むにゃむにゃ言わせてください
+;-------------------------------------------------
+@KOJO_SLEEP_K4
+;上から順に発言頻度が高いようにする(== 0の付け忘れではない)
+IF RAND:3
+	PRINTFORML 
+ELSEIF RAND:2
+	PRINTFORML 
+ELSE
+	PRINTFORML 
+ENDIF
+
+;-------------------------------------------------
+;メイン画面で選択肢として独立している日常イベントでのセリフ。WAIT使って大丈夫です
+;こっちはあくまで選択肢で選ばれた場合に限るのに注意。
+;-------------------------------------------------
+@KOJO_DAILYCOM_K4, ARGS
+;打招呼
+#DIMS GREETING
+
+
+SELECTCASE ARGS
+CASE "归途"
+	;SAVESTR:現在位置 と SAVESTR:归途の行動 を決定する
+	CALL SETFLAG, "遭遇地点"
+	;地の文を出す
+	CALL DAILY_MESSAGE, "归途"
+;[999]選択後の台詞。TFLAG:床イン = 1とすることで強制的にエロにも行ける
+CASE "休憩"
+	IF PLACE("自宅")
+		IF COND("夜")
+
+		ELSE
+
+		ENDIF
+	;ここは実質昼のみ
+	ELSEIF PLACE("部室")
+
+	;場所移動後
+	ELSE
+
+	ENDIF
+;ここには特殊な条件での角色独自のイベントを書く。別に無くても構わない
+;発生領帯ミングは日常イベント選択後の好感度を得た直後
+CASE "特殊事件"
+	;眠ってる時でも来るので書くことないならRETURN 0してください
+	SIF CFLAG:睡眠
+		RETURN 0
+;これは昼か夜
+CASE "打招呼"
+	IF COND("夜")
+		GREETING = 晚上好
+	ELSEIF COND("昼")
+		GREETING = 你好
+	ELSE
+		GREETING = 早上好う
+	ENDIF
+	;你に先に打招呼をされた
+	IF CFLAG:打招呼した == 0
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "叫醒"
+	PRINTFORMW 
+CASE "Talk"
+	SELECTCASE STR:日常イベント名
+	CASE "夸奖"
+		PRINTFORMW 「做的真好、您可以通过和另一个人调情来告诉自己对自己的感觉」
+		PRINTFORMW 「重要的是要知道你是否是在奉承」
+	CASE "甜言蜜语"
+		IF TALENT:恋慕
+			PRINTFORMW 「这是一个出乎意料的好地方呢」
+			PRINTFORMW  ％CALLNAME：TARGET％知道你喜欢苦笑呢
+		ELSEIF CALCF("甜言蜜语成功")
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 「啊哈！」
+			PRINTFORMW  说什么呢，奇奇怪怪的？
+		ENDIF
+	CASEELSE
+		IF RAND:3 == 0
+			PRINTFORMW 
+		ELSEIF RAND:2
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDSELECT
+
+CASE "拭汗"
+	PRINTFORMW 「谢谢啦、我就让你帮个忙吧~」
+;睡眠中の悪戯
+CASE "趁睡袭击"
+	;梦话
+	CALL KOJO_SLEEP_K4
+	WAIT
+CASE "互动"
+	SELECTCASE STR:日常イベント名
+	CASE "托一托胸部"
+		PRINTFORMW 
+	CASE "按摩"
+		PRINTFORMW 「谢谢啦，我的肩膀还真有点酸呢~」
+	CASE "接吻"
+		IF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	CASE "膝枕"
+		PRINTFORMW 
+	CASE "泡茶"
+		PRINTFORMW 「诶呀，还蛮好喝的呢」
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+CASE "整理睡姿"
+	;梦话
+	CALL KOJO_SLEEP_K4
+	WAIT
+CASE "卖个破绽"
+	SELECTCASE STR:日常イベント名
+	CASE "Ｈ的邀请", "展示内褲"
+		PRINTFORMW 
+	CASE "推倒"
+		PRINTFORMW 
+	CASE "口淫"
+		PRINTFORMW 
+	CASE "亲脸頬", "接吻"
+		PRINTFORMW 
+	CASE "膝枕", "抱住", "把胸部压了上去", "摩擦股間"
+		PRINTFORMW 
+	CASE "抚摸", "手淫"
+		PRINTFORMW 
+	CASE "膝枕"
+		PRINTFORMW 
+	CASE "沏茶"
+		PRINTFORMW 
+	;それ以外
+	CASEELSE
+		IF RAND:2
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDSELECT
+CASE "廁所"
+	;廁所で用を済ませた後の台詞
+	IF BASE:尿意 == 0
+		;主人も廁所で済ませてきた
+		IF BASE:MASTER:尿意 == 0
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;廁所に行く際の台詞
+	ELSE
+		PRINTFORMW 「少し席を取下わね」
+	ENDIF
+CASE "廁所詮索"
+	;初回
+	IF DEVENT(ARGS) == 0
+		PRINTFORMW 「可以吗？去厕所的话，男孩子会用小鸡鸡射击，女孩子则会像被采花一样」
+		PRINTFORMW %CALLNAME:TARGET%被%CALLNAME:MASTER%好好教育了.....
+	ELSE
+		PRINTFORMW 「你说这些污言秽语，想要体验飞天的感觉吗？」
+		PRINTFORMW %CALLNAME:TARGET%站着不动
+	ENDIF
+CASE "检查阴部"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K4
+		WAIT
+	ELSEIF COND("合意：检查阴部") == 0
+		;拒否されたのに連続実行
+		IF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "检查内褲"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K4
+		WAIT
+	;連続実行
+	ELSEIF CSTR:PREV_DAILYCOM == STR:日常イベント名
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "撫摸股間"
+	PRINTFORMW 
+CASE "检查布鲁马", "股間観察"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K4
+		WAIT
+	ELSEIF CFLAG:股間確認済 && RAND:2
+		PRINTFORMW 
+	;心情好
+	ELSEIF CFLAG:心情好
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "掀起裙子"
+	SELECTCASE STR:日常イベント名
+	CASE "撩起裙子"
+		;胖次チラ直後
+		IF COND("胖次チラ直後")
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;掀起裙子
+	CASEELSE
+		;刚睡醒の胡乱な状態を襲う
+		IF CFLAG:刚睡醒
+			PRINTFORMW 
+		;睡眠中の悪戯
+		ELSEIF CFLAG:睡眠
+			;梦话
+			CALL KOJO_SLEEP_K4
+			WAIT
+		;胖次チラ直後
+		ELSEIF COND("胖次チラ直後")
+			PRINTFORMW 
+		ELSE
+			IF COND("打招呼前")
+				PRINTFORMW 
+			ELSE
+				;胖次沒穿
+				IF EQUIP:胖次 == 0
+					PRINTFORMW 
+				ELSE
+					PRINTFORMW 
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDSELECT
+ENDSELECT
+
+
+

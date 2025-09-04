@@ -1,0 +1,502 @@
+﻿@COM90
+;手淫(用手套来冲を活用するのはまた今度…)
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+CALL SHOW_COM_ORDER_COM, 90
+
+;実行できない
+IF TCVAR:干劲 == 0
+	SIF PENIS(PLAYER)
+		PRINTFORMW %CALLNAME:TARGET%對於%CALLNAME:PLAYER%的陰莖似乎完全不想觸碰、非常討厭的樣子……
+	RETURN 0
+ENDIF
+
+;-------------------------------------------------
+;実行決定
+;-------------------------------------------------
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+;-------------------------------------------------
+;射精格子
+;-------------------------------------------------
+IF CHECK_COM("手交口交")
+	CALL SAMEN_CHECK, 70
+	SELECTCOM = 91
+	CALL SAMEN_CHECK, 50
+	SELECTCOM = 90
+ELSEIF CHECK_COM("玩弄Ａ手交")
+	CALL SAMEN_CHECK, 70
+	SELECTCOM = 96
+	CALL SAMEN_CHECK, 50
+	SELECTCOM = 90
+ELSEIF CHECK_COM("洗面奶手交")
+	CALL SAMEN_CHECK, 70
+	SELECTCOM = 104
+	CALL SAMEN_CHECK, 50
+	SELECTCOM = 90
+ELSE
+	CALL SAMEN_CHECK
+ENDIF
+
+RETURN 1
+
+@FLAG_COM90, ARG
+IF CHECK_COM("手交しあう") == 90
+	CALL FLAG_COM10, 50
+ELSEIF CHECK_COM("手交口交") == 90
+	CALL FLAG_COM91, 50
+ELSEIF CHECK_COM("玩弄Ａ手交") == 90
+	CALL FLAG_COM96, 50
+ELSEIF CHECK_COM("洗面奶手交") == 90
+	CALL FLAG_COM104, 50
+ENDIF
+;対象の指⇔調教者のＰ的污垢が移動
+IF TALENT:PLAYER:一般人 || TALENT:PLAYER:男性  || TALENT:PLAYER:扶她
+	CALL EQ_STAIN, TARGET, "手", PLAYER, "Ｐ"
+;対象の指⇔調教者のＶ的污垢が移動
+ELSE
+	CALL EQ_STAIN, TARGET, "Ｖ", PLAYER, "Ｐ"
+ENDIF
+
+;汚れは手套でふき取る。
+SIF EQUIP:手套 && !CHECK_GLOVE("指露出")
+	CALL RESET_STAIN_EX, "Ｐ", PLAYER
+
+@SOURCE_COM90, ARG
+IF CHECK_COM("手交しあう") == 90
+	CALL SOURCE_COM10, 50
+ELSEIF CHECK_COM("手交口交") == 90
+	CALL SOURCE_COM91, 50
+ELSEIF CHECK_COM("玩弄Ａ手交") == 90
+	CALL SOURCE_COM96, 50
+ELSEIF CHECK_COM("洗面奶手交") == 90
+	CALL SOURCE_COM104, 50
+ENDIF
+
+CALL VARSET_COMF
+
+CALL SOURCE_SERVICE_PLAY, "手淫"
+
+CALL SOURCE_DOWNBASE_HP, 90
+
+IF PENIS(PLAYER)
+	SOURCE:0:不潔 = COM_ORDER_STAIN("Ｐ", "手")*20 + 60
+ELSE
+	SOURCE:0:不潔 = COM_ORDER_STAIN("Ｖ", "手")*20 + 60
+ENDIF
+
+SOURCE:0:欲情追加 = CALCF("実行値による欲情追加")
+SOURCE:0:屈従 = 500
+SOURCE:0:逸脱 = 100
+
+CALL CALC, "調教ソース", ARG
+
+;性行動と達成感
+@SOURCE_SERVICE_PLAY, ARGS
+;技巧と対応した～使いの和
+#DIM ABL_SERVICE
+
+;ABL:奉仕精神をみる
+SELECTCASE ABL:奉仕精神
+CASE 0
+	SOURCE:0:性行動 = 200
+	SOURCE:0:達成感 = 50
+CASE 1
+	SOURCE:0:性行動 = 500
+	SOURCE:0:達成感 = 200
+CASE 2 TO 5
+	SOURCE:0:性行動 = 500 + (ABL:奉仕精神 - 1)*100
+	SOURCE:0:達成感 = 200 + (ABL:奉仕精神 - 1)*50
+CASE 6 TO 10
+	SOURCE:0:性行動 = 900 + (ABL:奉仕精神 - 5)*60
+	SOURCE:0:達成感 = 400 + (ABL:奉仕精神 - 5)*20
+CASEELSE
+	SOURCE:0:性行動 = 1200 + (ABL:奉仕精神 - 10)*30
+	SOURCE:0:達成感 = 500 + (ABL:奉仕精神 - 10)*10
+ENDSELECT
+
+ABL_SERVICE = ABL:技巧
+SELECTCASE ARGS
+CASE "手淫", "胸爱抚奉侍", "飞机杯冲", "逆振動棒", "逆Ａ振動棒"
+	ABL_SERVICE += ABL:指靈活
+
+CASE "口交"
+	ABL_SERVICE += ABL:舌靈活
+
+	TIMES SOURCE:0:性行動, 1.50
+	TIMES SOURCE:0:達成感, 1.50
+CASE "奉仕舐陰"
+	ABL_SERVICE += ABL:舌靈活
+
+	TIMES SOURCE:0:性行動, 1.80
+	TIMES SOURCE:0:達成感, 1.80
+
+CASE "強制口交", "肛門奉仕"
+	ABL_SERVICE += ABL:舌靈活
+
+	TIMES SOURCE:0:性行動, 2.00
+	TIMES SOURCE:0:達成感, 2.00
+CASE "乳交", "洗面奶"
+	ABL_SERVICE += ABL:魔乳
+
+CASE "素股"
+	ABL_SERVICE += ABL:腰靈活
+
+CASE "泡泡浴"
+	ABL_SERVICE += ABL:腰靈活 + ABL:魔乳
+CASE "足交"
+	ABL_SERVICE += ABL:施虐属性
+CASE "足を舐める"
+	ABL_SERVICE += ABL:受虐属性
+CASE "六九式"
+
+ENDSELECT
+
+SELECTCASE ABL_SERVICE
+CASE 0 TO 5
+	SOURCE:0:性行動 = MULTIPLY(SOURCE:0:性行動, 100 + ABL_SERVICE*20)
+	SOURCE:0:達成感 = MULTIPLY(SOURCE:0:達成感, 100 + ABL_SERVICE*20)
+CASE 6 TO 10
+	SOURCE:0:性行動 = MULTIPLY(SOURCE:0:性行動, 200 + (ABL_SERVICE - 5)*10)
+	SOURCE:0:達成感 = MULTIPLY(SOURCE:0:達成感, 200 + (ABL_SERVICE - 5)*10)
+CASEELSE
+	SOURCE:0:性行動 = MULTIPLY(SOURCE:0:性行動, 250 + (ABL_SERVICE - 10)*5)
+	SOURCE:0:達成感 = MULTIPLY(SOURCE:0:達成感, 250 + (ABL_SERVICE - 10)*5)
+ENDSELECT
+
+
+@TRAIN_MESSAGE_COM90
+IF CHECK_COM("Ｗ奉仕")
+	;二人とも前回と同じ行動
+	IF SELECTCOM:1 == PREVCOM:1 && SELECTCOM == PREVCOM
+		PRINTFORM 兩人
+		IF TALENT:(TARGET:1):淫乱 + TALENT:(TARGET:1):恋慕 && TALENT:淫乱 + TALENT:恋慕 && RAND:4 == 0
+			PRINTFORMW 在如同耽溺在夢中一樣神情恍惚著的同時、將%CALLNAME:PLAYER%的陰莖持續擼動侍奉著……
+		ELSEIF ABL:(TARGET:1):奉仕精神 >= 3 && ABL:奉仕精神 >= 3 && RAND:3 == 0
+			PRINTFORMW 在密切而謹慎地關注著神態的同時、將%CALLNAME:PLAYER%的陰莖持續擼動侍奉著……
+		ELSEIF ABL:(TARGET:1):技巧 + ABL:技巧 >= 6 && RAND:2 == 0
+			PRINTFORMW 在嫻熟地調節著運動節奏的同時、將%CALLNAME:PLAYER%的陰莖持續擼動侍奉著……
+		ELSE
+			PRINTFORMW 將%CALLNAME:PLAYER%的陰莖持續擼動侍奉著……
+		ENDIF
+	ELSE
+		PRINTFORM %CALLNAME:TARGET%和%CALLNAME:(TARGET:1)%
+		SIF TALENT:(TARGET:1):淫乱 + TALENT:(TARGET:1):恋慕 && TALENT:淫乱 + TALENT:恋慕 && RAND:2 == 0
+			PRINTFORM 在用充滿慾望與依戀的雙瞳凝視著%CALLNAME:MASTER%赤裸身體的同時、
+		IF RAND:2 == 0
+			PRINTFORMW 像是在競爭一樣的將陰莖持續擼動侍奉著……
+		ELSE
+			PRINTFORMW 相互協助的將陰莖持續擼動侍奉著……
+		ENDIF
+	ENDIF
+;==90で两根手交、== 91なら口交＆手交、それ以外は犯されながら手交
+ELSEIF CHECK_COM("３Ｐ奉仕")
+	CALL TRAIN_MESSAGE_3P
+;同時推倒
+ELSEIF TEQUIP:Ｗ推倒
+	PRINTFORM %CALLNAME:TARGET%
+	;助手が前回と同じ行動(違う行動の時は、ここでなく、EQUIP_COM32で記述)
+	SIF SELECTCOM:1 == PREVCOM:1 && SELECTCOM:1 >= 0
+		PRINTFORM 、%TEXTS("Ｗ推倒中")%、
+
+	IF SELECTCOM == PREVCOM
+		PRINTFORMW 將%CALLNAME:MASTER%的陰莖噗嗤噗嗤地持續擼動著……
+	ELSE
+		PRINTFORMW 將%CALLNAME:MASTER%的陰莖持續擼動著……
+	ENDIF
+;前回と同じ
+ELSEIF PREVCOM == SELECTCOM && COND("前Ｔ調教者") == PLAYER
+	PRINTFORM %CALLNAME:TARGET%
+	IF TEQUIP:電話中
+		PRINTFORM 和%TEXTR(@"感觉和平时的电话没有什么不同的/什么都不知道地给这边打电话的/完全没有任何怀疑持续地通电话的/完全不知情/完全不知道发生了这样的事情的/不知道对方已经出轨了的/相信着%CALLNAME:TARGET%的")%
+		PRINTFORM %TEXTS("彼氏")%%TEXTR("说这话的同时/持续通话的同时/进行着日常会话的同时/谈论着最近发生的事情的同时/讲着情话的同时")%、
+	ELSEIF INSERT("合体中")
+		PRINTFORM %TEXTS("合体中", TARGET)%
+	ELSEIF TEQUIP:面部騎乗
+		PRINTFORM 將%CALLNAME:PLAYER%的臉頰用
+		SELECTCASE COND("陰毛")
+		CASE 1 TO 3
+			PRINTFORM \@ RAND:2 ? 柔滑 # 柔軟 \@的
+		CASE 7
+			PRINT 被厚重的黑色密林深深掩藏的
+		ENDSELECT
+		PRINTFORM 胯股之间不斷摩擦著的同時、、
+	ENDIF
+	IF TALENT:恋慕 && INSERT("合体中") == 0 && RAND:3 == 0
+		;气味弱点分岐
+		IF PLAYER == MASTER && TALENT:气味弱点 && RAND:3
+			IF RAND:2
+				PRINTFORMW 陰莖所散發出的淫靡%TEXTS("气味")%仔細嗅聞著、並且用手不斷地擼動著……
+			ELSE
+				PRINTFORMW 蒸騰出灼熱汗汽的陰莖的%TEXTS("气味")%用力到鳴響鼻腔的盡情享受著、並且用雙手將其不斷摩擦刺激著……
+			ENDIF
+		ELSE
+			PRINTFORMW 在如同耽溺在夢中一樣神情恍惚著的同時、將%CALLNAME:PLAYER%的陰莖持續擼動侍奉著……
+		ENDIF
+	ELSEIF ABL:奉仕精神 >= 3 && TEQUIP:面部騎乗 + INSERT("合体中") == 0 && RAND:3 == 0
+		PRINTFORMW 在密切而謹慎地關注著神態的同時、將%CALLNAME:PLAYER%的陰莖持續擼動侍奉著……
+	ELSEIF ABL:技巧 >= 3 && RAND:2 == 0
+		PRINTFORMW 挺立的陰莖用時快時慢的節奏嫻熟地侍奉著……
+	ELSE
+		PRINTFORMW 挺立的陰莖神情恍惚的持續擼動著……
+	ENDIF
+ELSEIF CHECK_COM("手交しあう")
+	PRINTFORM %CALLNAME:PLAYER%達は
+	SIF TEQUIP:接吻
+		PRINTFORM 、%TEXTS("接吻継続")%
+	PRINTFORM 互相的阴茎
+	IF RAND:2
+		PRINTFORMW 繼續時快時慢的%TEXTR("來回撫摸著/輕輕摩挲著")%……
+	ELSE
+		PRINTFORMW 持續%TEXTR("細緻而激烈地/用沾滿前列液的手有節奏地")%擼動著……
+	ENDIF
+ELSEIF CHECK_COM("手交口交")
+	PRINTFORM %CALLNAME:TARGET%
+	IF TEQUIP:電話中
+		PRINTFORM 和%TEXTR(@"感觉和平时的电话没有什么不同的/什么都不知道地给这边打电话的/完全没有任何怀疑持续地通电话的/完全不知情/完全不知道发生了这样的事情的/不知道对方已经出轨了的/相信着%CALLNAME:TARGET%的")%
+		PRINTFORM %TEXTS("彼氏")%%TEXTR("说这话的同时/持续通话的同时/进行着日常会话的同时/谈论着最近发生的事情的同时/讲着情话的同时")%、
+	ENDIF
+	;气味弱点分岐
+	IF PLAYER == MASTER && TALENT:气味弱点 && TALENT:恋慕 && (CHOSECOM(SELECTCOM) == 0 || RAND:3 == 0)
+		IF CHECK_STAIN(STAIN:PLAYER:Ｐ, "Ｐ恥垢") && RAND:5
+			PRINTFORM 將包皮內部%TEXTR("白色恥垢/苦澀的殘渣")%所散發出的嗆鼻%TEXTS("气味")%
+		ELSE
+			PRINTFORM 將陰莖蒸騰而出的醉人%TEXTS("气味")%
+		ENDIF
+		PRINTFORM %TEXTR("仔細嗅聞著/盡情享受著")%的同時、將%CALLNAME:PLAYER%的
+	ELSEIF TALENT:恋慕 && RAND:4 == 0
+		PRINTFORM 神志恍惚地將%CALLNAME:PLAYER%的
+	ELSEIF ABL:奉仕精神 >= 3 && RAND:3 == 0
+		PRINTFORM 凝视着%CALLNAME:PLAYER%的脸
+	ELSE
+		PRINTFORM %CALLNAME:PLAYER%の
+	ENDIF
+	IF RAND:4 == 0
+		PRINTFORM 龜頭用舌頭仔細舔舐著、
+	ELSEIF RAND:3 == 0
+		PRINTFORM 尿道用舌尖小心地刺激著、
+	ELSEIF RAND:2
+		PRINTFORM 陰莖不斷地啄吻著、
+	ELSE
+		PRINTFORM 龜頭含住後用力地吮吸起來、
+	ENDIF
+	PRINTFORMW 並且在用手指玩弄著陰莖的時候、也將%CALLNAME:PLAYER%的反應盡情享受著……
+;被逆推ているとき
+ELSEIF TEQUIP:推倒 || CHECK_COM("洗面奶手交")
+	PRINTFORM %CALLNAME:TARGET%
+	IF TEQUIP:電話中
+		PRINTFORM 和%TEXTR(@"感觉和平时的电话没有什么不同的/什么都不知道地给这边打电话的/完全没有任何怀疑持续地通电话的/完全不知情/完全不知道发生了这样的事情的/不知道对方已经出轨了的/相信着%CALLNAME:TARGET%的")%
+		PRINTFORM %TEXTS("彼氏")%%TEXTR("说这话的同时/持续通话的同时/进行着日常会话的同时/谈论着最近发生的事情的同时/讲着情话的同时")%、
+	ENDIF
+	IF TEQUIP:接吻
+		PRINTFORM %TEXTS("接吻継続")%
+		CALL SETFLAG, "追加接吻フラグ", TARGET
+	ELSEIF TEQUIP:面部騎乗
+		PRINT 跨坐在臉頰上的同時、
+	ELSEIF CHECK_COM("玩弄Ａ手交")
+		PRINTFORM 將%CALLNAME:PLAYER%的尻穴用\@ RAND:2 ? 盡力延長的 # \@舌尖
+		IF RAND:3 == 0
+			PRINT 蹂躪著的同時、用
+		ELSEIF RAND:2
+			SIF (ABL:奉仕精神 >= 3 || ABL:施虐属性 >= 3) && RAND:2
+				PRINT 連同最深處的肉襞也一併
+			PRINTFORM 舔舐著的同時、用
+		ELSE
+			PRINT 玩弄著的同時、用
+		ENDIF
+	ELSEIF CHECK_COM("洗面奶手交")
+		PRINTFORM 將%CALLNAME:PLAYER%的臉頰用
+		IF RAND:3 == 0
+			PRINT 豐腴的胸部
+		ELSEIF RAND:2 == 0
+			PRINT 成熟飽滿的果實
+		ELSE
+			PRINT 柔軟的乳房
+		ENDIF
+		IF RAND:2 && TEQUIP:推倒
+			PRINTFORM 不斷壓迫著的同時、用
+		ELSEIF RAND:2
+			PRINTFORM 緊緊包裹住的同時、用
+		ELSE
+			PRINTFORM 的谷間深深埋住的同時、用
+		ENDIF
+	;腋の气味嗅がせつつ
+	ELSEIF CHECK_CLO("腋露出") && PREVCOM != 1 && PREVCOM != 9 && (CHOSECOM(SELECTCOM) == 0 || RAND:3 == 0)
+		PRINTFORMW 將%CALLNAME:PLAYER%的臉頰用%TEXTS("腋")%緊緊夾住、讓夾雜著汗液臭味的%TEXTS("气味")%強制性地衝入鼻腔的同時、以愉快地心情將陰莖擼動著……
+		RETURN 1
+	;自尊心高いor淫乱or施虐属性Lv4以上
+	ELSEIF (TALENT:高慢 || TALENT:淫乱 || ABL:施虐属性 >= 4) && RAND:2 == 0
+		PRINT 帶著愉快的微笑
+	;小悪魔
+	ELSEIF TALENT:小悪魔
+		PRINT 在臉上露出戲謔的壞笑的同時、
+	;淫乱or欲情4LV以上
+	ELSEIF (TALENT:淫乱 || PALAM:欲情 >= PALAMLV:4) && RAND:2 == 0
+		PRINT 一邊妖艶的微笑著一邊
+	ELSEIF (TALENT:淫乱 || PALAM:欲情 >= PALAMLV:4) && RAND:2 == 0
+		PRINT 氣息絮亂的
+	ELSEIF RAND:2 == 0 || TEQUIP:眼罩
+		SIF RAND:2 == 0
+			PRINT 好像很開心
+		PRINT 微笑着一邊
+	ENDIF
+	PRINTFORM 將陰莖玩弄著、
+	IF PREVCOM == 1 || PREVCOM == 9
+		PRINTFORM 在用股間\@ RAND:2 ? 緊緊壓住 # 不斷摩擦 \@的同時、將
+	ELSEIF CHECK_COM("洗面奶手交") && RAND:2
+		PRINT 在柔軟乳肉中幸福的享受著的
+	ELSE
+		PRINT 發出快樂而苦悶的哼聲的
+	ENDIF
+	PRINTFORMW %CALLNAME:PLAYER%的反應盡情享受著……
+;それ以外
+ELSE
+	PRINTFORM %CALLNAME:TARGET%
+	IF TEQUIP:電話中
+		PRINTFORM 和%TEXTR(@"感觉和平时的电话没有什么不同的/什么都不知道地给这边打电话的/完全没有任何怀疑持续地通电话的/完全不知情/完全不知道发生了这样的事情的/不知道对方已经出轨了的/相信着%CALLNAME:TARGET%的")%
+		PRINTFORM %TEXTS("彼氏")%%TEXTR("说这话的同时/持续通话的同时/进行着日常会话的同时/谈论着最近发生的事情的同时/讲着情话的同时")%、
+	ENDIF
+	IF TEQUIP:接吻
+		PRINTFORM %CALLNAME:PLAYER%%TEXTS("接吻継続助詞付き")%、
+		CALL SETFLAG, "追加接吻フラグ", TARGET
+	ELSEIF TEQUIP:六九式
+		PRINTFORM %TEXTS("６９")%
+	ELSEIF CHECK_COM("玩弄Ａ手交")
+		PRINTFORM 將%CALLNAME:PLAYER%的尻穴用\@ RAND:2 ? 盡力延長的 # \@舌尖
+		IF RAND:2
+			SIF (ABL:奉仕精神 >= 3 || ABL:施虐属性 >= 3) && RAND:2
+				PRINT 連同最深處的肉襞也一併
+			PRINTFORM 舔舐著的同時、用
+		ELSE
+			PRINT 玩弄著的同時、用
+		ENDIF
+	ELSEIF INSERT("合体中")
+		PRINTFORM %TEXTS("合体中", TARGET)%
+	;气味弱点分岐
+	ELSEIF PLAYER == MASTER && TALENT:气味弱点 && TALENT:恋慕 && INSERT("合体中") == 0 && (CHOSECOM(SELECTCOM) == 0 || RAND:3 == 0)
+		IF CHECK_STAIN(STAIN:PLAYER:Ｐ, "Ｐ恥垢") && RAND:3
+			SELECTCASE RANDF(3 + TALENT:高慢)
+			CASE 0
+				PRINTFORMW %CALLNAME:PLAYER%的陰莖包皮下黏著的骯髒恥垢所散發的嗆鼻%TEXTS("气味")%仔細嗅聞著的同時、帶著因興奮而泛起紅潮的臉將陰莖擼動起來……
+			CASE 1
+				PRINTFORMW %CALLNAME:PLAYER%的陰莖用雙手激烈地擼動著的同時、也因為各種淫液在雙手運動下發出的淫靡水聲與蒸騰而出的陰莖的濃郁%TEXTS("气味")%而更加興奮了……
+			CASE 2
+				PRINTFORMW 陰莖用手擼動著的同時、不時地減慢手部的運動、用鼻子抵住膨脹起來的龜頭、將那淫靡的%TEXTS("气味")%陶醉而仔細地嗅聞著……
+			CASE 3
+				PRINTFORMW %CALLNAME:PLAYER%的陰莖內部埋藏著的恥垢所散發的淫靡%TEXTS("气味")%滿臉紅暈地譏諷著的同時、無意識更加細緻地侍奉著陰莖……
+			ENDSELECT
+			RETURN 1
+		ELSEIF CHECK_STAIN(STAIN:PLAYER:Ｐ, "精液") && RAND:3 == 0
+			IF RAND:2
+				PRINTFORM 被精液弄髒的陰莖那更加淫靡的%TEXTS("气味")%仔細嗅聞著興奮起來的同時、用
+			ELSE
+				PRINTFORM %CALLNAME:PLAYER%的陰莖的那混雜著精液淫臭的醉人%TEXTS("气味")%仔細嗅聞著的同時、用
+			ENDIF
+		ELSEIF RAND:3 == 0
+			PRINTFORM %CALLNAME:PLAYER%的陰莖的%TEXTS("气味")%仔細嗅聞著的同時、用
+		ELSEIF RAND:2
+			PRINTFORM 蒸騰著熱汽的陰莖那不斷飄入鼻腔的濃郁%TEXTS("气味")%用力吸入肺部、因此而神志恍惚的同時、用
+		ELSE
+			PRINTFORM 抵近鼻尖的%CALLNAME:PLAYER%的陰莖那醉人的%TEXTS("气味")%盡情享受著的同時、用
+		ENDIF
+	ENDIF
+	IF RAND:2
+		IF EQUIP:手套 && CHECK_GLOVE("指露出") == 0
+			;精液ぬるぬる
+			IF CHECK_STAIN(STAIN:手套, "精液")
+				IF RAND:2
+					PRINT 被精液完全浸透的
+				ELSE
+					PRINT 被精液變得黏糊糊的
+				ENDIF
+			ENDIF
+			PRINTFORM %GLOVE(TARGET, "略")%
+		ELSE
+			SIF CHECK_STAIN(STAIN:手, "精液")
+				PRINT 被精液變得黏糊糊的
+			PRINTFORM 嬌嫩掌心
+		ENDIF
+		PRINTFORMW 將龜頭按住並包裹起來、來回地摩挲著……
+	ELSE
+		;精液ぬるぬる
+		SIF (CHECK_GLOVE("指露出") && CHECK_STAIN(STAIN:手套, "精液") ) || CHECK_STAIN(STAIN:手, "精液")
+			PRINT 被精液變得黏糊糊的
+		PRINTFORMW 手指將陰莖糾纏住、激烈地擼動著……
+	ENDIF
+ENDIF
+;母乳体質とかだと母乳を飲めるかも
+CALL TEXT, "喝母乳"
+
+@COM_ORDER_COM90, ARG
+#DIM MEMO_STAIN
+
+VARSET LOCAL
+LOCALS = 
+
+;すべての命令に共通の要素を考慮
+;(信頼が高いと命令に従いやすいなど)
+CALL COM_ORDER, ARG
+
+LOCAL = RESULT
+
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	LOCAL += MIN(ABL:奉仕精神, 10) * 2
+	LOCALS = %LOCALS% + 奉仕精神LV{ABL:奉仕精神}({MIN(ABL:奉仕精神, 10) * 2})
+ENDIF
+;ABL:精液中毒
+IF ABL:精液中毒
+	LOCAL += MIN(ABL:精液中毒, 5) * 2
+	LOCALS = %LOCALS% + 精液中毒LV{ABL:精液中毒}({MIN(ABL:精液中毒, 5) * 2})
+ENDIF
+
+;強気
+IF TALENT:強気
+	LOCAL += 10
+	LOCALS = %LOCALS% + 強気(10)
+ENDIF
+;害羞
+IF TALENT:害羞
+	LOCAL -= 3
+	LOCALS = %LOCALS% - 害羞(3)
+ENDIF
+;献身的
+IF TALENT:献身
+	LOCAL += 6
+	LOCALS = %LOCALS% + 献身(6)
+ENDIF
+;否定快感
+IF TALENT:否定快感
+	LOCAL -= 1
+	LOCALS = %LOCALS% - 否定快感(1)
+ENDIF
+
+IF PENIS(PLAYER)
+	MEMO_STAIN = COM_ORDER_STAIN("Ｐ", "手") / 3
+ELSE
+	MEMO_STAIN = COM_ORDER_STAIN("Ｖ", "手") / 3
+ENDIF
+;汚れ有
+IF MEMO_STAIN
+	LOCAL -= MEMO_STAIN
+	LOCALS = %LOCALS% - 汚れ有
+	;汚臭鈍感
+	SIF TALENT:汚臭鈍感 || TALENT:汚臭敏感
+		LOCALS = %LOCALS%、\@TALENT:汚臭鈍感 ? 汚臭鈍感 # 汚臭敏感\@
+	SIF COND("陶酔")
+		LOCALS = %LOCALS%、陶酔で半減
+	LOCALS = %LOCALS%({MEMO_STAIN})
+ENDIF
+
+;合計を表示(14以上で実行)
+CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 14
+
+RETURN RESULT

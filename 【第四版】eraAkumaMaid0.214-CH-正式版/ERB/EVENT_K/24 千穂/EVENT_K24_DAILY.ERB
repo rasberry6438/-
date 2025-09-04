@@ -1,0 +1,846 @@
+﻿;-------------------------------------------------
+;各種打招呼
+;-------------------------------------------------
+@KOJO_GREETING_K24, ARGS
+#DIM MEMO_LINECOUNT
+;イベント発生中の角色
+#DIM ACTOR
+;イベント発生中の角色の默认のCALLNAME
+#DIMS CALLNAME_ACTOR
+
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE ARGS
+CASE "打招呼"
+	SELECTCASE CSTR:朝袭
+	CASE "朝口交", "朝六九式"
+		IF EXP_GAIN("射精経験", PLAYER)
+			CALL PRINT_STR, "「――嗯……。_H_　早上好。」_W_"
+			PRINTFORMW 舔着射到脸上的精液，一边打招呼说着。
+		ELSE
+			PRINTFORMW 「-啊， 早安...」
+			PRINTFORML 不知道什么时候開始prpr地舔着脸，一边打着招呼。
+		ENDIF
+	ENDSELECT
+
+	;何か発言してたらここまで
+	;SIF LINECOUNT > MEMO_LINECOUNT
+	;	RETURN 1
+
+	IF COND("体育")
+		PRINTFORMW	
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "一番乗り"
+
+CASE "ただいま"
+	IF RAND:2
+
+	ELSE
+
+	ENDIF
+CASE "既に入室"
+	PRINTFORMW 
+	;家で出迎えてくれる時
+	IF COND("夜")
+
+	ELSE
+
+	ENDIF
+
+CASE "入室打招呼"
+
+;部屋にいる他の人から打招呼を返される打招呼。WAITの使用は一回が望ましい
+CASE "簡易入室打招呼"
+	;遅れた時のセリフ（既に部員の４分の３が集合済）
+	IF CHARA_NUM("入室打招呼時の室内人数") >= CHARANUM*3/4 && RAND:3 == 0
+
+	ELSE
+
+	ENDIF
+;簡易入室打招呼に対する返し。WAITの使用は一回が望ましい
+;誰が入室してきた人はCOND("入室打招呼中")がONなのでFIND_COND("入室打招呼中")で検索可能
+;また、入ってきた人数はCHARA_NUM("入室打招呼中")で調べられる
+CASE "打招呼返し"
+	;打招呼してきた人の中から一人選ぶ
+	ACTOR = FIND_COND("入室打招呼中")
+	;選ばれた角色の默认のCALLNAME。この角色への呼びかけはCNAME(CALLNAME_ACTOR) で出来る
+	CALLNAME_ACTOR = %CSVCALLNAME(NO:ACTOR)%
+
+	;ここでは括弧に『』を使う
+
+	;打招呼してきた人に老师が混じっている
+	IF FIND_COND("教員", "入室打招呼中")
+		PRINTFORMW 『』
+	;相手が現れるのが遅かった（既に部員の４分の３が集合済）
+	ELSEIF CHARA_NUM("入室打招呼時の室内人数") >= CHARANUM*3/4 && RAND:3 == 0
+		PRINTFORMW 『』
+	ELSE
+		PRINTFORMW 『』
+	ENDIF
+
+CASE "居間に現れた"
+	;一度居間から別の場所に行って、居間に帰って来た時
+	IF CMOVE("居間")
+		PRINTFORMW 「」
+	ELSE
+	PRINTFORMW 『』
+	ENDIF
+CASE "抜け出された"
+	PRINTFORMW 「啊……。」
+CASE "便当"
+	;IF CEVENT("初めての便当") == 0
+		;初めて便当を作った場合、反応に恐怖感強。
+		;PRINTFORMW 「えっと、頼まれてた做便当みたんですけど……。」
+			;SIF COND("同居中") == 0
+			;同居中でない場合はホテルで作ってる。（部屋に据え付けの廚房があるホテルも有ます。）
+			;でも、IHじゃなかったのでクッキングヒーター買った。千穂は火が怖いからIHじゃなきゃ無理。
+			;PRINTFORMW　
+			;CALL SET_CEVENT, "初めての便当", TARGET
+	;ELSEIF RAND:2 == 0
+	;ここから同居中とか関係ない台詞パターン
+		;PRINTFORMW	
+	;ELSEIF RAND:1 == 0
+		;PRINTFORMW
+	;ELSE
+		;PRINTFORMW
+	;ENDIF
+ENDSELECT
+
+;-------------------------------------------------
+;メイン画面での台詞。いわゆる一言イベント強化版
+;ちなみに画面随机属性しても同じセリフを喋ります
+;選択肢に挟まれた場所で出力するのでWAITの使用は禁止
+;-------------------------------------------------
+@KOJO_DAILY_K24, ARGS
+#DIM MEMO_LINECOUNT
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE ARGS
+;初回のセリフ
+CASE "初回台詞"
+	;千穂の立場的に既に何人かいるのはほぼほぼ確定なのでこんな感じで……。
+	;そのうち、千穂が最初パターンも考えなきゃならない？
+	;狂人枠（兼常識人枠……っていうか、マトモな人类少ない！）
+	PRINTFORML 「欸……？欸……？」
+	PRINTFORML （因为房间里混乱的情况抱着頭）
+CASE "浑身是汗"
+	PRINTFORML 
+CASE "刚睡醒"
+	PRINTFORML 「……早上好。」
+;沉眠著
+CASE "睡眠"
+	;梦话
+	CALL KOJO_SLEEP_K24
+;泣きながら寝てるのに地の文で幸せに寝てることになってるので呼び出さないように。
+	;梦话用の汎用地の文呼出
+;	CALL DAILY_MESSAGE, "梦话"
+ENDSELECT
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;前回指令対応台詞
+SELECTCASE CONDS("直前行動")
+CASE "愛の告白"
+	PRINTFORML 
+CASE "契約成立"
+	PRINTFORML 
+CASE "摆脱"
+	PRINTFORML 
+CASE "主人公的房間に連れ込まれた"
+	PRINTFORML 
+CASE "自室に招待"
+	PRINTFORML 
+CASE "自室に訪問された"
+	;指导者を伴っている場合
+	IF FIND_COND("現在存在", "助手")
+		PRINTFORML 
+	ELSEIF FIND_COND("現在存在", "槞彁")  && RAND:5 == 0
+		;魔界語の勉強。
+		PRINTFORML 无言地凝视着那张被写得满满的、漆黑一片的纸。老实说，有点吓人。
+	ELSEIF RAND:3
+		;歌っているのはグスタフ・マーラー　交響曲第2番「復活」の第5楽章の一部
+		PRINTFORML　「♪Was vergangen, auferstehen」
+		PRINTFORML　「♪Bereite dich zu leben」
+		PRINTFORML 对着戒指唱着什么。
+	ELSEIF RAND:2
+		PRINTFORML 「啊，干什么？」
+		PRINTFORML 注意到进入自己房间的我，像终于打開開関一样有了反应。
+	ENDIF
+CASE "指导者部屋訪問"
+	PRINTFORML 
+;自宅移動の後に你に連れられて居間に回来了場合など。優先度は低いです
+CASE "帰還"
+	PRINTFORML 
+CASE "オナバレ"
+	PRINTFORML 
+CASE "露脐装超短裙胖次チラ"
+	PRINTFORML 
+CASE "低腰臀圍"
+	PRINTFORML 
+CASE "掀起裙子"
+	PRINTFORML 
+CASE "買東西"
+	;買ってきた道具などで分岐
+	;IF COND("巨大振動棒購入")
+
+	;	CALL SET_DEVENT, "巨大振動棒感想"
+	;ELSE
+		;単純にいっぱい買ったかどうかで分岐
+		SELECTCASE COND("買上品数")
+		CASE IS >= 4
+
+		CASEELSE
+
+		ENDSELECT
+	;ENDIF
+ENDSELECT
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;標語の反応。書いたらコメントアウトを外してください
+IF CFLAG:標語実践
+	IF STRCOUNT(SAVESTR:標語, "注意口渴")
+		;IF DEVENT("標語茶") == 0
+		;	PRINTFORML 
+		;	CALL SET_DEVENT, "標語茶"
+		;ENDIF
+	ELSEIF STRCOUNT(SAVESTR:標語, "体操服")
+		SELECTCASE SAVESTR:標語
+		CASE "体操服はやっぱり布鲁马"
+			;IF DEVENT("標語布鲁马") == 0
+			;	PRINTFORML 
+			;	CALL SET_DEVENT, "標語布鲁马"
+			;ENDIF
+		CASE "体操服はやっぱり运动短褲"
+
+		CASE "体操服はやっぱり紧身短褲"
+
+		CASE "体操服はやっぱり运动衫"
+		;各分岐を細かく埋めずに、上の分岐を消して望みの体操服に着替えてやったぞ発言をここに書くのも良いと思います
+		CASEELSE
+
+		ENDSELECT
+	ELSEIF STRCOUNT(SAVESTR:標語, "学生服")
+		SELECTCASE SAVESTR:標語
+		CASE "学生服は露脐装超短裙に限る"
+			;IF DEVENT("標語露脐装超短裙") == 0
+			;	PRINTFORML 
+			;	CALL SET_DEVENT, "標語露脐装超短裙"
+			;ENDIF
+		CASE "学生服は超短迷你に限る"
+		;各分岐を細かく埋めずに、上の分岐を消して望みの学生服に着替えてやったぞ発言をここに書くのも良いと思います
+		CASEELSE
+
+		ENDSELECT
+	ENDIF
+ENDIF
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;イベント台詞。書いたらコメントアウトを外してください
+;CFLAG:日常事件回数が10増えるたびに一つ叫醒ぐらいで良いでしょう
+IF CFLAG:日常事件回数 >= 5 && DEVENT("質問１") == 0
+	PRINTFORML 「我的班级吗？秘密。」
+	CALL SET_DEVENT, "質問１"
+ENDIF
+IF CFLAG:日常事件回数 >= 15 && DEVENT("母親に関して１") == 0
+	PRINTFORML 「関于母亲吗？……是一个对妹妹很温柔的人。」
+	CALL SET_DEVENT, "母親に関して１"
+ENDIF
+IF CFLAG:日常事件回数 >= 25 && DEVENT("父親に関して１") == 0
+	PRINTFORML 「関于父亲吗？
+	PRINTFORML  听律师说是一家制药公司的董事长。」
+	CALL SET_DEVENT, "父親に関して１"
+ENDIF
+;IF CFLAG:日常事件回数 >= 35 && DEVENT("質問４") == 0
+;	PRINTFORML　
+;	PRINTFORML　
+;	PRINTFORML　
+;	CALL SET_DEVENT, "質問４"
+;ENDIF
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;他の人といちゃついた後にpartner変更
+IF COND("いちゃいちゃ") == 0 && FIND_COND("Ｈ的いちゃつき中")
+;	PRINTFORML 
+ENDIF
+
+;何か発言してたらここまで
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;以下は随机台詞など
+
+;時間帯と場所と関係で変化有些
+IF COND("夜")
+	IF CHARA_NUM("現在存在") == 0 && RAND:2 == 0
+			CALL PRINT_STR, @"「%TEXTR("……只有我们两个人？/…………。")%」_L"
+	ELSEIF FIND_COND("現在存在", "アイリ") && RAND:4 == 0
+			PRINTFORML 「乖孩子、乖孩子……。」
+			PRINTFORML 亚依璃完全被当做猫来疼爱了呢？
+	ELSEIF FIND_COND("現在存在", "槞彁") && RAND:5 == 0
+			;槞彁の聞いてるラジオを聞いて魔界語を理解しようとしている。
+			PRINTFORML　「дещは…ваは……。」
+			PRINTFORML　「ДемославяやВибоградは……。」
+			PRINTFORML ……槞彁对从广播听到的内容做着笔记，把便条纸写得漆黑一片。
+	ELSEIF FIND_COND("現在存在", "槞彁") && RAND:4 == 0
+			;千穂と槞彁の昆虫食の話。千穂は欠食。槞彁は魔界の食文化。
+			PRINTFORML 「如果不让它停止进食一段时间的话会很苦的」
+			PRINTFORML　-　槞彁　-
+			;飢えさせないと苦い。そのとおりだと私も思う。
+			PRINTFORML 「如果通过培育让它不再苦涩的话，我觉得是值得肯定的。」
+			PRINTFORML 千穗和槞彁開心的聊着吃饭的话题……有什么不祥的预感。
+	ELSEIF FIND_COND("現在存在", "槞彁") && RAND:3 == 0
+			;良好な親子関係という概念を千穂がいまいち理解できないのが主要な原因。特に"父親"は未知。
+			;"母親"に関してはまぁ、一応わかるが……ホームドラマの内容を聞いているような感覚。
+			PRINTFORML　「…………。」
+			PRINTFORML 听到槞彁谈论起家庭的话题，露出了非常复杂的表情。
+			;妹人格解放後？開放予定。槞彁を「自分の妹」として判定している狂気の反応。
+			;PRINTFORML　（槞彁酱はお母桑に連れられて魔界に行ったんだ。……あれ？）
+	ELSEIF FIND_COND("現在存在", "槞彁") && RAND:2 == 0
+			PRINTFORML 「想让我看看戒指吗?是的，请。」	
+			;PRINTFORM　指輪に魂が閉じ込められるなんておとぎ話のようですねぇ」
+			PRINTFORML　-　槞彁　-
+			PRINTFORML 『把灵魂收起来储存着，听起来就像是童话故事一样呢』
+			;え？流石に魔界にも人格を維持したまま魂を移動させる技術はまだないので魔界由来の技術じゃないと思います。
+			PRINTFORML 『什么？想法大胆是挺大胆的、不过如果不是魔界的技術的话、顶多也只能保証人格不会破損而已。我们魔界现在还没能掌握移民的力量。』
+			;妹人格追加時に解禁。
+			;PRINTFORML　-　千穂　-
+			;PRINTFORML　「…………。じゃあ、槞彁酱は私が妹を殺したって言いたいの？」
+			;PRINTFORML　-　槞彁　-
+			;え……？ち…、ちがいます。ちがいます！
+			;PRINTFORML　『(恐怖)、否定……否定！否定！』
+			;↓あんまり長くても邪魔なのでカット。
+			;PRINTFORML　-　千穂　-
+			;PRINTFORML　「……妹を返してもらえませんか？」
+			;PRINTFORML　-　槞彁　-
+			;は、是……返します。……すみませんでした。
+			;PRINTFORML　『肯定、』
+	;ELSEIF FIND_COND("現在存在", "槞彁") && RAND:1 == 0
+			;魔界語での会話。もしくはその練習。
+			;PRINTFORML　『』
+			;PRINTFORML　-　槞彁　-
+			;PRINTFORML　『』
+	ELSEIF FIND_COND("現在存在", "西西莉亚") && RAND:3 == 0
+			;ツェ桑発言要約。「你頭おかしい。」に対して千穂が発言を理解できなかったver
+			PRINTFORML 「怎么了？」
+			PRINTFORML -　西西莉亚　-　
+			PRINTFORML 「根据福柯的理论，所谓疯狂早在近代所认为的称为理性这一种东西的很久之前就被认识到了、
+			PRINTFORML 「用他的说法，这已经变成必须消除的东西了。
+			PRINTFORML 「在现代社会以前，例如在希腊，癫痫发作被认为是神圣的疾病。
+			PRINTFORML 「有些萨满在现代会被与精神分裂症患者混为一谈。
+			PRINTFORML 「然而，进入17世纪后，疯狂是丧失理性的存在，与非理性共存变成不可能。
+			PRINTFORML 「魔女狩猎不是在中世纪，而是在16世纪初至17世纪。 関于这个说法的详细信息，请参阅「疯癫与文明」……
+			;PRINTFORML　-　千穂　-　
+			;PRINTFORML　「ほぇー？」
+			;将来的に↓の理解しちゃった版を統合する。
+			;CALL PRINT_STR, @"%TEXTR(@"%CNAME("「ほえー？」/「…………。」千穂は西西莉亚の話を聞いていないようだ。")%_L"
+	;ELSEIF FIND_COND("現在存在", "西西莉亚") && RAND:3 == 0
+			;ツェ桑発言要約。「你頭おかしい。」に対して千穂が理解しちゃった版。
+			;PRINTFORML 「根据福柯的理论，所谓疯狂早在近代所认为的称为理性这一种东西的很久之前就被认识到了、
+			;PRINTFORML 用他的说法，这已经变成必须消除的东西了。
+			;PRINTFORML　前近代社会においては、例えばギリシャにおいててんかん発作は神聖病として貴ばれていたし
+			;PRINTFORML 有些萨满在现代会被与精神分裂症患者混为一谈。
+			;PRINTFORML 然而，进入17世纪后，疯狂是丧失理性的存在，与非理性共存变成不可能。
+			;PRINTFORML 魔女狩猎不是在中世纪，而是在16世纪初至17世纪。 関于这个说法的详细信息，请参阅「疯癫与文明」。
+			;強烈に反発
+			;PRINTFORM　「ほえー……？」
+	;ELSEIF FIND_COND("現在存在", "麦莉爱娜") && RAND:3 == 0
+			;PRINTFORML　「…………。」
+			;PRINTFORML　-　麦莉爱娜　-　
+			;PRINTFORML　「失くしたものは戻らない、ひっくり返った水をお盆に戻すこともできない。
+			;PRINTFORML　だから、いつまでも囚われないで前へ進んでほしいの。きっと、你はそれができるはずだから。」
+			;PRINTFORML　麦莉爱娜が千穂に話しかけているが千穂は聞いていないようだ。
+	ELSEIF FIND_COND("現在存在", "万音") && RAND:3 == 0
+			;淫魔覚醒版前提での会話。そのうち淫魔覚醒版と淫魔覚醒してない状態で分ける。
+			PRINTFORML 「呃……这样啊……啊~」
+			PRINTFORML 千穗在万音的教导下自慰。
+	ELSEIF FIND_COND("現在存在", "万音") && RAND:2 == 0
+			;淫魔覚醒版（もしくは、咖啡館勤務開始）前提での会話。そのうち淫魔覚醒版と淫魔覚醒してない状態で分ける。
+			PRINTFORML 「自助餐厅不提供了，学生食堂没有卖桶装冰淇淋的计划吗？」
+			PRINTFORML 向万音询问学生食堂的菜单。
+	;玛丽（ヒカリ）と千穂（ヤミ）の相性って最悪だと思います。
+	;「玛丽桑は成長して悪魔とも会話が成り立つかもしれないって前に進みました。それは、とても素晴らしいと思います。」
+	;「じゃあ、それまでに鏖殺された悪魔はどういう気持ちになればいいの？逆に言えばいままでは会話をしようとしてもぷちっと潰して来たんでしょ？」
+	;悪魔で女仆がバトルモノなら間違いなく殺し合ってる。聖女とそれに噛みつき続ける狂犬。
+	ELSEIF FIND_COND("現在存在", "玛丽") && RAND:5 == 0
+			PRINTFORML （为什么，这个女孩一脸笑容地追问我的过去……？）
+			PRINTFORML 千穗和玛丽在说着什么，千穗脸上堆着笑。
+	ELSEIF FIND_COND("現在存在", "玛丽") && RAND:4 == 0
+			PRINTFORML （我和这个女孩不一样，走到哪里都是尘土飞扬。）
+			PRINTFORML 千穗和玛丽在说着什么，千穗脸上堆着笑。
+	ELSEIF FIND_COND("現在存在", "玛丽") && RAND:3 == 0
+			PRINTFORML （……杀死恶魔，消灭恶魔，有什么好笑的吗？）
+			PRINTFORML （我做了正确的事，完全没有回頭看那些被碾死的东西。）
+			PRINTFORML （而创造美好的未来才是值得微笑的。）
+			;PRINTFORML （和我一样的，一样的，一样的）
+			;PRINTFORML　（……人殺しの癖ni↘）
+			PRINTFORML 千穗和玛丽在说着什么，千穗脸上堆着笑。
+	ELSEIF FIND_COND("現在存在", "玛丽") && RAND:2 == 0
+			PRINTFORML （……吵死了，吵死了，吵死了。）
+			PRINTFORML （――不管是声音还是表情都让人讨厌！）
+			PRINTFORML 千穗和玛丽在说着什么，千穗脸上堆着笑。
+	;ELSEIF FIND_COND("現在存在", "乃々") && RAND:3 == 0
+			;昼と夜で学園（生徒会）絡みで違うこと喋らせたい。
+			;PRINTFORML　「……」
+			;PRINTFORML　-　乃々　-　
+	ELSEIF FIND_COND("現在存在", "乃々") && RAND:2 == 0
+			PRINTFORML 「和旧校舍的管理员老师是亲戚？」
+	ELSEIF FIND_COND("現在存在", "乃々") && RAND:1 == 0
+			PRINTFORML 「郁金香……樱、红叶……薰衣草。」
+	ELSE
+		IF RAND:4 == 0
+			;単独随机セリフ集
+			;指輪シリーズ。
+			PRINTFORM %CALLNAME:TARGET%
+			CALL PRINT_STR, @"%TEXTR("在对着戒指说话。/正在擦戒指。/在挑选戒指的新绳子。")%_L"
+		ELSEIF RAND:3
+			;単独随机台詞集
+			;まじめ系。
+			PRINTFORML %TEXTR("（如果，不能把灵魂分開的话，我……怎么办才好呢?）")%
+		ELSEIF RAND:2
+			;単独随机台詞集
+			;トンデモ系。
+			PRINTFORML %TEXTR("（啊，学园的大树在发光。）/（呃?有人骑着扫帚飞吗?）/（穿着修道服的人在屋顶上飞来飞去……。）")%
+		ENDIF
+	ENDIF
+ELSE
+	IF CHARA_NUM("現在存在") == 0 && RAND:2 == 0
+			CALL PRINT_STR, @"「%TEXTR("……只有我们两个人？")%」_L"
+	ELSEIF FIND_COND("現在存在", "弗理希艾尔") && RAND:2 == 0
+		;弗理希艾尔と千穂の会話
+		PRINTFORM %CALLNAME:TARGET%和%CALLNAME:FINDCHARA(NO, 1)%正在讨论
+		CALL PRINT_STR, @"在谈论%TEXTR(@"%CNAME("二人称")%的事/和恶魔契约时能做的事")%。_L"
+	ELSEIF FIND_COND("現在存在", "西西莉亚") && RAND:3 == 0
+			;ツェ桑発言要約。你頭おかしい。に対して千穂が発言を理解できなかったver
+			PRINTFORML 「怎么了？」
+			PRINTFORML -　西西莉亚　-　
+			PRINTFORML 「根据福柯的理论，所谓疯狂早在近代所认为的称为理性这一种东西的很久之前就被认识到了、
+			PRINTFORML 用他的说法，这已经变成必须消除的东西了。
+			PRINTFORML 在现代社会以前，例如在希腊，癫痫发作被认为是神圣的疾病。
+			PRINTFORML 有些萨满在现代会被与精神分裂症患者混为一谈。
+			PRINTFORML 然而，进入17世纪后，疯狂是丧失理性的存在，与非理性共存变成不可能。
+			PRINTFORML 魔女狩猎不是在中世纪，而是在16世纪初至17世纪。 関于这个说法的详细信息，请参阅「疯癫与文明」。
+			;PRINTFORML　-　千穂　-　			
+			;PRINTFORML　「ほぇー？」
+			;ELSE
+			;ツェ桑発言要約。你頭おかしい。に対して千穂が理解しちゃった版。
+			;PRINTFORML 「根据福柯的理论，所谓疯狂早在近代所认为的称为理性这一种东西的很久之前就被认识到了、
+			;PRINTFORML 用他的说法，这已经变成必须消除的东西了。
+			;PRINTFORML　前近代社会においては、例えばギリシャにおいててんかん発作は神聖病として貴ばれていたし
+			;PRINTFORML 有些萨满在现代会被与精神分裂症患者混为一谈。
+			;PRINTFORML 然而，进入17世纪后，疯狂是丧失理性的存在，与非理性共存变成不可能。
+			;PRINTFORML 魔女狩猎不是在中世纪，而是在16世纪初至17世纪。 関于这个说法的详细信息，请参阅「疯癫与文明」。
+			;強烈に反発
+			;PRINTFORM　「ほえー……？」
+	ELSEIF FIND_COND("現在存在", "西西莉亚") && RAND:2 == 0
+			;増やしたのは千穂の妹の魂じゃない。
+			PRINTFORML 「……复活体质？」
+			PRINTFORML -　西西莉亚　-　
+			PRINTFORML 「嗯，但是你不是这样的。所以很有趣呢。」
+			PRINTFORML 「单纯的精神力"のみ"到持有"魂を増やした"之类的东西……」
+	;玛丽（ヒカリ）と千穂（ヤミ）の相性って最悪だと思います。
+	;「玛丽桑は成長して悪魔とも会話が成り立つかもしれないって前に進みました。それは、とても素晴らしいと思います。」
+	;「じゃあ、それまでに鏖殺された悪魔はどういう気持ちになればいいの？逆に言えばいままでは会話をしようとしてもぷちっと潰して来たんでしょ？」
+	;悪魔で女仆がバトルモノなら間違いなく殺し合ってる。聖女とそれに噛みつき続ける狂犬って形で。
+	ELSEIF FIND_COND("現在存在", "玛丽") && RAND:6 == 0
+			PRINTFORML （为什么，这个女孩一脸笑容地追问我的过去……？）
+			PRINTFORML 千穗和玛丽在说着什么，千穗脸上堆着笑。
+	ELSEIF FIND_COND("現在存在", "玛丽") && RAND:5 == 0
+			PRINTFORML （我和这个女孩不一样，走到哪里都是尘土飞扬。）
+			PRINTFORML 千穗和玛丽在说着什么，千穗脸上堆着笑。
+	ELSEIF FIND_COND("現在存在", "玛丽") && RAND:4 == 0
+			PRINTFORML （……杀死恶魔，消灭恶魔，有什么好笑的吗？）
+			PRINTFORML （我做了正确的事，完全没有回頭看那些被碾死的东西。）
+			PRINTFORML （而创造美好的未来才是值得微笑的。）
+			PRINTFORML （和我一样的，一样的，一样的）
+			;PRINTFORML　（……ただの人殺しの癖ni↘）
+			PRINTFORML 千穗和玛丽在说着什么，千穗脸上堆着笑。
+	ELSEIF FIND_COND("現在存在", "玛丽") && RAND:3 == 0
+			PRINTFORML （……吵死了，吵死了，吵死了。）
+			PRINTFORML （――不管是声音还是表情都让人讨厌！）
+			PRINTFORML 千穗和玛丽在说着什么，千穗脸上堆着笑。
+	ELSEIF FIND_COND("現在存在", "乃々") && RAND:3 == 0
+			;学園内の話。
+			PRINTFORML 「自助餐厅的热三明治菜谱变了，真是可惜。」
+			PRINTFORML 「原本是把鸡蛋，奶酪和海苔夹在一起，现在不仅海苔没了，还涨了20日元。」
+			PRINTFORML 千穗和乃乃正在交谈関于自助餐厅的菜单。
+			;PRINTFORML　-　乃々　-　
+			;PRINTFORML　「」
+	ELSEIF FIND_COND("現在存在", "乃々") && RAND:2 == 0
+			PRINTFORML 「和旧校舍的管理员老师是亲戚？」
+	ELSEIF FIND_COND("現在存在", "乃々") && RAND:1 == 0
+			;自分自身もひどく傷つくので、千穂は他人の悪口を言えない。
+			;どうして、神（天使）は自分の妹を助けてくれなかったのか？という嘆きの湾曲表現。
+			PRINTFORML 「郁金香……樱红叶……薰衣草。」
+	ELSEIF RAND:3
+		;単独随机台詞集。
+		;指輪ちまちま系
+		PRINTFORM %CALLNAME:TARGET%
+		CALL PRINT_STR, @"%TEXTR("在对着戒指说话。/正在擦戒指。/在挑选戒指的新绳子。")%_L"
+	ELSEIF RAND:2
+		;単独随机台詞集。
+		;真面目に悩む枠。真面目なんだけどすごくギャグっぽい。
+		;狂気＝殺意じゃない。
+		PRINTFORML %TEXTR("（如果，不能把灵魂分開的话，我……怎么办才好呢?）")%
+	ELSE
+		;単独随机台詞集（トンデモ枠）
+		;元ネタ
+		PRINTFORML %TEXTR("（啊，企鹅在天上飞。）/（旧校舍那边太阳之塔和怪兽战斗着）/（……窗外有一只碧绿的兔子。）")%
+	ENDIF
+ENDIF
+
+
+;-------------------------------------------------
+;梦话。随意むにゃむにゃ言わせてください
+;-------------------------------------------------
+@KOJO_SLEEP_K24
+;上から順に発言頻度が高いようにする(== 0の付け忘れではない)
+IF RAND:3
+	PRINTFORML 「……呼……呼。」
+	PRINTFORML 睡觉时发出规律的呼吸声。
+ELSEIF RAND:2
+	PRINTFORML 
+ELSE
+	PRINTFORML 「对不起，对不起，请原谅我……拜托了。」
+	PRINTFORML 千穂睡着后哭了起来。
+ENDIF
+
+;-------------------------------------------------
+;メイン画面で選択肢として独立している日常イベントでのセリフ。WAIT使って大丈夫です
+;こっちはあくまで選択肢で選ばれた場合に限るのに注意。
+;-------------------------------------------------
+@KOJO_DAILYCOM_K24, ARGS
+;打招呼
+#DIMS GREETING
+
+
+SELECTCASE ARGS
+CASE "归途"
+	;SAVESTR:現在位置 と SAVESTR:归途の行動 を決定する
+	CALL SETFLAG, "遭遇地点"
+
+	;地の文の前の台詞がある場合はここに書く
+	SELECTCASE SAVESTR:現在位置
+	CASE "阵雨"
+
+	ENDSELECT
+
+	;地の文を出す
+	CALL DAILY_MESSAGE, "归途"
+
+	SELECTCASE SAVESTR:归途の行動
+	CASE "相合傘"
+
+	CASE "内衣選び", "泳装選び"
+
+	;特定行動でのセリフ。DAILY_MESSAGE, "归途"の地の文を参考に随意場合分けしてください。
+	CASE "打情骂俏",
+	
+	CASE "站着读书",
+	
+	CASE "買食物",
+	
+	CASE "物色游戏"
+
+	CASE "检查新刊"
+	;IF RAND:2
+		;PRINTFORML　「」
+		;PRINTFORMW　
+		;ELSE
+		;PRINTFORML　
+		;PRINTFORMW　
+	;ENDIF
+	
+	CASE "繞道"
+	IF SAVESTR:現在位置 == "空地"
+			IF RAND:2
+				;暫定。
+				PRINTFORML　「………。」
+				PRINTFORMW　千穗在移动图书馆看书。
+			ELSE
+				;トラ马のフラッシュバック
+				PRINTFORML 「………回去吧。」
+				PRINTFORMW 到了那里，什么都没做就被催促回家。
+			ENDIF
+	ENDIF
+	IF SAVESTR:現在位置 == "河边"
+			IF RAND:2
+				PRINTFORML 「这条河里的鱼吗？有银鱼和鲶鱼，除此之外的话还能钓到巨骨舌鱼和异型鱼。」
+				PRINTFORMW 用不知道从哪里拿到的钓竿一边投竿一边被教导着。
+			ELSE
+				;"妹が使うから"大切な体です。
+				PRINTFORML 「去散步了。因为是妹妹要用的重要的身体，所以要注意健康。」
+			ENDIF
+	ENDIF
+
+	CASE "直帰"
+
+	CASEELSE
+
+	ENDSELECT
+
+;[999]選択後の台詞。TFLAG:床イン = 1とすることで強制的にエロにも行ける
+CASE "休憩"
+	IF PLACE("自宅")
+		IF COND("夜")
+
+		ELSE
+
+		ENDIF
+	;ここは実質昼のみ
+	ELSEIF PLACE("部室")
+
+	;場所移動後
+	ELSE
+
+	ENDIF
+;ここには特殊な条件での角色独自のイベントを書く。別に無くても構わない
+;発生領帯ミングは日常イベント選択後の好感度を得た直後
+CASE "特殊事件"
+	;眠ってる時でも来るので書くことないならRETURN 0してください
+	SIF CFLAG:睡眠
+		RETURN 0
+;これは昼か夜
+CASE "打招呼"
+	IF COND("夜")
+		GREETING = 晚上好
+	ELSEIF COND("昼")
+		GREETING = 你好
+	ELSE
+		GREETING = 早上好
+	ENDIF
+	;你に先に打招呼をされた
+	IF CFLAG:打招呼した == 0
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "叫醒"
+	PRINTFORMW 
+CASE "Talk"
+	SELECTCASE STR:日常イベント名
+		
+	CASE "夸奖"
+		PRINTFORMW 
+	CASE "甜言蜜语"
+		IF TALENT:恋慕
+			PRINTFORMW 
+		ELSEIF CALCF("甜言蜜语成功")
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	CASEELSE
+		IF RAND:3 == 0
+			PRINTFORMW 
+		ELSEIF RAND:2
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDSELECT
+
+CASE "拭汗"
+	PRINTFORMW 
+CASE "淋浴独り言"
+	;PRINTFORML 
+CASE "淋浴"
+	;実は内衣を漁ったのに気づかれています
+	IF COND("淋浴：内衣漁りバレ")
+
+	ELSE
+
+	ENDIF
+;睡眠中の悪戯
+CASE "趁睡袭击"
+	;梦话
+	CALL KOJO_SLEEP_K24
+	WAIT
+CASE "互动"
+	SELECTCASE STR:日常イベント名
+	CASE "托一托胸部"
+		PRINTFORMW 
+	CASE "按摩"
+		PRINTFORMW 
+	CASE "接吻"
+		IF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	CASE "膝枕"
+		PRINTFORMW 
+	CASE "泡茶"
+		PRINTFORMW 
+	;当然だが尾巴がある相手のみ
+	CASE "抚摸尾巴"
+		;初めて
+		IF DEVENT(STR:日常イベント名) == 0
+			PRINTFORMW 
+		;連続実行
+		ELSEIF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			PRINTFORMW 
+		;この時間で初実行
+		ELSEIF CHOSE_DEVENT(STR:日常イベント名) == 0 && RAND:2
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+CASE "整理睡姿"
+	;梦话
+	CALL KOJO_SLEEP_K24
+	WAIT
+CASE "卖个破绽"
+	SELECTCASE STR:日常イベント名
+	CASE "Ｈ的邀请", "展示内褲"
+		PRINTFORMW 
+	CASE "推倒"
+		PRINTFORMW 
+	CASE "口淫"
+		PRINTFORMW 
+	CASE "亲脸頬", "接吻"
+		PRINTFORMW 
+	CASE "膝枕", "抱住", "把胸部压了上去", "摩擦股間"
+		PRINTFORMW 
+	CASE "抚摸", "手淫"
+		PRINTFORMW 
+	CASE "膝枕"
+		PRINTFORMW 
+	CASE "沏茶"
+		;CSTR:茶 を指定してある場合には、SAVESTR:茶 で何を用意したかが判定できる
+		;例）PRINTFORMW 「よければ%SAVESTR:茶%どうぞ」
+		PRINTFORMW 「我买了一些茶点你要吃吗？」
+	;それ以外
+	CASEELSE
+		IF RAND:2
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDSELECT
+;これは素質に[開朗]ないし[粗野]を持っている角色のみです
+CASE "構って欲しい！"
+	PRINTFORMW 
+CASE "廁所"
+	;廁所で用を済ませた後の台詞
+	IF BASE:尿意 == 0
+		;主人も廁所で済ませてきた
+		IF BASE:MASTER:尿意 == 0
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;廁所に行く際の台詞
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "廁所詮索"
+	PRINTFORMW 
+CASE "检查阴部"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K24
+		WAIT
+	ELSEIF COND("合意：检查阴部") == 0
+		;拒否されたのに連続実行
+		IF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "检查内褲"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K24
+		WAIT
+	ELSE
+		;連続実行
+		IF CSTR:PREV_DAILYCOM == STR:日常イベント名
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	ENDIF
+CASE "撫摸股間"
+	PRINTFORMW 
+CASE "检查布鲁马", "股間観察"
+	;睡眠中の悪戯
+	IF CFLAG:睡眠
+		;梦话
+		CALL KOJO_SLEEP_K24
+		WAIT
+	ELSEIF CFLAG:股間確認済 && RAND:2
+		PRINTFORMW 
+	;心情好
+	ELSEIF CFLAG:心情好
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+
+CASE "掀起裙子"
+	SELECTCASE STR:日常イベント名
+	CASE "撩起裙子"
+		;初めて
+		IF DEVENT(STR:日常イベント名) == 0
+			PRINTFORMW 「有人说这样做会让你高兴。」
+			PRINTFORMW 一脸嫌弃地看着这边。
+		;胖次チラ直後
+		ELSEIF COND("胖次チラ直後")
+			PRINTFORMW 
+		ELSE
+			PRINTFORMW 
+		ENDIF
+	;掀起裙子
+	CASEELSE
+		;刚睡醒の胡乱な状態を襲う
+		IF CFLAG:刚睡醒
+			PRINTFORMW 
+		;睡眠中の悪戯
+		ELSEIF CFLAG:睡眠
+			;梦话
+			CALL KOJO_SLEEP_K24
+			WAIT
+		;初めて
+		ELSEIF DEVENT(STR:日常イベント名) == 0
+			PRINTFORMW 
+		;胖次チラ直後
+		ELSEIF COND("胖次チラ直後")
+			PRINTFORMW 
+		ELSE
+			IF COND("打招呼前")
+				PRINTFORMW 
+			ELSE
+				;胖次沒穿
+				IF EQUIP:胖次 == 0
+					PRINTFORMW 
+				ELSE
+					PRINTFORMW 
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDSELECT
+ENDSELECT
+
+
+

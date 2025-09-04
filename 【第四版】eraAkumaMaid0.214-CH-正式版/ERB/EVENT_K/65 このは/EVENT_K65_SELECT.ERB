@@ -1,0 +1,366 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;X1は角色番号に置換してください
+;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+;ここで TFLAG:取引可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K65_ADDSELECT
+;STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("追加選択肢その１", 16)% … %CALLNAME:TARGET%にＡＡＡしてもらいます/
+;STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("追加選択肢之２", 16)% … %CALLNAME:TARGET%にＢＢＢしてもらいます/
+
+;お願い・取引で増やした選択肢の地の文と台詞
+@KOJO_WISH_K65_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+	;フラグを弄る場合はそれもここで行う
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+	;フラグを弄る場合はそれもここで行う
+ENDSELECT
+
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K65_ADDSELECT
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K65_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+;直接Ｈしたい場合
+CASE "追加選択肢からＨ：Talk"
+	;前編
+	IF CEVENTS("追加選択肢からＨ") == ""
+		PRINTFORMW 接吻特
+		PRINTL [0]选项1(选择这个会H)
+		PRINTL [1]选项2(选择这个不会H)
+		CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+		FLAG:SELECT_USERSHOP = 100
+	ELSE
+		IF TFLAG:床イン
+			PRINTFORMW H时的情况展開
+		ELSE
+			PRINTFORMW 这边是不会H的情况展開
+		ENDIF
+	ENDIF
+ENDSELECT
+
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K65_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+IF ABL:信頼 >= 3
+	STR:選択肢 += "脸颊软乎乎/"
+ENDIF
+
+IF ABL:信頼 >= 4 && COND("冬") && (PLACE("自宅") || PLACE("部室"))
+	STR:選択肢 += "在暖炉里卿卿我我/"
+ENDIF
+
+;睡眠時の互动指令の選択肢を追加
+@DAILY2_SLEEP_K65_ADDSELECT
+;STR:選択肢 += "睡眠時追加選択肢その１/"
+;STR:選択肢 += "睡眠時追加選択肢之２/"
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K65_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "ほっぺむにむに"
+	IF CEVENT("ほっぺむにむに初回/此花") == 0
+		PRINTFORMW %CALLNAME:MASTER%把手放在正看着别处的%CALLNAME:TARGET%的脸颊上，像要压扁一样揉捏着。
+		PRINTL
+		CALL EMOTION_PLUS, "惊嚇", TARGET
+		PRINTFORMW 「呜，做、做什么？突然摸我的脸，mu gyu」
+		PRINTFORMW 「……嗯、噗……嗯呜，嗯~~！」
+		CALL EMOTEFACE, "害羞", TARGET
+		PRINTFORMW 「噗啊，真是的~，突然做什么啊，吓了我一跳……」
+		PRINTFORMW 「软软的，这种问题，真是的……虽然是这样……」
+		PRINTL
+		PRINTFORMW %CALLNAME:TARGET%摸着被揉捏的脸颊，确认着柔软度……
+		CALL SET_CEVENT, "ほっぺむにむに初回/此花"
+	ELSE
+		PRINTFORMW %CALLNAME:MASTER%看着%TEXTR("发呆的/丰腴的/看着外面的")%%CALLNAME:TARGET%的%TEXTR("柔软的/像孩子般/捏着感觉很有弹性的")%脸颊%TEXTR("用手掌按了下去/捏住拉扯/双手捧住，轻轻地揉捏起来")%。
+		PRINTL 
+		CALL EMOTION_PLUS, "惊嚇", TARGET
+		PRINTFORMW 「%TEXTR("唔~/噗啾~/唔欸~/嗯欸~")%、%TEXTR("啊~/欸~/真是的~/呀~/又")%、稍微、%TEXTR("要干什么呀~？/呀欸嘿欸欸~/哟咯哦~！/&$#`@￥！+%~！？")%」
+		CALL EMOTEFACE, "憤怒", TARGET
+		PRINTFORMW 「%TEXTR("嗯咕~/真是的~/呼~/嗯呜~/啊~")%……%TEXTR("好痛……/要被拉长了~/脸颊~/被摆弄了~")%」
+		PRINTL 
+		PRINTFORMW %CALLNAME:TARGET%正按着自己的脸颊……
+		IF TALENT:恋慕
+			PRINTFORMW 但是，%CALLNAME:TARGET%却好像有点高兴。
+		ENDIF
+	ENDIF
+
+CASE "こたつでいちゃいちゃ"
+	IF TALENT:恋慕
+		IF RAND:4 == 0
+			PRINTFORMW %CALLNAME:MASTER%邀请%CALLNAME:TARGET%一起钻进了被炉。
+			PRINTFORML 
+			CALL EMOTION_PLUS, "心情好", TARGET
+			PRINTFORMW 「呵呵呵……像这样靠在一起，真好啊~」
+			PRINTFORMW 「啊，吃橘子吧，来，来」
+			PRINTFORMW 「啊~」
+			PRINTFORMW 「呵呵，好吃吗？那，%CNAME("一人称")%也喂你吃」
+			CALL EMOTEFACE, "心情好/栗口", TARGET
+			PRINTFORMW 「啊……唔」
+			CALL EMOTEFACE, "笑顔", TARGET
+			PRINTFORMW 「嗯哼，呵呵，好吃」
+			PRINTFORMW 「卿卿我我的感觉真好呢~，呵呵……」
+			PRINTFORMW 「好幸福……」
+			PRINTFORMW %CALLNAME:MASTER%就这样和%CALLNAME:TARGET%一起吃着橘子放松着。
+		ELSEIF RAND:3 == 0
+			PRINTFORMW %CALLNAME:MASTER%在被炉里放松时，%CALLNAME:TARGET%也挨着坐了进来。
+			PRINTFORML 
+			CALL EMOTION_PLUS, "闲", TARGET
+			PRINTFORMW 「呼，好冷……%CNAME("二人称")%的肩膀，好暖和啊~」
+			PRINTFORMW 「感觉超级安心呢~，呵呵……」
+			CALL EMOTEFACE, "笑顔", TARGET
+			PRINTFORMW 「再贴近一点吧~」
+			PRINTFORML 
+			PRINTFORMW 这样说着，%CALLNAME:TARGET%从侧面抱住%CALLNAME:MASTER%，紧紧贴了上来。
+			PRINTFORML 
+			CALL EMOTEFACE, "闭眼/紅潮２", TARGET
+			PRINTFORMW 「……呼……」
+			PRINTFORMW 「……」
+			IF COND("欲求不満")
+				PRINTFORMW 「嗯，唔……%CNAME("二人称")%……好可爱……」
+				PRINTFORML 
+				PRINTFORMW 就这样%CALLNAME:TARGET%红潮的脸庞凑近过来……
+				PRINTFORML 
+				CALL EMOTION_PLUS, "闭眼/赤面２/小口２", TARGET
+				PRINTFORMW 「嗯……呲……哈姆……」
+				PRINTFORMW 「呲……唔，噗啊……」
+				PRINTFORMW 「……」
+				CALL EMOTEFACE, "ガチ害羞", TARGET
+				PRINTFORMW 「啊，呀，那个，总觉得忍不住了」
+				CALL EMOTEFACE, "心情好/紅潮２", TARGET
+				PRINTFORMW 「呵呵，没办法吧？总觉得躁动难耐了，你看」
+				PRINTFORML 
+				PRINTFORMW %CALLNAME:TARGET%似乎有些迷糊，深情地看着%CALLNAME:MASTER%……
+				EXP:接吻経験 += 1
+				EXP:MASTER:接吻経験 += 1
+			ELSE
+				CALL EMOTEFACE, "心情好", TARGET
+				PRINTFORMW 「啊，总觉得，真的有点恍惚了呢……」
+				PRINTFORMW 「……不，我没睡，嘛，可能稍微有点累了~」
+				PRINTFORML 
+				PRINTFORMW %CALLNAME:TARGET%似乎太放松了，開始犯困了……
+			ENDIF
+		ELSEIF RAND:2
+			PRINTFORMW %CALLNAME:MASTER%邀请%CALLNAME:TARGET%一起钻进了被炉。
+			PRINTFORML 
+			CALL EMOTION_PLUS, "笑顔", TARGET
+			PRINTFORMW 「呵呵，暖洋洋的呢~」
+			CALL EMOTEFACE, "害羞", TARGET
+			PRINTFORMW 「抱紧一点吧，哇，呀！？」
+			PRINTFORMW 「等、等一下~，不要摸我大腿啦，呀，库呼呼……」
+			PRINTFORMW 「不要、不要挠痒痒啦，真是的！」
+			IF COND("欲求不満")
+				PRINTFORML
+				PRINTFORMW %CALLNAME:MASTER%在被炉里摸着%CALLNAME:TARGET%的腿嬉戏时，%CALLNAME:TARGET%隔着衣服摸到了%CALLNAME:MASTER%的性器！
+				PRINTFORML 
+				CALL EMOTION_PLUS, "小悪魔", TARGET
+				PRINTFORMW 「嗯呜，呵呵，嗯哼……哼，对捉弄人的变态桑，就要这样惩罚……」
+				CALL EMOTEFACE, "惊嚇", TARGET
+				PRINTFORMW 「……嗯呀！？」
+				CALL EMOTEFACE, "害羞", TARGET
+				PRINTFORMW 「嗯，嗯呜，啊……嗯啊……呀，别这样，往下面摸了，嗯呜，呵呵，啊呜」
+				PRINTFORML 
+				PRINTFORMW %CALLNAME:MASTER%不甘示弱地反击，%CALLNAME:TARGET%也做出了反应，加强了攻击%CALLNAME:MASTER%的手部动作。
+				PRINTFORMW 从外面看只知道他们在被炉里贴在一起动来动去，
+				PRINTFORMW 实际上里面正在进行着酥痒与快感交织的白热化争斗。
+				PRINTFORML 
+				PRINTFORMW 「嗯呜……！？，等、这个，呀，呀……」
+				PRINTFORMW 「嗯呀！？，等、等一下，真的，嗯呜，啊，啊嗯……」
+				PRINTFORML 
+				CALL EMOTEFACE, "小悪魔", TARGET
+				PRINTFORMW 「我、我已经生气了哦，来，抱紧~」
+				PRINTFORMW 「这里很舒服吧？来，蹭蹭，蹭蹭蹭，嗯，嗯呜，这边也，好舒服……嗯哼、嗯嗯呜……」
+				CALL EMOTEFACE, "害羞", TARGET
+				PRINTFORMW 「嗯哼，啊嗯，啊呜，库……库呼，呵呵……总、总觉得有点搞不清楚了……」
+				PRINTFORMW 「哎，哎呀，嗯，呀……！？啊呜呜……」
+				PRINTFORML 
+				PRINTFORML 
+				PRINTFORML 
+				PRINTFORML 
+				PRINTFORMW ……
+				PRINTFORMW 就这样%CALLNAME:TARGET%在被炉里互相抚摸了一会儿后，眼神迷离的%CALLNAME:TARGET%对%CALLNAME:MASTER%说道。
+				PRINTFORML 
+				CALL EMOTION_PLUS, "心情好/頬汗", TARGET
+				PRINTFORMW 「哈~，哈~，啊，啊呜，嗯……」
+				PRINTFORMW 「呼……那个，我说~，要不要，在床上继续~？」
+				PRINTFORMW 「从、从刚才開始就有点，寂寞的感觉，或者说不过瘾，那个，啊~……」
+				CALL EMOTEFACE, "ガチ害羞/頬汗", TARGET
+				PRINTFORMW 「可以吧……？脑袋晕乎乎的，已经忍不住了，%CNAME("一人称")%……」
+				PRINTFORMW 「刚才那个，也、也有点期待的成分在……」
+				PRINTFORML 
+				PRINTFORMW %CALLNAME:TARGET%紧贴着身体，扭扭捏捏地看着%CALLNAME:MASTER%……
+			ELSE
+				PRINTFORML
+				PRINTFORMW %CALLNAME:MASTER%在被炉里抚摸着%CALLNAME:TARGET%的大腿玩耍时，%CALLNAME:TARGET%反过来挠%CALLNAME:MASTER%的胳肢窝。
+				PRINTFORML 
+				PRINTFORMW 「嗯呜、呵呵，哈、哈，来啦、来、嗯哼，哈、呀、嗯……！……！」
+				PRINTFORMW 「竟、竟然发出奇怪的声音了啦，真是的~……」
+				CALL EMOTEFACE, "小悪魔", TARGET
+				PRINTFORMW 「呵呵呵……只是挠痒痒就满足不了了吗？变态」
+				PRINTFORML 
+				PRINTFORMW %CALLNAME:TARGET%和%CALLNAME:MASTER%玩得很開心……
+			ENDIF
+		ELSE
+			PRINTFORMW %CALLNAME:MASTER%邀请%CALLNAME:TARGET%一起钻进了被炉。
+			PRINTFORML 
+			CALL EMOTION_PLUS, "心情好", TARGET
+			PRINTFORMW 「外面虽然很冷，但是%CNAME("一人称")%们紧贴在一起暖洋洋的呢~」
+			PRINTFORMW 「抱抱……呵呵，呵呵……有点热了？」
+			CALL EMOTEFACE, "笑顔", TARGET
+			PRINTFORMW 「没関系啦，再多贴一会儿嘛~来，靠过来，摸摸，摸摸」
+			PRINTFORMW 「人家也有想撒娇的时候嘛~，呐~，啊，嗯，呵呵……♪」
+			PRINTFORMW 「呵呵呵……♪」
+			PRINTFORML 
+			PRINTFORMW 就这样，%CALLNAME:MASTER%摸了摸%CALLNAME:TARGET%的頭一会儿。
+		ENDIF
+	ELSE
+		IF RAND:3 == 0
+			PRINTFORMW %CALLNAME:MASTER%邀请%CALLNAME:TARGET%一起钻进了被炉。
+			PRINTFORML 
+			CALL EMOTION_PLUS, "重置", TARGET
+			PRINTFORMW 「呼，好暖和……过了这么多年还是不习惯寒冷啊~」
+			PRINTFORMW 「过了多少年，还是会想念温暖的被炉」
+			PRINTFORMW 「呵呵，真令人怀念啊~」
+			PRINTFORMW 「啊，吃橘子吧，橘子」
+			PRINTFORMW 「嗯哼，果然被炉和橘子是绝配呢~，吧唧吧唧……」
+			PRINTFORML 
+			PRINTFORMW %CALLNAME:TARGET%在和%CALLNAME:MASTER%肩膀相碰的距离，大口吃着橘子。
+		ELSEIF RAND:2
+			PRINTFORMW %CALLNAME:MASTER%邀请%CALLNAME:TARGET%一起钻进了被炉。
+			PRINTFORML 
+			CALL EMOTION_PLUS, "重置", TARGET
+			PRINTFORMW 「说到冬天果然就是被炉了呢~」
+			PRINTFORMW 「……哈啊~」
+			CALL EMOTEFACE, "心情好", TARGET
+			PRINTFORMW 「因为，很少和别人一起钻被炉嘛」
+			PRINTFORMW 「感觉更加放松了……」
+			PRINTFORMW 「呼呼，感觉比平时更暖和了」
+			PRINTFORMW 「呵呵……」
+			PRINTFORML 
+			PRINTFORMW %CALLNAME:TARGET%依偎着靠过来，在被炉里暖和了好一阵子……
+		ELSE
+			PRINTFORMW %CALLNAME:MASTER%邀请%CALLNAME:TARGET%一起钻进了被炉。
+			PRINTFORML 
+			CALL EMOTION_PLUS, "重置", TARGET
+			PRINTFORMW 「嗯，知道了，暖和一下吧」
+			PRINTFORML 
+			PRINTFORMW 就这样，抚摸着把手脚伸进被炉里暖和着的%CALLNAME:TARGET%的頭。
+			PRINTFORML 
+			CALL EMOTEFACE, "惊嚇", TARGET
+			PRINTFORMW 「嗯~，怎么了~？突然，哇」
+			CALL EMOTEFACE, "重置", TARGET
+			PRINTFORMW 「嘛，如果想摸的话，我倒是无所谓~」
+			CALL EMOTEFACE, "害羞", TARGET
+			PRINTFORMW 「喂，稍微，摸得太过分了吧，頭发都要乱糟糟的了~」
+			PRINTFORMW 「唔~……」
+			PRINTFORMW 「嗯」
+			PRINTFORML 
+			PRINTFORMW %CALLNAME:TARGET%突然把頭靠在%CALLNAME:MASTER%的肩膀上。
+			PRINTFORML 
+			PRINTFORMW 「帮我把頭发整理一下嘛~」
+			PRINTFORMW 「我（%CNAME("一人称")%）就先这样休息一下」
+			PRINTFORMW 「呵呵」
+			PRINTFORML 
+			PRINTFORMW 就这样，我帮%CALLNAME:TARGET%整理了一会儿頭发……
+
+		ENDIF
+	ENDIF
+
+;直接Ｈしたい場合
+CASE "追加選択肢からＨ：もて无"
+	;前編
+	IF CEVENTS("追加選択肢からＨ") == ""
+		PRINTFORMW 接吻特
+		PRINTL [0]选项1(选择这个会H)
+		PRINTL [1]选项2(选择这个不会H)
+		CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+		FLAG:SELECT_USERSHOP = 100
+	ELSE
+		IF TFLAG:床イン
+			PRINTFORMW H时的情况展開
+		ELSE
+			PRINTFORMW 这边是不会H的情况展開
+		ENDIF
+	ENDIF
+
+
+CASE "睡眠時追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "睡眠時追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+ENDSELECT
+
+;-------------------------------------------------
+;约会行き先の選択肢を追加。
+@DATE_K65_ADDSELECT
+;ここで増やした選択肢を選ぶと、それがSAVESTR:约会 に代入される仕組みです
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+@KOJO_DATE_K65_ADDSELECT
+SELECTCASE SAVESTR:约会
+CASE "追加選択肢その１"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+CASE "追加選択肢之２"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+ENDSELECT
+
+;-------------------------------------------------
+;换地方指令の選択肢を追加
+@MOVE_K65_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"

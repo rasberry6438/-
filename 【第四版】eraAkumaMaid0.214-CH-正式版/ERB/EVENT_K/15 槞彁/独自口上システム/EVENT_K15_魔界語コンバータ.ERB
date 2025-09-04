@@ -1,0 +1,967 @@
+﻿@K15_STRL(ARGS)
+CALL K15_STR(ARGS)
+PRINTL
+
+@K15_STRW(ARGS)
+CALL K15_STR(ARGS)
+WAIT
+
+@K15_STRFW(ARGS)
+CALL K15_STR(ARGS)
+FORCEWAIT
+
+@K15_STR(ARGS)
+	#DIM LCOUNT
+	#DIMS ResultHtml
+	#DIM TagCount
+	#DIMS DYNAMIC Memo
+	#DIMS DYNAMIC MEMO_RESULTS,100
+
+	;CALL PRINT_STRL(ARGS)
+	;LOCALS = %HTML_GETPRINTEDSTR(0)%
+	;CLEARLINE 1
+
+
+	REPLACE ARGS, @"&amp;", @"&"
+	Memo = %RESULTS%
+	REPLACE Memo, @"&gt;", @">"
+	Memo = %RESULTS%
+	REPLACE Memo, @"&lt;", @"<"
+	Memo = %RESULTS%
+	REPLACE Memo, @"&quot;", @"’"
+	Memo = %RESULTS%
+	REPLACE Memo, @"&apos;", @"'"
+	Memo = %RESULTS%
+	;この二つ是ったいなんぞや
+		REPLACE Memo, @"&#nn;",@"" 
+		Memo = %RESULTS%
+		REPLACE Memo, @"&#xnn;", @""
+		Memo = %RESULTS%
+		
+	HTML_TAGSPLIT Memo
+	TagCount = RESULT
+
+	FOR LCOUNT, 0, TagCount
+		MEMO_RESULTS:LCOUNT = %RESULTS:LCOUNT%
+	NEXT
+
+	ResultHtml = 
+	FOR LCOUNT, 0, TagCount
+		IF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 6) == "</nobr"
+			;PRINTFORMW %MEMO_RESULTS:LCOUNT%
+			;ResultHtml += MEMO_RESULTS:LCOUNT
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 3) == "</p"
+			;ResultHtml += MEMO_RESULTS:LCOUNT
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 2) == "</"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 5) == "<nobr"
+			;PRINT
+			;ResultHtml += MEMO_RESULTS:LCOUNT
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 7) == "<button"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 10) == "<nonbutton"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 3) == "<br"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 5) == "<font"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 2) == "<b"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 2) == "<i"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 2) == "<u"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 2) == "<p"
+			;ResultHtml += MEMO_RESULTS:LCOUNT
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 2) == "<s"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 4) == "<img"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 6) == "<shape"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSEIF SUBSTRING(MEMO_RESULTS:LCOUNT, 0, 4) == "<!--"
+			ResultHtml += @"%MEMO_RESULTS:LCOUNT%"
+		ELSE
+			;PRINTFORML ELSE %MEMO_RESULTS:LCOUNT%
+			ResultHtml += @"%K15_CyrillicConverter(MEMO_RESULTS:LCOUNT)%"
+		ENDIF
+	NEXT
+	RESULTS = %ResultHtml%
+;-------------------------------------------------
+;槞彁のキリル文字変換装置
+;-------------------------------------------------
+@K15_CyrillicConverter(Text)
+	#FUNCTIONS 
+	#DIMS Text
+	;#region PRINT_STR表記法の隔離
+		REPLACE Text, "_BBHH", "_ＢＢＨＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_BWHH", "_ＢＷＨＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_BWH", "_ＢＷＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_WHH", "_ＷＨＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_BBH", "_ＢＢＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_BHH", "_ＢＨＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_UH", "_ＵＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_WH", "_ＷＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_HH", "_ＨＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_BH", "_ＢＨ"
+		Text =  %RESULTS%
+		REPLACE Text, "_H", "_Ｈ"
+		Text =  %RESULTS%
+		;REPLACE Text, "_U", "_Ｕ"
+		;Text =  %RESULTS%
+	;#endregion
+
+	;#region キリル変換
+		REPLACE Text, "Chtobi", "Чтобы"
+		Text =  %RESULTS%
+		REPLACE Text, "chtobi", "чтобы"
+		Text =  %RESULTS%
+		REPLACE Text, "Chtobi", "Чтобы"
+		Text =  %RESULTS%
+		REPLACE Text, "chtobi", "чтобы"
+		Text =  %RESULTS%
+		REPLACE Text, "ishod", "исход"
+		Text =  %RESULTS%
+		REPLACE Text, "otsif", "оциф"
+		Text =  %RESULTS%
+		REPLACE Text, "otsin", "оцин"
+		Text =  %RESULTS%
+		REPLACE Text, "otsed", "оцед"
+		Text =  %RESULTS%
+		REPLACE Text, "otsen", "оцен"
+		Text =  %RESULTS%
+		REPLACE Text, "otsep", "оцеп"
+		Text =  %RESULTS%
+		REPLACE Text, "Shto", "Что"
+		Text =  %RESULTS%
+		REPLACE Text, "shto", "что"
+		Text =  %RESULTS%
+		REPLACE Text, "tsia", "тся"
+		Text =  %RESULTS%
+		REPLACE Text, "Shch", "Щ"
+		Text =  %RESULTS%
+		REPLACE Text, "shch", "щ"
+		Text =  %RESULTS%
+		REPLACE Text, "tsya", "тся"
+		Text =  %RESULTS%
+		REPLACE Text, "tsa ", "тся "
+		Text =  %RESULTS%
+		REPLACE Text, "Eto", "Это"
+		Text =  %RESULTS%
+		REPLACE Text, "eto", "это"
+		Text =  %RESULTS%
+		REPLACE Text, "tst", "тст"
+		Text =  %RESULTS%
+		REPLACE Text, "bi ", "бы "
+		Text =  %RESULTS%
+		REPLACE Text, "sch", "щ"
+		Text =  %RESULTS%
+		REPLACE Text, "yi", "ый"
+		Text =  %RESULTS%
+		REPLACE Text, "ii", "ий"
+		Text =  %RESULTS%
+		REPLACE Text, "oi", "ой"
+		Text =  %RESULTS%
+		REPLACE Text, "ei", "ей"
+		Text =  %RESULTS%
+		REPLACE Text, "Ot", "От"
+		Text =  %RESULTS%
+		REPLACE Text, "ot", "от"
+		Text =  %RESULTS%
+		REPLACE Text, "i^", "й"
+		Text =  %RESULTS%
+		REPLACE Text, "e'", "э"
+		Text =  %RESULTS%
+		REPLACE Text, "zh", "ж"
+		Text =  %RESULTS%
+		REPLACE Text, "kh", "х"
+		Text =  %RESULTS%
+		REPLACE Text, "ts", "ц"
+		Text =  %RESULTS%
+		REPLACE Text, "ch", "ч"
+		Text =  %RESULTS%
+		REPLACE Text, "Ch", "Ч"
+		Text =  %RESULTS%
+		REPLACE Text, "Sh", "Ш"
+		Text =  %RESULTS%
+		REPLACE Text, "sh", "ш"
+		Text =  %RESULTS%
+		REPLACE Text, "yu", "ю"
+		Text =  %RESULTS%
+		REPLACE Text, "ya", "я"
+		Text =  %RESULTS%
+		REPLACE Text, "ye", "е"
+		Text =  %RESULTS%
+		REPLACE Text, "yo", "ё"
+		Text =  %RESULTS%
+		REPLACE Text, "ia", "я"
+		Text =  %RESULTS%
+		REPLACE Text, "iu", "ю"
+		Text =  %RESULTS%
+		REPLACE Text, "io", "ё"
+		Text =  %RESULTS%
+		REPLACE Text, "''", "ъ"
+		Text =  %RESULTS%
+		REPLACE Text, "q", "ы"
+		Text =  %RESULTS%
+		REPLACE Text, "e", "е"
+		Text =  %RESULTS%
+		REPLACE Text, "z", "з"
+		Text =  %RESULTS%
+		REPLACE Text, "k", "к"
+		Text =  %RESULTS%
+		REPLACE Text, "l", "л"
+		Text =  %RESULTS%
+		REPLACE Text, "m", "м"
+		Text =  %RESULTS%
+		REPLACE Text, "n", "н"
+		Text =  %RESULTS%
+		REPLACE Text, "o", "о"
+		Text =  %RESULTS%
+		REPLACE Text, "p", "п"
+		Text =  %RESULTS%
+		REPLACE Text, "r", "р"
+		Text =  %RESULTS%
+		REPLACE Text, "s", "с"
+		Text =  %RESULTS%
+		REPLACE Text, "t", "т"
+		Text =  %RESULTS%
+		REPLACE Text, "u", "у"
+		Text =  %RESULTS%
+		REPLACE Text, "f", "ф"
+		Text =  %RESULTS%
+		REPLACE Text, "h", "х"
+		Text =  %RESULTS%
+		REPLACE Text, "g", "г"
+		Text =  %RESULTS%
+		REPLACE Text, "a", "а"
+		Text =  %RESULTS%
+		REPLACE Text, "b", "б"
+		Text =  %RESULTS%
+		REPLACE Text, "v", "в"
+		Text =  %RESULTS%
+		REPLACE Text, "w", "в"
+		Text =  %RESULTS%
+		REPLACE Text, "z", "з"
+		Text =  %RESULTS%
+		REPLACE Text, "i", "и"
+		Text =  %RESULTS%
+		REPLACE Text, "'", "ь"
+		Text =  %RESULTS%
+		REPLACE Text, "c", "ц"
+		Text =  %RESULTS%
+		REPLACE Text, "d", "д"
+		Text =  %RESULTS%
+		REPLACE Text, "j", "ж"
+		Text =  %RESULTS%
+		REPLACE Text, "y", "й"
+		Text =  %RESULTS%
+		REPLACE Text, "x", "ь"
+		Text =  %RESULTS%
+		REPLACE Text, "A","А"
+		Text = %RESULTS%
+		REPLACE Text, "B","Б"
+		Text = %RESULTS%
+		REPLACE Text, "C","Ц"
+		Text = %RESULTS%
+		REPLACE Text, "D","Д"
+		Text = %RESULTS%
+		REPLACE Text, "E","Е"
+		Text = %RESULTS%
+		REPLACE Text, "F","Ф"
+		Text = %RESULTS%
+		REPLACE Text, "G","Г"
+		Text = %RESULTS%
+		REPLACE Text, "H","Х"
+		Text = %RESULTS%
+		REPLACE Text, "I","И"
+		Text = %RESULTS%
+		REPLACE Text, "J","Ж"
+		Text = %RESULTS%
+		REPLACE Text, "K","К"
+		Text = %RESULTS%
+		REPLACE Text, "L","Л"
+		Text = %RESULTS%
+		REPLACE Text, "M","М"
+		Text = %RESULTS%
+		REPLACE Text, "N","Н"
+		Text = %RESULTS%
+		REPLACE Text, "O","О"
+		Text = %RESULTS%
+		REPLACE Text, "P","П"
+		Text = %RESULTS%
+		REPLACE Text, "Q","Ы"
+		Text = %RESULTS%
+		REPLACE Text, "R","Р"
+		Text = %RESULTS%
+		REPLACE Text, "S","С"
+		Text = %RESULTS%
+		REPLACE Text, "T","Т"
+		Text = %RESULTS%
+		REPLACE Text, "U","У"
+		Text = %RESULTS%
+		REPLACE Text, "V","В"
+		Text = %RESULTS%
+		REPLACE Text, "W","В"
+		Text = %RESULTS%
+		REPLACE Text, "X","Ь"
+		Text = %RESULTS%
+		REPLACE Text, "Y","Й"
+		Text = %RESULTS%
+		REPLACE Text, "Z","З"
+		Text = %RESULTS%
+	;#endregion
+
+
+	
+	;#region PRINT_STR表記法の再有効化
+		REPLACE Text, "_ＢＢＨＨ", "_BBHH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＢＷＨＨ", "_BWHH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＢＷＨ", "_BWH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＷＨＨ", "_WHH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＢＢＨ", "_BBH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＢＨＨ", "_BHH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＵＨ", "_UH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＷＨ", "_WH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＨＨ", "_HH"
+		Text =  %RESULTS%
+		REPLACE Text, "_ＢＨ", "_BH"
+		Text =  %RESULTS%
+		REPLACE Text, "_Ｈ", "_H"
+		Text =  %RESULTS%
+		;REPLACE Text, "_Ｕ", "_U"
+		;Text =  %RESULTS%
+	;#endregion
+	RETURNF Text
+@K15_HiraganaConverter(Text)
+	#FUNCTIONS 
+	#DIMS DYNAMIC Text
+	#DIMS DYNAMIC ResultText
+	;#region 平仮名 拗音の方が文字数が多いので上に来る
+		REPLACE Text, "きゃ", "kya"
+		Text = %RESULTS%
+		REPLACE Text, "きゅ", "kyu"
+		Text = %RESULTS%
+		REPLACE Text, "きょ", "kyo"
+		Text = %RESULTS%
+		REPLACE Text, "しゃ", "sha"
+		Text = %RESULTS%
+		REPLACE Text, "しゅ", "shu"
+		Text = %RESULTS%
+		REPLACE Text, "しょ", "sho"
+		Text = %RESULTS%
+		REPLACE Text, "ちゃ", "cha"
+		Text = %RESULTS%
+		REPLACE Text, "ちゅ", "chu"
+		Text = %RESULTS%
+		REPLACE Text, "ちょ", "cho"
+		Text = %RESULTS%
+		REPLACE Text, "にゃ", "nya"
+		Text = %RESULTS%
+		REPLACE Text, "にゅ", "nyu"
+		Text = %RESULTS%
+		REPLACE Text, "にょ", "nyo"
+		Text = %RESULTS%
+		REPLACE Text, "ひゃ", "hya"
+		Text = %RESULTS%
+		REPLACE Text, "ひゅ", "hyu"
+		Text = %RESULTS%
+		REPLACE Text, "ひょ", "hyo"
+		Text = %RESULTS%
+		REPLACE Text, "みゃ", "mya"
+		Text = %RESULTS%
+		REPLACE Text, "みゅ", "myu"
+		Text = %RESULTS%
+		REPLACE Text, "みょ", "myo"
+		Text = %RESULTS%
+		REPLACE Text, "りゃ", "rya"
+		Text = %RESULTS%
+		REPLACE Text, "りゅ", "ryu"
+		Text = %RESULTS%
+		REPLACE Text, "りょ", "ryo"
+		Text = %RESULTS%
+		REPLACE Text, "ぎゃ", "gya"
+		Text = %RESULTS%
+		REPLACE Text, "ぎゅ", "gyu"
+		Text = %RESULTS%
+		REPLACE Text, "ぎょ", "gyo"
+		Text = %RESULTS%
+		REPLACE Text, "じゃ", "ja"
+		Text = %RESULTS%
+		REPLACE Text, "じゅ", "ju"
+		Text = %RESULTS%
+		REPLACE Text, "じょ", "jo"
+		Text = %RESULTS%
+		REPLACE Text, "びゃ", "bya"
+		Text = %RESULTS%
+		REPLACE Text, "びゅ", "byu"
+		Text = %RESULTS%
+		REPLACE Text, "びょ", "byo"
+		Text = %RESULTS%
+		REPLACE Text, "ぴゃ", "pya"
+		Text = %RESULTS%
+		REPLACE Text, "ぴゅ", "pyu"
+		Text = %RESULTS%
+		REPLACE Text, "ぴょ", "pyo"
+		Text = %RESULTS%
+
+
+		REPLACE Text, "あ", "a"
+		Text = %RESULTS%
+		REPLACE Text, "い", "i"
+		Text = %RESULTS%
+		REPLACE Text, "う", "u"
+		Text = %RESULTS%
+		REPLACE Text, "え", "e'"
+		Text = %RESULTS%
+		REPLACE Text, "お", "o"
+		Text = %RESULTS%
+		REPLACE Text, "か", "ka"
+		Text = %RESULTS%
+		REPLACE Text, "き", "ki"
+		Text = %RESULTS%
+		REPLACE Text, "く", "ku"
+		Text = %RESULTS%
+		REPLACE Text, "け", "ke"
+		Text = %RESULTS%
+		REPLACE Text, "こ", "ko"
+		Text = %RESULTS%
+		REPLACE Text, "さ", "sa"
+		Text = %RESULTS%
+		REPLACE Text, "し", "shi"
+		Text = %RESULTS%
+		REPLACE Text, "す", "su"
+		Text = %RESULTS%
+		REPLACE Text, "せ", "se"
+		Text = %RESULTS%
+		REPLACE Text, "そ", "so"
+		Text = %RESULTS%
+		REPLACE Text, "た", "ta"
+		Text = %RESULTS%
+		REPLACE Text, "ち", "chi"
+		Text = %RESULTS%
+		REPLACE Text, "つ", "tsu"
+		Text = %RESULTS%
+		REPLACE Text, "て", "tye"
+		Text = %RESULTS%
+		REPLACE Text, "と", "tuo"
+		Text = %RESULTS%
+		REPLACE Text, "な", "na"
+		Text = %RESULTS%
+		REPLACE Text, "に", "nyi"
+		Text = %RESULTS%
+		REPLACE Text, "ぬ", "nu"
+		Text = %RESULTS%
+		REPLACE Text, "ね", "ne"
+		Text = %RESULTS%
+		REPLACE Text, "の", "no"
+		Text = %RESULTS%
+		REPLACE Text, "は", "ha"
+		Text = %RESULTS%
+		REPLACE Text, "ひ", "hi"
+		Text = %RESULTS%
+		REPLACE Text, "ふ", "fu"
+		Text = %RESULTS%
+		REPLACE Text, "へ", "he"
+		Text = %RESULTS%
+		REPLACE Text, "ほ", "ho"
+		Text = %RESULTS%
+		REPLACE Text, "ま", "ma"
+		Text = %RESULTS%
+		REPLACE Text, "み", "mi"
+		Text = %RESULTS%
+		REPLACE Text, "む", "mu"
+		Text = %RESULTS%
+		REPLACE Text, "め", "me"
+		Text = %RESULTS%
+		REPLACE Text, "も", "mo"
+		Text = %RESULTS%
+		REPLACE Text, "や", "ya"
+		Text = %RESULTS%
+		REPLACE Text, "ゆ", "yu"
+		Text = %RESULTS%
+		REPLACE Text, "よ", "yio"
+		Text = %RESULTS%
+		REPLACE Text, "ら", "la"
+		Text = %RESULTS%
+		REPLACE Text, "り", "li"
+		Text = %RESULTS%
+		REPLACE Text, "る", "ru"
+		Text = %RESULTS%
+		REPLACE Text, "れ", "le"
+		Text = %RESULTS%
+		REPLACE Text, "ろ", "ro"
+		Text = %RESULTS%
+		REPLACE Text, "わ", "va"
+		Text = %RESULTS%
+		REPLACE Text, "を", "vo"
+		Text = %RESULTS%
+		REPLACE Text, "ん", "ng"
+		Text = %RESULTS%
+		REPLACE Text, "が", "ga"
+		Text = %RESULTS%
+		REPLACE Text, "ぎ", "gi"
+		Text = %RESULTS%
+		REPLACE Text, "ぐ", "gu"
+		Text = %RESULTS%
+		REPLACE Text, "げ", "ge"
+		Text = %RESULTS%
+		REPLACE Text, "ご", "go"
+		Text = %RESULTS%
+		REPLACE Text, "ざ", "za"
+		Text = %RESULTS%
+		REPLACE Text, "じ", "ji"
+		Text = %RESULTS%
+		REPLACE Text, "ず", "zu"
+		Text = %RESULTS%
+		REPLACE Text, "ぜ", "ze"
+		Text = %RESULTS%
+		REPLACE Text, "ぞ", "zo"
+		Text = %RESULTS%
+		REPLACE Text, "だ", "dya"
+		Text = %RESULTS%
+		REPLACE Text, "ぢ", "ji"
+		Text = %RESULTS%
+		REPLACE Text, "づ", "zu"
+		Text = %RESULTS%
+		REPLACE Text, "で", "dye"
+		Text = %RESULTS%
+		REPLACE Text, "ど", "duo"
+		Text = %RESULTS%
+		REPLACE Text, "ば", "ba"
+		Text = %RESULTS%
+		REPLACE Text, "び", "bi"
+		Text = %RESULTS%
+		REPLACE Text, "ぶ", "bu"
+		Text = %RESULTS%
+		REPLACE Text, "べ", "be"
+		Text = %RESULTS%
+		REPLACE Text, "ぼ", "bo"
+		Text = %RESULTS%
+		REPLACE Text, "ぱ", "pa"
+		Text = %RESULTS%
+		REPLACE Text, "ぴ", "pi"
+		Text = %RESULTS%
+		REPLACE Text, "ぷ", "pu"
+		Text = %RESULTS%
+		REPLACE Text, "ぺ", "pe"
+		Text = %RESULTS%
+		REPLACE Text, "ぽ", "po"
+		Text = %RESULTS%
+	;#endregion
+
+	;#region頭文字を大文字に变更
+		
+		SELECTCASE SUBSTRING(RESULTS,0,1)
+			CASE "a"
+				ResultText = A
+			CASE "b"
+				ResultText = B
+			CASE "c"
+				ResultText = C
+			CASE "d"
+				ResultText = D
+			CASE "e"
+				ResultText = E
+			CASE "f"
+				ResultText = F
+			CASE "g"
+				ResultText = G
+			CASE "h"
+				ResultText = H
+			CASE "i"
+				ResultText = I
+			CASE "j"
+				ResultText = J
+			CASE "k"
+				ResultText = K
+			CASE "l"
+				ResultText = L
+			CASE "m"
+				ResultText = M
+			CASE "n"
+				ResultText = N
+			CASE "o"
+				ResultText = O
+			CASE "p"
+				ResultText = P
+			CASE "q"
+				ResultText = Q
+			CASE "r"
+				ResultText = R
+			CASE "s"
+				ResultText = S
+			CASE "t"
+				ResultText = T
+			CASE "u"
+				ResultText = U
+			CASE "v"
+				ResultText = V
+			CASE "w"
+				ResultText = W
+			CASE "x"
+				ResultText = X
+			CASE "y"
+				ResultText = Y
+			CASE "z"
+				ResultText = Z
+			CASEELSE
+				ResultText = SUBSTRING(RESULTS,0,1)
+		ENDSELECT
+		ResultText += @"%SUBSTRING(RESULTS,1,-1)%"
+	;#endregion
+
+
+
+	RETURNF ResultText
+
+
+
+
+;-------------------------------------------------
+;既知単語の強調
+;-------------------------------------------------
+@K15_VOCAB(Text)
+	#DIMS DYNAMIC Text
+	#DIM DYNAMIC Lcount
+	#DIMS DYNAMIC Dictionary
+	
+	;Text = %K15_CyrillicConverter(Text)%
+	;テスト用
+	;CALL SET_CEVENT("сакана")
+	;CALL SET_CEVENT("Аната")
+	;CALL SET_CEVENT("Коннйчивар")
+	;CALL SET_CEVENT("Vatashi")
+	
+	IF CEVENT("⊥лыъвьыкцлр")
+		Dictionary = 【名词】槞彁：好像是魔界语的本名
+		CALL K15_VOCAB_REPLACE(Text, CNAME("本名"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	IF CEVENT("U二人称")
+		Dictionary = 【名词】你的名字在魔界语中是这样发音
+		CALL K15_VOCAB_REPLACE(Text, 魔界語PlayerName, Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;友達
+	IF CEVENT("Tommordatch")
+		Dictionary = 【名词】朋友
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Tommordatch"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;翻訳機
+	IF CEVENT("Hongyackiy")
+		Dictionary = 【名词】翻译机
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Hongyackiy"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;くすぐったい
+	IF CEVENT("kusgu'tay")
+		Dictionary = 【形容詞】好痒
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Hongyackiy"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+
+	;有がとう
+	IF CEVENT("Arrygator")
+		Dictionary = 【感叹词】有がとう:感谢
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Arrygator"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;ございます
+	IF CEVENT("gozaymass")
+		Dictionary = 【？词】不明:接在感谢后面的敬语？
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Gozaymass"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;恥ずかしい
+	IF CEVENT("hadzkashiy")
+		Dictionary = 【形容词】好害羞
+		CALL K15_VOCAB_REPLACE(Text, CNAME("本名"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;大丈夫
+	IF CEVENT("Dayzhorb");
+		Dictionary = 【形动词】没関系
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Dayzhorb"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;そうだ 
+	IF CEVENT("Sohrda")
+		Dictionary = 【词】据说/好像是/即将要
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Sohrda"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;ごめん 
+	IF CEVENT("Gommeng")
+		Dictionary = 【感叹词】对不起
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Gommeng"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;いただき
+	IF CEVENT("Itadaky")
+		Dictionary = 【动词】收到/得到
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Itadaky"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	
+	;種族
+	IF CEVENT("shuzock")
+		Dictionary = 【名词】种族
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("shuzock"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;鞄
+	IF CEVENT("Kabang")
+		Dictionary = 【名词】包裹？
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Kabang"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;嬉しい
+	IF CEVENT("Ulleshy")
+		Dictionary = 【形容词】好高兴
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Ulleshy"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;欧内酱
+	IF CEVENT("Oneychan")
+		Dictionary = 【名词】姐姐
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Oneychan"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;父亲
+	IF CEVENT("Otor-san")
+		Dictionary = 【名词】父亲
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Oneychan"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+
+	IF CEVENT("Tobel")
+		Dictionary = 【动词】飞行
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Tobel"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	
+	
+	;虚種 外国人と外人の違いのような物、偽種の方が差別的な表現
+	;槞彁の世界観においては、魔界人と悪魔も同じ扱いだよ
+	IF CEVENT("Gish")
+		Dictionary = 【名词】虚伪
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Kyogyi"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;虚偽
+	IF CEVENT("Kyogyi")
+		Dictionary = 【名词】虚伪
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Kyogyi"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;～人　（アメリカ人、日本人、虚偽人　など）
+	IF CEVENT("zhing")
+		Dictionary = 【格変化】～（前缀所属）人
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("zhing"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;真実 真実界 など
+	IF CEVENT("Shingzitsu")
+		Dictionary = 【名词】真实
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Shingzitsu"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+
+	;店
+	IF CEVENT("mishe")
+		Dictionary = 【名词】商店
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("mishe"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+
+	;私
+	IF CEVENT("Vatash")
+		Dictionary = 【代名词】私；我/一人称
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Vatash"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;えっち
+	IF CEVENT("E'tchi")
+		Dictionary = 【名词】性行为
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("E'tchi"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;你
+	IF CEVENT("Anata")
+		Dictionary = 【代名词】你/二人称
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Vatash"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;やめて
+	IF CEVENT("yametye")
+		Dictionary = 【动词】别这样
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("yametye"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;やめる
+	IF CEVENT("yamel")
+		Dictionary = 【动词】停止
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("yametye"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;何
+	IF CEVENT("Nany");
+		Dictionary = 【代名词】什么？
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Nany"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+
+	;他
+	IF CEVENT("Hokha")
+		Dictionary = 【代名词】其他
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Nany"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+
+
+	IF CEVENT("Example");Еьампле
+		Dictionary = 【テスト】置換成功
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("Example"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+	;サメ
+	IF CEVENT("SAME");Еьампле
+		Dictionary = 【名词】魔界的幻兽？
+		CALL K15_VOCAB_REPLACE(Text, K15_CyrillicConverter("SAME"),Dictionary)
+		Text = %RESULTS%
+	ENDIF
+
+	VARSET RESULTS:0, ""
+	RESULTS:0 = %Text%
+	;余りよろしくないけれども、K15_VOCABに辞書機能も付与する為に下記の行を追加する(两个仕事をさせる)
+	RESULTS:1 = %Dictionary%
+;
+@K15_VOCAB_REPLACE(Text,Word,Dictionary)
+	#DIMS DYNAMIC Text
+	#DIMS DYNAMIC Word
+	#DIMS DYNAMIC Dictionary
+	#DIM DYNAMIC TagCount
+	#DIM DYNAMIC Lcount
+	#DIM DYNAMIC Lcount2
+	#DIMS DYNAMIC MEMO_RESULTS,300
+
+	#DIM DYNAMIC EndButtonTagCount
+	#DIM DYNAMIC StartButtonTagCount
+	#DIM DYNAMIC EndNonbuttonTagCount
+	#DIM DYNAMIC StartNonbuttonTagCount
+
+	HTML_TAGSPLIT Text
+	TagCount = RESULT
+	EndButtonTagCount = 0
+	StartButtonTagCount = 0
+	EndNonbuttonTagCount = 0
+	StartNonbuttonTagCount = 0
+	
+	FOR Lcount, 0, TagCount
+		MEMO_RESULTS:LCOUNT = %RESULTS:LCOUNT%
+	NEXT
+	;辞書情報を挿入して良いかの確認
+	FOR Lcount, 0, TagCount
+		IF STRCOUNTS(MEMO_RESULTS:Lcount,Word) > -1
+
+			FOR Lcount2, 0, Lcount
+				IF STRCOUNTS(MEMO_RESULTS:Lcount2,"</button") > 0
+					EndButtonTagCount++
+				ELSEIF STRCOUNTS(MEMO_RESULTS:Lcount2,"<button") > 0
+					StartButtonTagCount++
+				ELSEIF STRCOUNTS(MEMO_RESULTS:Lcount2,"</nonbutton") > 0
+					EndNonbuttonTagCount++
+				ELSEIF STRCOUNTS(MEMO_RESULTS:Lcount2,"<nonbutton") > 0
+					StartNonbuttonTagCount++
+				ENDIF
+
+			NEXT
+			SIF EndButtonTagCount <= StartButtonTagCount
+				RESULTS = </button>%MEMO_RESULTS:Lcount%<button>
+			SIF EndNonbuttonTagCount <= StartNonbuttonTagCount
+				RESULTS = </nonbutton>%MEMO_RESULTS:Lcount%<nonbutton>
+			;IF StartTagCount == EndTagCount
+				;【メモ】なんでRESULTSに一回入れないとREPLACEしてくれないんだ...?
+				RESULTS = %MEMO_RESULTS:Lcount%
+				;なぜか分からないけど、Window内でホバーコメント表示する為にはnonbuttonではなくてbuttonである必要があるらしい
+				REPLACE (MEMO_RESULTS:Lcount), Word, @"<button title='%Dictionary%' value='-1'><font color='#%KnownWordColor%' bcolor='#%KnownWordSelectingColor%'><u><i>%Word%</i></u></font></button>"
+				;REPLACE (MEMO_RESULTS:Lcount), Word, @"<nonbutton title='%Dictionary%'><font color='%KnownWordColor%'>%Word%</font></nonbutton>"
+				MEMO_RESULTS:Lcount = %RESULTS%
+			;ENDIF
+		ENDIF
+	NEXT
+
+	VARSET RESULTS:0, ""
+	FOR Lcount, 0, TagCount
+		RESULTS += @"%MEMO_RESULTS:Lcount%"
+	NEXT
+;-------------------------------------------------
+;辞書登録機能
+;-------------------------------------------------
+@K15_VOCAB_SET(Text)
+	#DIMS DYNAMIC Text
+
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Ypos
+	#DIM DYNAMIC Xsize
+	#DIM DYNAMIC Ysize
+	#DIM DYNAMIC WindowID
+	;#DIMS DYNAMIC WindowName
+	;#DIMS DYNAMIC WindowControlBarName
+	;#DIMS DYNAMIC LineColor
+	;#DIMS DYNAMIC WindowColor
+	;#DIMS DYNAMIC InputData
+
+	IF !CEVENT(Text)
+		VARSET D20XX_OS_WindowInput
+		CALL SET_CEVENT(@"%Text%")
+		CALL K15_VOCAB(Text)
+		D20XX_OS_WindowInput:0 += @"【辞書に %K15_CyrillicConverter(Text)%：%RESULTS:1% が登録されました】"
+		;D20XX_OS_WindowInput:1 += @"游戏画面を阴蒂ックで消えます"
+		
+		
+		STRLENFORM %D20XX_OS_WindowInput:0%
+		Xsize = (RESULT*2/2)*50 + 100
+		SIF (Xsize/50) % 2
+			 Xsize += 50
+		Xpos = (120 - Xsize/50)*50
+		Ypos = 29
+		Ysize = 2
+		WindowID = 1
+
+		D20XX_OS_WindowInput:0 = <font color='Yellow'>%D20XX_OS_WindowInput:0%</font>
+		;D20XX_OS_WindowInput:1 = <nonbutton pos='{(Xsize/50 -32)*50}'><font color='#6e6e6e'>[游戏画面を阴蒂ックで消えます]</font></nonbutton>
+		
+		
+		;WindowControlBarName = 魔界語辞書システム
+		;WindowName = 魔界語辞書システム
+		;WindowColor = #000070
+		
+		;PRINTFORML %D20XX_OS_WindowInput:0%
+
+		;InputData = {Xpos}D20XXSPLIT{Ypos}D20XXSPLIT{WindowID}D20XXSPLIT%WindowColor%
+		;CALL D20XX_OS_WindowBar(Xpos,Ypos,Xsize,Ysize,WindowID,WindowControlBarName,WindowName,LineColor,WindowColor,InputData)
+		PRINTL
+		CALL D20XX_OS_Window(Xpos,Ypos,Xsize,Ysize,WindowID,"#FFFFF","#505050")
+	ENDIF
+	
+		;CALL D20XX_OS_WindowsHTML_Output

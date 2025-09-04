@@ -1,0 +1,250 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;36は角色番号に置換してください
+;-------------------------------------------------
+
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K36_ADDSELECT
+;お菓子以外も食わせるし、昼に合わせて点心に統一
+SIF (COND("夜") || CHARA_NUM("约会的约定") == 0) && CFLAG:心情好 == 0 && (PLACE("居間") || PLACE("主人公的房間"))
+	STR:選択肢 += "点心を给/"
+;無限お菓子ループ。やめよう
+;SIF COND("夜") && CFLAG:心情好 == 2 && PLACE("居間")
+;	STR:選択肢 += "デコピンをする/"
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K36_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "点心を给"
+	PRINTFORM %CALLNAME:MASTER%
+	IF RAND:2
+		IF PLACE("居間")
+			IF RAND:5 == 0
+				PRINTFORMW 拿着快要过赏味期的%TEXTR("干面包/桃罐頭/松果罐頭/饼干")%、将其%TEXTR("给予了/交付给了")%%CALLNAME:TARGET%。
+			ELSE
+				PRINTFORM 从冰箱里
+				IF COND("冬") || (COND("夏") == 0 && RAND:3 == 0) 
+					PRINTFORMW 取出了%TEXTR("豆沙包/披萨包/肉包/咖喱包")%、用微波炉加热后%TEXTR("给予了/交付给了")%%CALLNAME:TARGET%。
+				ELSE
+					PRINTFORMW 取出了%TEXTR("布丁/咖啡果冻/冰淇淋/软冰淇淋/水洋管/蕨饼")%%TEXTR("给予了/交付给了")%%CALLNAME:TARGET%。
+				ENDIF
+			ENDIF
+		ELSE
+			IF COND("冬") && RAND:3 == 0
+				PRINTFORMW 拿起被炉上的一个橘子、抛给了%CALLNAME:TARGET%。
+			ELSE
+				PRINTFORMW 从点心存放处适当抽出%TEXTR("粗点心/点心")%%TEXTR("给予了/交付给了")%%CALLNAME:TARGET%。
+			ENDIF
+		ENDIF
+	ELSE
+		PRINTFORM 吃掉了
+		IF STATE("酔酒",MASTER) && STATE("酔酒",TARGET) && RAND:2
+			PRINTFORM 下酒菜
+		ELSEIF CFLAG:MASTER:茶 && RAND:3 == 0
+			PRINTFORM 茶点
+		ELSE
+			PRINTFORM %TEXTR("粗点心/膨化食品/爆米花/薯片/百奇饼/曲奇饼/金平糖")%
+		ENDIF
+		PRINTFORM を
+		PRINTFORMW 分给了%CALLNAME:TARGET%一点。
+	ENDIF
+	PRINTL 
+	CALL EMOTION_PLUS, "心情好", TARGET
+	PRINTFORMW %TEXTR("（幸福的笑容）/「谢谢♪」/「哇哦♪」")%
+	PRINTL 
+	CALL PRINT_STR, @"%CALLNAME:TARGET%变成了[心情好]状态_黄色_(実行値+5BOUNS)_W"
+	CFLAG:心情好 = 2
+CASE "デコピンをする"
+	PRINTFORMW %CALLNAME:MASTER%%TEXTR("突然/趁机/毫无预兆地")%对%CALLNAME:TARGET%的脑袋弹了一下。
+	PRINTL 
+	CALL EMOTION_PLUS, "憤怒", TARGET
+	PRINTFORMW 「%TEXTR("好痛！？/干什么！/干什么啊！")%」
+	PRINTL 
+	PRINTFORMW %CALLNAME:TARGET%变得不高兴了。
+	CALL SETFLAG_DAILY, "心情差"
+	CFLAG:心情好 = 0
+ENDSELECT
+
+;-------------------------------------------------
+;约会行き先の選択肢を追加。
+@DATE_K36_ADDSELECT
+;しばらく凍結。うちでおと无くしてろ
+;SIF CEVENT("约会：サイ阴蒂ングに行く解禁")
+;	STR:選択肢 += "サイ阴蒂ングに行く/"
+;サイ阴蒂ング约会というより、自転車で連れ回されるが正確。
+
+@KOJO_DATE_K36_ADDSELECT
+SELECTCASE SAVESTR:约会
+;サイ阴蒂ング行き先memo
+;1.デイキャンプ(冬×)（弁当持参時も×）
+;2.突然の豪雨で雨宿り（夏のみ）（弁当持参時も×）（かなり低確率）
+;3.鍾乳洞(夏のみ)
+;4A.滝(冬×)
+;4B.動物とふれあいできる自然公園
+;5.湖(冬×)
+;6.海辺にある道の駅
+;7A.混浴温泉
+;7B.見晴らしのいい丘(冬×)（おまけ）
+;後でＨすることも考慮して一応スタミナ配分を計算してくれるので、あまり過酷な探検には行かない。
+;你「……温泉で釣ってくる割りに選出率低くない？」
+;冬場はかなり候補減る。
+
+CASE "サイ阴蒂ングに行く"
+	CALL SET_CEVENT, "サイ阴蒂ング约会した"
+;導入
+	PRINTFORMW 「%TEXTR(@"好。跟着%CALLNAME:TARGET%小姐吧！/有来的时候，也有回去的时候，所以要好好管理自己的体力啊？/目的地是到达后的乐趣！/要好好补充水分哦？")%」
+	PRINTFORMW %TEXTR("似乎是为了配合这边的节奏，但仍然以很快的速度/充满活力/无限的活力/以飞快的速度/以不像背着大背包的速度/完全没有放慢速度")%骑着自行车。%CALLNAME:TARGET%的后面的%CALLNAME:MASTER%在%TEXTR("不停地喘着气/拼命地/勉强地/咿咿呀呀地")%追逐着。
+	;足腰が鍛えられる。使う筋肉が違うのではないか？
+	EXP:腰靈活経験 += 2 + RAND:3
+	EXP:MASTER:腰靈活経験 += RAND:3
+;ショー胖次からちらりと見えるぱんつを糧に干劲を出す你とか……。厳しいか。
+TFLAG:偷瞄内衣可能 = 1
+
+;行き先。
+;一分岐当たりの文量をどの程度にするかがけっこう難しい。
+;途中で選択肢が表示されない関係上、もうちょっとかさ増ししても大丈夫かも。どうだろう。
+		PRINTFORML 
+	;さらに４分岐するし、便当持って来るとスキップされるのでちょっと発生率を優遇
+	IF RAND:4 == 0 && COND("冬") == 0 && CEVENT("约会の便当") == 0
+		PRINTFORMW 这次的目的地是附近有大片树林的河边露营地。
+		IF CEVENT("初回デイキャンプ约会") == 0
+			PRINTFORMW 「叔叔！你好！」
+			PRINTFORMW 『哦、%CALLNAME:TARGET%酱。早就等着了。要吃点心吗？』
+			PRINTFORMW 「要吃！　超想吃！」
+			PRINTFORMW 是已经来过好几次了吗、和一个很熟的男管理员亲热地聊了一会儿，
+			PRINTFORMW 不一会儿，抱着帐篷里的工具回到了这边。
+			PRINTFORMW 「%CALLNAME:MASTER%、你组装过这样的东西吗？」
+			PRINTFORML 两个人一起搭起帐篷，走进去一边谈笑一边分享点心，
+			PRINTFORMW 一会儿休息一会儿睡午觉，享受着与平常的喧嚣隔绝的平静时光。
+			CALL SET_CEVENT, "初回デイキャンプ约会"
+		ELSE
+			IF RAND:3 == 0
+				IF RAND:3 == 0
+					PRINTFORMW 「啊，ごろごろー（拟声词咕噜咕噜，在日语中悠闲无事的意思）。偶尔放松一下也不错啊……」
+				ELSEIF RAND:2
+					PRINTFORMW 「啊哈哈、什么嘛。%CNAME("一人称")%偶尔也会读普通的小说啊」
+				ELSE
+					PRINTFORMW 「在这里。就算是星期天也几乎没人，很安静，想思考的时候我就来这里」
+					PRINTFORMW 「旺季也没遇到过人多的时候，有点担心经营啊」
+				ENDIF
+				PRINTFORMW 两个人在河滩上搭起帐篷，偶尔闲聊几句，各自做自己喜欢的事。
+				PRINTFORMW 潺潺的水声听起来很舒服，每天的疲劳似乎都消失了一些……。
+				;帰りがしんどいし普通に相殺だわ
+			;夏はセミがうるさいのでスキップして下のご飯率を上げる。まぁこの季節は去游泳が
+			ELSEIF RAND:2 && COND("夏") == 0
+				IF RAND:3 == 0
+					PRINTFORMW 「虽然没见过、听说偶尔会有野猪下来。%TEXTR(@"到了怎么办/全力冲刺的话能逃掉吗？/%CALLNAME:MASTER%、能打倒野猪吗？ /虽然不比熊强，但也很可怕")%」
+				ELSEIF RAND:2 == 0
+					PRINTFORMW 「像这样在树中行走，会不会想抓、%TEXTR("独角仙/锹形虫")%呢？」
+					PRINTFORMW 「不过，现在不是季节，所以那个。到了夏天怎么样？去找一找怎么样？」
+				ELSE
+					PRINTFORMW 「%TEXTR(@"有一天♪　森林里面♪/呵呵呵♪今天也是晴天太好了！")%」
+				ENDIF
+					PRINTFORMW 和%CALLNAME:TARGET%在杂木林中一边聊天一边探险，找了个不错的地方并排设置了折叠式摇椅。
+					PRINTFORMW 坐在椅子上，静静地闭上眼睛，听着树叶轻轻摇动的声音，度过了放松的时光……。
+			ELSE
+				IF RAND:2
+					IF RAND:3 == 0
+						PRINTFORMW 「……嗯，对对。还想再来点那种感觉的树枝吗」
+					ELSE
+						PRINTFORMW 「今天我们要生火！　来烤%TEXTR("棉花糖/香肠/法兰克福/奶酪")%吧！」
+					ENDIF
+					PRINTFORMW 从附近的树林里捡了一些可以当柴火的树枝，用篝火台生火。
+					PRINTFORMW 面对面地烤着食物，香气扑鼻，令人流口水……。
+					PRINTFORMW 「%TEXTR(@"怎么样？偶尔这样也不错吧？/下次吧。想不想借竿钓鱼什么的%CNAME("一人称")%、也想烤鱼啊/哦、%CNAME("一人称")%烧烤的方法应该还不错？/哼哼哼♪」")%
+					PRINTFORMW 两人比平时更兴奋地聊着天，度过了愉快的时光。
+				ELSE
+					IF RAND:2
+						PRINTFORMW 「今天做咖喱喽！」
+						PRINTFORMW 「只是把哥哥准备的配料煮一下、%CNAME("一人称")%也绰绰有余！」
+					ELSE
+						PRINTFORMW 「%CALLNAME:TARGET%小姐下厨！　今天中午、是直接吃方便面！」
+						PRINTFORMW 「呵呵呵，在外面吃的话，美味度会增加五成，这样就不能小视了？」
+					ENDIF
+					PRINTFORMW 从附近的树林里捡来可以当柴火的树枝，在篝火台上生火。
+					PRINTFORMW 在锅里咕嘟咕嘟地煮着菜，美味的香味扑鼻而来，强烈地刺激着食欲……。
+					PRINTFORML 
+					PRINTFORMW 「好，完成了！　我開动了！」
+					PRINTFORMW ……
+					PRINTFORMW …………
+				ENDIF
+			ENDIF
+		ENDIF
+	ELSEIF COND("夏") && CEVENT("约会の便当") == 0 && RAND:8 == 0 && EQUIP:胸罩
+		PRINTFORMW 途中在公园稍事休息时，刚刚还是晴朗的天气，突然变得乌云蔽日。
+		PRINTFORMW 「%TEXTR(@"不会吧。听天气预报说今天是晴天……/总有种不祥的预感。今天去附近的店吧……/不会吧!刚才还是晴天……")%」
+		PRINTFORMW %CALLNAME:TARGET%还没说完，就開始滴滴答答地下雨，转眼间就下起了倾盆大雨。
+		PRINTFORMW 「%TEXTR(@"呜哇！/撤退！/%CALLNAME:MASTER%！　这边！")%」
+		PRINTFORMW 匆匆忙忙地，把自行车拉到亭子里避雨去了。
+		PRINTFORMW 「哈啊。照这样下去，好像暂时停不下来…」
+		PRINTFORMW 看着暴雨的样子，连刚才坐的长椅都看不清，%CALLNAME:TARGET%的脸阴沉了下来。
+		PRINTFORMW 因为浑身湿透，隔着薄衬衫隐约可以看到她的胸罩。
+		PRINTFORMW 现在身上穿的好像是%BRA(TARGET)%……。
+		PRINTFORMW 「喏，先用这个擦身子。要是感冒了就麻烦了吧？？」
+		PRINTFORMW 接过%CALLNAME:TARGET%从背包里翻出来的毛巾，边说边打发时间，直到雨停。
+		PRINTFORMW 结果这一天先回家再出发，在附近的家庭餐厅吃饭，切换得很快的%CALLNAME:TARGET%看起来意外的開心。
+	CALL SET_CEVENT, "サイ阴蒂ング约会で雨宿りした"
+		;ふつう胸罩も着替えてくるだろうけど誤魔化す
+	ELSEIF COND("夏") && RAND:4 == 0
+		PRINTFORMW 下了自行车，沿着林间小路大步走着，来到了似乎是今天目的地的洞穴入口。
+		PRINTFORMW 从附近的招牌上看，好像是钟乳洞，侧耳倾听，能听见哗啦哗啦的水声……。
+		PRINTFORMW 「这里夏天非常凉爽，推荐探险地哦」
+		PRINTFORMW 「我带了雨靴，在这里换。还有手电筒。很滑，要小心脚下哦？」
+		PRINTFORMW 在熟练的%CALLNAME:TARGET%的指示下，做好了可以进行相应搜索的准备。
+		PRINTFORMW 「%TEXTR(@"那么出发！/%CALLNAME:TARGET%小姐调查队、出发！/那么，let ' s go！")%」
+		PRINTFORMW %TEXTR("虽然被一踏进屋子就跳出来的大群蝙蝠吓了一跳/中途有几次摔倒在地/听着回响的脚步声，小心翼翼地向昏暗的洞穴深处走去")%、带着童心未泯的心情享受了一次小小的冒险。
+	ELSEIF RAND:4 == 0
+		IF COND("冬") == 0 && RAND:3
+			PRINTFORMW 下了自行车，沿着河边在山脚下的森林中前行了十几分钟，传来了哗啦哗啦的水声。
+			PRINTFORMW 「啊哈哈，瀑布来了!虽然没准备游泳，不过先玩水吧！」
+			PRINTFORMW %CALLNAME:TARGET%光着脚，啪嗒啪嗒地踏进河中，向这边招手。
+			PRINTFORMW 应她的邀请，%CALLNAME:MASTER%也脱了鞋，两个人一起享受清凉舒适的水的触感。
+	ELSE
+			PRINTFORMW 到达似乎是这次的目的地的大型自然公园后，不知从哪里传来了牛鸣声。
+			PRINTFORMW 「这里啊，有很多动物。牛等一下再说、先看看%TEXTR("驼鸟/骆驼/驼羊/食蚁兽")%吧！」
+			PRINTFORMW 被欢快的%CALLNAME:TARGET%牵着手，接触了各种各样的动物，度过了快乐的时光。
+		ENDIF
+	ELSEIF RAND:3 == 0 && COND("冬") == 0
+		PRINTFORMW 没有波浪的清澈的水面像一面大镜子一样的湖边似乎是这次的目的地。
+		PRINTFORMW 「怎么样，很漂亮吧？　%TEXTR("中意吗？ /冬天好像能钓到年轻的鹭鸟，不适合约会啊……/这里是我很喜欢的地方/前几天，我带朋友来的时候，朋友说『殺人鬼要出现了！』")%」
+		PRINTFORMW 我们在附近一块适中的岩石上坐下，以平静的心情享受着偶尔鸟鸣的静谧氛围。
+	ELSEIF RAND:2
+		PRINTFORMW 沿着海风怡人的沿海道路一直往前走，前面的车站就是这次的目的地。
+		IF RAND:3 && CEVENT("约会の便当") == 0
+			PRINTFORMW 「我喜欢这里的%TEXTR("软冰淇淋/大判烧/豆沙团子/糯米团子")%♪　%TEXTR("今天很努力/作为努力的奖励/顺便补充回来的能量")%%CNAME("一人称")%来请客！」
+			PRINTFORMW 两人坐在长椅上，靠在沙滩上，一边眺望波涛翻滚，一边大口大口地品尝美味的甜品。
+		ELSE
+			PRINTFORMW 「景色不错吧？　%TEXTR("虽然地形上不适合游泳，要不要去浪岸边游一下？/今天虽然谁都没有，但是作为钓鱼的地方好像也很有名哦/听说这里每年都有海龟来下蛋。真想看一次啊……")%」
+			PRINTFORMW 和開心地跟自己说话的%CALLNAME:TARGET%并肩，在美丽的沙滩上悠闲地散步。
+		ENDIF
+	ELSE
+		PRINTFORM 我进了山路，又下了自行车
+		IF RAND:4 || COND("冬") || COND("夏") || EXP:约会経験 < 10
+			PRINTFORMW 徒步爬上狭窄的小路大约十几分钟，
+			PRINTFORMW 我们来到了一间虽然老旧但看起来保养得很好的木造小屋前。
+			PRINTFORMW 「呵呵呵，就是上次说过的混浴露天温泉哦♪」
+			PRINTFORMW 「我还带来了两份好好擦身体的毛巾，一起进去吧♪」
+			PRINTFORMW 在简易的更衣处并排脱衣服、%TEXTR("＿（口上原作者待施工的空位）/＿（口上原作者待施工的空位）/虽然中途有猴子乱入的意外、")%%CALLNAME:TARGET%慢慢地泡进了热水里，放松了身心。
+			BASE:MASTER:精力 = MIN(BASE:MASTER:精力 + 10, MAXBASE:MASTER:精力)
+			BASE:精力 = MIN(BASE:精力 + 10, MAXBASE:精力)
+			PRINTL 
+			PRINTFORML 精力+10（两人都是）
+		ELSE
+			PRINTFORMW 在没有路的路上与%CALLNAME:TARGET%牵着手走了几十分钟左右，
+			PRINTFORMW 突然觉得视野開阔起来，来到了可以将整个城市尽收眼底的小山丘上。
+			PRINTFORMW 「太阳升起的时候来是最棒的，即使是中午也感觉很好吧？」
+			PRINTFORMW 「告诉你这个位置%CNAME("二人称")%可是第一次。要对其他人保密啊？」
+			SIF CEVENT("约会の便当") == 0
+				PRINTFORMW 一边喝着%CALLNAME:TARGET%带来的水壶里的茶，一边欣赏着珍贵的绝景……。
+		ENDIF
+	ENDIF
+	PRINTL 
+	;情緒はさほど上がらんけど、一緒に和我一起玩もらえてうれしいこいつの好感度は上がる
+	CFLAG:好感度 += 50
+	PRINTFORMW 好感度+50
+	FLAG:情緒 += 15
+
+ENDSELECT
+
+

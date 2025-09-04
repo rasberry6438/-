@@ -1,0 +1,1655 @@
+﻿;-------------------------------------------------
+;-------------------------------------------------
+@K15_Tachietica_Overhaul
+	#DIM DYNAMIC LCount
+	#DIM DYNAMIC CrntLine
+
+	#DIM DYNAMIC X_RoomPos
+	#DIM DYNAMIC Y_RoomPos
+	#DIM DYNAMIC Img_SizePer
+
+	#DIM DYNAMIC CHOICE
+
+	;100行読めば行けるやろ
+	#DIMS DYNAMIC LogTexts,101
+	#DIMS DYNAMIC LogNormalUI,101
+	#DIM DYNAMIC LastDoubleLine
+
+	SIF CFLAG:UUI != 1
+		CALL REPRINT_SHOP_NAME
+
+	FOR Lcount,0,101
+		LogTexts:Lcount = %HTML_GETPRINTEDSTR(100-Lcount)%
+		CALL D20XX_NO_NOBR2(LogTexts:Lcount)
+		LogTexts:Lcount = %RESULTS%
+	NEXT
+	
+	IF CFLAG:TARGET:好感度 > K15T_好感度メモ && CEVENT("K15イベント好感度変化") == 0
+		CALL 你体力減少(100)
+		SIF CFLAG:TARGET:好感度 - K15T_好感度メモ < 10 && RESULT == 1
+			CFLAG:TARGET:好感度 = K15T_好感度メモ+10
+	ENDIF
+	CALL DEL_CEVENT("K15イベント好感度変化")
+
+	;念のためのセーフティー機能
+	SIF NAME:TARGET != "槞彁"
+		RETURN 1
+	
+	$CBG_LOOP
+	IF CFLAG:UUI != 1
+
+		CLEARLINE 100
+		FOR Lcount,0,101
+			HTML_PRINT @"<nobr>%LogTexts:Lcount%</nobr>"
+		NEXT
+
+		;CLEARLINE 3
+		FOR Lcount,0,10
+			IF STR:Lcount != ""
+				HTML_PRINT @"%STR:Lcount%"
+			ENDIF
+		NEXT 
+		VARSET STR, "", 0 , 20
+		PRINTFORML 
+		CALL K15_Tachietica_ImgStamp(5500,3,"UI切替2",500,DAILY_SC+0)
+		RETURN 0
+	ENDIF
+
+	;おまじない
+	;(EVENT_K_DAILY.ERB ;特に台詞が無いなら表示した名前を消しておく)
+	;対策の為に一行以上口上側で表示した事をシステム側に理解させる為に必要
+	PRINTFORML 
+
+	VARSET LogTexts
+
+	;=============================================
+	FOR Lcount,0,101
+		LogTexts:Lcount = %HTML_GETPRINTEDSTR(100-Lcount)%
+		CALL D20XX_NO_NOBR2(LogTexts:Lcount)
+		LogTexts:Lcount = %RESULTS%
+	NEXT
+	FOR Lcount,0,101
+		IF Lcount > 1
+			IF LogTexts:(Lcount) == "-------------------------------------------------------------------------------------------------------------------------"&& LogTexts:(Lcount-1) == "-------------------------------------------------------------------------------------------------------------------------"
+				LastDoubleLine = 100 - Lcount 
+				BREAK
+			ENDIF
+		ENDIF
+	NEXT
+	
+	;=============================================
+	;PRINTFORMW Debug300 LastDoubleLine = {LastDoubleLine}
+	;HTML_PRINT @"%LogTexts:Lcount%"
+	;HTML_PRINT @"%LogTexts:(Lcount-1)%"
+	;HTML_PRINT @"%LogTexts:(Lcount-2)%"
+	;PRINTFORMW Debug301
+	CLEARLINE LastDoubleLine
+
+	CALL OVERLAY_GCREATE, 600, @"%K15_UUIBG()%+0x70000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG 600, 0, 0, 5
+
+	SIF UUI_IsCBG == ""
+		UUI_IsCBG = True
+
+	IF UUI_IsCBG == "False"
+		HTML_PRINT @"<nobr><nonbutton pos='10000000'>【多分行数が増えていない判定になるとなんかよろしくないので追加している行】</nonbutton></nobr>"
+		FOR Lcount, 0, 44
+			IF Lcount == 6
+				;CALL 槞彁_TachieGenerate(@"%CSTR:颜绘変化%",4000,3500,0)
+				CALL 槞彁_TachieGenerate(@"%CSTR:颜绘変化%",4000,3500,0)
+				
+				HTML_PRINT @"<nobr>%RESULTS%</nobr>"
+				;HTML_PRINT @"<nobr><nonbutton pos='{3500}'><img src='K15T_TestBody3' height='{4000}' ypos='{00}'></nonbutton></nobr>"
+			ELSE
+				[IF_DEBUG]
+					PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　 Debug {Lcount}
+				[ENDIF]
+				[IF_NDEBUG]
+					PRINTL
+				[ENDIF]
+			ENDIF
+		NEXT 
+		
+		;CALL K15_STR("「Kanny missor suckiy nang deshch kar_UH_？」")
+		;CALL K15_VOCAB(RESULTS)
+		;CALL D20XX_NO_NOBR2(RESULTS)
+		;CALL K15_HTML_PRINT_STR(RESULTS)
+		;D20XX_OS_WindowInput:0 += @"%RESULTS%"
+		PRINTFORML 
+		CALL D20XX_OS_WindowInput_Constructor
+		FOR Lcount,0,10
+			D20XX_OS_WindowInput:Lcount = %STR:Lcount%
+		NEXT
+		CALL D20XX_OS_WindowSTRFORM(600,38,4700,5,,,@"%K15_UUI_WindowColor%")
+		VARSET STR
+
+		PRINTL 
+		CALL K15_Tachietica_ImgStamp(50,38,"他の角色へ",500,DAILY_SC+5)
+		
+		IF UUI_Window != "槞彁詳細"
+			PRINTL 
+			CALL K15_Tachietica_ImgStamp(5500,1,"UI切替",500,DAILY_SC+0)
+			PRINTL 
+			CALL K15_Tachietica_ImgStamp(5500,6,"データアイコン",500,DAILY_SC+7)
+		ENDIF 
+		PRINTL 
+		CALL K15_Tachietica_ImgStamp(5500,38,"終了する",500,DAILY_结束回合)
+
+		CALL K15_Tachietica_Overhaul_HeadWindowUI
+
+
+		;他の角色へ用のウィンドウ表示部分
+		SELECTCASE UUI_Window
+			CASE "他の角色へ"
+				D20XX_OS_WindowInput:0 += @"次は誰を相手にしようか？"
+				D20XX_OS_WindowInput:1 += @""
+
+				FOR Lcount, 0, 6
+					SIF CALLNAME:(ANIME_CHARA:LCOUNT) != "ドッペル你"
+						D20XX_OS_WindowInput:(Lcount+2) += @"<button value='{CFLAG:(ANIME_CHARA:LCOUNT):優先順位}'>[%CALLNAME:(ANIME_CHARA:LCOUNT)%]</button>"
+				NEXT
+				D20XX_OS_WindowInput:9 += @"<button pos='600' value='{DAILY_SC+6}'>[関閉]</button><button pos='600' value='{DAILY_SC+6}'>[関閉]</button>"
+				PRINTL 
+				CALL D20XX_OS_WindowSTRFORM(2000,15,1500,11,,,@"%K15_UUI_WindowColor%")
+				UUI_Window = 
+			CASE "槞彁詳細"
+				CALL K15_Tachietica_Profile
+
+			CASEELSE 
+				;左のいつもの指令の表示部分
+				PRINTL 
+				CALL K15_Tachietica_Overhaul_UpperCMDs(0,6,1600,6,,,@"%K15_UUI_WindowColor%")
+
+				PRINTL 
+				CALL K15_Tachietica_Overhaul_CMDWindow(0,12,1400,20,,,@"%K15_UUI_WindowColor%")
+
+		ENDSELECT
+
+	ELSEIF UUI_IsCBG == "True"
+		PRINTFORML 
+		FOR Lcount, 0, 44
+			[IF_DEBUG]
+				PRINTFORML 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　 Debug {Lcount}
+				;PRINTL 
+			[ENDIF]
+			[IF_NDEBUG]
+				;PRINTFORML Debug {Lcount}
+				PRINTFORML
+			[ENDIF]
+		NEXT 
+
+		CALL K15_Tachietica_Overhaul_HeadWindowUI
+
+		;PRINTL 
+		;CALL K15_Tachietica_ImgStamp(50,38,"他の角色へ",500,DAILY_SC+5)
+		;PRINTL 
+		;CALL K15_Tachietica_ImgStamp(5500,1,"UI切替",500,DAILY_SC+0)
+		;PRINTL 
+		;CALL K15_Tachietica_ImgStamp(5500,6,"データアイコン",500,DAILY_SC+7)
+		
+		;SELECTCASE (GETTIME()%2);RANDが固定されているので
+		SELECTCASE SAVESTR:現在位置
+			CASE "公園"
+				SELECTCASE KABURAND(9);RANDが固定されているので
+					CASE 0 TO 3;近く
+						X_RoomPos = RAND(350)+100
+						Y_RoomPos = 50
+						Img_SizePer = 100
+						CALL K15_POPUP_SPRIT, "BG汎用ポジ直立", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+						CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+					CASE 4;近く
+						X_RoomPos = 100
+						Y_RoomPos = -50
+						Img_SizePer = 90
+						CALL K15_POPUP_SPRIT, "BG汎用ポジ直立", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+						CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+					
+					CASEELSE 
+						X_RoomPos = RAND(350)+100
+						Y_RoomPos = -RAND(150)-300
+						
+						Img_SizePer = 100
+						CALL K15_POPUP_SPRIT, "BG汎用ポジ浮き", X_RoomPos, Y_RoomPos, MathEX_Per(305,Img_SizePer), MathEX_Per(270,Img_SizePer)
+						CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(305,Img_SizePer), MathEX_Per(270,Img_SizePer)
+				ENDSELECT
+			CASE "居間"
+				IF CFLAG:睡眠
+					X_RoomPos = 470
+					Y_RoomPos = -200
+					CALL K15_POPUP_SPRIT, "BG居間居睡眠ポジ", X_RoomPos, Y_RoomPos, 144,147
+					CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, 144,147
+				ELSE
+					SELECTCASE KABURAND(4)
+						CASE 0
+							X_RoomPos = RAND(100)+300
+							Y_RoomPos = -400
+							Img_SizePer = 75
+							CALL K15_POPUP_SPRIT, "BG汎用ポジ浮き", X_RoomPos, Y_RoomPos, MathEX_Per(305,Img_SizePer), MathEX_Per(270,Img_SizePer)
+							CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(305,Img_SizePer), MathEX_Per(270,Img_SizePer)
+					
+						CASE 1
+							X_RoomPos = 800
+							Y_RoomPos = -50
+							Img_SizePer = 80
+							CALL K15_POPUP_SPRIT, "BG汎用ポジ直立", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+							CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+						CASEELSE 
+							X_RoomPos = RAND(350)+100
+							Y_RoomPos = 150
+							Img_SizePer = 100
+							CALL K15_POPUP_SPRIT, "BG汎用ポジ直立", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+							CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+					ENDSELECT
+				ENDIF
+			CASE "情人旅館"
+				SELECTCASE KABURAND(3)
+					CASE 0
+						X_RoomPos = 800
+						Y_RoomPos = -50
+						Img_SizePer = 90
+						CALL K15_POPUP_SPRIT, "BG汎用ポジ直立", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+						CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+
+					CASE 1
+						X_RoomPos = 550
+						Y_RoomPos = -220
+						Img_SizePer = 110
+						CALL K15_POPUP_SPRIT, "BG自室ポジ２", X_RoomPos, Y_RoomPos, MathEX_Per(212,Img_SizePer), MathEX_Per(347,Img_SizePer)
+						CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(212,Img_SizePer), MathEX_Per(347,Img_SizePer)
+					CASEELSE 
+						X_RoomPos = RAND(350)+100
+						Y_RoomPos = 150
+						Img_SizePer = 100
+						CALL K15_POPUP_SPRIT, "BG汎用ポジ直立", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+						CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(313,Img_SizePer), MathEX_Per(519,Img_SizePer)
+				ENDSELECT
+			CASEELSE ;自室系の場合
+				IF CFLAG:睡眠
+					X_RoomPos = 700
+					Y_RoomPos = -95
+					CALL K15_POPUP_SPRIT, "BG自室居睡眠ポジ", X_RoomPos, Y_RoomPos, 256,319
+					CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, 256,319
+				ELSE
+					SELECTCASE KABURAND(3);RANDが固定されているので
+						CASE 0
+							X_RoomPos = 180
+							Y_RoomPos = -10
+							CALL K15_POPUP_SPRIT, "BG自室ポジ１", X_RoomPos, Y_RoomPos, 206, 317
+							CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, 206, 317
+						CASE 1
+							X_RoomPos = 650
+							Y_RoomPos = -180
+							Img_SizePer = 95
+							CALL K15_POPUP_SPRIT, "BG自室ポジ２", X_RoomPos, Y_RoomPos, MathEX_Per(212,Img_SizePer), MathEX_Per(347,Img_SizePer)
+							CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, MathEX_Per(212,Img_SizePer), MathEX_Per(347,Img_SizePer)
+						CASE 2
+							X_RoomPos = 750
+							Y_RoomPos = -140
+							CALL K15_POPUP_SPRIT, "BG自室ポジ２", X_RoomPos, Y_RoomPos, 212, 347
+							CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, 212, 347
+						CASEELSE
+							X_RoomPos = 180
+							Y_RoomPos = -10
+							CALL K15_POPUP_SPRIT, "BG自室ポジ１", X_RoomPos, Y_RoomPos, 206, 317
+							CALL POPUP_BUTTON, "", X_RoomPos, Y_RoomPos, 206, 317
+					ENDSELECT
+				ENDIF
+		ENDSELECT
+		X_RoomPos = 1000-7
+		;Y_RoomPos = -1*CLIENTHEIGHT()+126
+		;Y_RoomPos = -727
+		Y_RoomPos = MAX(-727,-1*CLIENTHEIGHT()+100)
+		LCount = 90
+		CALL K15_POPUP_SPRIT, "UI切替", X_RoomPos, Y_RoomPos, LCount, LCount
+		CALL POPUP_BUTTON, "UI切替", X_RoomPos, Y_RoomPos, LCount, LCount
+		
+
+		X_RoomPos = 1000-7
+		;Y_RoomPos = -632
+		Y_RoomPos = MAX(-632,-1*CLIENTHEIGHT()+100+95)
+		LCount = 90
+		CALL K15_POPUP_SPRIT, "データアイコン", X_RoomPos, Y_RoomPos, LCount, LCount
+		CALL POPUP_BUTTON, "データアイコン", X_RoomPos, Y_RoomPos, LCount, LCount
+		
+
+		X_RoomPos = 12
+		Y_RoomPos = -24
+		LCount = 90
+		CALL K15_POPUP_SPRIT, "他の角色へ", X_RoomPos, Y_RoomPos, LCount, LCount
+		CALL POPUP_BUTTON, "他の角色へ", X_RoomPos, Y_RoomPos, LCount, LCount
+
+
+		;#region これを出せばCBGモードで終了するを表示出来るんだけど、どう頑張っても本体側を弄らないと良い感じに出来ないので諦め
+			;X_RoomPos = 1000-7
+			;Y_RoomPos = -24
+			;LCount = 90
+			;CALL K15_POPUP_SPRIT, "終了する", X_RoomPos, Y_RoomPos, LCount, LCount
+			;CALL POPUP_BUTTON, "終了する", X_RoomPos, Y_RoomPos, LCount, LCount
+		;#endregion
+		;#region
+			
+			CALL POPUP_SELECT
+			CALL EFFECT_ALLRESET
+			SELECTCASE POPUP_RESULT
+				CASE 0 ;槞彁が押ささった時
+					UUI_IsCBG = False
+				CASE 1 ;UI切替が押ささった時
+					CFLAG:UUI = 0
+				CASE 2 ;データボタンが押ささった時
+					UUI_Window = 槞彁詳細
+					UUI_IsCBG = False
+				CASE 3 ;他の角色へが押ささった時
+					UUI_Window = 他の角色へ
+					UUI_IsCBG = False
+
+				CASEELSE
+			ENDSELECT
+			GOTO CBG_LOOP
+		;#endregion
+	ENDIF
+;上の固定ウィンドウ
+@K15_Tachietica_Overhaul_HeadWindowUI
+	#DIMS DYNAMIC Temp
+	#DIMS DYNAMIC Temp2
+	#DIMS DYNAMIC Temp3
+	#DIMS DYNAMIC Temp4
+	#DIMS DYNAMIC Temp5
+
+	
+	;上中央～右の横長ウィンドウの表示部分
+	CALL PRINT_BARH("減少ゲージ",BASE:MASTER:体力,MAXBASE:MASTER:体力,16)
+	Temp = %RESULTS%
+	CALL PRINT_BARH("魂ゲージ",BASE:MASTER:魂,MAXBASE:MASTER:魂,5)
+	Temp2 = %RESULTS%
+	CALL PRINT_BARH("減少ゲージ",BASE:MASTER:精力,MAXBASE:MASTER:精力,5)
+	Temp3 = %RESULTS%
+
+	PRINTL 
+	CALL D20XX_OS_WindowInput_Constructor
+	D20XX_OS_WindowInput:0 += @"%TEXTS("日期表示")% -%TEXTS("現在位置")%-"
+	D20XX_OS_WindowInput:1 += @"你 体力%Temp%{BASE:MASTER:体力}/{MAXBASE:MASTER:体力}　魂%Temp2%%TEXTS("0.01", BASE:MASTER:魂)%　精力%Temp2%{BASE:MASTER:精力}/{MAXBASE:MASTER:精力}"
+	D20XX_OS_WindowInput:2 += @"<b>目標：<u>%K15_次のタスク()%</u></b>"
+	CALL D20XX_OS_Window(1500,1,3900,4,,,@"%K15_UUI_WindowColor%")
+		
+
+
+	;左上の小さいウィンドウの表示部分
+	
+	;PRINTFORMW Debug 100 Temp = %Temp% Temp2 = %Temp2%
+	CALL D20XX_OS_WindowInput_Constructor
+	CALL PRINT_BARH("欲求ゲージ",BASE:TARGET:欲求不満,100,6)
+	Temp = %RESULTS%
+	CALL PRINT_BARH("溜めゲージ",BASE:TARGET:尿意,MAXBASE:TARGET:尿意,6)
+	Temp2 = %RESULTS%
+
+	;IF COND("胎内の精液量", TARGET) >= 100000
+	;	Temp3 = [%HUNI("UH")%<font color='#FFC0CB'>いっぱい</font>%HUNI("UH")%]
+	;ELSE
+	;	CALL PRINT_BARH("爱心粉紅ゲージ", COND("胎内の精液量", TARGET), 100000, 12)
+	;	Temp3 = %RESULTS%
+	;ENDIF
+
+	;#region 
+		Temp3 = 
+		IF TALENT:TARGET:筋肉
+			IF COND("苗条", TARGET)
+				Temp3 = (隐约腹肌)
+			ELSE
+				Temp3 = (筋肉)
+			ENDIF
+		ELSEIF COND("苗条", TARGET)
+			Temp3 = (細)
+		ELSEIF COND("豐腴", TARGET)
+			Temp3 = (豐腴)
+		ENDIF
+
+		Temp5 = 
+		IF TALENT:TARGET:男性
+		ELSEIF TALENT:TARGET:巨尻 >= 3
+			Temp5 = (超) 
+		ELSEIF TALENT:TARGET:巨尻 == 2
+			Temp5 = (爆) 
+		ELSEIF TALENT:TARGET:巨尻
+			Temp5 = (巨) 
+		ELSEIF TALENT:TARGET:小尻
+			Temp5 = (小) 
+		ELSE
+			Temp5 = (並) 
+		ENDIF
+	;#endregion
+
+	
+	;#region CALL TEXT("生理周期")からの輸入
+		VARSET LOCALS
+		IF COND("着床済", TARGET)
+			LOCALS = 爱心粉紅_着床済
+		ELSEIF TALENT:TARGET:事后避孕药
+			LOCALS = 事后避孕药
+		ELSEIF COND("受精済", TARGET)
+			LOCALS = 爱心粉紅_受精済
+			
+		ELSEIF COND("重発情期", TARGET)
+			LOCALS = 赤_重発情日
+		ELSEIF COND("排卵中", TARGET)
+			LOCALS = ショッキング粉紅_超危険日
+		ELSEIF COND("発情期", TARGET)
+			LOCALS = 爱心粉紅_発情期
+		ELSEIF TALENT:TARGET:未成熟
+			LOCALS = 未成熟
+		;避妊中
+		ELSEIF COND("避妊中", TARGET)
+			IF CFLAG:TARGET:口服避孕薬
+				LOCALS = 口服避孕薬
+			ELSE
+				LOCALS = 避妊中
+			ENDIF
+		;ELSEIF BASE:TARGET:胎児
+		ELSEIF COND("産卵日", TARGET)
+			LOCALS = 青_産卵日
+		ELSEIF COND("保卵期", TARGET)
+			LOCALS = 緑_保卵期
+		ELSEIF COND("安全日", TARGET)
+			IF TALENT:TARGET:生理が重い
+				LOCALS = 青_生理中
+			ELSE
+				LOCALS = 安全日
+			ENDIF
+		ELSEIF COND("危険日", TARGET)
+			LOCALS = イエロー_危険日
+		ELSE 
+			LOCALS = 卵抱期
+		ENDIF
+
+		SIF TALENT:Ｖ妊娠不能
+			LOCALS = ？？？
+
+		CALL PRINT_STRL, @"NOBUTTON_[_%LOCALS%_]"
+	;#endregion
+	RESULTS = %HTML_GETPRINTEDSTR(0)%
+	CALL D20XX_NO_NOBR(RESULTS)
+	Temp4 = %RESULTS%
+	CLEARLINE 1
+	
+	IF CEVENT("名前公開")
+		D20XX_OS_WindowInput:0 += @"<font color='#%K15_VOICE_COLOR%'><b>槞彁</b></font>  好感度：{CFLAG:TARGET:好感度}" 
+	ELSE
+		D20XX_OS_WindowInput:0 += @"<font color='#%K15_VOICE_COLOR%'><b>？？</b></font>  好感度：{CFLAG:TARGET:好感度}" 
+	ENDIF
+	
+
+	IF CFLAG:TARGET:好感度 > K15T_好感度メモ
+		D20XX_OS_WindowInput:0 += @" <font color='Yellow'>+{CFLAG:TARGET:好感度 - K15T_好感度メモ}</font>"
+		K15T_好感度メモ = CFLAG:TARGET:好感度
+	ELSEIF CFLAG:TARGET:好感度 < K15T_好感度メモ
+		D20XX_OS_WindowInput:0 += @" <font color='Red'>-{CFLAG:TARGET:好感度 - K15T_好感度メモ}</font>"
+		K15T_好感度メモ = CFLAG:TARGET:好感度
+	ENDIF
+
+	;D20XX_OS_WindowInput:2 += @"胎内精液量%Temp3%"
+	IF BASE:TARGET:胸圍 >= 100
+		LOCAL = 12
+	ELSE
+		LOCAL = 25
+	ENDIF
+	;D20XX_OS_WindowInput:1 += @"Ｂ:{BASE:TARGET:胸圍}(%CONDS("罩杯尺寸")%cup)<shape type='space' param='{LOCAL}'>Ｗ:{BASE:TARGET:腰圍}<shape type='space' param='{LOCAL}'>Ｈ:{BASE:TARGET:臀圍}"
+	D20XX_OS_WindowInput:1 += @"Ｂ:{BASE:TARGET:胸圍}cm(%CONDS("罩杯尺寸")%)<shape type='space' param='{LOCAL}'>Ｗ:{BASE:TARGET:腰圍}cm<shape type='space' param='{LOCAL}'>Ｈ:{BASE:TARGET:臀圍}cm"
+	D20XX_OS_WindowInput:2 += @"性欲%Temp%周期%Temp4%"
+	PRINTL 
+	CALL D20XX_OS_Window(0,1,1400,4,,,@"%K15_UUI_WindowColor%")
+
+
+
+;@DAILY_StaticCMD_LISTを参考に
+@K15_Tachietica_Overhaul_UpperCMDs(Xpos,Ypos,Xsize,Ysize,WindowID,LineColor = "#FFFFF" ,WindowColor = "#000070")
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Ypos
+	#DIM DYNAMIC Xsize
+	#DIM DYNAMIC Ysize
+	#DIM DYNAMIC WindowID
+	#DIM DYNAMIC Lcount
+	#DIMS DYNAMIC LineColor
+	#DIMS DYNAMIC WindowColor
+
+	#DIMS DYNAMIC BaseViews,44
+	#DIMS DYNAMIC MainHtml,44
+
+	#DIMS DYNAMIC Temp,100
+	CALL D20XX_OS_WindowInput_Constructor
+	SIF TARGET == 0 || CFLAG:睡眠 || COND("约会の予定有")
+		D20XX_OS_WindowInput:0 += @"<font color='#707070'>"
+	IF CFLAG:ご褒美権
+		D20XX_OS_WindowInput:0 += @"<button value='{DAILY_邀请上床}'>[ご褒美を頂く]</button>"
+	ELSE
+		D20XX_OS_WindowInput:0 += @"<button value='{DAILY_邀请上床}'>[%NAMES("床")%に邀请]</button>"
+	ENDIF
+	SIF TARGET == 0 || CFLAG:睡眠 || COND("约会の予定有")
+		D20XX_OS_WindowInput:0 += @"</font>"
+	
+	D20XX_OS_WindowInput:0 += @"<button pos='{Xsize-150}' value='{DAILY_SC+8}'>[x]</button>"
+
+
+	;只今约会のお時間(周日昼)
+	IF DAYEV("约会領帯ム")
+		IF PLACE("自宅") == 0
+			D20XX_OS_WindowInput:1 += @"<font color='#707070'><button value='{DAILY_约会}'>[和某人约会]</button></font>"
+		ELSEIF COND("约会の予定有")
+			D20XX_OS_WindowInput:1 += @"<font color='#FFC0CB'><button value='{DAILY_约会}'>[去约会]</button></font>"
+		ELSEIF CHARA_NUM("约会可能")
+			D20XX_OS_WindowInput:1 += @"<button value='{DAILY_约会}'>[和某人约会]</button>"
+		ELSE
+			D20XX_OS_WindowInput:1 += @"<font color='#707070'><button value='{DAILY_约会}'>[和某人约会]</button></font>"
+		ENDIF
+	;休日の约会に誰かを邀请？
+	ELSE
+		IF CFLAG:睡眠
+			D20XX_OS_WindowInput:1 += @"<font color='#707070'><button value='{DAILY_约会}'>[邀请去约会]</button></font>"
+		ELSEIF COND("约会可能") && CHARA_NUM("约会的约定") == 0
+			IF COND("约会お誘い済み")
+				D20XX_OS_WindowInput:1 += @"<button value='{DAILY_约会}'>[接受约会邀请]</button>"
+			ELSE
+				D20XX_OS_WindowInput:1 += @"<button value='{DAILY_约会}'>[邀请去约会]</button>"
+			ENDIF
+		ELSE
+			D20XX_OS_WindowInput:1 += @"<font color='#707070'><button value='{DAILY_约会}'>[邀请去约会]</button></font>"
+		ENDIF
+	ENDIF
+
+	;この場にいない人をＨに邀请(居間or部室のみ選択可能)
+	IF PLACE("居間") + PLACE("部室") == 0 || FIND_COND("叫出来Ｈ可能") == 0 || COND("约会の予定有")
+		D20XX_OS_WindowInput:2 += @"<font color='#707070'><button value='{DAILY_叫出来}'>[叫部員出来]</button></font>"
+	ELSEIF PLACE("居間")
+		D20XX_OS_WindowInput:2 += @"<button value='{DAILY_叫出来}'>[叫去情人旅馆]</button>"
+	ELSEIF PLACE("部室")
+		D20XX_OS_WindowInput:2 += @"<button value='{DAILY_叫出来}'>[叫去做爱房]</button>"
+	ENDIF
+	
+
+
+	SIF COND("場所移動可能") == 0 || COND("约会の予定有")
+		D20XX_OS_WindowInput:3 += @"<font color='#707070'>"
+	IF PLACE("部室")
+		IF CHARA_NUM("集合予定") >= 3
+			D20XX_OS_WindowInput:3 += @"<button value='{DAILY_密会}'>[出去密会]</button>"
+		ELSE
+			D20XX_OS_WindowInput:3 += @"<button value='{DAILY_密会}'>[换地方]</button>"
+		ENDIF
+	ELSE
+		IF PLACE("野外")
+			D20XX_OS_WindowInput:3 += @"<button value='{DAILY_密会}'>[返回]</button>"
+		ELSE
+			D20XX_OS_WindowInput:3 += @"<button value='{DAILY_密会}'>[换地方]</button>"
+		ENDIF
+	ENDIF
+	SIF COND("場所移動可能") == 0 || COND("约会の予定有")
+		D20XX_OS_WindowInput:3 += @"</font>"
+	
+
+	SIF TARGET == 0 || CFLAG:睡眠
+		D20XX_OS_WindowInput:4 += @"<font color='#707070'>"
+	IF TARGET && COND("魂の交易可能")
+		D20XX_OS_WindowInput:4 += @"<button value='{DAILY_交易}'>[做交易(魂%TEXTS("0.01", BASE:MASTER:魂)%)]</button>"
+	ELSE
+		D20XX_OS_WindowInput:4 += @"<button value='{DAILY_交易}'>[拜托了]</button>"
+	ENDIF
+	SIF TARGET == 0 || CFLAG:睡眠
+		D20XX_OS_WindowInput:4 += @"</font>"
+
+
+	CALL D20XX_OS_Window(Xpos,Ypos,Xsize,Ysize,WindowID,LineColor,WindowColor)
+
+	
+
+@K15_Tachietica_Overhaul_CMDWindow(Xpos,Ypos,Xsize,Ysize,WindowID,LineColor = "#FFFFF" ,WindowColor = "#000070")
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Ypos
+	#DIM DYNAMIC LocalYposCount
+	#DIM DYNAMIC Xsize
+	#DIM DYNAMIC Ysize
+	#DIM DYNAMIC WindowID
+	#DIM DYNAMIC Lcount
+	#DIMS DYNAMIC LineColor
+	#DIMS DYNAMIC WindowColor
+
+	#DIMS DYNAMIC BaseViews,44
+	#DIMS DYNAMIC MainHtml,44
+
+	#DIMS DYNAMIC Temp,100
+
+	;タブ部分の最終行
+	#DIM DYNAMIC TabLastY
+
+	#DIM DYNAMIC ListLastY
+
+	
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;#DIMS DYNAMIC SelectTab
+	;#DIMS DYNAMIC ShopMenu,4,20
+	;#DIMS DYNAMIC MainText,43
+	;#DIMS DYNAMIC LeftWindowColor
+	;#DIMS DYNAMIC SelectLeftTab
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	
+	IF CFLAG:睡眠
+		TabLastY = 10
+	ELSE
+		TabLastY = 18
+	ENDIF
+	SIF UUI_タブ == ""
+		UUI_タブ = タブ１
+
+	VARSET RESULTS:0, ""
+	FOR Lcount,0,44
+		D20XX_OS_WindowsHTML:WindowID:Lcount =
+	NEXT
+	FOR Lcount,0,44
+		BaseViews:Lcount = %HTML_GETPRINTEDSTR(44-Lcount)%
+		CALL D20XX_NO_NOBR2(BaseViews:Lcount)
+		BaseViews:Lcount = %RESULTS%
+	NEXT
+	CLEARLINE 44
+
+	;背景色を表示する部分
+	IF CFLAG:睡眠
+		D20XX_OS_WindowsHTML:WindowID:Ypos += @"<nonbutton pos ='{Xpos}'><shape type='rect' param='50,50,{Xsize+200},106' color='%WindowColor%' ></nonbutton>"
+		FOR Lcount,(Ypos+1),(Ypos+TabLastY);(Ypos+Ysize-1)
+			D20XX_OS_WindowsHTML:WindowID:Lcount += @"<nonbutton pos ='{Xpos}'><shape type='rect' param='50,0,{Xsize+200},106' color='%WindowColor%' ></nonbutton>"
+		NEXT
+	ELSE
+		D20XX_OS_WindowsHTML:WindowID:Ypos += @"<nonbutton pos ='{Xpos}'><shape type='rect' param='50,50,{Xsize+200},106' color='%WindowColor%' ></nonbutton>"
+		FOR Lcount,(Ypos+1),(Ypos+TabLastY);(Ypos+Ysize-1)
+			D20XX_OS_WindowsHTML:WindowID:Lcount += @"<nonbutton pos ='{Xpos}'><shape type='rect' param='50,0,{Xsize+200},106' color='%WindowColor%' ></nonbutton>"
+		NEXT
+	ENDIF
+	D20XX_OS_WindowsHTML:WindowID:(Ypos+TabLastY) += @"<nonbutton pos ='{Xpos+Xsize}'><shape type='rect' param='50,0,200,50' color='%WindowColor%' ></nonbutton>"
+	FOR Lcount,(Ypos+TabLastY),(Ypos+Ysize)
+		D20XX_OS_WindowsHTML:WindowID:Lcount += @"<nonbutton pos ='{Xpos}'><shape type='rect' param='50,0,{Xsize},106' color='%WindowColor%' ></nonbutton>"
+	NEXT
+	;一番下の行
+	D20XX_OS_WindowsHTML:WindowID:(Ypos+Ysize) += @"<nonbutton pos ='{Xpos}'><shape type='rect' param='50,0,{Xsize},50' color='%WindowColor%' ></nonbutton>"
+
+
+	D20XX_OS_WindowsHTML:WindowID:Ypos += @"<nonbutton pos='{Xpos}'>┏"
+	D20XX_OS_WindowsHTML:WindowID:(Ypos+Ysize) += @"<nonbutton pos='{Xpos}'>┗"
+	FOR Lcount,0,Xsize/100-1
+		D20XX_OS_WindowsHTML:WindowID:Ypos += @"━"
+		D20XX_OS_WindowsHTML:WindowID:(Ypos+Ysize) += @"━"
+	NEXT
+	D20XX_OS_WindowsHTML:WindowID:(Ypos+Ysize) += @"┛</nonbutton>"
+
+	FOR LCount,(Ypos+1),(Ypos+Ysize)
+		D20XX_OS_WindowsHTML:WindowID:LCount += @"<nonbutton pos ='{Xpos}'>┃</nonbutton>"
+	NEXT
+	;睡眠中は専用の物に切り替わる
+	IF CFLAG:睡眠
+		SELECTCASE UUI_タブ
+			CASE "タブ１"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+0)  += @"━━┓</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+1)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>晚</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+2)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>安</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+3)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>好</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+4)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>梦</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+5)  += @"<nonbutton pos ='{Xpos+Xsize}'>┏━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+6)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>系</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+7)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>统</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+8)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>菜</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+9)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>单</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+10) += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┛</nonbutton>"
+			CASE "システム"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+0)  += @"┏━┓</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+1)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>晚</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+2)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>安</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+3)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>好</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+4)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>梦</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+5)  += @"<nonbutton pos ='{Xpos+Xsize}'>┗━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+6)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+4}'>系</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+7)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+4}'>统</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+8)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+4}'>菜</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+9)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+4}'>单</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+10) += @"<nonbutton pos ='{Xpos+Xsize}'>┏━┛</nonbutton>"
+			CASEELSE
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+0)  += @"━━┓</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+1)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>晚</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+2)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>安</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+3)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>好</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+4)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>梦</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+5)  += @"<nonbutton pos ='{Xpos+Xsize}'>┏━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+6)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>系</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+7)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>统</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+8)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>菜</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+9)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>单</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+10) += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┛</nonbutton>"
+		ENDSELECT
+		SELECTCASE UUI_タブ
+			CASE "タブ１"
+				ListLastY = 0
+				CALL TEXT_SELECT_DAILY_SLEEPING
+				Temp = %STR:選択肢%
+				SPLIT Temp,"/",LOCALS
+				FOR Lcount, 0, 100
+					;PRINTFORML Debug101 %LOCALS:Lcount%
+					SELECTCASE LOCALS:Lcount
+						CASE ""
+							;CrntLine = Lcount
+							BREAK
+						CASEELSE
+							IF STRCOUNT(@"いつものUIにする/タブ１/タブ２/タブ３/システム", @"%LOCALS:LCOUNT%/")
+								;UUI用の特殊追加選択肢の為リストに不顯示(右のタブに使う用)
+							ELSE
+								IF STRCOUNT(@"%LOCALS:Lcount%","_") >= 1
+									SPLIT LOCALS:Lcount, "_", Temp
+									IF RESULT > 2
+										LOCALS:Lcount = %Temp:(RESULT-1)%
+									ELSE
+										CONTINUE
+									ENDIF
+								ENDIF
+								ListLastY++
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"<button pos='{Xpos+100}' value='{DAILY_SL+Lcount}'>"
+								SIF STRCOUNT(STR:追加選択肢, @"/%LOCALS:LCOUNT%/")
+									D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"<font color='#70E02C'>"
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"[%DAILYCOMNAME_SELECT(LOCALS:LCOUNT)%]"
+								SIF STRCOUNT(STR:追加選択肢, @"/%LOCALS:LCOUNT%/")
+									D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"</font>"
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"</button>"
+							ENDIF 
+					ENDSELECT
+				NEXT
+			CASE "システム"
+				LocalYposCount = 1
+				SIF TARGET == 0 || CFLAG:睡眠
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				IF TARGET && COND("魂の交易可能")
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_交易}'>[做交易(魂%TEXTS("0.01", BASE:MASTER:魂)%)]</button>"
+				ELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_交易}'>[拜托了]</button>"
+				ENDIF
+				SIF TARGET == 0 || CFLAG:睡眠
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				
+				LocalYposCount++
+
+
+
+				IF FLAG:勧誘可能 && CHARA_NUM("勧誘可能") && CFLAG:睡眠 == 0 && PLACE("部室") + PLACE("居間")
+				ELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				ENDIF
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_增加角色}'>[勧誘同伴]</button>"
+				IF FLAG:勧誘可能 && CHARA_NUM("勧誘可能") && CFLAG:睡眠 == 0 && PLACE("部室") + PLACE("居間")
+				ELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				ENDIF
+				LocalYposCount++
+
+				SIF TARGET == 0 || CFLAG:睡眠
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_買東西}'>[買東西]</button>"
+				SIF TARGET == 0 || CFLAG:睡眠
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				LocalYposCount++
+				
+
+				SIF COND("場所移動可能") == 0 || COND("约会の予定有")
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				IF PLACE("部室")
+					IF CHARA_NUM("集合予定") >= 3
+						D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_密会}'>[出去密会]</button>"
+					ELSE
+						D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_密会}'>[换地方]</button>"
+					ENDIF
+				ELSE
+					IF PLACE("野外")
+						D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_密会}'>[返回]</button>"
+					ELSE
+						D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_密会}'>[换地方]</button>"
+					ENDIF
+				ENDIF
+				SIF COND("場所移動可能") == 0 || COND("约会の予定有")
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				LocalYposCount++
+				
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_能力表示}'>[能力表示与职位変更]</button>"
+				LocalYposCount++
+				LocalYposCount++ ;ここでスペースを入れる
+				;SIF BASE:MASTER:尿意 > 3000
+				;	MENU_SHOP += @"[304]去厕所/"
+
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_保存}'>[保存]</button>"
+				LocalYposCount++
+				
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_加载}'>[加载]</button>"
+				LocalYposCount++
+				
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_Config}'>[Config]</button>"
+				LocalYposCount++
+
+				SIF NUM("写真") == 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_阅览照片}'>[阅览照片]</button>"
+				SIF NUM("写真") == 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				LocalYposCount++
+
+
+				SIF COND("池面", MASTER) == 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_整理内衣}'>[整理内衣]</button>"
+				LocalYposCount++
+				LocalYposCount++;ここでもスペースを入れる
+				IF FLAG:自動進行停止 == 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_ポーズ}'>[pause　　]</button>"
+				ELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_ポーズ}'>[pause解除]</button>"
+				ENDIF
+				
+
+				STR:ＥＮＤ标题 = 
+				STR:エンディング = 
+				STR:ＥＮＤカラー = 
+				
+				;これ何に使うか分からないからとりあえずコメントアウト
+				;必用变成了時に考える
+				;SIF CFLAG:睡眠 == 0 || CFLAG:睡眠時エンディング
+				;	TRYCALLFORM MENU_SINGLE_ENDING_K{NO:TARGET}
+
+				SELECTCASE STR:エンディング
+					CASE ""
+						STR:ＥＮＤ标题 = 
+					CASEELSE
+						;@MENU_SINGLE_ENDING_K{NO:TARGET}で文字色が決められていない場合
+						IF STR:ＥＮＤカラー == ""
+							SIF COND("未読ＥＮＤ選択可能")
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<font color='#FFC0CB'>"
+						ENDIF
+						SIF STR:ＥＮＤカラー != ""
+							D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<font color='#%TOSTR(DEF_COLOR(STR:ＥＮＤカラー),"X6")%'>"
+				ENDSELECT
+
+				SELECTCASE STRLENS(STR:ＥＮＤ标题)
+				CASE 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @""
+				CASE IS >= 19
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<button pos='{Xpos+100}' value='{DAILY_エンディングを迎える}'>[%STR:ＥＮＤ标题%]</button>"
+				CASEELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<nonbutton pos='{Xpos+100}' >[%STR:ＥＮＤ标题%]</nonbutton>"
+				ENDSELECT
+				SELECTCASE STR:エンディング
+					CASE ""
+						STR:ＥＮＤ标题 = 
+					CASEELSE
+						;@MENU_SINGLE_ENDING_K{NO:TARGET}で文字色が決められていない場合
+						IF STR:ＥＮＤカラー == ""
+							SIF COND("未読ＥＮＤ選択可能")
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"</font>"
+						ENDIF
+						SIF STR:ＥＮＤカラー != ""
+							D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"</font>"
+				ENDSELECT
+		ENDSELECT
+
+
+	
+	ELSE
+		SELECTCASE UUI_タブ
+			CASE "タブ１"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+0)  += @"━━┓</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+1)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>交</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+2)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>│</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+3)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+1}'>谈</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+4)  += @"<nonbutton pos ='{Xpos+Xsize}'>┏━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+5)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>给</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+6)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>│</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+7)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>与</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+8)  += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+9)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>性</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+10) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>骚</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+11) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>扰</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>哦</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+13) += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+14) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>系</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+15) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>统</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+16) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>菜</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+17) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>单</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+18) += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┛</nonbutton>"
+			CASE "タブ２"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+0)  += @"┳━┓</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+1)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>交</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+2)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>│</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+3)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>谈</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+4)  += @"<nonbutton pos ='{Xpos+Xsize}'>┗━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+5)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+2}'>给</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+6)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+2}'>│</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+7)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+2}'>与</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+8)  += @"<nonbutton pos ='{Xpos+Xsize}'>┏━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+9)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>性</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+10) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>骚</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+11) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>扰</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>哦</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+13) += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+14) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>系</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+15) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>统</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+16) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>菜</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+17) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>单</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+18) += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┛</nonbutton>"
+			CASE "タブ３"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+0)  += @"┳━┓</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+1)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>交</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+2)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>│</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+3)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>谈</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+4)  += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+5)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>给</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+6)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>│</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+7)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>与</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+8)  += @"<nonbutton pos ='{Xpos+Xsize}'>┗━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+9)  += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+3}'>性</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+10) += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+3}'>骚</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+11) += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+3}'>扰</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+3}'>哦</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+13) += @"<nonbutton pos ='{Xpos+Xsize}'>┏━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+14) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>系</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+15) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>统</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+16) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>菜</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+17) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+4}'>单</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+18) += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┛</nonbutton>"
+			CASE "システム"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+0)  += @"┳━┓</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+1)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>交</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+2)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>│</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+3)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+1}'>谈</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+4)  += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+5)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>给</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+6)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>│</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+7)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+2}'>与</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+8)  += @"<nonbutton pos ='{Xpos+Xsize}'>┣━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+9)  += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>性</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+10) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>骚</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+11) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>扰</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<nonbutton pos ='{Xpos+Xsize}'>┃</nonbutton><button value = '{DAILY_SC+3}'>哦</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+13) += @"<nonbutton pos ='{Xpos+Xsize}'>┗━┫</nonbutton>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+14) += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+4}'>系</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+15) += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+4}'>统</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+16) += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+4}'>菜</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+17) += @"<nonbutton pos ='{Xpos+Xsize}'>　</nonbutton><button value = '{DAILY_SC+4}'>单</button>┃"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+18) += @"<nonbutton pos ='{Xpos+Xsize}'>┏━┛</nonbutton>"
+		ENDSELECT
+		
+		SELECTCASE UUI_タブ
+			CASE "タブ１"
+				ListLastY = 0
+				CALL TEXT_SELECT_DAILY1
+				Temp = %STR:選択肢%
+				SPLIT Temp,"/",LOCALS
+				FOR Lcount, 0, 100
+					;PRINTFORML Debug101 %LOCALS:Lcount%
+					SELECTCASE LOCALS:Lcount
+						CASE ""
+							;CrntLine = Lcount
+							BREAK
+						CASEELSE
+							IF STRCOUNT(@"いつものUIにする/タブ１/タブ２/タブ３/システム/他の角色へ/", @"%LOCALS:LCOUNT%/")
+								;UUI用の特殊追加選択肢の為リストに不顯示(右のタブに使う用)
+							ELSE
+								IF STRCOUNT(@"%LOCALS:Lcount%","_") >= 1
+									SPLIT LOCALS:Lcount, "_", Temp
+									IF RESULT > 2
+										LOCALS:Lcount = %Temp:(RESULT-1)%
+									ELSE
+										CONTINUE
+									ENDIF
+								ENDIF
+								ListLastY++
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"<button pos='{Xpos+100}' value='{DAILY_B1+Lcount}'>"
+								SIF STRCOUNT(STR:追加選択肢, @"/%LOCALS:LCOUNT%/")
+									D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"<font color='#70E02C'>"
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"[%DAILYCOMNAME_SELECT(LOCALS:LCOUNT)%]"
+								SIF STRCOUNT(STR:追加選択肢, @"/%LOCALS:LCOUNT%/")
+									D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"</font>"
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"</button>"
+
+								
+							ENDIF 
+					ENDSELECT
+				NEXT
+			CASE "タブ２"
+				ListLastY = 0
+				CALL TEXT_SELECT_DAILY2
+				Temp = %STR:選択肢%
+				SPLIT Temp,"/",LOCALS
+				FOR Lcount, 0, 100
+					;PRINTFORML Debug101 %LOCALS:Lcount%
+					SELECTCASE LOCALS:Lcount
+						CASE ""
+							;CrntLine = Lcount
+							BREAK
+						CASEELSE
+							IF STRCOUNT(@"いつものUIにする/タブ１/タブ２/タブ３/システム", @"%LOCALS:LCOUNT%/")
+								;UUI用の特殊追加選択肢の為リストに不顯示(右のタブに使う用)
+							ELSE
+								IF STRCOUNT(@"%LOCALS:Lcount%","_") >= 1
+									SPLIT LOCALS:Lcount, "_", Temp
+									IF RESULT > 2
+										LOCALS:Lcount = %Temp:(RESULT-1)%
+									ELSE
+										CONTINUE
+									ENDIF
+								ENDIF
+								ListLastY++
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"<button pos='{Xpos+100}' value='{DAILY_B2+Lcount}'>"
+								SIF STRCOUNT(STR:追加選択肢, @"/%LOCALS:LCOUNT%/")
+									D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"<font color='#70E02C'>"
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"[%DAILYCOMNAME_SELECT(LOCALS:LCOUNT)%]"
+								SIF STRCOUNT(STR:追加選択肢, @"/%LOCALS:LCOUNT%/")
+									D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"</font>"
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"</button>"
+							ENDIF 
+					ENDSELECT
+				NEXT
+			CASE "タブ３"
+				ListLastY = 0
+				CALL TEXT_SELECT_DAILY4
+				Temp = %STR:選択肢%
+				SPLIT Temp,"/",LOCALS
+				FOR Lcount, 0, 100
+					;PRINTFORML Debug101 %LOCALS:Lcount%
+					SELECTCASE LOCALS:Lcount
+						CASE ""
+							;CrntLine = Lcount
+							BREAK
+						CASEELSE
+							IF STRCOUNT(@"いつものUIにする/タブ１/タブ２/タブ３/システム", @"%LOCALS:LCOUNT%/")
+								;UUI用の特殊追加選択肢の為リストに不顯示(右のタブに使う用)
+							ELSE
+								;PRINTFORML Debug101 %LOCALS:Lcount% STRCOUNT(@"%LOCALS:Lcount%","_") = {STRCOUNT(@"%LOCALS:Lcount%","_")}
+								IF STRCOUNT(@"%LOCALS:Lcount%","_") >= 1
+									SPLIT LOCALS:Lcount, "_", Temp
+									IF RESULT > 2
+										LOCALS:Lcount = %Temp:(RESULT-1)%
+									ELSE
+										CONTINUE
+									ENDIF
+								ENDIF
+								ListLastY++
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"<button pos='{Xpos+100}' value='{DAILY_B4+Lcount}'>"
+								SIF STRCOUNT(STR:追加選択肢, @"/%LOCALS:LCOUNT%/")
+									D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"<font color='#70E02C'>"
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"[%DAILYCOMNAME_SELECT(LOCALS:LCOUNT)%]"
+								SIF STRCOUNT(STR:追加選択肢, @"/%LOCALS:LCOUNT%/")
+									D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"</font>"
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+ListLastY) += @"</button>"
+							ENDIF 
+					ENDSELECT
+				NEXT
+			CASE "システム"
+				LocalYposCount = 1
+				SIF TARGET == 0 || CFLAG:睡眠
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				IF TARGET && COND("魂の交易可能")
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_交易}'>[做交易(魂%TEXTS("0.01", BASE:MASTER:魂)%)]</button>"
+				ELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_交易}'>[拜托了]</button>"
+				ENDIF
+				SIF TARGET == 0 || CFLAG:睡眠
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				
+				LocalYposCount++
+
+
+
+				IF FLAG:勧誘可能 && CHARA_NUM("勧誘可能") && CFLAG:睡眠 == 0 && PLACE("部室") + PLACE("居間")
+				ELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				ENDIF
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_增加角色}'>[勧誘同伴]</button>"
+				IF FLAG:勧誘可能 && CHARA_NUM("勧誘可能") && CFLAG:睡眠 == 0 && PLACE("部室") + PLACE("居間")
+				ELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				ENDIF
+				LocalYposCount++
+
+				SIF TARGET == 0 || CFLAG:睡眠
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_買東西}'>[買東西]</button>"
+				SIF TARGET == 0 || CFLAG:睡眠
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				LocalYposCount++
+				
+
+				SIF COND("場所移動可能") == 0 || COND("约会の予定有")
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				IF PLACE("部室")
+					IF CHARA_NUM("集合予定") >= 3
+						D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_密会}'>[出去密会]</button>"
+					ELSE
+						D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_密会}'>[换地方]</button>"
+					ENDIF
+				ELSE
+					IF PLACE("野外")
+						D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_密会}'>[返回]</button>"
+					ELSE
+						D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_密会}'>[换地方]</button>"
+					ENDIF
+				ENDIF
+				SIF COND("場所移動可能") == 0 || COND("约会の予定有")
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				LocalYposCount++
+				
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_能力表示}'>[能力表示与职位変更]</button>"
+				LocalYposCount++
+				LocalYposCount++ ;ここでスペースを入れる
+				;SIF BASE:MASTER:尿意 > 3000
+				;	MENU_SHOP += @"[304]去厕所/"
+
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_保存}'>[保存]</button>"
+				LocalYposCount++
+				
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_加载}'>[加载]</button>"
+				LocalYposCount++
+				
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_Config}'>[Config]</button>"
+				LocalYposCount++
+
+				SIF NUM("写真") == 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<font color='#707070'>"
+				D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_阅览照片}'>[阅览照片]</button>"
+				SIF NUM("写真") == 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"</font>"
+				LocalYposCount++
+
+
+				SIF COND("池面", MASTER) == 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_整理内衣}'>[整理内衣]</button>"
+				LocalYposCount++
+				LocalYposCount++;ここでもスペースを入れる
+				IF FLAG:自動進行停止 == 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_ポーズ}'>[pause　　]</button>"
+				ELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+LocalYposCount) += @"<button pos='{Xpos+100}' value='{DAILY_ポーズ}'>[pause解除]</button>"
+				ENDIF
+				
+
+				STR:ＥＮＤ标题 = 
+				STR:エンディング = 
+				STR:ＥＮＤカラー = 
+				
+				;これ何に使うか分からないからとりあえずコメントアウト
+				;必用变成了時に考える
+				;SIF CFLAG:睡眠 == 0 || CFLAG:睡眠時エンディング
+				;	TRYCALLFORM MENU_SINGLE_ENDING_K{NO:TARGET}
+
+				SELECTCASE STR:エンディング
+					CASE ""
+						STR:ＥＮＤ标题 = 
+					CASEELSE
+						;@MENU_SINGLE_ENDING_K{NO:TARGET}で文字色が決められていない場合
+						IF STR:ＥＮＤカラー == ""
+							SIF COND("未読ＥＮＤ選択可能")
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<font color='#FFC0CB'>"
+						ENDIF
+						SIF STR:ＥＮＤカラー != ""
+							D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<font color='#%TOSTR(DEF_COLOR(STR:ＥＮＤカラー),"X6")%'>"
+				ENDSELECT
+
+				SELECTCASE STRLENS(STR:ＥＮＤ标题)
+				CASE 0
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @""
+				CASE IS >= 19
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<button pos='{Xpos+100}' value='{DAILY_エンディングを迎える}'>[%STR:ＥＮＤ标题%]</button>"
+				CASEELSE
+					D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"<nonbutton pos='{Xpos+100}' >[%STR:ＥＮＤ标题%]</nonbutton>"
+				ENDSELECT
+				SELECTCASE STR:エンディング
+					CASE ""
+						STR:ＥＮＤ标题 = 
+					CASEELSE
+						;@MENU_SINGLE_ENDING_K{NO:TARGET}で文字色が決められていない場合
+						IF STR:ＥＮＤカラー == ""
+							SIF COND("未読ＥＮＤ選択可能")
+								D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"</font>"
+						ENDIF
+						SIF STR:ＥＮＤカラー != ""
+							D20XX_OS_WindowsHTML:WindowID:(Ypos+12) += @"</font>"
+				ENDSELECT
+		ENDSELECT
+	ENDIF
+	
+	;ここでLeftWindowの中身を設定する
+	FOR LCount,(Ypos+TabLastY+1),(Ypos+Ysize)
+		D20XX_OS_WindowsHTML:WindowID:LCount += @"<nonbutton pos='{Xpos+Xsize}'>┃</nonbutton>"
+	NEXT
+
+	FOR Lcount,0,44
+		;PRINTFORML <nobr>%BaseViews:Lcount%%D20XX_OS_WindowsHTML:WindowID:Lcount%</nobr>
+		HTML_PRINT @"<nobr>%BaseViews:Lcount%%D20XX_OS_WindowsHTML:WindowID:Lcount%</nobr>"
+		;HTML_PRINT @"<nobr>%D20XX_OS_WindowsHTML:WindowID:Lcount%</nobr>"
+	NEXT
+	CALL D20XX_OS_WindowInput_Constructor
+
+;
+@K15_Tachietica_ImgStamp(Xpos,Ypos,ImgName,ImgSize,ButtonNo = -1,FocusImg)
+	#DIM DYNAMIC Xpos
+	#DIM DYNAMIC Ypos
+	#DIMS DYNAMIC ImgName
+	#DIM DYNAMIC ImgSize
+	#DIM DYNAMIC ButtonNo
+	#DIMS DYNAMIC FocusImg
+
+	#DIM DYNAMIC WindowID
+	#DIM DYNAMIC Lcount
+	#DIMS DYNAMIC BaseViews,44
+
+	VARSET RESULTS:0, ""
+	FOR Lcount,0,44
+		D20XX_OS_WindowsHTML:WindowID:Lcount =
+	NEXT
+
+	;PRINTL
+	FOR Lcount,0,44
+		BaseViews:Lcount = %HTML_GETPRINTEDSTR(44-Lcount)%
+		CALL D20XX_NO_NOBR2(BaseViews:Lcount)
+		BaseViews:Lcount = %RESULTS%
+	NEXT
+	CLEARLINE 45
+
+	FOR Lcount,0,44
+		;PRINTFORML <nobr>%BaseViews:Lcount%%D20XX_OS_WindowsHTML:WindowID:Lcount%</nobr>
+		IF Ypos == Lcount
+			IF ButtonNo != -1
+				HTML_PRINT @"<nobr>%BaseViews:Lcount%<button value='{ButtonNo}' pos='{Xpos}'><img src='%ImgName%' srcb='%FocusImg%' height='{ImgSize}'></button></nobr>"
+			ELSE
+				HTML_PRINT @"<nobr>%BaseViews:Lcount%<nonbutton pos='{Xpos}'><img src='%ImgName%' height='{ImgSize}'></nonbutton></nobr>"
+			ENDIF
+		ELSE
+		HTML_PRINT @"<nobr>%BaseViews:Lcount%</nobr>"
+		ENDIF
+		;HTML_PRINT @"<nobr>%D20XX_OS_WindowsHTML:WindowID:Lcount%</nobr>"
+	NEXT
+	CALL D20XX_OS_WindowInput_Constructor
+
+
+;
+@K15_Tachietica_Profile
+	#DIM DYNAMIC Lcount
+	#DIM DYNAMIC Emotion
+	#DIMS DYNAMIC Temps,10
+	#DIMS DYNAMIC ABLList,6
+	#DIMS DYNAMIC EggImg
+	#DIMS DYNAMIC Temperature
+	#DIMS DYNAMIC Tachietica
+	CALL PRINT_BARH("欲求ゲージ",BASE:TARGET:欲求不満,100,6)
+	Temps:0 = %RESULTS%
+
+	;#region CALL TEXT("生理周期")からの輸入
+		VARSET LOCALS
+		IF COND("着床済", TARGET)
+			LOCALS = 爱心粉紅_着床済
+		ELSEIF TALENT:TARGET:事后避孕药
+			LOCALS = 事后避孕药
+		ELSEIF COND("受精済", TARGET)
+			LOCALS = 爱心粉紅_受精済
+			
+		ELSEIF COND("重発情期", TARGET)
+			LOCALS = 赤_重発情日
+		ELSEIF COND("排卵中", TARGET)
+			LOCALS = ショッキング粉紅_超危険日
+		ELSEIF COND("発情期", TARGET)
+			LOCALS = 爱心粉紅_発情期
+		ELSEIF TALENT:TARGET:未成熟
+			LOCALS = 未成熟
+		;避妊中
+		ELSEIF COND("避妊中", TARGET)
+			IF CFLAG:TARGET:口服避孕薬
+				LOCALS = 口服避孕薬
+			ELSE
+				LOCALS = 避妊中
+			ENDIF
+		;ELSEIF BASE:TARGET:胎児
+		ELSEIF COND("産卵日", TARGET)
+			LOCALS = 青_産卵日
+		ELSEIF COND("保卵期", TARGET)
+			LOCALS = 緑_保卵期
+		ELSEIF COND("安全日", TARGET)
+			IF TALENT:TARGET:生理が重い
+				LOCALS = 青_生理中
+			ELSE
+				LOCALS = 安全日
+			ENDIF
+		ELSEIF COND("危険日", TARGET)
+			LOCALS = イエロー_危険日
+		ELSE 
+			LOCALS = 卵抱期
+		ENDIF
+
+		SIF TALENT:Ｖ妊娠不能
+			LOCALS = ？？？
+
+		CALL PRINT_STRL, @"NOBUTTON_[_%LOCALS%_]"
+	;#endregion
+	RESULTS = %HTML_GETPRINTEDSTR(0)%
+	CALL D20XX_NO_NOBR(RESULTS)
+	Temps:1 = %RESULTS%
+	CLEARLINE 1
+	
+	;CALL 槞彁_TachieGenerate(@"%K15_Tachietica_Prifile衣装%",4000, 100, -4000,1)
+
+	;#region 卵子グラ選択布ト
+		VARSET EggImg
+		SELECTCASE GETBITS(BASE:TARGET:バイオリズム, 0, 5)
+			;保卵期(子宮に卵を抱えている状態)
+			CASE 1
+				EggImg = K15_卵子_殻２
+			CASE 2
+				EggImg = K15_卵子_殻３
+			CASE 3
+				EggImg = K15_卵子_卵
+			CASE 4
+				EggImg = K15_卵子_小型
+			CASE 5
+				EggImg = K15_卵子_中型
+			CASE 6 
+				EggImg = K15_卵子_大型０
+			CASE 7 
+				EggImg = K15_卵子_大型１
+			CASE 8
+				EggImg = K15_卵子_大型２
+			CASE 9
+				EggImg = K15_卵子_大型３
+			CASE 10
+				EggImg = K15_卵子_殻１
+			CASEELSE 
+		ENDSELECT
+		SIF TALENT:TARGET:Ｖ妊娠不能
+			EggImg = K15_卵子_不在
+		EggImg = <nonbutton pos='2500'><img src='%EggImg%' height='600' ypos='-500'></nonbutton>
+	;#endregion
+	;#region 体温
+		IF K15_体温:4 == ""
+			FOR Lcount,0,5
+				K15_体温:Lcount = %TEXTR("体温平常１/体温平常２/体温平常３/体温平常４")%
+			NEXT
+		ENDIF
+		IF TodayTemperture最終更新日 != TEXTS("日期表示")
+			TodayTemperture最終更新日 = %TEXTS("日期表示")%
+			IF TALENT:TARGET:Ｖ妊娠不能
+				TodayTemperture = %TEXTR("体温平常１/体温平常２/体温平常３/体温平常４")%
+			ELSE
+				SELECTCASE GETBITS(BASE:TARGET:バイオリズム, 0, 5)
+					;保卵期(子宮に卵を抱えている状態)
+					CASE 1
+						TodayTemperture = %TEXTR("体温平常１/体温平常２/体温平常３/体温平常４")%
+					CASE 2
+						TodayTemperture = %TEXTR("体温平常１/体温平常２/体温平常３/体温平常４")%
+					;産卵日、産卵日は一日だけ
+					CASE 3
+						IF STRCOUNT(K15_体温:4,"体温産卵")
+							TodayTemperture = %TEXTR("体温産卵継続")%
+						ELSE
+							TodayTemperture = %TEXTR("体温産卵１/体温産卵２")%
+						ENDIF
+					;危険日開始
+					CASE 4
+						IF STRCOUNT(K15_体温:4,"体温発情期開始１")
+							TodayTemperture = %TEXTR("体温発情期１/体温発情期２/体温発情期３")%
+						ELSE
+							TodayTemperture = %TEXTR("体温発情期開始１/体温発情期開始２")%
+						ENDIF
+					;危険日中日
+					CASE 5
+						TodayTemperture = %TEXTR("体温発情期１/体温発情期２/体温発情期３")%
+					;排卵日、またの名を超危険日。産卵体質の場合は卵子の寿命が一日ではない
+					CASE 6 TO 7
+						TodayTemperture = %TEXTR("体温発情期１/体温発情期２/体温発情期３")%
+					CASE 8
+						IF STRCOUNT(K15_体温:4,"体温発情期終了")
+							TodayTemperture = %TEXTR("体温平常１/体温平常２/体温平常３/体温平常４")%
+						ELSE
+							TodayTemperture = %TEXTR("体温発情期終了１/体温発情期終了２")%
+						ENDIF
+					CASEELSE 
+						TodayTemperture = %TEXTR("体温平常１/体温平常２/体温平常３/体温平常４")%
+				ENDSELECT
+			ENDIF
+		ENDIF
+		
+		Lcount = 90
+		Temperature += @"<nonbutton pos='{Lcount}'><img src='%K15_体温:0%' height='600' ypos='-500'></nonbutton>"
+		Lcount += 400
+		Temperature += @"<nonbutton pos='{Lcount}'><img src='%K15_体温:1%' height='600' ypos='-500'></nonbutton>"
+		Lcount += 400
+		Temperature += @"<nonbutton pos='{Lcount}'><img src='%K15_体温:2%' height='600' ypos='-500'></nonbutton>"
+		Lcount += 400
+		Temperature += @"<nonbutton pos='{Lcount}'><img src='%K15_体温:3%' height='600' ypos='-500'></nonbutton>"
+		Lcount += 400
+		Temperature += @"<nonbutton pos='{Lcount}'><img src='%K15_体温:4%' height='600' ypos='-500'></nonbutton>"
+		Lcount += 400
+		Temperature += @"<nonbutton pos='{Lcount}'><img src='%TodayTemperture%' height='600' ypos='-500'></nonbutton>"
+	;#endregion
+
+	;立ち絵描画
+	CALL 槞彁_TachieGenerate(@"%K15_Tachietica_Prifile衣装%",4000, 3050, -4000,1)
+	Tachietica = %RESULTS%
+	;説明欄
+	;"魔界から尽って来た槞色の髪を持つ少女。頭に1対 腰に2対の羽を持つ"
+	;"羽ばたくのではなく叭%HUNI("なお")%るように飛ぶ。"
+	;"こちらの言語が使えず、身振り手振りを駆使して斤%HUNI("逆あ")%ようとしている。"
+	;"%NAME:MASTER%に助けられて、しばらく借住する事变成了。"
+	;"故郷ではどうやら、宕っているようだが...?"
+	;"%HUNI("亜漢字3")%%HUNI("ゐに")%%HUNI("まふ")%事については興味があるが、%HUNI("はよ")%%HUNI("だ恣")%%HUNI("そそ")%ようなので未経験。"
+	;"而%HUNI("ひに")%な曜%HUNI("亜漢字3")%は伊る%HUNI("亜漢字1")%だが、叭%HUNI("なお")%る%HUNI("亜漢字1")%は%HUNI("亜漢字2")%に而%HUNI("つん")%ではない。"
+	;D20XX_OS_WindowInput:0  += @"ふりがな:　　 %HUNI("にす")%%HUNI("もむ")%%HUNI("小ゐ")%%HUNI("をね")%"
+	D20XX_OS_WindowInput:1  += @"名前:<font color='#%K15_VOICE_COLOR%'><b>⊥лыъвьыкцлр</b></font>  字(あざな)：<font color='#%K15_VOICE_COLOR%'>槞</font>  称号：<font color='#%K15_VOICE_COLOR%'>彁</font>  好感度：{CFLAG:TARGET:好感度} "
+	D20XX_OS_WindowInput:2  += @"　生萌颯沙:闢歴19713萌6颯2沙 (43萌)"
+	D20XX_OS_WindowInput:3  += @"　身高　　:{BASE:TARGET:身高}cm"
+	D20XX_OS_WindowInput:4  += @"　体重　　:0.5kg (質量:{BASE:TARGET:身高*110/100}kg)"
+	D20XX_OS_WindowInput:5  += @"　トップ　:{BASE:TARGET:胸圍,3}cm (%CONDS("罩杯尺寸")%cup) "
+	D20XX_OS_WindowInput:6  += @"　アンダー:{BASE:TARGET:アンダー胸圍,3}cm"
+	D20XX_OS_WindowInput:7  += @"　ウエスト:{BASE:TARGET:腰圍,3}cm "
+	D20XX_OS_WindowInput:8  += @"　臀圍　:{BASE:TARGET:臀圍,3}cm"
+	D20XX_OS_WindowInput:9  += @"────────────────────────────────────────────────────────────"
+	
+	D20XX_OS_WindowInput:10 += @"～胸　部～"
+	D20XX_OS_WindowInput:11 += @"アンダー{BASE:TARGET:アンダー胸圍}cmの細い体躯に、43萌の少女らしからぬ"
+	D20XX_OS_WindowInput:12 += @"%CONDS("罩杯尺寸")%cupのふくらみが実っている。"
+	D20XX_OS_WindowInput:13 += @"尽管穿着轮廓宽松肥大的衣物、"
+	D20XX_OS_WindowInput:14 += @"那份饱满依然能透过衣料被感知到。"
+
+	IF BASE:TARGET:罩杯 >= 12
+		D20XX_OS_WindowInput:15 += @"────────────────────────────────────────────────────────────<nonbutton pos='2500'><img src='K15_Prof_巨乳' height='600' ypos='-575'></nonbutton>"
+	ELSE
+		D20XX_OS_WindowInput:15 += @"────────────────────────────────────────────────────────────<nonbutton pos='2500'><img src='K15_Prof_普乳' height='600' ypos='-575'></nonbutton>"
+	ENDIF
+	D20XX_OS_WindowInput:16 += @"～私　处～"
+	D20XX_OS_WindowInput:17 += @"产卵经验少到仅用双手就能数清的"
+	D20XX_OS_WindowInput:18 += @"正处于少女向女性转变期的青涩果实"
+	D20XX_OS_WindowInput:19 += @"那个神圣之地尚未接纳过任何男性。"
+	D20XX_OS_WindowInput:20 += @"表面仍保持着光洁无毛的状态。"
+
+	D20XX_OS_WindowInput:21 += @"────────────────────────────────────────────────────────────<nonbutton pos='2500'><img src='K15_Prof_性器' height='600' ypos='-575'></nonbutton>"
+
+	
+	D20XX_OS_WindowInput:22 += @"～子宫内～"
+	
+	IF TALENT:TARGET:Ｖ妊娠不能
+		D20XX_OS_WindowInput:23 += @"尚未做好准备的未成熟子宫。"
+		D20XX_OS_WindowInput:24 += @""
+		D20XX_OS_WindowInput:25 += @""
+		D20XX_OS_WindowInput:26 += @""
+	ELSE 
+		SELECTCASE GETBITS(BASE:TARGET:バイオリズム, 0, 5)
+			;保卵期(子宮に卵を抱えている状態)
+			CASE 1
+				;EggImg = K15_卵子_殻２
+				D20XX_OS_WindowInput:23 += @"从腹部上方触摸能感受到外壳的存在和大小"
+				D20XX_OS_WindowInput:24 += @"由于子宫中存在巨大物体、身体误以为孕育了孩子"
+				D20XX_OS_WindowInput:25 += @"这种类似育有子嗣的假孕现象、让她时常感到幸福满足。"
+				D20XX_OS_WindowInput:26 += @"但在独处时却被类似孕期抑郁的孤独感和焦躁折磨。"
+			CASE 2
+				;EggImg = K15_卵子_殻３
+				D20XX_OS_WindowInput:23 += @"形成坚固外壳且正逐渐硬化的卵子。"
+				D20XX_OS_WindowInput:24 += @"虽已无法实现受精、但为了心爱之人"
+				D20XX_OS_WindowInput:25 += @"仍在持续茁壮成长变得又大又硬。"
+				D20XX_OS_WindowInput:26 += @"少女对存有卵子的子宫感到安心和舒适"
+			CASE 3
+				;EggImg = K15_卵子_卵
+				D20XX_OS_WindowInput:23 += @"未能完成受精的卵子的最终形态。"
+				D20XX_OS_WindowInput:24 += @"被坚硬外壳包裹的卵子让子宫误认为存有胎儿"
+				D20XX_OS_WindowInput:25 += @"催产素和费洛蒙驱使身体寻求作为配偶的雄性。"
+				D20XX_OS_WindowInput:26 += @"正在准备成为发情期求爱道具的状态。"
+			CASE 4
+				;EggImg = K15_卵子_小型
+				D20XX_OS_WindowInput:23 += @"刚从发育未成熟的少女卵巢中排出的"
+				D20XX_OS_WindowInput:24 += @"晶莹剔透的小巧卵子、仍显稚嫩脆弱。"
+				D20XX_OS_WindowInput:25 += @"尚未积蓄营养、且没有外壳的卵子"
+				D20XX_OS_WindowInput:26 += @"正等待着与心仪对象的精子结合。"
+			CASE 5
+				;EggImg = K15_卵子_中型
+				D20XX_OS_WindowInput:23 += @"已做好接纳精子准备的饱满卵子"
+				D20XX_OS_WindowInput:24 += @"性急的卵子不断向身体下达交配指令"
+				D20XX_OS_WindowInput:25 += @"在过量分泌的激素作用下、少女的整个身体"
+				D20XX_OS_WindowInput:26 += @"開始散发雌性特有的求爱费洛蒙。"
+			CASE 6 
+				;EggImg = K15_卵子_大型０
+				D20XX_OS_WindowInput:23 += @"积蓄充足营养处于最佳受精时机的卵子"
+				D20XX_OS_WindowInput:24 += @"因迟迟未见精液到来而在子宫内躁动不安"
+				D20XX_OS_WindowInput:25 += @"使发情相関的症状愈发严重。"
+				D20XX_OS_WindowInput:26 += @"激素分泌达到顶峰、正逐渐剥夺大脑的思考能力。"
+			CASE 7 
+				;EggImg = K15_卵子_大型１
+				D20XX_OS_WindowInput:23 += @"积蓄营养的卵子開始形成薄膜准备受精"
+				D20XX_OS_WindowInput:24 += @"随时准备以充足养分迎接精子的到来。"
+				D20XX_OS_WindowInput:25 += @"卵子不断催促着身体、要在薄膜完全形成前完成受精。"
+				D20XX_OS_WindowInput:26 += @"时刻准备着与心仪对象的精子结合"
+			CASE 8
+				;EggImg = K15_卵子_大型２
+				D20XX_OS_WindowInput:23 += @"薄膜已经形成的卵子、在成膜后仍持续膨胀、"
+				D20XX_OS_WindowInput:24 += @"此时已达人类卵子的8倍大小（直径约1.2毫米）"
+				D20XX_OS_WindowInput:25 += @"成长到肉眼可见的明显尺寸"
+				D20XX_OS_WindowInput:26 += @"携带数倍于人类卵子的营养殷切等待着精子"
+			CASE 9
+				;EggImg = K15_卵子_大型３
+				D20XX_OS_WindowInput:23 += @"急速膨大、直至可用手指捏起尺寸的卵子"
+				D20XX_OS_WindowInput:24 += @"已达到可受精尺寸的极限临界点、即将失去受精的机会。"
+				D20XX_OS_WindowInput:25 += @"卵子渴望着能突破自身加厚卵膜的"
+				D20XX_OS_WindowInput:26 += @"强力精子前来与自己完成受精结合。"
+			CASE 10
+				;EggImg = K15_卵子_殻１
+				D20XX_OS_WindowInput:23 += @"正在从卵子向卵形态转变的过渡阶段"
+				D20XX_OS_WindowInput:24 += @"意识到已经无法受精的卵子将积蓄的养分"
+				D20XX_OS_WindowInput:25 += @"只为转化为求爱道具以吸引心仪对象。"
+				D20XX_OS_WindowInput:26 += @"正在成型的硬壳也是在为将来保护胎儿的膜壳做练习"
+			CASEELSE 
+		ENDSELECT
+	ENDIF
+
+
+	D20XX_OS_WindowInput:22 += @"<nonbutton pos='2470'>周期%Temps:1%</nonbutton>"
+	D20XX_OS_WindowInput:28 += @"%EggImg%"
+	
+	;D20XX_OS_WindowInput:29 += @"<nonbutton pos='2500'>性欲%Temps%</nonbutton>"
+	D20XX_OS_WindowInput:32 += @"<nonbutton pos='90'><shape type='rect' param='0,-500,2400,590' color='#D0D0D0'></nonbutton>%Temperature%"
+	;D20XX_OS_WindowInput:33 += @"<nonbutton pos='90'><shape type='rect' param='0,-500,2420,620' color='#000000'></nonbutton>"
+	D20XX_OS_WindowInput:33 += @"────────────────────────────────────────────────────────────"
+	CALL NEW_PRINT_ABLH(TARGET)
+	FOR Lcount,0,6
+		ABLList:Lcount = %HTML_GETPRINTEDSTR(5-Lcount)%
+		CALL D20XX_NO_NOBR2(ABLList:Lcount)
+		ABLList:Lcount = %RESULTS%
+	NEXT
+	CLEARLINE 7
+	D20XX_OS_WindowInput:35 += @"%ABLList:0%"
+	D20XX_OS_WindowInput:36 += @"%ABLList:1%"
+	D20XX_OS_WindowInput:37 += @"%ABLList:2%"
+	D20XX_OS_WindowInput:38 += @"%ABLList:3%"
+	D20XX_OS_WindowInput:39 += @"%ABLList:4%"
+	D20XX_OS_WindowInput:40 += @"%ABLList:5%"
+	
+	D20XX_OS_WindowInput:38 += @"%Tachietica%"
+	D20XX_OS_WindowInput:40 += @"<button value='{DAILY_SC+9}' pos='3700'>[通常衣装]</button><button value='{DAILY_SC+10}' pos='4200'>[内衣]</button><button value='{DAILY_SC+11}' pos='4500'>[全裸]</button>"
+	
+	;D20XX_OS_WindowInput:41 += @"<font color='#FF0000'>０１２３４５６７８９</font><font color='#00FF00'>０１２３４５６７８９</font><font color='#0000FF'>０１２３４５６７８９</font><font color='#FF0000'>０１２３４５６７８９</font><font color='#00FF00'>０１２３４５６７８９</font><font color='#0000FF'>０１２３４５６７８９</font><font color='#FF0000'>０１２３４５６７８９</font><font color='#00FF00'>０１２３４５６７８９</font><font color='#0000FF'>０１２３４５６７８９</font><font color='#FF0000'>０１２３４５６７８９</font><font color='#00FF00'>０１２３４５６７８９</font><font color='#0000FF'>０１２３４５６７８９</font><font color='#FF0000'>０１２３４５６７８９</font><font color='#00FF00'>０１２３４５６７８９</font><font color='#0000FF'>０１２３４５６７８９</font>"
+	PRINTL
+	CALL D20XX_OS_Window(500,0,5600,43,,,@"%K15_UUI_WindowColor%")
+	
+	;#region 関閉ボタン
+		D20XX_OS_WindowInput:0 = <button value='{DAILY_SC+6}'>→</button>
+		D20XX_OS_WindowInput:1 = <button value='{DAILY_SC+6}'>関</button>
+		D20XX_OS_WindowInput:2 = <button value='{DAILY_SC+6}'>→</button>
+		D20XX_OS_WindowInput:3 = <button value='{DAILY_SC+6}'>闭</button>
+		D20XX_OS_WindowInput:4 = <button value='{DAILY_SC+6}'>→</button>
+		PRINTL 
+		CALL D20XX_OS_WindowSTRFORM(300,18,200,6,,,@"%K15_UUI_WindowColor%")
+		;UUI_Window = 
+	;#endregion
+;立ち絵用
+@OVERLAY_TCREATE(GRAPHICS_ID, ARGS, SPRITE_NAME, GRAPHICS_WIDTH, GRAPHICS_HEIGHT )
+	#DIM DYNAMIC LCOUNT
+	#DIM DYNAMIC SPLIT_COUNT
+	#DIM DYNAMIC GRAPHICS_ID
+	#DIM DYNAMIC GRAPHICS_WIDTH
+	#DIM DYNAMIC GRAPHICS_HEIGHT
+	#DIMS DYNAMIC SPRITE_NAME
+	#DIMS DYNAMIC SPRITE_COLOR
+	#DIMS DYNAMIC SPLIT_STR, 100
+	#DIM MEMO_TIME
+
+
+	;ARGS:0の内容を分割してスプライトの名前を取り出す
+	SPLIT ARGS, "<TCBG/>", SPLIT_STR
+	SPLIT_COUNT = RESULT
+
+	SIF GRAPHICS_ID == 0
+		GRAPHICS_ID = NO:TARGET + 5000
+
+	;画像の尺寸が決まっていないなら最初に認識されたスプライトの尺寸
+	IF !GRAPHICS_WIDTH || !GRAPHICS_HEIGHT
+		FOR LCOUNT, 0, SPLIT_COUNT
+			IF SPRITECREATED(SPLIT_STR:LCOUNT)
+				GRAPHICS_WIDTH = SPRITEWIDTH(SPLIT_STR:LCOUNT)
+				GRAPHICS_HEIGHT = SPRITEHEIGHT(SPLIT_STR:LCOUNT)
+				BREAK
+			ENDIF
+		NEXT
+	ENDIF
+
+	;ここまでに尺寸が決まってなかったら中断
+	SIF !GRAPHICS_WIDTH || !GRAPHICS_HEIGHT
+		RETURN 0
+
+	;作成済みの場合は書き換える
+	IF !GCREATE(GRAPHICS_ID, GRAPHICS_WIDTH, GRAPHICS_HEIGHT)
+		GDISPOSE GRAPHICS_ID
+		GCREATE GRAPHICS_ID, GRAPHICS_WIDTH, GRAPHICS_HEIGHT
+
+		;GRAPHICS_IDが立ち絵グラのものなら、STRにこのスプライトに対応する颜绘文字列を記録
+		SELECTCASE GRAPHICS_ID
+			;槞彁の立ち絵番号領域 5000+15
+			;どうせ各角色立ち絵は1角色1枚しかだ桑やろ
+			;5059は死神酱
+			CASE 5015;,5059
+				STR:GRAPHICS_ID = %ARGS%
+		ENDSELECT
+	ENDIF
+
+	;重ね作業
+	FOR LCOUNT, 0, SPLIT_COUNT
+		;デバッグ用
+		;PRINTFORML %SPLIT_STR:LCOUNT%
+		
+		IF SPRITECREATED(SPLIT_STR:LCOUNT)
+			GDRAWSPRITE GRAPHICS_ID, SPLIT_STR:LCOUNT, 0, 0, GRAPHICS_WIDTH, GRAPHICS_HEIGHT
+			CONTINUE
+		ELSEIF ISNUMERIC(SPLIT_STR:LCOUNT)
+			GSETBRUSH GRAPHICS_ID, TOINT(SPLIT_STR:LCOUNT)
+			GFILLRECTANGLE GRAPHICS_ID, 0, 0, GRAPHICS_WIDTH, GRAPHICS_HEIGHT
+			CONTINUE
+		ENDIF
+
+	;	MEMO_TIME = GETMILLISECOND()
+		IF CHECK_CREATED_CUTIN(SPRITE_NAME)
+			SPRITEDISPOSE @"%SPRITE_NAME%"
+		ENDIF
+		GDRAWSPRITE GRAPHICS_ID, SPRITE_NAME, 0, 0, GRAPHICS_WIDTH, GRAPHICS_HEIGHT
+
+	;	PRINTFORMW %SPRITE_NAME%の所要時間：{GETMILLISECOND() - MEMO_TIME}
+		;PRINTFORMW Debug100 SPRITE_NAME:%SPRITE_NAME%
+	NEXT
+	SPRITECREATE SPRITE_NAME, GRAPHICS_ID
+	RETURN 1

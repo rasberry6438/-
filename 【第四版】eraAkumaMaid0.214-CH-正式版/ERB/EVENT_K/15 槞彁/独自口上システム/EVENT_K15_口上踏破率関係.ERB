@@ -1,0 +1,122 @@
+﻿;ERHファイルにこれを追加する
+;#DIMS SAVEDATA K15_KojoList
+;#DIMS SAVEDATA K15_UsedKojo
+
+;-------------------------------------------------
+;全ての口上を記録するシステム(本文ではなく、口上呼び出し用引数だよ)
+;-------------------------------------------------
+@SET_K15_KojoList(ARGS)
+	#DIMS DYNAMIC TEXT_SEARCH
+
+	TEXT_SEARCH = <KSPLIT/>%ARGS%<KSPLIT/>
+
+	;経験済みなら追加せずに終了
+	SIF STRCOUNT(@"<KSPLIT/>%K15_KojoList%", TEXT_SEARCH)
+		RETURN 1
+
+	;経験していないなら追加
+	K15_KojoList = %K15_KojoList%%ARGS%<KSPLIT/>
+
+@Count_K15_CompleteRate
+	#DIM DYNAMIC Lcount
+
+	#DIM DYNAMIC AllKojoCount
+	#DIM DYNAMIC UsedKojoCount
+	#DIMS DYNAMIC SuperTemp,1000000;LOCALSの101個じゃ足りないよ～～～
+
+	#DIMS DYNAMIC UnWatchedKojoNames
+	#DIMS TEXT_SEARCH, 2
+
+	RESULT = 0
+	SPLIT K15_KojoList, "<KSPLIT/>", SuperTemp
+	AllKojoCount = RESULT
+
+	RESULT = 0
+	SPLIT K15_UsedKojo, "<KSPLIT/>", SuperTemp
+	FOR Lcount, 0, RESULT
+		SELECTCASE SuperTemp:Lcount
+			;文字
+			CASE ""
+				CONTINUE
+			CASEELSE
+				UsedKojoCount++
+		ENDSELECT
+	NEXT
+
+	PRINTFORML 現在的口上踏破率は[{UsedKojoCount}/{AllKojoCount}]です。
+	[IF_DEBUG]
+		RESULT = 0
+		SPLIT K15_UsedKojo, "<KSPLIT/>", SuperTemp
+		FOR Lcount, 0, RESULT
+			TEXT_SEARCH = <KSPLIT/>%SuperTemp:Lcount%<KSPLIT/>
+			TEXT_SEARCH:1 = <KSPLIT/>%SuperTemp:Lcount%：
+
+			IF STRCOUNTS(@"<KSPLIT/>%K15_KojoList%", TEXT_SEARCH, TEXT_SEARCH:1)
+				UnWatchedKojoNames += @"[%SuperTemp:Lcount%]"
+			ENDIF
+		NEXT
+		PRINTFORML まだ見ていない口上は
+		PRINTFORML %UnWatchedKojoNames%
+		PRINTFORML 。
+	[ENDIF]
+	WAIT 
+;-------------------------------------------------
+;踏破済み口上を記録するシステム
+;-------------------------------------------------
+@K15_UsedKojo(ARGS)
+	#FUNCTION
+	#DIM LCOUNT
+	#DIMS TEXT_SEARCH, 2
+
+	;既にイベント経験済みかを調べる
+	TEXT_SEARCH = <KSPLIT/>%ARGS%<KSPLIT/>
+	TEXT_SEARCH:1 = <KSPLIT/>%ARGS%：
+
+	RETURNF STRCOUNTS(@"<KSPLIT/>%K15_UsedKojo%", TEXT_SEARCH, TEXT_SEARCH:1)
+
+
+@SET_K15_UsedKojo(ARGS)
+	#DIM DYNAMIC LCOUNT
+	#DIMS DYNAMIC TEXT_SEARCH
+
+
+	TEXT_SEARCH = <KSPLIT/>%ARGS%<KSPLIT/>
+
+	;経験済みなら追加せずに終了
+	SIF STRCOUNT(@"<KSPLIT/>%K15_UsedKojo%", TEXT_SEARCH)
+		RETURN 1
+	
+	;口上全てのリストであるK15_KojoListに登録されていない奴だったら追加せずに終了
+	IF !STRCOUNT(@"<KSPLIT/>%K15_KojoList%", TEXT_SEARCH)
+		[IF_DEBUG]
+			HTML_PRINT (@"<font color='#FF0000'><b>注意！！！口上リストに未登録の口上が呼ばれたぞ！！！！ 呼ばれた口上の名前：%ARGS%</b></font>")
+			FORCEWAIT 
+		[ENDIF]
+		RETURN 1
+		
+	ENDIF
+
+	;経験していないなら追加
+	K15_UsedKojo = %K15_UsedKojo%%ARGS%<KSPLIT/>
+
+
+@DEL_K15_UsedKojo(ARGS)
+	#DIM Lcount
+	#DIMS DYNAMIC SuperTemp,1000000;LOCALSの101個じゃ足りないよ～～～
+
+	VARSET SuperTemp
+	;イベントごとに分解する
+	SPLIT K15_UsedKojo, "<KSPLIT/>", SuperTemp
+
+	;一旦CSTR:CEVENTを初期化
+	K15_UsedKojo = 
+
+	FOR Lcount, 0, RESULT
+		SELECTCASE SuperTemp:Lcount
+			;消す対称or空文字
+			CASE "", ARGS
+				CONTINUE
+			CASEELSE
+				K15_UsedKojo += @"%SuperTemp:Lcount%<KSPLIT/>"
+		ENDSELECT
+	NEXT

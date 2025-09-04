@@ -1,0 +1,959 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;22は角色番号に置換してください
+;-------------------------------------------------
+;お願い・交易での選択肢を追加。番号は80～89を使ってよい
+@WISH_K22_ADDSELECT
+IF CEVENT("新しい服")
+	IF CEVENT("美式校服化：琉娜")
+		STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("美式校服着用を止めて", 16)% … %CALLNAME:TARGET%に美式校服着用を止めてもらいます/
+	ELSE
+		STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("美式校服を着て", 16)% … %CALLNAME:TARGET%に美式校服を着て部活に着てもらいます/
+	ENDIF
+ENDIF
+SIF CEVENT("襲来")
+	STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("ラディーネの来訪頻度を変えて", 16)% … 通过%CALLNAME:TARGET%向拉蒂涅提出请求/
+
+;お願い・交易で増やした選択肢の地の文と台詞
+@KOJO_WISH_K22_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "美式校服着用を止めて"
+	PRINTFORMW %CALLNAME:TARGET%决定听从%CALLNAME:MASTER%的%ARGS%建议。
+	PRINTL 
+	PRINTFORML 「诶～？不换了吗？」
+	PRINTFORMW 「明白了、下次就穿着平时的衣服吧」
+	PRINTL 
+	PRINTFORMW %CALLNAME:TARGET%不再穿着情趣水手服了。
+	CALL DEL_CEVENT, "美式校服化：琉娜"
+CASE "美式校服を着て"
+	PRINTFORMW %CALLNAME:TARGET%决定听从%CALLNAME:MASTER%的%ARGS%建议。
+	PRINTL 
+	PRINTFORML 「嗯、希望我下次穿着情趣水手服来？」
+	PRINTFORMW 「好的、下次我会穿来的」
+	PRINTL 
+	PRINTFORMW %CALLNAME:TARGET%開始穿着情趣水手服了。
+	CALL SET_CEVENT, "美式校服化：琉娜"
+	;フラグを弄る場合はそれもここで行う
+CASE "ラディーネの来訪頻度を変えて"
+	PRINTFORMW %CALLNAME:TARGET%决定听从%CALLNAME:MASTER%的%ARGS%建议。
+	PRINTL 
+	PRINTFORML 「奶奶什么时候来？」
+	PRINTFORM 「现在是
+	IF CFLAG:3200 == 0
+		PRINTFORML 只在周末过来……要让她每天都来吗？」
+	ELSE
+		PRINTFORML 每天都过来…要改成只在周末过来吗？」
+	ENDIF
+	CALL PRINT_SELECT, "就这样做/还是算了吧"
+	IF RESULT == 0
+		PRINTFORMW 「知道了、我会告诉奶奶的」
+		IF CFLAG:3200 == 0
+			CFLAG:3200 = 1
+		ELSE
+			CFLAG:3200 = 0
+		ENDIF
+	ELSE
+		PRINTFORMW 「不改了吗？嗯、明白了」
+	ENDIF
+	;フラグを弄る場合はそれもここで行う
+ENDSELECT
+
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K22_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K22_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%做了%ARGS%的事。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%后%CALLNAME:TARGET%的反応
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%做了%ARGS%的事。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%后%CALLNAME:TARGET%的反応
+ENDSELECT
+
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K22_ADDSELECT
+IF CEVENT("襲来") && PLACE("旧宿直室")
+	IF CFLAG:3200 == 0
+		STR:選択肢 += "ラディーネと交流する/"
+	ELSEIF CFLAG:3200 == 1 && TEXTS("曜日") == "土" || TEXTS("曜日") == "日"
+		STR:選択肢 += "ラディーネと交流する/"
+	ENDIF
+ENDIF
+SIF ABL:信頼 >= 3 && COND("昼") && CEVENT("農作業済み") == 0
+	STR:選択肢 += "畑仕事を手伝う/"
+SIF ABL:信頼 >= 3 && PLACE("自宅") && CEVENT("家事手伝い済み") == 0
+	STR:選択肢 += "家事を手伝う/"
+
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K22_ADDSELECT, ARGS
+
+#DIM CHOICE
+#DIMS CHOICES
+
+SELECTCASE ARGS
+CASE "ラディーネと交流する"
+	IF CEVENT("ラディーネ交流：当日初回済み") == 0
+		PRINTFORMW 由于%CALLNAME:TARGET%%TEXTR(@"暂时离開座位/去查看田地情况后就一直没回来/说要「稍微去买个东西哦」而拜托看家")%、闲下来的%CALLNAME:MASTER%决定和拉蒂涅交流。
+		PRINTFORML 『%TEXTR(@"哎呀呀怎么了、找咱有什么事吗？/哦呀、女婿大人！…怎么？本来不是该轮到%CALLNAME:TARGET%了吗？/愿意陪我这把老骨頭还真是…太感谢了…/正好、正无聊得发慌呢…/哦呀、怎么了？要陪咱解闷吗？")%』
+		PRINTFORML 被搭话的拉蒂涅、%TEXTR(@"欢快地爬了过来/缓缓转向这边/雀跃地凑了过来")%。
+		CFLAG:3201 += 1
+		CALL SET_CEVENT, "ラディーネ交流：当日初回済み"
+	ELSE
+		PRINTFORML 『%TEXTR(@"又要来陪咱了吗？呵呵、真開心呀/陪着咱就这么有趣吗、这样啊这样啊♪/呼呼、接下来打算做什么呢？/总是来找咱的话、%CALLNAME:TARGET%可是会吃醋的哦？咯咯♪")%』
+	ENDIF
+	PRINTFORMW 要做什么呢？
+	PRINTFORML [0] 闲聊
+	PRINTFORML [1] 询问拉蒂涅的事
+	PRINTFORML [2] 按摩
+	PRINTFORML [3] 肢体接触
+	PRINTFORML [4] 性骚扰
+	PRINTFORML [5] 推倒
+	CALL INPUT_SELECT, 6
+	CHOICE = RESULT
+	SELECTCASE CHOICE
+	CASE 0
+		PRINTFORML 『%TEXTR(@"想和咱聊天嘛？好呀♪/呵呵、想和咱聊什么呀？/唔嗯、最近的的事都不太清楚呢…/怎么啦？有想和咱说的话吗？")%』
+		PRINTFORMW %CALLNAME:MASTER%与拉蒂涅就%TEXTR(@"最近的流行趋势/関于有点色色的/这几天的天气/喜欢的音乐/喜欢的事物/无関紧要的闲聊")%话题%TEXTR(@"聊得热火朝天/愉快畅谈/兴致勃勃地聊起来")%。
+	CASE 1
+		PRINTFORML 『想知道咱的事吗？唔嗯、其实咱也没有什么有趣的故事可以讲啦…』
+		PRINTFORMW 『嘛、算了、想问什么？』
+		PRINTFORML [0] 関于拉蒂涅本人
+		PRINTFORML [1] 関于丈夫
+		PRINTFORML [2] 関于儿子夫妇二人
+		PRINTFORML [3] 関于孙女
+		PRINTFORML [4] 其他各种问题
+		CALL INPUT_SELECT, 5
+		CHOICE = RESULT
+		SELECTCASE CHOICE
+		CASE 0
+			IF CEVENT("ラディーネ交流：本人の話済み") == 0
+				PRINTFORMW 『唔嗯…咱在现存的龙族里、也是最接近始祖的那批古龙而已啦…』
+				PRINTFORML 『虽说活了一万年左右、但像这样獲得智慧…真正懂事也就是最近两千年的事』
+				PRINTFORML 『更早以前的事…果然还是模模糊糊的…才、才不是老年痴呆啦？！』
+				PRINTFORMW 『因为上古时期的咱！就只会发狂吃东西睡觉嘛！』
+				PRINTFORML 『总、总之觉醒后的咱、作为能够沟通的龙遇到过形形色色的人物』
+				PRINTFORML 『跟着恶魔贵族学会了读写、了解人类世界的各种事…』
+				PRINTFORML 『从想要龙角碎片的魔术师那里、学会了化为人形的方法…』
+				PRINTFORMW 『还和其他獲得智慧、被尊为贤者的异种族交流过呢』
+				PRINTFORML 『咱也做过统帅龙族的首领之类的工作…不过后来有合适资质的后辈诞生后、就让位了』
+				PRINTFORMW 『嘛、或许也可能是因为咱作风太随便的缘故、之后就彻底被当成退休老太婆对待了』
+				PRINTFORML 『因为忌惮咱的实力和资历会威胁到他们的地位、甚至想赶走咱的蠢货也是有过的呢』
+				PRINTFORMW 『这种家伙就用咱的力量教会他们道理！毕竟不惹麻烦就不会遭报应嘛！』
+				PRINTFORML 『后来啊、儿子带着媳妇回来、在他们生下双胞胎前、咱都被当作家族里的怪脾气老太婆咯』
+				PRINTFORMW 『之后的事情下回再说吧…咱自己的过往差不多就这些啦』
+				PRINTFORML 『抱歉啊、是不是挺无聊的？』
+				PRINTFORMW 『要是聊到夫君的事情三天三夜都说不完呢…』
+				CALL SET_CEVENT, "ラディーネ交流：本人の話済み"
+			ELSE
+				IF RAND:4 == 0
+					PRINTFORML 『「今天的胖次是什么颜色」吗？』
+					PRINTFORML 『可惜、咱是不穿派啦』
+					PRINTFORML 『要亲自确认下吗？来嘛♪』
+					PRINTFORMW 拉蒂涅抓住%CALLNAME:MASTER%的手探入衣襟、指尖直接触碰到了她的乳頭和私处…。
+				ELSEIF RAND:3 == 0
+					PRINTFORML 『咱喜欢的类型？当然是强大聪慧又温柔体贴…像咱丈夫那样的男人啦♪』
+					PRINTFORML 『再者说、明知咱是上古巨龙还毫无畏惧的样子也很有趣』
+					PRINTFORMW 『不过汝可别因此对咱蹬鼻子上脸哦？不过就没大没小这点而言、汝倒是挺合咱胃口的♪』
+				ELSEIF RAND:2
+					PRINTFORML 『为什么遮住眼睛？最初、是为了遮住宝石义眼、避免招惹上不要命的盗贼』
+					PRINTFORML 『如今嘛、是为了纪念每天帮咱缠绷带的夫君、变成类似护身符一样的东西』
+					PRINTFORMW 『还有就是单纯觉得这样很酷嘛♪你们年轻人类男性不都是这样吗？』
+				ELSE
+					PRINTFORMW 『想要看咱的眼睛？喏』
+					PRINTFORML 被%CALLNAME:MASTER%央求的拉蒂涅、簌啦…一声爽快地揭開绷带。
+					PRINTFORMW 被旧伤疤纵向贯穿、失去光芒的灰白色左眼、以及深红色如宝石一般的右眼无神地凝望着虚空…。
+					IF RAND:2
+						PRINTFORML 『左眼是当年和夫君对决时被斩伤的、现在倒成了个念想…』
+						PRINTFORMW 拉蒂涅怜爱地抚摸着左眼的伤疤…。
+					ELSE
+						PRINTFORML 『右眼则是被个什么魔王给石化了、不过夫君灭了那厮、把咱这颗石頭眼珠给炼成了宝石义眼♪』
+						PRINTFORMW 拉蒂涅咔地抠下义眼、一边炫耀地说着『很漂亮吧？』一边将它递了过来…。
+					ENDIF
+				ENDIF
+			ENDIF
+		CASE 1
+			IF CEVENT("ラディーネ交流：旦那の話済み") == 0
+				PRINTFORML 『好吧、那就讲讲咱夫君的故事吧！』
+				PRINTFORMW 『我们的相遇…大约、是在数百年之前了』
+				PRINTFORML 『那时、人们对异种族的认知比现代人更深一些、但也更加排外』
+				PRINTFORMW 『尤其是那些煽动民众的宗教团体、以剿灭异族的名义掀起屠杀、像咱这样的幸存者只能逃往偏远之处…真是个黑暗的时代』
+				PRINTFORML 『就在人类气焰正盛的时候、咱的巢穴不幸被发现了』
+				PRINTFORML 『每天都会有宗教讨伐队和所谓的勇者、为了悬赏和财宝来取咱的性命』
+				PRINTFORMW 『不过他们都太弱了根本敌不过咱！反而让咱的危险评价直线上升、来送死的蠢货渐渐变少了』
+				PRINTFORMW 『就在这样的烦心日子里…咱遇到了命中注定的相遇』
+				PRINTFORML
+				PRINTFORMW 『那天出现的战士、和之前那些杂鱼根本不在同一个层次…简直是云泥之别』
+				PRINTFORML 『无论咱撕裂他多少次、碾碎他多少次、烧焦他多少次、那家伙都会再一次爬起像疯狗一样扑过来』
+				PRINTFORML 『咱在那场战斗中崩断了牙、打碎了爪、连龙角都被折断…体力也被渐渐耗尽了』
+				PRINTFORMW 『三天三夜的死斗最后无人獲胜、那男人劈開咱左眼的时候、一人一龙都筋疲力尽地倒下了』
+				PRINTFORML 『…等回过神来、咱不仅治好了自己的伤、居然连那男人的伤也顺便处理了』
+				PRINTFORML 『不惜连断裂的龙角也用上、甚至犯下龙族的大忌————让他饮下咱的血』
+				PRINTFORMW 『…现在想来、那个时候咱就已经坠入爱河了吧…』
+				PRINTFORML 『男人醒来的时候、咱正好为了方便治疗保持着人类姿态』
+				PRINTFORML 『看着满脸通红盯着咱身体看的傻小子、咱问他拼死屠龙是为了什么』
+				PRINTFORML 『他忽然严肃起来、说自己出身在某个山脚的穷乡村、冒险屠龙就为了赚赏金拯救总被饥荒所困的家乡』
+				PRINTFORML 『据他所说、那些宗教团体的贵族老爷们、悬赏了重金买龙族的命啊』
+				PRINTFORML 『望着他那双山泉水一般清澈的眼睛、不知怎么、咱就是觉得这小子肯定没有说谎』
+				PRINTFORML 『所以咱当场就决定、哪能因为这点小钱相互厮杀！直接掏出一大堆财宝塞给他』
+				PRINTFORML 『他被吓得直摆手、说太多了不能收、咱为了说服他收下还废了好多功夫』
+				PRINTFORMW 『最后、咱把断角的尖端塞给他当作屠龙的证明、他三两步一回頭鞠了好多个躬才离開』
+				PRINTFORML 
+				PRINTFORML 『几个月之后、那个男人又来了』
+				PRINTFORMW 『咱还想着、该不会是他见钱眼開、这次真要来取咱性命了什么的』
+				PRINTFORML 『结果他扑通一声跪在地上、说变卖财宝的钱拯救了村子、说咱是他的大恩人、之类的…』
+				PRINTFORMW 『还说什么、他能不能为咱做点什么呀、被弄瞎的眼睛会不会不方便啊』
+				PRINTFORML 『咱随口逗他说、要不留下来一起生活给咱解解闷、结果他居然当真了』
+				PRINTFORMW 『居然真把锅碗瓢盆都搬进巢穴、就这么開始和咱同居了！』
+				PRINTFORML 『…之后十几年的生活倒是过得挺滋润』
+				PRINTFORML 『反正外界都当咱已经死了、自然不会有赏金猎人上門打扰』
+				PRINTFORMW 『能在同一个巢穴中生活、各种各样的事都一起分享……有个伴的日子可比数千年的独居生活舒坦多了』
+				PRINTFORML 
+				PRINTFORML 『然后有一天、咱和他都意识到对方的感情…于是就结婚了』
+				PRINTFORMW 『一人一龙在巢穴里模仿着人类的婚礼仪式、交换了誓约的初吻、还许下了未来』
+				PRINTFORML 『…那晚的欢爱激烈地不得了呦～…♪因为都是第一次所以根本不懂节制嘛…♪』
+				PRINTFORML 『现在回忆起来、那里都会不自觉地湿润起来…什么的♪』
+				PRINTFORMW 『而且就在初夜、异种族之间的结合居然一发就怀上了！连咱都完全没想到会这样呢』
+				PRINTFORMW 『不过、之后就没再怀上过…结果生下来的只有%CALLNAME:TARGET%的父亲这一个独苗』
+				PRINTFORML 
+				PRINTFORMW 『…和咱结婚又交合之后、得到了妻子和孩子这些精神寄托的夫君、变得强得可怕』
+				PRINTFORMW 『当身怀六甲的咱还活着的这件事暴露的时候、他独自一人歼灭了来追捕的骑士团…』
+				PRINTFORMW 『当企图杀害咱的夫君和咱腹中的孩子、将咱据为己有的同族袭来时、被他一刀斩杀…』
+				PRINTFORMW 『某个魔王弄瞎我剩下的这只眼时、他那难以言表的暴怒模样…』
+				PRINTFORML 
+				PRINTFORMW 『…总之、就是这样和咱相伴而生的夫君…终究还是敌不过寿命啊』
+				PRINTFORML 『虽然给他当初饮下过咱的血、寿命是一般人的五倍…但在咱成千上万的岁月中仍是短短一瞬』
+				PRINTFORMW 『但是…共同度过的时光、最后相拥的温暖、咱绝对、永远也不会忘记…』
+				PRINTFORML 
+				PRINTFORMW 『…哎呀、变得这么伤感了？抱歉啦』
+				PRINTFORML 『嘛、関于咱夫君的故事大概就是这些了』
+				PRINTFORMW 『其实省略了很多细节、下次有机会的话咱再讲给你听吧！』
+				CALL SET_CEVENT, "ラディーネ交流：旦那の話済み"
+			ELSE
+				PRINTFORML 『好嘞、这次再讲讲咱夫君的故事吧！』
+				PRINTFORMW 『%TEXTR(@"那大概要追溯到○○○年前………/有一天咱正………/咱夫君可厉害了、比如说………")%%TEXTR(@"然后………/结果………/所以啊………")%』
+				PRINTFORMW 『%TEXTR(@"夫君他/夫君的/多亏了夫君")%………%TEXTR(@"……居然/……了/………之后")%………』
+				PRINTFORMW 『%TEXTR(@"后来啊/话说回来/这之后")%………%TEXTR(@"……之后/变成这样/接着")%………』
+				PRINTFORMW …拉蒂涅関于自己的夫君%TEXTR(@"是多么优秀的男人/的英勇传奇/的点点滴滴/的回忆")%、%TEXTR(@"滔滔不绝地讲述着/连绵不绝地诉说着/始终充满热情地叙述着")%…。
+			ENDIF
+		CASE 2
+			IF RAND:3 == 0
+				PRINTFORML 『咱家儿子虽然外表凶悍实力强大…但总觉得他过于老好人或者说性格软弱…』
+				PRINTFORML 『他既没有训斥过琉娜、也没和媳妇吵过架』
+				PRINTFORMW 『换个角度说、明明有着强大的力量却格外讨厌伤害他人的这份温柔也很难能可贵呢…』
+			ELSEIF RAND:2
+				PRINTFORML 『咱的儿媳妇是个開朗又标致的美人…不过生起气来可不得了…』
+				PRINTFORML 『会用长长的龙尾绞杀啊、招呼雷云引发暴风雨啦、那场面可真是』
+				PRINTFORMW 『就算你有一天遇到她、可千万不要上去性骚扰哦？』
+			ELSE
+				PRINTFORML 『儿子儿媳他们的恋爱…那可是经历过大风大浪的呢』
+				PRINTFORML 『当初儿子从远东的大陆上带回来一个龙新娘的时候…可把咱吓了一跳哇』※注：此处指代琉娜母亲的龙、原文为龍ryu、而非dragon、琉娜的母亲应该是传统的东方龙种。
+				PRINTFORML 『咱和儿子为了让那些歧视外族人的同族闭嘴、可是费了不少功夫…』
+				PRINTFORMW 『不过愿意孤身一人嫁到那种偏僻的地方、儿媳的这份胆量为她獲得认可也提供了很多帮助呢…』
+			ENDIF
+		CASE 3
+			IF RAND:3 == 0
+				PRINTFORML 『%CALLNAME:TARGET%啊…和过去不同、如今长成了活泼的孩子呢』
+				PRINTFORML 『当初嚷嚷着 要去人类的世界！的时候可把咱吓坏了…不过结果倒是皆大欢喜呢』
+				PRINTFORMW 『你和孙女她相处地这么好、咱是真的很感谢你哦』
+			ELSEIF RAND:2
+				PRINTFORML 『%CALLNAME:TARGET%的姐姐嘛…往好了说是恪守传统的龙族、往坏了说那就是个家里蹲』
+				PRINTFORML 『以前、%CALLNAME:TARGET%说要离開家的时候、她还大喊着「去那种地方到底有什么好的！」极力反对』
+				PRINTFORMW 『那大概是姐妹俩第一次吵架吧…』
+			ELSE
+				PRINTFORML 『%CALLNAME:TARGET%还有个双胞胎姐姐』
+				PRINTFORMW 『养大这对除了体型外貌以外都完全相反的双胞胎、可真是相当不容易呢…』
+			ENDIF
+		CASE 4
+			IF RAND:3
+				PRINTFORML 『如今的龙族、被那些讲究纯血主义的排外分子把持着』
+				PRINTFORMW 『这帮家伙到处欺负同族、还擅自把咱推崇为首领、日子过得别提多糟心了』
+				PRINTFORML 『所以我就带着全家都搬出来了！搬到了普通龙族根本不敢靠近的休眠火山里啦！』
+				PRINTFORML 『问咱家人的安危？好得很呢！倒不如说因此大家都能悠闲地生活、咱就觉得当初的决定是正确的！』
+				PRINTFORMW 『再说了、你看%CALLNAME:TARGET%不也活蹦乱跳地长大了嘛？』
+			ELSEIF RAND:2
+				PRINTFORMW 『汝可曾触碰过龙之逆鳞？』
+				PRINTFORML 『原本是东方龙独有的特征、但最近咱这边长这个的同族也变多了』
+				PRINTFORMW 『可能是由于混血导致的吧』
+				PRINTFORML 『咱身上倒是没长这危险的东西、而且长出来的位置也因龙而异…』
+				PRINTFORMW 『之前有蠢货乱摸咱儿媳和还是孩子的%CALLNAME:TARGET%的逆鳞、结果闹得不可開交呢…』
+			ELSE
+				PRINTFORMW 『姑且确认一下…%CALLNAME:TARGET%没有给你喝过血吧？』
+				PRINTFORML 『龙之血、古往今来所有知晓其存在的人都趋之若鹜的强力魔法素材、同时也是大补之物』
+				PRINTFORMW 『不老不死…虽然没办法达到、但可以让人蜕变成超越凡人的存在』
+				PRINTFORML 『古时饮用过龙之血的人、被奉为屠龙英雄受人敬仰、而这份贪婪继而引发更多的杀戮…』
+				PRINTFORML 『甚至导致只是与龙族有所関联的非龙种族、也会遭遇过血腥的屠杀甚至亡国灭种』
+				PRINTFORMW 『因此、在龙族之中、将自己的血液提供给外族饮用是禁忌中的禁忌』
+				PRINTFORMW （嘛、咱自己倒是破过例、罪过罪过）
+			ENDIF
+		ENDSELECT
+	CASE 2
+		PRINTFORML 『%TEXTR(@"来～得正是时候～、身上刚好感觉有些僵硬哇…/按摩的时候要是敢偷偷性骚扰…嘛、稍微一点点的话可以原谅哦♪/要给我按摩吗？真贴心呀♪")%』
+		IF RAND:3 == 0
+			PRINTFORML 『哦哦～、对对就是那里…♪』
+			PRINTFORML 『手法真不错啊…简直想让汝每天都来帮咱按呢…♪』
+			PRINTFORMW 被%CALLNAME:MASTER%%TEXTR(@"施展腰部指压/施展揉捏脖颈/捶肩")%的拉蒂涅、正舒服地发出热烫的喘息…。
+		ELSEIF RAND:2
+			PRINTFORML 『嗯～…真舒服啊～…』
+			PRINTFORML 『…開始犯困了…Ｚzｚ……』
+			PRINTFORMW 趴着接受%TEXTR(@"腰部周围/背部/大腿")%按摩的拉蒂涅、在按摩结束前就安稳地睡着了…。
+		ELSE
+			PRINTFORML 『啊～就是那里～…呜哇？！』
+			PRINTFORML 『好疼、啊疼疼疼疼！！汝在干什么啊！？』
+			PRINTFORMW 突然施加的强力足底穴位按摩、让拉蒂涅疼得不停挣扎…。
+		ENDIF
+	CASE 3
+		PRINTFORML [0] 抚摸頭发
+		PRINTFORML [1] 摸頭
+		PRINTFORML [2] 拜托膝枕
+		PRINTFORML [3] 亲吻
+		CALL INPUT_SELECT, 4
+		CHOICE = RESULT
+		SELECTCASE CHOICE
+		CASE 0
+			IF RAND:3 == 0
+				PRINTFORML 『%TEXTR(@"哎呀…松開了吗/唔、蒙眼布居然…")%』
+				PRINTFORMW %CALLNAME:MASTER%在抚摸拉蒂涅頭发的时候、手指不小心勾到了绷带导致蒙眼布松脱。
+				PRINTFORML 『%TEXTR(@"哦哦、不必在意/重新系上就好了")%…对了、能麻烦汝帮忙系上吗？』
+				PRINTFORMW %CALLNAME:MASTER%按照拉蒂涅的请求、将递过来的蒙眼布重新系上…。
+				PRINTFORMW 『%TEXTR(@"系得不错…以后每天都让汝帮忙来系吧♪/这温柔的手法…简直像夫君给我系时一样呢…/呵呵、对对…汝学得很快很厉害嘛♪")%』
+			ELSEIF RAND:2
+				PRINTFORML 『最近、虽然会洗頭但没怎么打理…可别闻味道啊？怪羞人的…』
+				PRINTFORML 拉蒂涅的发丝带着淡淡的熏香气息…。
+				PRINTFORMW 『这不是已经在闻了吗？！真是防不胜防啊！』
+			ELSE
+				PRINTFORML 『摸咱的頭发有那么有趣吗？』
+				PRINTFORML 『嚯～、这样啊…那就尽情摸吧♪』
+				PRINTFORMW 拉蒂涅正任由%CALLNAME:MASTER%用手指梳理自己的頭发…。
+			ENDIF
+		CASE 1
+			IF RAND:3 == 0
+				PRINTFORML 『怎么、摸咱的頭…是把咱错当成%CALLNAME:TARGET%那样的小姑娘了～？』
+				PRINTFORML 『太天真了！咱是抚摸的一方！汝才是该被抚摸的那边！』
+				PRINTFORMW …拉蒂涅在被%CALLNAME:MASTER%摸了个够后、突然这么说着反摸回来…。
+			ELSEIF RAND:2
+				PRINTFORML 『呼嗯…既然在摸頭、那要不要也摸摸龙角？』
+				PRINTFORML 『龙族本不会轻易让人触摸龙角、但咱已是老朽之躯没那么多讲究……若是汝的话可以破例哦』
+				PRINTFORML 『嗯…♪%TEXTR(@"跟%CALLNAME:TARGET%学的吗？力度掌握地不错嘛/对对、就是这种感觉…/呵呵、想起夫君了呢…")%♪』
+				PRINTFORMW 每当%CALLNAME:MASTER%的手拂过龙角、拉蒂涅都会发出舒服的鼻音…。
+			ELSE
+				PRINTFORML 『嗯嗯…呼啊～……被你摸着摸着就開始犯困了…』
+				PRINTFORML 『咱想就这样……稍微睡一会儿也没関系吧……？』
+				PRINTFORML 『…呵呵、真温柔呢……呼………呼………』
+				PRINTFORMW 拉蒂涅在%CALLNAME:MASTER%的抚摸中、打着轻柔的鼾声睡了大概半小时…。
+			ENDIF
+		CASE 2
+			IF RAND:3 == 0
+				PRINTFORML 『要膝枕吗？腿会累所以不太想做啊…』
+				PRINTFORML 虽然这么说、但拉蒂涅还是并拢双腿、啪啪地拍了拍大腿、示意可以躺上来…。
+				PRINTFORMW 『累了的话要换人哦？咱也想躺一躺呢』
+			ELSEIF RAND:2
+				PRINTFORML 『怎么、累了吗？』
+				PRINTFORML 『来、不嫌弃咱的腿就尽管躺吧』
+				PRINTFORMW 拉蒂涅将%CALLNAME:MASTER%搂进怀里、让其躺在自己大腿上…。
+			ELSE
+				PRINTFORML 拉蒂涅的手正轻柔的抚摸着、枕在自己大腿上的%CALLNAME:MASTER%的頭发…。
+				PRINTFORML 『乖宝宝～…好孩子…乖乖睡吧…♪』
+				PRINTFORMW 『…呵呵、困了的话就睡吧…』
+			ENDIF
+		CASE 3
+			PRINTFORML 『%TEXTR(@"怎么啦～？靠这么近…/呵呵、咱的脸上沾东西了吗？/嗯嗯～？脸贴得真近啊～")%』
+			PRINTFORM %TEXTR(@"笑眯眯的/察觉到什么的/鼻尖近到贴在一起的")%拉蒂涅
+			IF RAND:2
+				PRINTFORMW %TEXTR(@"的嘴唇、突然覆盖了%CALLNAME:MASTER%的嘴唇/突然送上深吻/突然偷袭亲吻过来")%…。
+				PRINTFORML 『%TEXTR(@"咕啾/啾啾/啾噜噜")%……%TEXTR(@"咕啾咕啾/滋溜、啪嗒啪嗒/咕啾咕啾")%……』
+				PRINTFORML 主动与%CALLNAME:MASTER%唇舌交缠的拉蒂涅、始终掌控着主导权…。
+				PRINTFORML 『%TEXTR(@"噗哈/哈呜/滋噜")%…%TEXTR(@"要把汝舌頭的味道、牢牢记住了…/呵呵、早就想这么做了吧/如何、和龙的深吻很厉害吧")%♪』
+				PRINTFORMW 终于舍得松開%CALLNAME:MASTER%嘴唇的拉蒂涅、%TEXTR(@"将混着双方唾液的液体咕咚咽下/分叉的舌尖正在微微颤抖/吐着长舌漏出得意的笑容")%…。
+			ELSE
+				PRINTFORMW %TEXTR(@"将自己的唇、轻轻地贴上去/缓缓送上亲吻/深深地亲吻上来")%…。
+				PRINTFORML 『%KOJO_RAND_K22("接吻")%』
+				PRINTFORML 拉蒂涅任凭%CALLNAME:MASTER%肆意亲吻、将其全部接受…。
+				PRINTFORML 『%TEXTR(@"啾啪/啾/哈啊")%…%TEXTR(@"怎么、这就满足了吗…/对咱这样的老太婆还这么热情呀？呵呵/嘻嘻、咱一把年纪都要沉浸其中了呢")%♪』
+				PRINTFORMW 当%CALLNAME:MASTER%移開嘴唇的时候、%TEXTR(@"拉蒂涅示威一样舔了舔舌頭/两人的唇间拉起一道热气腾腾的唾液银丝/面带红晕的拉蒂涅露出淘气的微笑")%…。
+			ENDIF
+		ENDSELECT
+	CASE 4
+		PRINTFORML [0] 抚摸屁股和尾巴
+		PRINTFORML [1] 揉弄胸部
+		PRINTFORML [2] 爱抚私处
+		PRINTFORML [3] 让她嗅闻阴茎
+		CALL INPUT_SELECT, 4
+		CHOICE = RESULT
+		SELECTCASE CHOICE
+		CASE 0
+			IF RAND:2
+				PRINTFORMW %CALLNAME:MASTER%将手伸向拉蒂涅的尾巴、%TEXTR(@"仔细感受着结实肌肉的触感/在尾巴根附近咔哧咔哧地抓挠/享受着顺滑鳞片摩擦的触感")%…。
+				PRINTFORML 『%TEXTR(@"嗯哼/哦呼/唔呼")%…♪%TEXTR(@"别、别闹…后背都起鸡皮疙瘩了…/喂、喂…好痒啊…/那、那里、痒痒的…")%♪』
+				PRINTFORMW 被玩弄尾巴的拉蒂涅、正扭捏的扭动着腰肢…。
+			ELSE
+				PRINTFORML %CALLNAME:MASTER%伸手%TEXTR(@"探入拉蒂涅的褲腰、尽情享受赤裸臀肉的柔软/大力抓握拉蒂涅的肉臀揉捏放松")%…。
+				PRINTFORML 『%TEXTR(@"嗯/啊/呜")%♪%TEXTR(@"汝真是喜欢这样啊/太、太放肆了…/太、太突然了…")%♪』
+				PRINTFORMW 突然被抚摸臀部的拉蒂涅身体猛地一颤、却就这样纵容着%CALLNAME:MASTER%的爱抚…。
+			ENDIF
+		CASE 1
+			IF CEVENT("ラディーネ交流：胸愛撫初回") == 0
+				PRINTFORML 『嗯？在意咱的胸部吗？呵呵、看这里♪』
+				PRINTFORMW 察觉到%CALLNAME:MASTER%的手逐渐伸向胸脯、拉蒂涅主动撩起衣襟、将沉甸甸的雪乳毫无保留地袒露出来。
+				PRINTFORML 如同西瓜一般大小的巨乳轻轻摇晃出乳浪、仿佛能听到乳肉相撞的啪嗒声、
+				PRINTFORMW 略大的嫣红乳頭点缀在稍小的嫩红乳晕上、嫩白乳肉上的丰润光泽一点也不像她这种年长者该有的模样…。
+				PRINTFORML 『哎呀呀、孙女婿的眼神好可怕、要把咱吃掉啦♪』
+				PRINTFORML 『想对咱的奶子做什么呀～？来呀来呀♪』
+				PRINTFORMW 被灼热的视线取悦到的拉蒂涅欢快地推挤摇晃双乳、翻涌的乳浪诱惑着%CALLNAME:MASTER%。
+				PRINTFORML 毫不客气地伸出手大力抓揉、拉蒂涅的双乳立刻回报以棉花糖般的软弹触感、从抓紧的指缝间溢出…。
+				PRINTFORML 『嗯啊…♪真是的、咱的奶子又不会逃走？稍微温柔点嘛♪』
+				PRINTFORMW 拉蒂涅嘴上娇嗔着、身体却配合地挺起胸脯任你揉捏、伴随着抓揉的动作不时发出一声甜美的娇吟…。
+				CALL SET_CEVENT, "ラディーネ交流：胸愛撫初回"
+			ELSE
+				IF RAND:3 == 0
+					IF RAND:3 == 0
+						PRINTFORML 『嗯、就是这样、用舌頭仔细拨弄…真棒…♪唔嗯♪』
+						PRINTFORMW 每当%CALLNAME:MASTER%的舌尖揉捻着挺立的乳頭、就会从拉蒂涅的唇间溢出细碎的娇吟…。
+						IF CFLAG:3205 == 0
+							PRINTFORML 『呵呵…汝舔得这么熟练、害咱的乳頭都硬邦邦地翘起来了…♪』
+							PRINTFORMW 看着%CALLNAME:MASTER%用舌頭侍弄勃起的乳頭、拉蒂涅发出甜腻的娇吟…。
+						ELSE
+							PRINTFORML 『ッ…咱的母乳味道如何？尽管喝个够吧…♪』
+							PRINTFORMW 乳頭溢出的浓稠母乳被卷入舌间、淡淡甘甜在口腔中扩散、就连身体深处也逐渐燥热起来…。
+						ENDIF
+					ELSEIF RAND:2
+						PRINTFORML 『呵呵♪像婴儿一样吮吸…真可爱呢♪』
+						PRINTFORMW 拉蒂涅搂住正含着自己的乳頭嘬吸的%CALLNAME:MASTER%、伸出手温柔地在頭顶抚摸着…。
+						IF CFLAG:3205 == 0
+							PRINTFORML 『啊啊♪别、别吸得那么用力呀♪乳頭都被拉长了啦♪』
+							PRINTFORML 当使坏的%CALLNAME:MASTER%突然加重吮吸力度、啾噗一声松開乳頭时、
+							PRINTFORMW 拉蒂涅的乳頭已经被吮吸到勃起、颤抖起来…。
+						ELSE
+							PRINTFORML 『嗯…♪都被你吸出这么多奶水了♪要全部都喝光哦♪』
+							PRINTFORML %CALLNAME:MASTER%顺从地大口吞咽甘甜的乳汁、喉结滚动声惹得拉蒂涅怜爱地伸过手搂住胸前的脑袋。
+							PRINTFORMW 在这期间拉蒂涅一直温柔地抚摸着%CALLNAME:MASTER%的后脑勺…。
+						ENDIF
+					ELSE
+						PRINTFORML 『呀啊♪别用牙齿咬嘛♪』
+						PRINTFORMW %CALLNAME:MASTER%叼住乳尖轻轻啮咬的时候、拉蒂涅发出甜美的喘息身体触电般颤抖…。
+						IF CFLAG:3205 == 0
+							PRINTFORML 『哈啊…被、被汝咬过的地方还在发麻呢…♪』
+							PRINTFORMW 松口之后赫然可见、拉蒂涅那嫣红的乳頭和乳晕上留下了%CALLNAME:MASTER%的齿痕…。
+						ELSE
+							PRINTFORML 『都、都怪你咬个不停…奶水都止不住了呀…♪』
+							PRINTFORMW %CALLNAME:MASTER%持续用牙齿轻轻碾着勃起的乳頭、将不断渗出的甘甜母乳全部咽下…。
+						ENDIF
+					ENDIF
+				ELSEIF RAND:2
+					IF RAND:3 == 0
+						PRINTFORML 『哎呀呀、别抓咱的乳頭呀…♪感觉要上瘾了…♪』
+						PRINTFORMW 乳頭被狠狠捏紧揉搓的感觉让拉蒂涅都酥麻地颤抖起来…。
+						IF CFLAG:3205 == 0
+							PRINTFORML 『啊嗯…♪刚、刚才那下差点让咱泄了身呢…♪』
+							PRINTFORMW 在数次抓捏乳頭的刺激下、拉蒂涅的股间已经渗出丝丝缕缕的雌性气息…。
+						ELSE
+							PRINTFORML 『啊啊♪母、母乳要…♪』
+							PRINTFORMW 持续揪着勃起的乳頭向外拉扯时、拉蒂涅香甜的乳汁居然像喷泉一样喷溅出来…。
+						ENDIF
+					ELSEIF RAND:2
+						PRINTFORML 『嗯嗯♪老是玩弄乳頭…汝这个小色鬼♪」
+						PRINTFORMW 重点挑逗她的乳頭、拉蒂涅半是懊恼半是沉溺地委身于快感之中…。
+						IF CFLAG:3205 == 0
+							PRINTFORML 『额嗯♪别、别往里按啦♪也不准往外拉…呀♪』
+							PRINTFORMW 将她的乳頭深深地按进乳肉又向外拉扯、尽情享受了一番这粉嫩乳頭的弹性…。
+						ELSE
+							PRINTFORML 『乳、乳汁都被浪费了啦♪啊啊……笨蛋♪』
+							PRINTFORMW 浸满母乳后湿漉漉的乳頭泛着水光、滑腻的手感变得更加诱人…。
+						ENDIF
+					ELSE
+						PRINTFORML 『啊、汝的手指…♪感觉要融化了啦…♪』
+						PRINTFORMW 乳頭和乳晕被反复亵玩的拉蒂涅双眸湿润、眼角染着艳红媚眼如丝…。
+						IF CFLAG:3205 == 0
+							PRINTFORML 『啊啊、那里不行呀、别揉那个敏感点啊…嗯♪』
+							PRINTFORMW 指尖突然加重力道揉捏乳頭、拉蒂涅带着颤音的甜腻喘息在房间里回荡…。
+						ELSE
+							PRINTFORML 『啊、啊、不可以、乳汁要溢出来了啦…♪』
+							PRINTFORMW 被指尖挤压碾磨的乳尖流出乳汁、香甜的气息弥散開来…。
+						ENDIF
+					ENDIF
+				ELSE
+					PRINTFORML 『%TEXTR(@"唔嗯♪汝这揉乳技巧倒是熟练…/对咱的奶子、可还满意呀？呵呵、那就好那就好/呼呼♪果然男人都很痴迷于女人的这对双乳呢")%♪』
+					IF RAND:3
+						PRINTFORMW %CALLNAME:MASTER%托起拉蒂涅那沉甸甸的巨乳、像在把玩弹力球一样从下往上拨弄着…。
+						IF CFLAG:3205 == 0
+							PRINTFORML 『唔、不帮咱再托高些吗？最近肩膀好酸呢～♪』
+							PRINTFORMW 嘴上这样開着玩笑、拉蒂涅却伸出手覆上%CALLNAME:MASTER%的手背、手把手引导着抚摸更进一步…。
+						ELSE
+							PRINTFORML 『嗯…嗯…♪看吧、乳汁都要晃出来啦♪』
+							PRINTFORMW 随着乳肉波涛般上下跃动、嫣红的乳頭渗出缕缕乳白的汁液…。
+						ENDIF
+					ELSEIF RAND:2
+						PRINTFORMW %CALLNAME:MASTER%迎面揉弄着拉蒂涅的巨乳、指节深深陷入乳肉的触感和乳尖在掌心摩擦带来的酥麻感、让人欲罢不能…。
+						PRINTFORML 『这么卖力地揉着…嗯、咱也感觉很舒服哦…♪真是好手法呢…♪』
+						IF CFLAG:3205 == 0
+							PRINTFORMW 拉蒂涅毫不掩饰欢愉的神色、随着娇躯轻颤、乳尖逐渐挺立…。
+						ELSE
+							PRINTFORMW 震颤的乳肉在%CALLNAME:MASTER%的抚弄下、温热的乳白色香甜汁液逐渐溢出…。
+						ENDIF
+					ELSE
+						PRINTFORMW %CALLNAME:MASTER%从身后托起拉蒂涅的丰腴双乳、像给奶牛榨乳那样伸出手从根部向尖端挤压…。
+						IF CFLAG:3205 == 0
+							PRINTFORML 『哈啊…♪这种揉法可挤不出母乳哦？』
+							PRINTFORMW 拉蒂涅嘴上这么说着、嫣红的乳頭却诚实地挺立起来微微颤抖…。
+						ELSE
+							PRINTFORML 『啊♪哦♪别这么用力挤呀…♪都要浪费了啦…♪』
+							PRINTFORMW 拉蒂涅穿着粗气、浓稠母乳正因手指的一次次捋动从乳頭处涌出…。
+						ENDIF
+					ENDIF
+				ENDIF
+			ENDIF
+		CASE 2
+			PRINTFORML 『%TEXTR(@"等、等下、至少先脱掉啦…/呀啊？！突、突然摸哪里呀…！/喂、汝、手在碰哪啊…！嗯啊…")%』
+			PRINTFORM 想要把%CALLNAME:MASTER%将手探入拉迪娜的褲子下、
+			IF RAND:3 == 0
+				PRINTFORMW 揉弄着她饱满的阴唇…。
+				PRINTFORML 『嗯嗯、别、别挠那里呀…』
+				PRINTFORMW 拉迪娜扭动腰肢抗议着、可腿间早已濡湿、发情雌性的气息逐渐逸散…。
+			ELSEIF RAND:2
+				PRINTFORMW 两指突然捻住充血挺立的阴蒂反复揉捏…。
+				PRINTFORML 『呜啊♪这样、腰要软掉了啦♪』
+				PRINTFORMW 敏感带被粗暴蹂躏的拉蒂涅膝盖打颤、浑身酥麻地瘫软下去…。
+			ELSE
+				PRINTFORMW 指尖陷入她那早已湿漉漉的蜜穴…。
+				IF RAND:3 == 0
+					PRINTFORML 『咿啊♪那里、不要、嗯啊啊～♪』
+					PRINTFORML 柔软紧实的穴肉被粗糙的手指反复剐蹭着、拉蒂涅夸张地后仰着身子、
+					PRINTFORMW 喷涌的爱潮浸透了%CALLNAME:MASTER%的手指、连她的皮褲都染出大片湿痕…。
+				ELSEIF RAND:2
+					PRINTFORML 『别、别故意搞出声音来…！太羞耻了…』
+					PRINTFORML 不满足于只是这样小幅度地抠挖、将她的褲子褪下来之后、用双手扒開她湿润的穴口
+					PRINTFORMW 混着泡沫的爱液拉出银丝垂落在地、浓郁的雌性气息弥漫開来…。
+				ELSE
+					PRINTFORML 『唔哦…♪…都、都怪汝、手指太会玩弄了…』
+					PRINTFORML 沾满粘稠爱液的手指从她恋恋不舍的穴口拔出、两指之间的粘稠爱液拉起丝线
+					PRINTFORMW 拉蒂涅满脸通红地别过脸去、耳尖泛起可爱的潮红…。
+				ENDIF
+			ENDIF
+		CASE 3
+			PRINTFORML %CALLNAME:MASTER%揭開下装露出半勃的肉棒、在%TEXTR(@"坐着/仰躺")%的拉蒂涅面前晃了晃…。
+			PRINTFORMW 『…嗯？%TEXTR(@"嗅嗅/嗯嗯/嘶～呼")%……%TEXTR(@"哈啊……/好浓的…")%♪』
+			IF RAND:4 == 0
+				PRINTFORML 『啊啦…果然♪如咱所料、真是个精神饱满的家伙呢…♪』
+				IF TALENT:MASTER:阴茎 >= 2
+					PRINTFORMW （和夫君的尺寸不相上下…不、或许更胜一筹呢…♪）
+				ELSEIF TALENT:MASTER:阴茎 == 0
+					PRINTFORMW （虽然尺寸普通……但这雄性气息倒是极品…♪）
+				ELSE
+					PRINTFORMW （大小、形状、气味…都让咱想起夫君当年呢…♪）
+				ENDIF
+				CALL PRINT_SELECT, "让她含入口中/暂且忍耐"
+			ELSEIF RAND:3 == 0
+				PRINTFORML 『光是被咱闻气味就变得这么精神抖擞了吗？』
+				PRINTFORMW 『那么、该怎么疼爱这根小可爱呢…♪』
+				CALL PRINT_SELECT, "塞进她湿润的唇间/暂且忍耐"
+			ELSEIF RAND:2
+				PRINTFORML 『唔、雄性荷尔蒙的气息越来越浓郁了呀♪气味的源頭是这里嘛～♪』
+				PRINTFORMW 拉蒂涅故作不知地耸动着鼻翼、朱唇轻启缓缓贴近%CALLNAME:MASTER%那根昂扬的肉棒…。
+				CALL PRINT_SELECT, "任由她吸吮/抽身退開"
+			ELSE
+				PRINTFORML 『突然发什么情哇？把这根腥膻～的坏东西突然顶过来♪』
+				PRINTFORMW 『莫非想要咱用嘴来…侍奉汝吗？呵呵♪』
+				CALL PRINT_SELECT, "让她含入口中/暂且忍耐"
+			ENDIF
+			IF RESULT == 0
+				IF RAND:3 == 0
+					PRINTFORML 按捺不住的%CALLNAME:MASTER%揪住拉蒂涅的龙角、猛地挺腰抵開她的唇齿…。
+					PRINTFORMW 『…呜？嗯咕呜！？咳、咳咳、呕唔！』
+					PRINTFORML 『%KOJO_RAND_K22("強制口交")%』
+					PRINTFORMW 就这样将拉蒂涅涨红的脸庞按在腿间、看着阴毛在她的俏脸上刮蹭的时候、射精的欲望越发强烈。
+					PRINTFORML 『呜咕……呕咳咳？！咕啾咕啾……咕啾……咕嘟……』
+					PRINTFORML 到达极限的%CALLNAME:MASTER%、用力挺腰抵住拉蒂涅的喉咙灌入一股股浓精…。
+					PRINTFORML 『………咳哈啊！咳咳！…%TEXTR(@"就、就算咱是龙族、这样粗暴也太过分了…/原来你喜欢霸王硬上弓吗…？/对、对老人家……还真是不留情面呢…？")%』
+					PRINTFORMW 拉蒂涅一边咳嗽一边埋怨着、从她凌乱的发丝之间、能看到蒙眼带被泪水沁出湿痕、…。
+				ELSEIF RAND:2
+					PRINTFORML %CALLNAME:MASTER%轻轻挺腰、肉棒顺势滑入拉蒂涅那微张的嘴巴…。
+					PRINTFORMW 『嗯…♪啾…啾噜…咕噗噗…♪』
+					PRINTFORML 『%KOJO_RAND_K22("口交")%』
+					PRINTFORMW 随着%CALLNAME:MASTER%缓慢摆动的节奏、拉蒂涅灵巧地吞吐着、发丝随着动作摆动…。
+					PRINTFORML 『唔嗯♪…嗯、唔……啾噜…♪』
+					PRINTFORML 在%CALLNAME:MASTER%精関失守的刹那、拉蒂涅喉頭滚动着将精液全部接纳。
+					PRINTFORML 『嗯啊…♪%TEXTR(@"呼姆呼姆（射精量相当多呢）/哈姆哈姆（分量十足嘛）/咕嘟咕嘟（居然这么浓稠）")%…♪咕啾、咕啾……咕嘟…♪』
+					PRINTFORMW 拉蒂涅特地张大嘴巴展示着残留在口腔中的白浊粘液、然后闭上嘴巴咀嚼起来发出黏腻的水声…。
+					PRINTFORML 『嗯咕、咳…%TEXTR(@"不嚼碎些会呛到呢/唔、喉咙还有点哽住呢/呵呵、雄性气息浓得化不開呢")%』
+					PRINTFORML 『不过、看好了～哟…汝的精液咱一滴不剩全吞下去啦…♪呵呵♪』
+					PRINTFORMW %CALLNAME:MASTER%轻轻抚摸着拉蒂涅的頭顶、再次张開嘴巴表示精液全都喝下去的她露出得意的笑容。
+				ELSE
+					PRINTFORML 静待片刻后、拉蒂涅灵巧地探出舌尖、缓缓将%CALLNAME:MASTER%的肉棒缠住含入口中…。
+					PRINTFORMW 『啧啧♪啾噜啾噜♪啾噜、啾噜噜…♪』
+					PRINTFORML 『滋滋、啾噜、咕啾、咕啾…滋噜噜噜♪』
+					PRINTFORMW 埋頭在%CALLNAME:MASTER%胯间的拉蒂涅、%TEXTR(@"从唇缝间伸出舌尖绕缠肉茎/加大吮吸力度发出下流的响声")%、专注地深喉侍奉着…。
+					PRINTFORML 『嗯咕♪滋溜、咕啾♪咕嘟咕嘟、咕嘟…♪』
+					PRINTFORML 从根部到冠状沟都被紧紧吮吸的快感、让%CALLNAME:MASTER%很快就濒临绝顶。
+					PRINTFORMW 拉蒂涅像吸食蜜露一样嘬紧%CALLNAME:MASTER%的肉棒、满脸陶醉地吞咽着精浆…。
+					PRINTFORML 『…啾噜…嗯咕♪呼～、%TEXTR(@"汝这精华、黏得像乌冬面一样呢/咳、失礼了…这倒是、意外地浓稠呢/相当美味呢…这样浓稠、都可以说是精乳了吧？")%♪』
+					PRINTFORMW %CALLNAME:MASTER%的肉棒顶端和拉蒂涅的唇瓣间、粘连着一缕缕白浊的银丝…。
+				ENDIF
+			ELSE
+				PRINTFORML %CALLNAME:MASTER%灵巧地抽身躲过她的嘴唇、而拉蒂涅
+				PRINTFORML 『啊、喂、别跑啦♪』
+				PRINTFORMW 这样说着、循着气味追了过来。
+				PRINTFORMW 就这样持续了好一会儿、保持着下半身暴露的%CALLNAME:MASTER%和四肢着地的拉蒂涅玩起了追逐游戏…。
+				SIF RAND:3
+					PRINTFORMW …正当他们玩得兴起、%CALLNAME:TARGET%回来把两个人都训斥了一顿…。
+			ENDIF
+		ENDSELECT
+	CASE 5
+		IF CEVENT("ラディーネ交流：当日性交済み")
+			PRINTFORML 『啊…？怎么、还想做吗？』
+			PRINTFORML 『咱已经累啦、剩下的下次再说好不好…』
+			PRINTFORMW 被拉蒂涅拒绝了…。
+		ELSE
+			IF CEVENT("ラディーネ交流：性交初回") == 0
+				PRINTFORML 『哎呀…突然这是作甚？』
+				PRINTFORML 被%CALLNAME:MASTER%抓住手腕、轻松压制在身下的拉蒂涅。
+				PRINTFORMW 当感知到%CALLNAME:MASTER%将勃起的肉棒按在自己的小腹上时、立刻就察觉了这其中的意图。
+				PRINTFORML 『哦…汝是想要抱咱吗？哦～嗯…有意思…』
+				PRINTFORMW 拉蒂涅故作为难地沉吟片刻之后。
+				PRINTFORML 『嘛、也没什么不行？毕竟孙女也信任汝、应当不会太过分』
+				PRINTFORML 『再说…从你的动作和气味上就知道、把咱当成猎物一样的心思早就暴露了呢♪』
+				PRINTFORMW 爽快答应的拉蒂涅、却反手将%CALLNAME:MASTER%轻轻托起推開…。
+				PRINTFORML 『手頭只剩下这件衣裳、只好拜托汝帮忙脱掉啦？』
+				PRINTFORML 说着将衣物脱光的拉蒂涅、她那与%CALLNAME:TARGET%相比毫不逊色的结实肌肉上、
+				PRINTFORMW 隐约可见的细小伤疤与触目惊心的陈旧伤疤错落交织…。
+				PRINTFORML 『抱歉啊、这副身子不怎么好看吧？』
+				PRINTFORML 『…嗅嗅…不过肉棒还是精神抖擞嘛♪呼、真叫人欢喜…♪』
+				PRINTFORML 当拉迪娜嗅到%CALLNAME:MASTER%即使是在看到这些可怖的疤痕仍然硬的像铁的肉棒上传来的味道、
+				PRINTFORMW 露出了灿烂的媚笑原地坐下大大张開双腿、将湿润的阴唇分開露出里面粉嫩的媚肉…。
+				PRINTFORML 『瞧、爱液都拉丝了不是？实话说、咱最近也饥渴难耐了哟…♪』
+				PRINTFORML 『啊对了、反正咱这子宫也怀不上种了』
+				PRINTFORMW 『汝就随心所欲地把肉棒插进来…当作泄欲小穴尽情使唤也没関系哦♪』
+				PRINTFORML 当充血的龟頭抵住穴口时、咕啾…响起了淫靡的水声。
+				PRINTFORMW 『嗯、对、就是这样…♪啊、哈啊………♪』
+				IF TALENT:MASTER:阴茎 >= 3
+					PRINTFORML 『呼呜…虽然有点紧、但这感觉…♪咱可馋死这个了…♪』
+					PRINTFORMW 拉蒂涅饥渴的蜜穴、即使被%CALLNAME:MASTER%那过于粗大的肉棒贯穿、仍然欢愉地流下情涎…。
+				ELSEIF TALENT:MASTER:阴茎 == 0
+					PRINTFORML 『嗯…呼……没関系哟、这不是好好进来了嘛♪』
+					PRINTFORMW 拉迪娜饥渴的蜜穴、即使是短小的肉茎也贪婪地吞入吮吸、像咀嚼一样蠕动着…。
+				ELSE
+					PRINTFORML 『哈啊、嗯…♪这种紧贴感…就是这个、咱想要的就是这个啊…♪』
+					PRINTFORMW %CALLNAME:MASTER%的肉棒、严丝合缝地契入拉蒂涅那饥渴的蜜穴、被温暖紧实的媚肉紧紧缠绕…。
+				ENDIF
+				PRINTFORML 穴肉黏腻缠绕上来的触感、仅仅只是插入就催生出惊人的快感。
+				PRINTFORML 『啊哦♪哦吼♪太激烈了♪咱的小穴就感觉那么舒服吗♪』
+				PRINTFORMW %CALLNAME:MASTER%强忍着射精冲动挺腰猛干、用激烈的抽插将拉蒂涅顶得花枝乱颤。
+				PRINTFORML 『啊呜、不行了呀♪太久没做了♪要去了、要去了啊啊♪』
+				PRINTFORML 随着拉蒂涅的腰肢痉挛一样弹跳、穴肉猛然收缩让%CALLNAME:MASTER%再也把持不住精関…。
+				PRINTFORML 『嗯啊啊～～～っ♪好烫…♪久违的精种呢…哈啊、要怀上了…♪』
+				PRINTFORML 『…開玩笑啦♪刚才不是说过了？咱这子宫早就不能生育了』
+				PRINTFORML 『比起这个…呼嗯、射完还这么精神呢♪』
+				PRINTFORMW 承受完精液的拉蒂涅媚眼如丝、穴肉突然夹紧缠住仍然硬挺的肉棒。
+				PRINTFORML 『这样可不算完哦？不如继续…嗯哦♪』
+				PRINTFORMW 已经射过一次后变得更加耐久的%CALLNAME:MASTER%顺势抱住拉蒂涅的双腿、開始了第二轮激战…。
+				PRINTFORML 
+				PRINTFORML 『呼呜～～～…哈啊、哈、呼呜～……』
+				PRINTFORML 『射了…这么多啊…♪让咱想起和夫君的新婚夜了…♪』
+				PRINTFORML 大约一小时后、承受完%CALLNAME:MASTER%的兽欲的拉蒂涅、瘫软在床上剧烈地喘息着
+				PRINTFORMW 蜜穴仍随着余韵阵阵收缩、将结块的白浊咕嘟咕嘟地往外吐着、脸上挂着餍足的笑容。
+				PRINTFORML 『投降投降、汝的肉棒太厉害、咱的腰都直不起来啦』
+				PRINTFORML 『啊～、要是被%CALLNAME:TARGET%看到这幅模样可就糟糕啦～…』
+				PRINTFORML 当拉蒂涅笑着对%CALLNAME:MASTER%说出这句话的瞬间。
+				PRINTFORMW 「我回来啦～、你们两个没做什么奇怪的……事……」
+				PRINTFORML 『啊…』
+				PRINTFORMW 啊…
+				PRINTFORML 「咿呀呀呀呀呀呀呀呀～～～～～～～～～～～～～～！！！？！！？！！？！！！？」
+				PRINTFORMW …后来、全裸的%CALLNAME:MASTER%和拉蒂涅就这样并排正坐、被%CALLNAME:TARGET%训斥了整整一个小时…。
+				CALL SET_CEVENT, "ラディーネ交流：性交初回"
+			ELSE
+				PRINTFORML %CALLNAME:MASTER%%TEXTR(@"将拉蒂涅按倒在榻榻米上/从正面将拉蒂涅拥入怀中/从后方将拉蒂涅揽入臂弯")%…。
+				PRINTFORMW 『%TEXTR(@"唔嗯…♪衣服还没褪尽就……真是个急性子…♪/真是的、被这么所求咱可吃不消…呵呵♪/呵呵……可别让%CALLNAME:TARGET%那丫頭发现…明白？/居然又对咱这把老骨頭发情……嘛倒也不讨厌♪/汝既然床上功夫这么厉害、可得温柔些哦♪/怎么？又想和咱云雨了？真拿你没办法…♪")%』
+				PRINTFORML 
+				IF RAND:6 == 0
+					PRINTFORML 『啊、啊、啊嗯…这、这样子实在太羞耻了、会被看光的呀…♪』
+					PRINTFORMW %CALLNAME:MASTER%将拉蒂涅悬抱在敞開的窗边、摆出火车便当后入位向上冲撞她的蜜穴…。
+					PRINTFORML 『嗯、啊啊、要涌出来了…出来了…♪嗯哈啊……♪』
+					PRINTFORML 伴随着抵住子宫口的激烈射精、拉蒂涅也无法继续忍耐、挺起腰肢对准窗外失禁、晶莹的液体划出一道漂亮的弧线…。
+					PRINTFORMW 『…在这种露天场合做爱、咱的脑袋和私处都变得松垮垮啦…♪』
+				ELSEIF RAND:5 == 0
+					PRINTFORML 『啾…♪啾啵…咕啾、啾呜♪』
+					PRINTFORMW %CALLNAME:MASTER%与拉蒂涅、以对面站立位纠缠在一起、在湿吻声中持续激烈抽插…。
+					PRINTFORML 『哈啊…要射了吗？好哦、就这样在里面…♪啾啾、滋噜♪』
+					PRINTFORML 稍微分開双唇请求着内射然后又恋恋不舍地接着亲吻、拉蒂涅主动抱了上来、四肢像树袋熊一样牢牢抱紧…
+					PRINTFORMW %CALLNAME:MASTER%伸出手托住她颤抖的双臀、一边舌吻一边将精液注入她的蜜穴深处…。
+				ELSEIF RAND:4 == 0
+					PRINTFORML 『哈、竟敢抓住龙角…♪何等放肆、该遭天谴的家伙♪』
+					PRINTFORML 拉蒂涅被后入位插入、龙角被当作把手抓紧、激烈地冲撞着。
+					PRINTFORMW 嘴上不然饶人地笑骂着%CALLNAME:MASTER%、蜜穴却仅仅缠绕住肉棒…。
+					PRINTFORML 『哦♪哦♪要被射了、顶到深处了、去…去了～～～～♪』
+					PRINTFORMW 被精液射入体内的时候、拉蒂涅的腰肢止不住的痉挛、伸出尾巴缠住%CALLNAME:MASTER%的身体一起达到高潮…。
+				ELSEIF RAND:3 == 0
+					PRINTFORML 『呼、哈啊、哈啊♪看呀看呀、怎么样♪咱娴熟的腰技♪』
+					PRINTFORMW 骑在%CALLNAME:MASTER%身上的拉蒂涅亢奋扭腰、巨乳随着动作剧烈晃动。
+					IF RAND:2
+						PRINTFORML 『啊…汝的手…♪又大又温暖呢…♪』
+						PRINTFORMW 将无处安放的手和她如恋人般十指相扣的瞬间、蜜穴猛地收缩绞住肉棒。
+						PRINTFORML 『呵呵、汝的精液要涌上来了呢…♪就这样、射出来吧♪高潮吧♪啾呜♪』
+						PRINTFORMW 保持着十指交扣的姿势拉蒂涅俯下身来索取亲吻、一股股浓精全都注入她的子宫…。
+					ELSE
+						PRINTFORML 但在%CALLNAME:MASTER%即将射精的瞬间、拉蒂涅的挺腰动作突然静止…。
+						PRINTFORMW 『哈啊、哈啊……抱、抱歉啦、让咱稍微歇口气嘛……腰快要断掉了……』
+						PRINTFORML 抓紧
+						PRINTFORMW 『诶？』
+						PRINTFORML 噗嗤！
+						PRINTFORMW 『咿呀！！？去、去了～～～～………♪』
+						PRINTFORML 惩罚擅自停下的拉蒂涅、抓住她停在半空的腰肢然后重重顶入最深处、
+						PRINTFORMW 突遭袭击的拉蒂涅子宫口被顶穿、在悲鸣中潮喷着达到高潮…满脸痴态地瘫软下来…。
+					ENDIF
+				ELSEIF RAND:2
+					PRINTFORML 『呼、哈啊、哈…♪别、别揉那么用力…♪唔嗯、嗯♪』
+					PRINTFORMW 拉蒂涅抵着墙站立、被%CALLNAME:MASTER%从身后抱住把玩着双乳、下体不断承受着冲击。
+					PRINTFORML 『呜、哦♪去了…呜♪呼呜呜～～～…♪』
+					PRINTFORMW 乳尖被突然捻住的瞬间、滚烫的白浊也在体内扩散、拉蒂涅仰頭发出绵长的喘息…。
+				ELSE
+					PRINTFORML 『哦哦、啊啊啊！呜哦哦哦！太、太刺激了…！啊啊嗯♪』
+					PRINTFORML 在正常位下被顶到蜜穴深处敏感点的同时、乳頭也被执拗地吮吸着
+					PRINTFORMW 双腿本能地缠住%CALLNAME:MASTER%的腰际、发出高亢的喘息声…。
+					PRINTFORML 「啊啊、呜啊啊啊～～～♪啊、哈啊……哈啊…♪」
+					PRINTFORMW 随着%CALLNAME:MASTER%浓稠的精液喷涌而入、拉蒂涅后仰頭颅露出雪白的脖颈、痉挛着达到高潮…。
+				ENDIF
+			ENDIF
+			CALL SET_CEVENT, "ラディーネ交流：当日性交済み"
+			CFLAG:3203 += 1
+		ENDIF
+	ENDSELECT
+CASE "畑仕事を手伝う"
+	PRINTFORMW %CALLNAME:MASTER%%CALLNAME:TARGET%%TEXTR("に誘われ畑を見に行った/の畑仕事を手伝った/の農作業に付き合った")%。
+	IF CFLAG:躁动难忍 || COND("発情期")
+		CALL SIMULATE_TRAIN_FIRST
+		LOCALS = %TEXTR("黄瓜/苦瓜/茄子/西葫芦")%
+		IF RAND:2 && PENIS(MASTER)
+			PRINTFORML 
+			PRINTFORMW …本应是这样的。
+			IF RAND:2 && COND("夏")
+				CALL PRINT_STRW, @"「%TEXTR(@"对不呜_H_　对呜起呜呜_H_　居然偷懒用蔬菜来自慰、对不起_H_/果、果然、虽然蔬菜也不错_H_　呀啊啊_H_　还是无套肉棒更舒服_H_")%」_"
+				PRINTFORML %TEXTR(@"把工作推给了%CALLNAME:MASTER%/假装去上厕所")%却拿着刚收獲的%LOCALS%背地里埋頭自慰着的%CALLNAME:TARGET%还是被%CALLNAME:MASTER%发现了、
+				PRINTFORM %TEXTR(@"一边追问着是不是经常做这种事一边询问%LOCALS%和肉棒哪个更好、/无视了语无伦次的辩解/一边舔着沾满白色爱液的%LOCALS%")%
+				IF RAND:2
+					PRINTFORM 保持着对面立位
+					CALL SIMULATE_TRAIN_COM, 63, 3
+				ELSE
+					PRINTFORM 保持着背面立位
+					CALL SIMULATE_TRAIN_COM, 64, 3
+				ENDIF
+				PRINTFORMW %TEXTR("激烈地/数次地/一个劲地")%%TEXTR(@"侵犯着%CALLNAME:TARGET%/冲撞着%CALLNAME:TARGET%的子宫/发泄着兽欲和忧愤")%…。
+				PRINTFORMW 毫不留情的%TEXTR("热烈做爱/强奸行为")%让%CALLNAME:TARGET%%TEXTR("几乎要哭出来、口齿不清地请求原谅/发出谄媚的甜蜜娇声/的腿和腰肢不住地痉挛")%、穴内也紧紧地收缩起来。
+				PRINTFORMW 兴奋不已的%CALLNAME:MASTER%在%TEXTR("满足于%CALLNAME:TARGET%的痴态之前/彻底让%CALLNAME:TARGET%了解到偷懒的代价之前/在%CALLNAME:TARGET%几乎失去反应之前/在%CALLNAME:TARGET%完全站不起来之前")%、%TEXTR("不停地给穴内播种/不停地将子种灌注进穴内")%…。
+			ELSE
+				CALL PRINT_STRW, @"「%TEXTR(@"好、好啊_H_　再多_H_　再多_H_/啊嗯_H_　刚刚的、刚才的好棒_H_　比起耕种土地、还是想要被别人耕耘小穴啊_H_/是、是啊_H_　要是、躁动难忍的话、就不能专心做农活了_H_　所以没办法啊_H_")%」_"
+				PRINTFORML %TEXTR("好像是故意的/简直像是在邀请一样")%摇晃着屁股逐渐靠近、%TEXTR("挥洒着/播撒着")%汗水和女性气息%CALLNAME:TARGET%的让%CALLNAME:MASTER%没法再忍耐、
+				PRINTFORM %TEXTR("像野兽一样袭击上来/放下了工作")%
+				IF RAND:2
+					PRINTFORM %TEXTR("前戏也草草了事、/胡乱地")%夺走了嘴唇、%TEXTR("抬起腿来/紧紧地相互拥抱")%、保持着对面立位
+					CALL SIMULATE_TRAIN_COM, 63, 5
+				ELSE
+					PRINTFORM %TEXTR("用手撑着/身体紧贴着")%附近的%TEXTR("树木/墙壁")%、%TEXTR("紧紧抓住腰肢/抓住了胳膊让上半身挺起/把尾巴抱在怀中")%进行了背面立位
+					CALL SIMULATE_TRAIN_COM, 64, 5
+				ENDIF
+				PRINTFORMW %TEXTR("激烈地/数次地/一个劲地")%%TEXTR(@"侵犯着%CALLNAME:TARGET%/冲撞着%CALLNAME:TARGET%的子宫/发泄着兽欲和忧愤")%…。
+				PRINTFORMW %CALLNAME:TARGET%好像也从一開始就这么想、配合着%CALLNAME:MASTER%的动作摆动腰肢、穴内有节奏地收缩着、頭发凌乱、发出仿佛连校舍里都能听得到的尖叫、狂乱着。
+				PRINTFORMW 彼此仿佛在梦中一样、在时间和精力允许的范围内尽情享受了%TEXTR("野外開发的性交/野外性交")%时%TEXTR("不停地给穴内播种/不停地将子种灌注进穴内")%…。
+			ENDIF
+		ELSE
+			CALL PRINT_STRW, @"「%TEXTR(@"…我、我去稍微休息一下哦…/抱、抱歉……我去下厕所……/哈啊………/呐、这边的工作、可以交给你吗？…好像哪里有点不舒服…")%_H_」_"
+			IF RAND:2 && COND("夏")
+				CALL PRINT_STRW, @"（%TEXTR(@"嗯呜、我又要忍不住了…/这样在里面摩擦的话绝对会很舒服吧…/赶快_H_　好像赶紧自慰啊")%_H_）_"
+				PRINTFORMW 因为%TEXTR("两颊绯红的/总觉得心不在焉的")%%CALLNAME:TARGET%拿着%LOCALS%频繁地%TEXTR("脱离工作/前去厕所")%所以没能像想象中那样进展
+				CALL SIMULATE_TRAIN_COM, 3, 5
+			ELSE
+				PRINTFORMW 因为%TEXTR("脸颊绯红的/视线躲躲闪闪的")%%CALLNAME:TARGET%频繁的%TEXTR("休息/脱离工作/前去厕所")%所以没能像想象中那样进展…。
+				CALL SIMULATE_TRAIN_COM, 3, 5
+			ENDIF
+		ENDIF
+		;経験や珠などの獲得量計算
+		CALL SIMULATE_TRAIN_CALC
+		;結果発表
+		CALL SIMULATE_TRAIN_SHOW
+		
+		CALL CALC, "欲求不満解消", TARGET, 5
+	ELSE
+		IF RAND:2
+			PRINTFORMW %TEXTR("这样、再把腰玩下去一些、对了对了、做的很好♪/呼、稍微休息一下吧…用这个去买你喜欢的饮料吧/嗯…石灰和肥料…就这种量吧…/哎呀～、果然还是人多好办事啊/嗯、从这里到那里可以交给你吗/既锻炼了身体又补贴了伙食、大家都应该在田里干活啊")%
+		ELSE
+			SELECTCASE TEXTS("季節")
+				CASE "冬"
+					PRINTFORMW %TEXTR("虽然牛蒡在早春也能采摘，但我果然还是喜欢冬天采摘的啊～/白菜、菠菜、春菊…都收獲了很多呢、下次要不要和部员的大家一起吃火锅啊？/无论是用来涮火锅还是作为佐料、大葱不管有多少都不会困扰的/啊哈哈哈…你看这个萝卜、形状好奇怪啊")%
+				CASE "秋"
+					PRINTFORMW %TEXTR("嗯、要是能种出蘑菇就最好了…/这个胡萝卜、洗过后可以生吃…要吃吗？/南瓜储藏到冬天的话会变得好吃…多多益善/红薯大丰收！要稍微烤些吃吗？/收獲了很多土豆啊…要在长出芽之前吃掉哦")%
+				CASE "夏"
+					PRINTFORMW %TEXTR("紫苏长势比想象中还要厉害呢…只用作挂面的佐料可能会用不完…/西葫芦和苦瓜…都长得好大啊。这些都可以吃哦/毛豆和蚕豆都收獲了很多啊、今晚喝啤酒吧～♪/那边的西红柿、可以洗着吃哦。刚采下来的时候最美味了/辣椒和茄子的长势都不错啊、很适合天妇罗和油炸呢")%
+				CASE "春"
+					PRINTFORMW %TEXTR("那边、那边的是西红柿和茄子的苗…这边是青椒和黄瓜…/你看、很大的卷心菜吧？是要浅渍呢～、还是做成卷心菜蛋糕呢？/终～于能够收獲竹笋了啊～、从种植到收獲要三年啊、三年/刚收獲的洋葱、无论是用来做沙拉还是用来烤牡蛎都可以")%
+			ENDSELECT
+		ENDIF
+	ENDIF
+	CALL SET_CEVENT, "農作業済み"
+CASE "家事を手伝う"
+	PRINTFORMW 要帮什么忙呢？
+	PRINTFORML [0] 清扫
+	PRINTFORML [1] 洗涤
+	IF COND("夜")
+		PRINTFORML [2] 料理
+		CALL INPUT_SELECT, 3
+	ELSE
+		CALL INPUT_SELECT, 2
+	ENDIF
+	CHOICE = RESULT
+
+	SELECTCASE CHOICE
+	CASE 0
+		PRINTFORMW 「%TEXTR("哦、/嗯？/诶？")%要帮我打扫吗？%TEXTR("谢谢！/好開心啊♪/得救了啊～")%」
+		PRINTFORM 「%TEXTR("那么就/嗯、今天是…")%、
+		IF RAND:3 == 0
+			PRINTFORMW 用抹布擦窗户和地板」
+			PRINTFORMW 「用抹布擦的话、%CNAME("一人称")%来用干抹布的…能拜托你用湿抹布擦吗？」
+		ELSEIF RAND:2
+			PRINTFORMW 洗掉厨房水槽的水垢吧」
+			PRINTFORMW 「虽然这么说、不过要先喷上柠檬酸除垢剂之后再擦哦、很简单吧？」
+		ELSE
+			PRINTFORMW 能拜托你清扫浴室吗」
+			PRINTFORMW 「能够适当活动身体、我觉得是一项不错的运动哦」
+		ENDIF
+	CASE 1
+		PRINTFORMW 「%TEXTR("哦、/嗯？/诶？")%要帮我洗衣服吗？%TEXTR("谢谢！/好開心啊♪/得救了啊～")%」
+		IF COND("昼")
+			IF RAND:3 == 0
+				PRINTFORMW 「今天也是好天气！所以刚洗完的这些堆积成山的衣服、拜托你了！」
+				PRINTFORMW 「那么%CNAME("一人称")%就去偷懒…就去休息了…不行吗？」
+			ELSEIF RAND:2
+				PRINTFORMW 「好、偶尔也把被子晾凉吧」
+				PRINTFORMW 「总是因为做这样那样的事、很快就湿透了不能盖了啊」
+			ELSE
+				PRINTFORMW 本来想要赶紧晾干衣服的%CALLNAME:TARGET%、突然停止了动作、面对着%CALLNAME:MASTER%的内褲凝固住了…。
+				PRINTFORMW 「……………哈啊、什、什么奇怪的事情都没考虑哦？！」
+			ENDIF
+		ELSE
+			IF RAND:3 == 0
+				PRINTFORMW 「…你是不是从刚才開始就一直在挑内褲叠啊？是错觉？」
+				PRINTFORMW 在%CALLNAME:TARGET%诧异的目光注视下、把洗好的衣服叠起来了…。
+			ELSEIF RAND:2
+				PRINTFORMW 「T恤的折叠方法？捏住肩膀和侧腹部附近…就这样…」
+				PRINTFORMW 「呼呼、需要练习呢」
+			ELSE
+				PRINTFORMW 本来想要赶紧叠好衣服的%CALLNAME:TARGET%、突然停止了动作、面对着%CALLNAME:MASTER%的内褲凝固住了…。
+				PRINTFORMW 「………咕咚………哈啊、什、什么奇怪下流的事情都没考虑哦？！」
+			ENDIF
+		ENDIF
+	CASE 2
+		PRINTFORMW 「%TEXTR("哦、/嗯？/诶？")%要帮我做晚饭吗？%TEXTR("谢谢！/好開心啊♪/得救了啊～")%」
+		PRINTFORM 「今天的晚饭是…
+		IF RAND:2 && COND("冬")
+			PRINTFORM 寒いから
+			IF RAND:5 == 0
+				PRINTFORMW 泡菜火锅！」
+				PRINTFORMW 「把拉面放进去…诶？这不是拉面？阿嘞？」
+			ELSEIF RAND:4 == 0
+				PRINTFORMW 汤豆腐！」
+				PRINTFORMW 「我想要萝卜泥…小心不要蹭到手上哦」
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 常夜锅！」
+				PRINTFORMW 「%CNAME("二人称")%放进去的切片生姜和大蒜很有效、一点也不油腻啊！」
+			ELSEIF RAND:2
+				PRINTFORMW 咖喱锅！」
+				PRINTFORMW 「可以选择面条或芝士焗饭、敬请期待呢」
+			ELSE
+				PRINTFORMW 鸡肉汆锅！」
+				PRINTFORMW 「蔬菜和鸡肉就交给你来切吧、%CNAME("一人称")%来做肉丸子」
+			ENDIF
+		ELSEIF RAND:2 && COND("夏")
+			PRINTFORM 暑くて野菜たく桑あるから
+			IF RAND:3 == 0
+				PRINTFORMW 油炸茄子青椒搭配挂面！」
+				PRINTFORMW 「冷的蘸汁和素天妇罗很配！而且只是挂面的话营养会跟不上的」
+			ELSEIF RAND:2
+				PRINTFORMW 蔬菜咖喱！」
+				PRINTFORMW 「用到的蔬菜基本都是%CNAME("一人称")%种出来的！怎么样、很厉害吧♪」
+			ELSE
+				PRINTFORMW 炒苦瓜！」
+				PRINTFORMW 「炒过之后意外地会去除掉苦味呢…尝尝看」
+			ENDIF
+		ELSE
+			IF RAND:4 == 0
+				PRINTFORMW 米粉！」
+				PRINTFORMW 「由%CNAME("二人称")%来切菜、由%CNAME("一人称")%来炒菜！完美！」
+			ELSEIF RAND:3 == 0
+				PRINTFORMW 炒面！」
+				PRINTFORMW 「无论是酱汁还是盐、挑喜欢的加吧！」
+			ELSEIF RAND:2
+				PRINTFORMW 什锦烧！」
+				PRINTFORMW 「好、把铁板拿出来、铁板！」
+			ELSE
+				PRINTFORMW 德式煎土豆！」
+				PRINTFORMW 「我也准备烤大蒜吐司、所以要把大蒜涂在法式面包上哦」
+			ENDIF
+		ENDIF
+	ENDSELECT
+	PRINTFORML 
+	PRINTFORML …%CALLNAME:TARGET%的家事を手伝ったことで好感度が上がった
+	CFLAG:好感度 += 15
+	PRINTFORMW 好感度+15
+	CALL SET_CEVENT, "家事手伝い済み"
+ENDSELECT
+
+;-------------------------------------------------
+;约会行き先の選択肢を追加。
+@DATE_K22_ADDSELECT
+;ここで増やした選択肢を選ぶと、それがSAVESTR:约会 に代入される仕組みです
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+@KOJO_DATE_K22_ADDSELECT
+SELECTCASE SAVESTR:约会
+CASE "追加選択肢その１"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %CALLNAME:TARGET%对%SAVESTR:约会%的反応
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+CASE "追加選択肢之２"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %CALLNAME:TARGET%对%SAVESTR:约会%的反応
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+ENDSELECT
+;-------------------------------------------------
+;换地方指令の選択肢を追加
+@MOVE_K22_ADDSELECT
+IF PLACE("自宅") && COND("周日")
+	STR:選択肢 += "旧宿直室/"
+ELSEIF PLACE("部室")
+	STR:選択肢 += "旧宿直室/"
+ENDIF
+CALL SET_CEVENT, "自室：旧宿直室"
+
+;STR:選択肢 += "追加選択肢之２/"
+
+

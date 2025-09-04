@@ -1,0 +1,790 @@
+﻿;添い寝のメイン関数
+@K15_添い寝_main(呼び出し方法 = "你発")
+	#DIM Temp1
+	#DIM LCOUNT
+	#DIMS BaseViews,44
+	#DIMS Temps1,10
+	
+	;你発/槞彁発の二択
+	;你発：互动追加指令
+	;槞彁発：TARGETが槞彁かつ、夜→朝への時間でお誘い
+	#DIMS DYNAMIC 呼び出し方法
+
+	#DIM BtnSize
+	#DIM DYNAMIC SelectBtnNo
+	#DIM DYNAMIC 終了通知
+	#DIM DYNAMIC 終了通知ボタンセレクト
+	REDRAW 0
+	FONTREGULAR
+
+	;初期化関係はこれでくくらないとだめだよ
+	IF FLAG:SELECT_USERSHOP != 998
+		最終添い寝実行日 = DAY
+		添い寝入眠度 = 0
+		添い寝背景差分 = 
+		添い寝興奮度 = BASE:TARGET:欲求不満*100
+
+		;色々初期化する
+		;ターン初期化
+		TCVAR:TARGET:回合数 = 0
+		;前のターンの挿入などの状態初期化
+		TCVAR:TARGET:PREVPLAY = 0
+		;推倒確率の補正を初期化
+		TCVAR:TARGET:推倒頻度補正 = 0
+		;好感度の記録
+		TCVAR:TARGET:好感度開始前 = CFLAG:TARGET:好感度
+		TCVAR:TARGET:收集的魂開始前 = BASE:TARGET:魂
+
+		STR:今回指令 = 添い寝開始メッセージ
+		終了通知 = 0
+	ENDIF 
+
+	WHILE 1
+		;寝落ちしたら終了するか聞く
+		IF 終了通知 == 0
+			IF 添い寝入眠度 >= 10000
+				終了通知 = 1
+			
+
+				CALL K15_添い寝_Draw
+				VARSET STR
+				
+				CALL LIBT_セリフ(@"「呼...呼...」")
+				CALL LIBT_地の文(@"在%CALLNAME:MASTER%的怀中、槞彁发出一阵轻轻的睡息...")
+				CALL LIBT_地の文(@"看起来已经睡着了呢")
+				CALL K15_添い寝メッセージウィンドウ
+
+				CALL OVERLAY_GCREATE, 1561264, @"黒px+0x80000000", MIN(1100,CLIENTWIDTH()), 850
+				CBGSETG 1561264, 0, 0, 1
+				
+				;PRINTFORML 
+				;CALL D20XX_OS_Window(((6000-300)/2),15,1200,7,10,"#FFFFF",@"%K15_UUI_WindowColor%")
+				CALL K15_添い寝ボタン生成(((6000-400)/2),(11+5),"K15S_ボタン_悄悄的出口る",0)
+				CALL K15_添い寝ボタン生成(((6000-400)/2),(11+7),"K15S_ボタン_まだ続ける",1)
+				CALL K15_非活性添い寝ボタン生成(((6000-400)/2),(11+9),"K15S_ボタン_恶作剧する",2)
+				
+
+				
+				FOR Lcount,0,2
+					BaseViews:Lcount = %HTML_GETPRINTEDSTR(1-Lcount)%
+					CALL D20XX_NO_NOBR2(BaseViews:Lcount)
+					BaseViews:Lcount = %RESULTS%
+				NEXT
+				;なんか最終行にこの選択肢が無いと駄目っぽいので
+				CLEARLINE 2
+				HTML_PRINT @"<nobr>%BaseViews:0%<button value='0' pos='1000000000'>[0]選択肢１(これを選ぶと结束回合します)</button></nobr>"
+				HTML_PRINT @"<nobr>%BaseViews:1%<button value='1' pos='1000000000'>[1]選択肢２(これを選ぶと结束回合しません)</button></nobr>"
+				;ここすっげぇ特殊な処理してるから注意
+				IF FLAG:SELECT_USERSHOP == 998 || 呼び出し方法 == "槞彁発"
+					$添い寝終了ループ1
+					INPUT 
+					FONTREGULAR
+					IF RESULT == 0;TFLAG:结束回合が1の時は既に一度終了ボタンを
+						CALL SETFLAG, "结束回合"
+						CALL EFFECT_ALLRESET
+						RETURN 0
+					ELSEIF RESULT == 1
+						;什麼也不做
+					ELSE 
+						GOTO 添い寝終了ループ1
+					ENDIF
+				ELSE 
+					FONTREGULAR
+					RETURN 0
+				ENDIF
+				RESULT = -1
+			ENDIF 
+		ENDIF
+
+		;SHOP画面のように
+		;セリフ→システム回りのパラメータ変更→(有れば)セリフ更新＆指令セレクト画面
+		;というサイクルで進む形にしようかなと
+
+		;指令セレクト布トでの口上を書き換える場合はこちら
+		;あと、添い寝開始時のメッセージとかもここ
+		
+		
+		;指令セレクト布ト
+			CALL K15_添い寝_Draw
+
+			CALL K15_添い寝メッセージウィンドウ
+			
+			CALL K15_添い寝ボタン
+			INPUT
+			SelectBtnNo = RESULT
+			IF SelectBtnNo == 添い寝終了ボタン
+				CALL K15_添い寝_Draw
+				CALL K15_添い寝メッセージウィンドウ
+
+				CALL OVERLAY_GCREATE, 1561264, @"黒px+0x80000000", MIN(1100,CLIENTWIDTH()), 850
+				CBGSETG 1561264, 0, 0, 1
+				
+				CALL D20XX_OS_WindowInput_Constructor
+				D20XX_OS_WindowInput:0 = <button value="0">[结束了]</button>
+				D20XX_OS_WindowInput:1 = <button value="1">[まだ続ける！]</button>
+				PRINTFORML 
+				CALL D20XX_OS_Window((122*50/2-1200/2),19,1200,3,10,"#FFFFF",@"%K15_UUI_WindowColor%")
+				
+				
+				
+				FOR Lcount,0,2
+					BaseViews:Lcount = %HTML_GETPRINTEDSTR(1-Lcount)%
+					CALL D20XX_NO_NOBR2(BaseViews:Lcount)
+					BaseViews:Lcount = %RESULTS%
+				NEXT
+				;なんか最終行にこの選択肢が無いと駄目っぽいので
+				CLEARLINE 2
+				HTML_PRINT @"<nobr>%BaseViews:0%<button value='0' pos='1000000000'>[0]選択肢１(これを選ぶと结束回合します)</button></nobr>"
+				HTML_PRINT @"<nobr>%BaseViews:1%<button value='1' pos='1000000000'>[1]選択肢２(これを選ぶと结束回合しません)</button></nobr>"
+				
+				;ここすっげぇ特殊な処理してるから注意
+				IF FLAG:SELECT_USERSHOP == 998 || 呼び出し方法 == "槞彁発"
+					$添い寝終了ループ2
+					INPUT 
+					FONTREGULAR
+					IF RESULT == 0;TFLAG:结束回合が1の時は既に一度終了ボタンを
+						CALL SETFLAG, "结束回合"
+						CALL EFFECT_ALLRESET
+						RETURN 0
+					ELSEIF RESULT == 1
+						;什麼也不做
+					ELSE 
+						GOTO 添い寝終了ループ2
+					ENDIF
+				ELSE 
+					FONTREGULAR
+					RETURN 0
+				ENDIF
+				RESULT = -1
+			ENDIF
+			CALL K15_添い寝指令(RESULT)
+			
+			IF RESULT != -1 || RESULT != -2
+			
+			;口上表示周り
+				CALL K15_添い寝口上処理()
+				FOR Lcount, 0, 10
+					;指令セレクト画面で口上を就这様表示する可能性が有るので一旦避難
+					Temps1:Lcount = %STR:Lcount%
+				NEXT 
+				
+				CALL PRINT_SUIW
+
+			;系统信息表示周り
+				
+				;CALL K15_添い寝系统信息
+				FOR Lcount, 0, 10
+					;指令セレクト画面で口上を就这様表示する可能性が有るので一旦避難
+					STR:Lcount = %添い寝システム文:Lcount%
+				NEXT 
+				CALL K15_添い寝_Draw
+				CALL K15_添い寝メッセージウィンドウ
+				
+				FOR Lcount, 0, 10
+					;避難終了
+					STR:Lcount = %Temps1:Lcount%
+				NEXT 
+				WAIT 
+			ENDIF 
+	WEND
+	;PRINTFORMW Debug201 添い寝終了するわよ
+
+@K15_添い寝_Draw
+	#DIM Temp1
+	#DIM LCOUNT
+	#DIMS BaseViews,44
+	#DIMS Temps1
+
+	#DIM BtnSize
+	#DIM DYNAMIC SelectBtnNo
+	;#region グラを生成する
+		CALL EFFECT_ALLRESET
+		CLEARLINE LINECOUNT
+		CALL K15_添い寝背景描画(添い寝背景差分)
+	;#endregion
+
+	;#region 一番下に下地を作る
+		FOR Lcount, 0, 44
+			IF Lcount== 6
+				Temps1 = 
+				;Temps1 += @"<nonbutton pos='150'><shape type='rect' color='%K15_UUI_WindowColor%' param='0,-25,800,150'></nonbutton>"
+				CALL PRINT_BARH("青色ゲージ",添い寝入眠度,10000,30)
+				Temps1 += @"<nonbutton pos='1050'><shape type='rect' color='%K15_UUI_WindowColor%' param='0,-30,4000,140'></nonbutton>"
+				Temps1 += @"<nonbutton pos='1100'>入眠：%RESULTS%</nonbutton>"
+				CALL PRINT_BARH("黄色ゲージ",添い寝安心度,10000,30)
+				Temps1 += @"<nonbutton pos='3100'>安心：%RESULTS%</nonbutton>"
+				HTML_PRINT @"<nobr>%Temps1%</nobr>"
+				;HTML_PRINT @"<nobr></nobr>"
+			ELSEIF Lcount== 7
+				Temps1 = 
+				CALL PRINT_BARH("爱心粉紅ゲージ",添い寝興奮度,10000,30)
+				Temps1 += @"<nonbutton pos='1050'><shape type='rect' color='%K15_UUI_WindowColor%' param='0,0,4000,130'></nonbutton>"
+				Temps1 += @"<nonbutton pos='1100'>興奮：%RESULTS%</nonbutton>"
+				CALL PRINT_BARH("白色ゲージ",添い寝絶頂度,10000,30)
+				Temps1 += @"<nonbutton pos='3100'>絶頂：%RESULTS%</nonbutton>"
+				HTML_PRINT @"<nobr>%Temps1%</nobr>"
+			ELSE
+				PRINTL
+			ENDIF 
+		NEXT 
+		CALL K15_Tachietica_Overhaul_HeadWindowUI
+		;#endregion
+
+@K15_添い寝メッセージウィンドウ
+	#DIM Lcount
+	;VARSET STR
+	CALL D20XX_OS_WindowInput_Constructor
+	;CALL LIBT_セリフ(@"「Oyasumy nasay_UH_」")
+	FOR Lcount,0,10
+		D20XX_OS_WindowInput:Lcount = %STR:Lcount%
+	NEXT
+	PRINTFORML 
+	CALL D20XX_OS_WindowSTRFORM(600,38,4700,5,,,@"%K15_UUI_WindowColor%")
+
+
+;SUI+(W:WAIT付き/Q:選択肢表示)
+@PRINT_SUI
+	CLEARLINE LINECOUNT
+	CALL K15_添い寝_Draw
+	CALL K15_添い寝メッセージウィンドウ
+	VARSET STR
+@PRINT_SUIW
+	CALL PRINT_SUI
+	WAIT 
+@PRINT_SUIQ
+	#DIM DYNAMIC InputDataBackUp
+	CALL PRINT_SUI
+	CALL PRINT_TUISelect
+	InputDataBackUp = RESULT
+	WAIT
+	RETURN InputDataBackUp
+
+
+
+;ここでボタンを生成するよ
+;ボタンがロックされているかどうかもここで処理するよ
+@K15_添い寝ボタン
+	#DIM DYNAMIC BtnSize
+	#DIM DYNAMIC BtnYLineCount
+	BtnSize = 200
+
+	[IF_DEBUG]
+		CALL SET_CEVENT("添い寝性騷擾許可Lv1")
+		CALL SET_CEVENT("添い寝性騷擾許可Lv2")
+		CALL SET_CEVENT("添い寝性騷擾許可Lv3")
+		;CALL SET_CEVENT("添い寝性騷擾許可Lv4")
+	[ENDIF]
+	
+	BtnYLineCount = 0
+	IF Soine_BtnTab == 0
+		CALL K15_添い寝ボタン生成(75,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_タブ_健全",添い寝健全ボタン,200)
+		CALL K15_添い寝ボタン生成(525,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_タブ_えっち非活性",添い寝えっちボタン,200)
+
+
+		BtnYLineCount++
+		CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_什麼也不做",添い寝什麼也不做)
+
+		;条件无
+		BtnYLineCount++
+		CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_話す",添い寝話す)
+
+		;条件无
+		BtnYLineCount++
+		CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_摸頭",添い寝摸頭)
+
+		;条件无
+		BtnYLineCount++
+		CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_手を握る",添い寝手を握る)
+
+		;条件无
+		BtnYLineCount++
+		CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_抱きつく",添い寝抱きつく)
+		
+		;条件无
+		BtnYLineCount++
+		CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_足を絡める",添い寝足を絡める)
+		
+		BtnYLineCount++
+		IF CEVENT("添い寝性騷擾許可Lv1") && 添い寝興奮度 >= 25*100
+			CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_接吻",添い寝接吻)
+		ELSE
+			CALL K15_非活性添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_接吻",0)
+		ENDIF
+		
+	ELSEIF Soine_BtnTab == 1
+		CALL K15_添い寝ボタン生成(75,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_タブ_健全非活性",添い寝健全ボタン,200)
+		CALL K15_添い寝ボタン生成(525,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_タブ_えっち",添い寝えっちボタン,200)
+
+		;条件无
+		BtnYLineCount++
+		CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_什麼也不做",添い寝什麼也不做)
+
+		BtnYLineCount++
+		IF CEVENT("添い寝性騷擾許可Lv1") && 添い寝興奮度 >= 25*100
+			CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_角を撫でる",添い寝角を撫でる)
+		ELSE
+			CALL K15_非活性添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_角を撫でる",0)
+		ENDIF
+
+		BtnYLineCount++
+		IF CEVENT("添い寝性騷擾許可Lv1") && 添い寝興奮度 >= 25*100
+			CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_尾巴をさわる",添い寝尾巴をさわる)
+		ELSE
+			CALL K15_非活性添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_尾巴をさわる",0)
+		ENDIF
+		
+		BtnYLineCount++
+		IF CEVENT("添い寝性騷擾許可Lv2") && 添い寝興奮度 >= 50*100
+			CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_胸を揉む",添い寝胸を揉む)
+		ELSE
+			CALL K15_非活性添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_胸を揉む",0)
+		ENDIF
+
+		BtnYLineCount++
+		IF CEVENT("添い寝性騷擾許可Lv2") && 添い寝興奮度 >= 25*100;あとで考える
+			CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_お尻を揉む",添い寝お尻を揉む)
+		ELSE
+			CALL K15_非活性添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_お尻を揉む",0)
+		ENDIF
+
+		BtnYLineCount++
+		IF CEVENT("添い寝性騷擾許可Lv3") && 添い寝興奮度 >= 50*100;あとで考える
+			CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_阴蒂を触る",添い寝阴蒂を触る)
+		ELSE
+			CALL K15_非活性添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_阴蒂を触る",0)
+		ENDIF
+
+		BtnYLineCount++
+		IF CEVENT("添い寝性騷擾許可Lv4") && 添い寝興奮度 >= 85*100;あとで考える
+			CALL K15_添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_中に指を入れる",添い寝中に指を入れる)
+		ELSE
+			CALL K15_非活性添い寝ボタン生成(0,(9+BtnSize/100*BtnYLineCount),"K15S_ボタン_中に指を入れる",0)
+		ENDIF
+	ENDIF
+	
+	PRINTL 
+	CALL K15_Tachietica_ImgStamp(5500,38,"終了する",500,添い寝終了ボタン)
+	;CALL K15_非活性添い寝ボタン生成(100,(8+BtnSize/100*9),"K15S_ボタン_がっつり",999)
+
+	;CALL K15_添い寝ボタン生成(100,(8+BtnSize/100*10),"K15S_ボタン_こっそり",999)
+
+@K15_添い寝ボタン生成(BtnXpos = 0, BtnYLine = 0, BtnImgName = "添い寝ボタン", BtnNo = -1, BtnSize = 200)
+	#DIM DYNAMIC BtnXpos
+	#DIM DYNAMIC BtnYLine
+	#DIMS DYNAMIC BtnImgName
+	#DIM DYNAMIC BtnNo
+	#DIM DYNAMIC BtnSize
+	PRINTL 
+	CALL K15_Tachietica_ImgStamp(BtnXpos, BtnYLine, BtnImgName, BtnSize, BtnNo,@"%BtnImgName%F")
+
+@K15_非活性添い寝ボタン生成(BtnXpos = 0, BtnYLine = 0, BtnImgName = "添い寝ボタン", BtnNo = -1, BtnSize = 200)
+	#DIM DYNAMIC BtnXpos
+	#DIM DYNAMIC BtnYLine
+	#DIMS DYNAMIC BtnImgName
+	#DIM DYNAMIC BtnNo
+	#DIM DYNAMIC BtnSize
+	PRINTL 
+	CALL K15_Tachietica_ImgStamp(BtnXpos, BtnYLine, BtnImgName, BtnSize, BtnNo)
+	PRINTL 
+	CALL K15_Tachietica_ImgStamp(BtnXpos, BtnYLine, "K15S_ボタン_ロック", BtnSize, BtnNo)
+
+
+@K15_添い寝背景描画(Emotion)
+	#DIMS DYNAMIC Lcount
+	#DIMS DYNAMIC Emotion
+	#DIM DYNAMIC BGLayer
+
+	#DIM DYNAMIC GraphicsId
+
+	GraphicsId = 700
+
+	BGLayer = 100
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_背景+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"黒px+0x80000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_後髪+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_身体+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_もみあげ_右+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_右腕+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_胸+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_キャミ+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	
+
+	IF STRCOUNT(Emotion,"添い寝通常左腕")
+		CALL OVERLAY_GCREATE, GraphicsId, @"K15S_左腕+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+		CBGSETG GraphicsId, 0, 0, BGLayer
+		BGLayer--
+		GraphicsId++
+	ELSEIF STRCOUNT(Emotion,"添い寝降ろし左腕")
+		CALL OVERLAY_GCREATE, GraphicsId, @"K15S_左腕_降ろし+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+		CBGSETG GraphicsId, 0, 0, BGLayer
+		BGLayer--
+		GraphicsId++
+	ELSE
+		CALL OVERLAY_GCREATE, GraphicsId, @"K15S_左腕+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+		CBGSETG GraphicsId, 0, 0, BGLayer
+		BGLayer--
+		GraphicsId++
+	ENDIF
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_もみあげ_左+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+	CALL OVERLAY_GCREATE, GraphicsId, @"K15S_顔素体+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+	CBGSETG GraphicsId, 0, 0, BGLayer
+	BGLayer--
+	GraphicsId++
+
+
+
+	;#region目
+		IF STRCOUNT(Emotion,"闭眼")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_つむり+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"笑颜")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_笑颜+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"垂眼５")
+			IF STRCOUNT(Emotion,"爱心眼")
+				CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_通常_爱心+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+				CBGSETG GraphicsId, 0, 0, BGLayer
+				BGLayer--
+				GraphicsId++
+			ELSEIF STRCOUNT(Emotion,"ぐるぐる")
+				CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_通常_ぐるぐる+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+				CBGSETG GraphicsId, 0, 0, BGLayer
+				BGLayer--
+				GraphicsId++
+			ELSE
+				CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_通常+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+				CBGSETG GraphicsId, 0, 0, BGLayer
+				BGLayer--
+				GraphicsId++
+			ENDIF
+			
+		ELSEIF STRCOUNT(Emotion,"半目")
+			IF STRCOUNT(Emotion,"爱心眼")
+				CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_半目_爱心+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+				CBGSETG GraphicsId, 0, 0, BGLayer
+				BGLayer--
+				GraphicsId++
+			ELSEIF STRCOUNT(Emotion,"ぐるぐる")
+				CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_半目_ぐるぐる+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+				CBGSETG GraphicsId, 0, 0, BGLayer
+				BGLayer--
+				GraphicsId++
+			ELSE
+				CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_半目+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+				CBGSETG GraphicsId, 0, 0, BGLayer
+				BGLayer--
+				GraphicsId++
+			ENDIF
+		ELSE 
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_目_通常+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++	
+		ENDIF
+	;#endregion 
+	
+	;#region口
+		IF STRCOUNT(Emotion,"微笑４")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_笑颜+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"呀哒")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_呀哒+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"流口水")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_流口水+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"ヮ")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_ヮ+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"小口３")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_小口３+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"小口２")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_小口２+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"半開４")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_半開４+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"無口系")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_無口系+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSE 
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_口_笑颜+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ENDIF
+	;#endregion 
+	
+	;#region眉
+		IF STRCOUNT(Emotion,"通常眉３")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_眉_通常+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSEIF STRCOUNT(Emotion,"困扰眉")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_眉_困扰眉+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSE
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_眉_通常+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ENDIF
+	;#endregion 
+	
+	;#region 呆毛
+		IF STRCOUNT(Emotion,"呆毛")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_呆毛_通常+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ELSE 
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_呆毛_通常+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ENDIF
+	;#endregion
+
+	;#region 漫画表現
+		IF STRCOUNT(Emotion,"赤面２")
+			CALL OVERLAY_GCREATE, GraphicsId, @"K15S_漫画表現_赤面２+0x00000000", MIN(1100,CLIENTWIDTH()), 850
+			CBGSETG GraphicsId, 0, 0, BGLayer
+			BGLayer--
+			GraphicsId++
+		ENDIF
+	;#endregion 
+;
+;添い寝背景描画
+@K15_添い寝背景描画_Sim
+	#DIM DYNAMIC LCount
+	
+	#DIMS DYNAMIC Arm
+	#DIMS DYNAMIC Mayu
+	#DIMS DYNAMIC Mouth
+	#DIMS DYNAMIC Ahoge
+	#DIMS DYNAMIC Eye
+	#DIMS DYNAMIC Manga
+	#DIMS DYNAMIC InputTags
+	
+	InputTags = 
+	Mouth =
+	Ahoge =  
+	Mayu = 
+	Eye = 
+	Manga = 
+
+	$K15S_SIM_LOOP
+	CALL EFFECT_ALLRESET
+	CLEARLINE LINECOUNT
+
+
+	
+	InputTags = 
+	InputTags += @"%Arm%%Mouth%%Mayu%%Ahoge%%Eye%%Manga%"
+	PRINTFORML 現在的タグ:%InputTags%
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	PRINTL 
+	
+	CALL K15_添い寝背景描画(InputTags)
+
+	FOR Lcount,0,9
+		PRINTL 
+	NEXT
+
+	SETCOLOR DEF_COLOR("緑")
+
+	PRINTFORML 腕 [099]初期化
+	PRINTFORML [000]通常 [001]降ろし
+	PRINTFORML 
+	PRINTFORML 目 [199]初期化
+	PRINTFORML [100]垂眼５ [101]垂眼５爱心眼 [102]垂眼５ぐるぐる
+	PRINTFORML [103]半目 [104]半目爱心眼 [105]半目ぐるぐる [106]闭眼 [107]笑颜
+	PRINTFORML 
+	PRINTFORML 口 [299]初期化
+	PRINTFORML [200]微笑４ [201]呀哒 [202]流口水 [203]ヮ [204]小口３ [205]半開４ [206]無口系
+	PRINTFORML 
+	PRINTFORML 眉 [399]初期化
+	PRINTFORML [300]通常眉３ [301]困扰眉
+	PRINTFORML 
+	PRINTFORML 呆毛 [499]初期化
+	PRINTFORML [400]呆毛 
+	PRINTFORML 
+	PRINTFORML 漫画表現 [599]初期化
+	PRINTFORML [500]赤面２
+
+	PRINTFORML 
+	PRINTFORML 現在的タグ:%InputTags%
+	PRINTFORML [997]全初期化 [998]コピペする [999]終了する
+	RESETCOLOR
+	INPUT 
+
+	SELECTCASE RESULT/100
+		CASE 0
+			SELECTCASE RESULT%100
+				CASE 0
+					Arm = 添い寝通常左腕/
+				CASE 1
+					Arm = 添い寝降ろし左腕/
+				CASE 99
+					Arm = 
+			ENDSELECT 
+		CASE 1 ;目
+			SELECTCASE RESULT%100
+				CASE 0
+					Eye = 垂眼５/
+				CASE 1
+					Eye = 垂眼５/爱心眼/
+				CASE 2
+					Eye = 垂眼５/ぐるぐる/
+				CASE 3
+					Eye = 半目/
+				CASE 4
+					Eye = 半目/爱心眼/
+				CASE 5
+					Eye = 半目/ぐるぐる/
+				CASE 6
+					Eye = 闭眼/
+				CASE 7
+					Eye = 笑颜/
+				CASE 99
+					Eye = 
+			ENDSELECT
+		CASE 2 ;口
+			SELECTCASE RESULT%100;[200]通常 [201]通常2 [299]通常or通常2 [202]ふりふり [203]爱心 [204]ハテナ [205]惊嚇
+				CASE 0
+					Mouth = 微笑４/
+				CASE 1
+					Mouth = 呀哒/
+				CASE 2
+					Mouth = 流口水/
+				CASE 3
+					Mouth = ヮ/
+				CASE 4
+					Mouth = 小口３/
+				CASE 5
+					Mouth = 半開４/
+				CASE 6
+					Mouth = 無口系/
+				CASE 99
+					Mouth = 
+			ENDSELECT
+		CASE 3 ;眉
+			SELECTCASE RESULT%100
+				CASE 0
+					Mayu = 通常眉３/
+				CASE 1
+					Mayu = 困扰眉/
+				CASE 99
+					Mayu = 
+			ENDSELECT
+		CASE 4 ;頭翼
+			SELECTCASE RESULT%100
+				CASE 0
+					Ahoge = 呆毛/
+				CASE 99
+					Ahoge = 
+			ENDSELECT
+		CASE 5
+			SELECTCASE RESULT%100
+				CASE 0
+					Ahoge = 赤面２/
+				CASE 99
+					Ahoge = 
+			ENDSELECT
+	ENDSELECT
+	
+	IF RESULT == 997
+		InputTags = 
+		Mouth =
+		Ahoge =  
+		Mayu = 
+		Eye = 
+		Manga = 
+	ELSEIF RESULT == 998
+		CLEARLINE LINECOUNT
+		PRINTFORML %InputTags%
+		WAIT
+	ELSEIF RESULT == 999
+		CALL EFFECT_ALLRESET
+		PRINTFORML 
+		RETURN
+	ENDIF
+
+	GOTO K15S_SIM_LOOP

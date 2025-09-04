@@ -1,0 +1,474 @@
+﻿;-------------------------------------------------
+;主に、特殊な技能などの設定関数を置く。
+;-------------------------------------------------
+@GET_EXABL, ARG
+#DIM LCOUNT
+SIF ARG <= 0
+	RETURN 0
+
+;Ｐ感覚とＣ感覚は等しい
+ABL:ARG:Ｐ感覚 = MAX(ABL:ARG:Ｃ感覚, ABL:ARG:Ｐ感覚)
+ABL:ARG:Ｃ感覚 = MAX(ABL:ARG:Ｃ感覚, ABL:ARG:Ｐ感覚)
+
+CALL SETFLAG, "天性の素質の設定", ARG
+
+;具体的なＬＶの算出
+ABL:ARG:舌靈活 = MAX(ABL:ARG:舌靈活, TALENT:ARG:天性の舌靈活 + MAX(GET_EXP_LV((EXP:ARG:口交経験 + EXP:ARG:舐陰経験 + EXP:ARG:接吻経験)/3) - 2, 0) )
+ABL:ARG:指靈活 = MAX(ABL:ARG:指靈活, TALENT:ARG:天性の指靈活 + MAX(GET_EXP_LV(EXP:ARG:手淫経験) - 2, 0) )
+ABL:ARG:腰靈活 = MAX(ABL:ARG:腰靈活, TALENT:ARG:天性の腰靈活 + MAX(GET_EXP_LV(EXP:ARG:腰靈活経験) - 2, 0) )
+ABL:ARG:魔乳 = MAX(ABL:ARG:魔乳, TALENT:ARG:天性の魔乳 + MAX(GET_EXP_LV(EXP:ARG:乳交経験) - 2, 0) )
+
+CALL GET_EXABL2, ARG
+
+
+@GET_EXABL2, ARG
+SIF ARG <= 0
+	RETURN 0
+
+CALL SETFLAG, "名器の設定", ARG
+
+;Ｖ名器LV（30未満だと緩く、70以上だと名器）
+CALL GET_EXABL_V, ARG
+ABL:ARG:Ｖ弛緩 = MAX(ABL:ARG:Ｖ拡張 - ABL:ARG:Ｖ技術, 0)
+ABL:ARG:Ｖ名器度 = ABL_V(ARG)
+
+;Ａ名器LV（30未満だと緩く、70以上だと名器）
+CALL GET_EXABL_A, ARG
+ABL:ARG:Ａ弛緩 = MAX(ABL:ARG:Ａ拡張 - ABL:ARG:Ａ技術, 0)
+ABL:ARG:Ａ名器度 = ABL_A(ARG)
+
+;喉LV(深喉口交や強制口交に関係)
+CALL GET_EXABL_T, ARG
+ABL:ARG:喉名器度 = ABL_T(ARG)
+
+;尿道の拡張状況（尿道には名器度は無い…のは過去の話である）
+CALL GET_EXABL_U, ARG
+ABL:ARG:尿道名器度 = ABL_U(ARG)
+
+
+;-------------------------------------------------
+;膣のLV取得
+;基本的に。入れるものの尺寸基準値(例：振動棒や阴茎なら1、粗大的振動棒なら2)とペアで使う
+;SEXの時の射精ゲージ増加などを見るときは、　基本値(Ｖ活用LV)*補正(Ｖ拡張LVの過不足)　で算出する。
+;Ｖ拡張調教の時には、入れるものの尺寸基準値とＶ拡張LVを比較して疼痛などを決める。
+;基準値+1の値の時がちょうど良い。
+;その際、Ｖ活用LVが尺寸基準値以上なら、+1できる。
+;-------------------------------------------------
+@GET_EXABL_V, ARG
+#DIM MEMO_EXP, 100
+
+SIF ARG <= 0
+	RETURN 0
+
+IF TALENT:ARG:男性 || TALENT:ARG:処女 == 1
+	ABL:ARG:Ｖ技術 = 0
+	ABL:ARG:Ｖ拡張 = 0
+	RETURN 0
+ENDIF
+
+VARSET MEMO_EXP
+
+;Ｖ活用LV
+;Ｖ経験、Ｖ性交経験、Ｖ破壊経験、Ｖ感覚、Ｖ性向、淫壷で判定
+;Ｖ拡張LVの方も同時に用いることが多い。
+ABL:ARG:Ｖ技術 = 1
+
+MEMO_EXP:GETNUM(EXP, "Ｖ経験") = EXP:ARG:Ｖ経験 - EXP_GAIN("Ｖ経験", ARG)
+MEMO_EXP:GETNUM(EXP, "Ｖ性交経験") = EXP:ARG:Ｖ性交経験 - EXP_GAIN("Ｖ性交経験", ARG)
+MEMO_EXP:GETNUM(EXP, "Ｖ拡張経験") = EXP:ARG:Ｖ拡張経験 - EXP_GAIN("Ｖ拡張経験", ARG)
+
+SELECTCASE MEMO_EXP:GETNUM(EXP, "Ｖ経験")
+CASE IS >= 1000
+	ABL:ARG:Ｖ技術 += 3
+CASE IS >= 500
+	ABL:ARG:Ｖ技術 += 2
+CASE IS >= 150
+	ABL:ARG:Ｖ技術 += 1
+ENDSELECT
+
+SELECTCASE MEMO_EXP:GETNUM(EXP, "Ｖ性交経験")
+CASE IS >= 600
+	ABL:ARG:Ｖ技術 += 4
+CASE IS >= 300
+	ABL:ARG:Ｖ技術 += 3
+CASE IS >= 150
+	ABL:ARG:Ｖ技術 += 2
+CASE IS  >= 50
+	ABL:ARG:Ｖ技術 += 1
+ENDSELECT
+
+SELECTCASE MEMO_EXP:GETNUM(EXP, "Ｖ拡張経験")
+CASE IS >= 300
+	ABL:ARG:Ｖ技術 -= 3
+CASE IS >= 100
+	ABL:ARG:Ｖ技術 -= 2
+CASE IS >= 50
+	ABL:ARG:Ｖ技術 -= 1
+ENDSELECT
+
+SIF TALENT:ARG:淫壷
+	ABL:ARG:Ｖ技術 += 1
+SIF TALENT:ARG:大力士
+	ABL:ARG:Ｖ技術 += 1
+SIF TALENT:ARG:Ｖ性向 && ABL:ARG:Ｖ技術 < 3
+	ABL:ARG:Ｖ技術 += 1
+
+;損傷したら、即座に疼痛で操れなくなる(拡張適性があるなら怪我が治れば元街道)
+SIF TALENT:ARG:Ｖ損傷 || (EXP:ARG:Ｖ損傷経験 && TALENT:ARG:拡張適性 == 0)
+	ABL:ARG:Ｖ技術 = MULTIPLY(ABL:ARG:Ｖ技術, 100 - MIN(EXP:ARG:Ｖ損傷経験 + TALENT:ARG:Ｖ損傷, 3)*30)
+
+;阴部に筋弛緩剤
+IF GETBIT(TEQUIP:ARG:筋弛緩剤, 2)
+	IF TALENT:ARG:薬毒耐性
+		ABL:ARG:Ｖ技術 /= 2
+	ELSE
+		ABL:ARG:Ｖ技術 = 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ｖ名器度
+;Ｖ経験、Ｖ性交経験、Ｖ拡張経験の平衡で名器度決定。淫壷のBOUNSもここで処理
+;拡張適性があると損傷が発生しているとき以外のペナルティは無視
+;ARGSに"絶対値"を入れると疲れや経験を無視した最高値が出る
+;-------------------------------------------------
+@ABL_V(ARG, ARGS)
+#FUNCTION
+#DIM MEMO_EXP, 100
+#DIM MULTI_VALUE
+
+SIF ARG <= 0
+	RETURNF 0
+SIF TALENT:ARG:男性
+	RETURNF 0
+
+VARSET MEMO_EXP
+
+;快感の基準はＶ活用LV
+LOCAL = 25 + ABL:ARG:Ｖ技術*5 + ABL:ARG:Ｖ拡張
+;Ｖ拡張ＬＶがＶ技術ＬＶを上回っているとペナルティ発生
+SIF ABL:ARG:Ｖ拡張 > ABL:ARG:Ｖ技術
+	LOCAL -= (ABL:ARG:Ｖ拡張 - ABL:ARG:Ｖ技術)*GET_EXP_LV(EXP:ARG:Ｖ経験)*2
+;基本Ｖ名器度の最低は10
+SIF LOCAL < 10
+	LOCAL = 10
+
+SELECTCASE ARGS
+CASE "絶対値"
+	MEMO_EXP:GETNUM(EXP, "Ｖ経験") = EXP:ARG:Ｖ経験
+	MEMO_EXP:GETNUM(EXP, "Ｖ性交経験") = EXP:ARG:Ｖ性交経験
+	MEMO_EXP:GETNUM(EXP, "Ｖ拡張経験") = EXP:ARG:Ｖ拡張経験
+CASEELSE
+	MEMO_EXP:GETNUM(EXP, "Ｖ経験") = EXP:ARG:Ｖ経験 - EXP_GAIN("Ｖ経験", ARG)
+	MEMO_EXP:GETNUM(EXP, "Ｖ性交経験") = EXP:ARG:Ｖ性交経験 - EXP_GAIN("Ｖ性交経験", ARG)
+	MEMO_EXP:GETNUM(EXP, "Ｖ拡張経験") = EXP:ARG:Ｖ拡張経験 - EXP_GAIN("Ｖ拡張経験", ARG)
+ENDSELECT
+
+;Ｖ拡張経験*10がＶ経験を越えていると、名器度にペナルティ
+MULTI_VALUE = LIMIT(100 * (100 + MEMO_EXP:GETNUM(EXP, "Ｖ経験")*2) / (100 + MEMO_EXP:GETNUM(EXP, "Ｖ経験") + MEMO_EXP:GETNUM(EXP, "Ｖ拡張経験")*10), 20, 100)
+;Ｖ性交経験がＶ経験の25％を超えているとBOUNS発生
+MULTI_VALUE = LIMIT(MULTI_VALUE * (100 + MEMO_EXP:GETNUM(EXP, "Ｖ経験") + MEMO_EXP:GETNUM(EXP, "Ｖ性交経験")*4) / (100 + MEMO_EXP:GETNUM(EXP, "Ｖ経験")*2), 20, 200)
+
+SIF TALENT:ARG:大力士
+	MULTI_VALUE += 9 + TALENT:ARG:大力士
+SIF TALENT:ARG:淫壷
+	MULTI_VALUE += 20
+
+;素質の[Ｖ名器]はペナルティの影響を受けない
+IF MULTI_VALUE > 100
+	LOCAL = MULTIPLY(LOCAL + TALENT:ARG:Ｖ名器*10, MULTI_VALUE)
+ELSE
+	LOCAL = MULTIPLY(LOCAL, MULTI_VALUE) + TALENT:ARG:Ｖ名器*10
+ENDIF
+
+SIF TALENT:ARG:Ｖ損傷
+	LOCAL /= TALENT:ARG:Ｖ損傷 + 1
+
+RETURNF LOCAL
+
+;肛門のLV取得
+@GET_EXABL_A, ARG
+#DIM MEMO_EXP, 100
+
+SIF ARG <= 0
+	RETURN 0
+
+VARSET MEMO_EXP
+
+MEMO_EXP:GETNUM(EXP, "Ａ経験") = EXP:ARG:Ａ経験 - EXP_GAIN("Ａ経験", ARG)
+MEMO_EXP:GETNUM(EXP, "Ａ性交経験") = EXP:ARG:Ａ性交経験 - EXP_GAIN("Ａ性交経験", ARG)
+MEMO_EXP:GETNUM(EXP, "Ａ拡張経験") = EXP:ARG:Ａ拡張経験 - EXP_GAIN("Ａ拡張経験", ARG)
+
+ABL:ARG:Ａ技術 = 1
+
+SELECTCASE MEMO_EXP:GETNUM(EXP, "Ａ経験")
+CASE IS >= 1000
+	ABL:ARG:Ａ技術 += 3
+CASE IS >= 500
+	ABL:ARG:Ａ技術 += 2
+CASE IS >= 150
+	ABL:ARG:Ａ技術 += 1
+ENDSELECT
+
+SELECTCASE MEMO_EXP:GETNUM(EXP, "Ａ性交経験")
+CASE IS >= 600
+	ABL:ARG:Ａ技術 += 4
+CASE IS >= 300
+	ABL:ARG:Ａ技術 += 3
+CASE IS >= 150
+	ABL:ARG:Ａ技術 += 2
+CASE IS  >= 50
+	ABL:ARG:Ａ技術 += 1
+ENDSELECT
+
+SELECTCASE MEMO_EXP:GETNUM(EXP, "Ａ拡張経験")
+CASE IS >= 300
+	ABL:ARG:Ａ技術 -= 4
+CASE IS >= 100
+	ABL:ARG:Ａ技術 -= 3
+CASE IS >= 50
+	ABL:ARG:Ａ技術 -= 2
+ENDSELECT
+
+SIF TALENT:ARG:尻穴狂い
+	ABL:ARG:Ａ技術 += 1
+SIF TALENT:ARG:大力士
+	ABL:ARG:Ａ技術 += 1
+SIF TALENT:ARG:Ａ性向 && ABL:ARG:Ａ技術 < 3
+	ABL:ARG:Ａ技術 += 1
+
+SIF TALENT:ARG:縦深菊穴
+	ABL:ARG:Ａ技術 -= 1
+
+;損傷したら、即座に疼痛で操れなくなる(拡張適性があるなら怪我が治れば元街道)
+SIF TALENT:ARG:Ａ損傷 || (EXP:ARG:Ａ損傷経験 && TALENT:ARG:拡張適性 == 0)
+	ABL:ARG:Ａ技術 = MULTIPLY(ABL:ARG:Ａ技術, 100 - MIN(EXP:ARG:Ａ損傷経験 + TALENT:ARG:Ａ損傷, 3)*30)
+
+;肛門に筋弛緩剤
+IF GETBIT(TEQUIP:ARG:筋弛緩剤, 0)
+	IF TALENT:ARG:薬毒耐性
+		ABL:ARG:Ａ技術 /= 2
+	ELSE
+		ABL:ARG:Ａ技術 = 0
+	ENDIF
+ENDIF
+
+;-------------------------------------------------
+;Ａ名器度
+;Ａ経験、Ａ性交経験、Ａ拡張経験の平衡で名器度決定。尻穴狂いのBOUNSもここ
+;拡張適性があると損傷が発生しているとき以外のペナルティは無視
+;ARGSに"絶対値"を入れると疲れや経験を無視した最高値が出る
+;-------------------------------------------------
+@ABL_A(ARG, ARGS)
+#FUNCTION
+#DIM MEMO_EXP, 100
+#DIM MULTI_VALUE
+
+SIF ARG <= 0
+	RETURNF 0
+
+VARSET MEMO_EXP
+
+;快感の基準はＡ活用LV
+LOCAL = 30 + ABL:ARG:Ａ技術*5 + ABL:ARG:Ａ拡張
+;Ａ拡張ＬＡがＡ技術ＬＡを上回っているとペナルティ発生
+SIF ABL:ARG:Ａ拡張 > ABL:ARG:Ａ技術
+	LOCAL -= (ABL:ARG:Ａ拡張 - ABL:ARG:Ａ技術)*GET_EXP_LV(EXP:ARG:Ａ経験)*2
+;基本Ａ名器度の最低は10
+SIF LOCAL < 10
+	LOCAL = 10
+
+SELECTCASE ARGS
+CASE "絶対値"
+	MEMO_EXP:GETNUM(EXP, "Ａ経験") = EXP:ARG:Ａ経験
+	MEMO_EXP:GETNUM(EXP, "Ａ性交経験") = EXP:ARG:Ａ性交経験
+	MEMO_EXP:GETNUM(EXP, "Ａ拡張経験") = EXP:ARG:Ａ拡張経験
+CASEELSE
+	MEMO_EXP:GETNUM(EXP, "Ａ経験") = EXP:ARG:Ａ経験 - EXP_GAIN("Ａ経験", ARG)
+	MEMO_EXP:GETNUM(EXP, "Ａ性交経験") = EXP:ARG:Ａ性交経験 - EXP_GAIN("Ａ性交経験", ARG)
+	MEMO_EXP:GETNUM(EXP, "Ａ拡張経験") = EXP:ARG:Ａ拡張経験 - EXP_GAIN("Ａ拡張経験", ARG)
+ENDSELECT
+
+;Ａ拡張経験*10がＡ経験を越えていると、名器度にペナルティ
+MULTI_VALUE = LIMIT(100 * (100 + MEMO_EXP:GETNUM(EXP, "Ａ経験")*2) / (100 + MEMO_EXP:GETNUM(EXP, "Ａ経験") + MEMO_EXP:GETNUM(EXP, "Ａ拡張経験")*10), 20, 100)
+;Ａ性交経験がＡ経験の20％を超えているとBOUNS発生
+MULTI_VALUE = LIMIT(MULTI_VALUE * (100 + MEMO_EXP:GETNUM(EXP, "Ａ経験") + MEMO_EXP:GETNUM(EXP, "Ａ性交経験")*5) / (100 + MEMO_EXP:GETNUM(EXP, "Ａ経験")*2), 20, 200)
+
+SIF TALENT:ARG:大力士
+	MULTI_VALUE += 9 + TALENT:ARG:大力士
+SIF TALENT:ARG:尻穴狂い
+	MULTI_VALUE += 20
+
+;素質の[Ａ名器]はペナルティの影響を受けない
+IF MULTI_VALUE > 100
+	LOCAL = MULTIPLY(LOCAL + TALENT:ARG:Ａ名器*10, MULTI_VALUE)
+ELSE
+	LOCAL = MULTIPLY(LOCAL, MULTI_VALUE) + TALENT:ARG:Ａ名器*10
+ENDIF
+
+SIF TALENT:ARG:Ａ損傷
+	LOCAL /= TALENT:ARG:Ａ損傷 + 1
+
+RETURNF LOCAL
+
+
+@GET_EXABL_T, ARG
+;-------------------------------------------------
+;喉を使う時の判定ベース
+;咥える物のサイズと比較して判定
+;阴茎の太さがきつい時は奥まで飲み込めないし、余裕も無い
+;基準値+1の値の時がちょうど良い。
+;-------------------------------------------------
+SIF ARG <= 0
+	RETURN 0
+;喉の拡張LV取得
+VARSET LOCAL
+LOCAL = EXP:ARG:口交経験 - EXP_GAIN("口交経験", ARG)
+LOCAL += 5 * (EXP:ARG:喉性交経験 - EXP_GAIN("喉性交経験", ARG) )
+
+;(口交経験など, 喉拡張LV)の対応は、(150, 1)、(300, 2)、(600, 3)、(1000, 4)
+ABL:ARG:喉拡張 = LIMIT(GET_EXP_LV(LOCAL) - 2, 0, 4)
+
+SIF TALENT:ARG:娇小 && ABL:ARG:喉拡張 >= 1
+	ABL:ARG:喉拡張 -= 1
+SIF COND("種族：人形", ARG) || COND("種族：拉米亚", ARG)
+	ABL:ARG:喉拡張 = MAX(ABL:ARG:喉拡張 + 1, 3)
+SIF ABL:ARG:喉拡張 <= TALENT:ARG:天性の舌靈活
+	ABL:ARG:喉拡張 += 1
+
+
+@ABL_T(ARG)
+#FUNCTION
+SIF ARG <= 0
+	RETURNF 0
+;快感の基準は技巧や奉仕
+LOCAL = 20 + ABL:ARG:技巧 + ABL:ARG:奉仕精神*2 + TALENT:ARG:喉名器*10
+SIF TALENT:ARG:嘔吐反射耐性
+	LOCAL += 5
+
+SELECTCASE ABL:ARG:喉拡張
+CASE 1
+	LOCAL += 5
+CASE 2
+	LOCAL = MULTIPLY(LOCAL, 120) + 10
+CASE 3
+	LOCAL = MULTIPLY(LOCAL, 150) + 20
+CASE IS >= 4
+	LOCAL = MULTIPLY(LOCAL, 200) + 30
+ENDSELECT
+
+RETURNF LOCAL
+
+@GET_EXABL_U, ARG
+;-------------------------------------------------
+;おもに尿道の太さ ABL:尿道拡張 の判定をする（これは阴茎尺寸などに即した値）
+;Ｖ尿道拡張度とＰ尿道拡張度に相関関係は一切ない
+;それらが設定されていないなら、まずはここで初期設定する
+;-------------------------------------------------
+SIF ARG <= 0
+	RETURN 0
+
+;Ｖ尿道拡張度の初期設定
+SIF CSTR:ARG:Ｖ尿道拡張度 == ""
+	CSTR:ARG:Ｖ尿道拡張度 = %CONDS("Ｖ尿道の初期拡張度", ARG)%
+;Ｐ尿道拡張度の初期設定
+SIF CSTR:ARG:Ｐ尿道拡張度 == ""
+	CSTR:ARG:Ｐ尿道拡張度 = %CONDS("Ｐ尿道の初期拡張度", ARG)%
+
+;拡張度
+SELECTCASE CALCF("尿道径", ARG)
+;ここまでは指挿入も無理
+CASE IS < 15
+	ABL:ARG:尿道拡張 = -2
+;ここまでは阴茎挿入は無理。尿道用の振動棒ならいける
+CASE 15 TO 20
+	ABL:ARG:尿道拡張 = -1
+;阴茎挿入可能になります
+CASE 21 TO 27
+	ABL:ARG:尿道拡張 = 0
+;以下7mm刻み
+CASE 28 TO 34
+	ABL:ARG:尿道拡張 = 1
+CASE 35 TO 41
+	ABL:ARG:尿道拡張 = 2
+CASEELSE
+	ABL:ARG:尿道拡張 = (CALCF("尿道径", ARG) - 21)/7
+ENDSELECT
+
+
+@ABL_U(ARG)
+#FUNCTION
+SIF ARG <= 0
+	RETURNF 0
+
+;快感の基準は尿道経験
+LOCAL = 10 + GET_EXP_LV(EXP:ARG:尿道経験)*2 + GET_EXP_LV(EXP:ARG:尿道性交経験)*5 + TALENT:ARG:尿道名器*10
+SIF TALENT:ARG:尿道性感
+	LOCAL += 5
+SIF TALENT:ARG:尿道狂
+	LOCAL += 20
+
+SELECTCASE ABL:ARG:尿道拡張
+CASE 0
+	LOCAL += 5
+CASE 1
+	LOCAL = MULTIPLY(LOCAL, 120) + 10
+CASE 2
+	LOCAL = MULTIPLY(LOCAL, 150) + 20
+CASE IS >= 3
+	LOCAL = MULTIPLY(LOCAL, 200) + 30
+ENDSELECT
+
+RETURNF LOCAL
+
+;-------------------------------------------------
+;大人ざまな素質の取得や変動の総合管理の場
+;-------------------------------------------------
+@GET_EXTALENT, ARG
+#DIM LCOUNT
+SIF ARG <= 0
+	RETURN 0
+
+;罩杯絡み
+IF TALENT:ARG:男性 == 0
+	TALENT:ARG:乳房 = 1
+ELSE
+	TALENT:ARG:乳房 = 0
+ENDIF
+SIF TALENT:ARG:乳房 == 0
+	BASE:ARG:罩杯 = 0
+
+IF COND("角色メイク中")
+	IF EXP:ARG:Ａ性交経験 == 0
+		TALENT:ARG:Ａ処女 = 1
+	ELSE
+		TALENT:ARG:Ａ処女 = 0
+	ENDIF
+	IF EXP:ARG:尿道性交経験 == 0
+		TALENT:ARG:尿道処女 = 1
+	ELSE
+		TALENT:ARG:尿道処女 = 0
+	ENDIF
+ENDIF
+
+IF PENIS(ARG) && EXP:ARG:Ｖ挿入経験 == 0
+	TALENT:ARG:童貞 = 1
+ELSE
+	TALENT:ARG:童貞 = 0
+ENDIF
+
+SIF TALENT:ARG:容易濕
+	TALENT:ARG:不易濕 = 0
+
+;以下は調教中は再計算を行わない
+SIF COND("調教中")
+	RETURN 0
+
+TALENT:ARG:性交熟達 = 0
+SIF COND("Ｖ熟達", ARG)
+	SETBIT TALENT:ARG:性交熟達, 0
+SIF COND("Ａ熟達", ARG)
+	SETBIT TALENT:ARG:性交熟達, 1
+SIF COND("尿道熟達", ARG)
+	SETBIT TALENT:ARG:性交熟達, 2
+

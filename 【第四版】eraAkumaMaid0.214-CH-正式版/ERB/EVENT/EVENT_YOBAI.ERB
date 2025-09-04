@@ -1,0 +1,328 @@
+﻿;-------------------------------------------------
+;夜に起こるイベント
+;-------------------------------------------------
+@EVENT_YOBAI, ARGS
+#DIM LCOUNT
+;行為の回数
+#DIM NUM_PLAY
+
+;CFLAG:一緒に寝た の初期化
+CVARSET CFLAG, GETNUM(CFLAG, "一緒に寝た")
+;夜袭フラグ
+CVARSET CSTR, GETNUM(CSTR, "夜袭")
+
+IF ARGS == ""
+	SIF COND("夜袭可能") == 0 || COND("手一杯", MASTER)
+		RETURN 0
+
+	SELECTCASE COND("欲求不満")
+	CASE 0
+		RETURN 0
+	CASE 1
+		SIF TALENT:淫乱 == 0 && TALENT:恋慕 == 0
+			RETURN 0
+	ENDSELECT
+ENDIF
+
+;夜イベントの決定。内容は CSTR:夜袭 に入っている
+CALL PLAY_AT_EVENING
+SIF ARGS != ""
+	CSTR:夜袭 = %ARGS%
+SIF CSTR:夜袭 == ""
+	RETURN 0
+
+;夜袭フラグON
+SETBIT FLAG:状況判定, 43
+TFLAG:颜绘表示中 = 0
+
+;夜袭の衣装に
+CALL SET_COORDINATE, "夜袭衣装"
+
+;基本回数は精力依存
+NUM_PLAY = LIMIT(BASE:精力/20 + LIMIT(RAND:(BASE:精力/10 + 1), 1, BASE:精力/15), 1, 4)
+
+DRAWLINE
+SIF COND("同衾イベント")
+	PRINTFORML ＜%CALLNAME:TARGET%的房間＞
+
+SELECTCASE CSTR:夜袭
+CASE "夜袭騎乗位"
+	CVARSET TEQUIP, GETNUM(TEQUIP, "推倒"), 1
+
+	NUM_PLAY = NUM_PLAY + MIN(3, (ABL:Ｖ感覚 + ABL:精液中毒)/3)
+
+	;PRINTL ＜夜袭＞
+	;口上の前後が凝っている角色用
+	CALL KOJO_EVENT, "夜袭騎乗位口上操作"
+	IF TFLAG:地の文スキップ
+		CALL KOJO_EVENT, CSTR:夜袭
+	ELSE
+		IF COND("同衾イベント")
+			PRINTFORMW %CALLNAME:MASTER%刚要躺在床上的时候、%CALLNAME:TARGET%抱了过来
+		ELSE
+			PRINTFORMW 在%CALLNAME:MASTER%就要上床的时候、突然%CALLNAME:TARGET%进入了房间
+		ENDIF
+
+		TFLAG:颜绘表示中 = 0
+		CALL EMOTION_PLUS, "躁动难忍", TARGET
+
+		;[高慢][傲慢][坏心眼][強気]持ちなら分岐
+		IF TALENT:高慢 || TALENT:傲慢 || TALENT:強気 || TALENT:坏心眼
+			PRINTFORMW 「……」
+			PRINTFORMW 没有说话、而是用热得湿润的眼睛凝视着%CALLNAME:MASTER%
+		;[害羞][清楚]持ちの場合分岐
+		ELSEIF TALENT:害羞 || TALENT:清楚
+			PRINTFORMW 用充满忧郁和欲望的眼神、視線偷偷上飄窺視著%CALLNAME:MASTER%的情況
+			SELECTCASE NO:TARGET
+			CASEELSE
+				PRINTFORMW 「……」
+			ENDSELECT
+		;[容易迷恋][献身][小悪魔]持ちなら分岐
+		ELSEIF TALENT:容易迷恋 || TALENT:献身 || TALENT:小悪魔
+			PRINTFORMW 「……」
+			PRINTFORMW 没有说话、而是用热得湿润的眼睛微笑地看着%CALLNAME:MASTER%
+		ENDIF
+		PRINTFORMW 就这様彼女将%CALLNAME:MASTER%推倒、用蜜壷吞下阴茎、用腰肢激烈地擊打著開始了
+
+		CALL KOJO_EVENT, CSTR:夜袭
+
+		;[高慢][傲慢][坏心眼][強気]持ちなら分岐
+		IF TALENT:高慢 || TALENT:傲慢 || TALENT:強気 || TALENT:坏心眼
+			PRINTFORMW %CALLNAME:TARGET%的嘴里夹杂着嬌声和悪语的同时、不停淫靡摆动着腰肢来抚慰子宮的干渇…
+		;[害羞][清楚]持ちの場合分岐
+		ELSEIF TALENT:害羞 || TALENT:清楚
+			PRINTFORML %CALLNAME:TARGET%不停地小声编织着歓喜的悲鳴和謝罪话语的同时、
+			PRINTFORMW 無心地摆动着腰肢来抚慰子宮的干渇…
+		;[容易迷恋][献身][小悪魔]持ちなら分岐
+		ELSEIF TALENT:容易迷恋 || TALENT:献身 || TALENT:小悪魔
+			PRINTFORMW %CALLNAME:TARGET%微笑着、并妖艳地摇动着腰肢抚慰着子宮的干渇…
+		;[開朗][好色][接受快感]持ちの場合分岐
+		ELSEIF TALENT:開朗 || TALENT:好色 || TALENT:接受快感
+			PRINTFORMW %CALLNAME:TARGET%微笑着、并妖艳地摇动着腰肢抚慰着子宮的干渇…
+		ELSE
+			PRINTFORMW 就像飢饿的野獣貪婪地吞噬着生肉一般、抚慰着子宮的干渇…
+		ENDIF
+	ENDIF
+	CALL SIMULATE_TRAIN, 65, NUM_PLAY
+	CALL CHECK_NINSHIN_ALLACTOR
+	CALL CALC, "欲求不満解消", TARGET, MIN(NUM_PLAY*25, 75)
+
+	PRINTFORM 不知道多少次絶頂以後、
+	IF TALENT:相思相愛
+		PRINTFORMW 相思的两人紧紧抱在一起、落入了深深的睡眠…
+		;一緒に眠ったフラグ。朝の相手として優先。
+		CFLAG:MASTER:一緒に寝た = TARGET
+		CFLAG:一緒に寝た = MASTER
+	ELSE
+		PRINTFORM 实现了思念的%CALLNAME:TARGET%将
+		;相手がいっぱいいるときは紳士協定
+		IF RAND:CHARANUM >= 5
+			PRINTFORMW 身体清理干净、依依不舍地回到了自己的房间…
+		ELSE
+			PRINTFORMW %CALLNAME:MASTER%抱住、就这様落入了深深的睡眠…
+			CFLAG:MASTER:一緒に寝た = TARGET
+			CFLAG:一緒に寝た = MASTER
+		ENDIF
+	ENDIF
+	CVARSET TEQUIP, GETNUM(TEQUIP, "推倒")
+
+CASE "夜袭Ａ騎乗位"
+	CVARSET TEQUIP, GETNUM(TEQUIP, "推倒"), 1
+
+	NUM_PLAY = NUM_PLAY + MIN(3, (ABL:Ａ感覚 + ABL:精液中毒)/3)
+
+	;PRINTL ＜夜袭＞
+	;口上の前後が凝っている角色用
+	CALL KOJO_EVENT, "夜袭Ａ騎乗位口上操作"
+	IF TFLAG:地の文スキップ
+		CALL KOJO_EVENT, CSTR:夜袭
+	ELSE
+		IF COND("同衾イベント")
+			PRINTFORMW %CALLNAME:MASTER%刚要躺在床上的时候、%CALLNAME:TARGET%抱了过来
+		ELSE
+			PRINTFORMW 在%CALLNAME:MASTER%就要上床的时候、突然%CALLNAME:TARGET%进入了房间
+		ENDIF
+
+		CALL EMOTION_PLUS, "躁动难忍", TARGET
+
+		;[高慢][傲慢][坏心眼][強気]持ちなら分岐
+		IF TALENT:高慢 || TALENT:傲慢 || TALENT:強気 || TALENT:坏心眼
+			PRINTFORMW 「……」
+			PRINTFORMW 没有说话、而是用热得湿润的眼睛凝视着%CALLNAME:MASTER%
+		;[害羞][清楚]持ちの場合分岐
+		ELSEIF TALENT:害羞 || TALENT:清楚
+			PRINTFORMW 用充满忧郁和欲望的眼神、視線偷偷上飄窺視著%CALLNAME:MASTER%的情況
+			SELECTCASE NO:TARGET
+			CASEELSE
+				PRINTFORMW 「……」
+			ENDSELECT
+		;[容易迷恋][献身][小悪魔]持ちなら分岐
+		ELSEIF TALENT:容易迷恋 || TALENT:献身 || TALENT:小悪魔
+			PRINTFORMW 「……」
+			PRINTFORMW 没有说话、而是用热得湿润的眼睛微笑地看着%CALLNAME:MASTER%
+		ENDIF
+		PRINTFORMW 就这様\@ TALENT:男性 ? %CALLNAME:TARGET% # 彼女 \@将%CALLNAME:MASTER%推倒、不浄的穴吞下阴茎、用腰肢激烈地擊打著開始了
+
+		CALL KOJO_EVENT, CSTR:夜袭
+
+		;[高慢][傲慢][坏心眼][強気]持ちなら分岐
+		IF TALENT:高慢 || TALENT:傲慢 || TALENT:強気 || TALENT:坏心眼
+			PRINTFORMW %CALLNAME:TARGET%的嘴里夹杂着嬌声和悪语的同时、不停淫靡摆动着腰肢贪享着肛門的肉欲…
+		;[害羞][清楚]持ちの場合分岐
+		ELSEIF TALENT:害羞 || TALENT:清楚
+			PRINTFORML %CALLNAME:TARGET%不停地小声编织着歓喜的悲鳴和謝罪话语的同时、
+			PRINTFORMW 無心地摆动着腰肢来满足肛門贪婪的肉欲…
+		;[容易迷恋][献身][小悪魔]持ちなら分岐
+		ELSEIF TALENT:容易迷恋 || TALENT:献身 || TALENT:小悪魔
+			PRINTFORMW %CALLNAME:TARGET%微笑着、并妖艳地摇动着腰肢满足着肛門贪婪的肉欲…
+		;[開朗][好色][接受快感]持ちの場合分岐
+		ELSEIF TALENT:開朗 || TALENT:好色 || TALENT:接受快感
+			PRINTFORMW %CALLNAME:TARGET%眯起眼微笑着、并不停用腰肢擊打著来满足肛門贪婪的肉欲…
+		ELSE
+			PRINTFORMW 被完全開発的肛門像吸入一样怒張地吞噬着、尽情贪享着肉欲…
+		ENDIF
+	ENDIF
+	CALL SIMULATE_TRAIN, 75, NUM_PLAY
+
+	CALL CALC, "欲求不満解消", TARGET, MIN(NUM_PLAY*25, 75)
+
+	PRINTFORM 不知道多少次絶頂以後、
+	IF TALENT:相思相愛
+		PRINTFORMW 相思的两人紧紧抱在一起、落入了深深的睡眠…
+		;一緒に眠ったフラグ。朝の相手として優先。
+		CFLAG:MASTER:一緒に寝た = TARGET
+		CFLAG:一緒に寝た = MASTER
+	ELSE
+		PRINTFORM 实现了思念的%CALLNAME:TARGET%将
+		;相手がいっぱいいるときは紳士協定
+		IF RAND:CHARANUM >= 5
+			PRINTFORMW 身体清理干净、依依不舍地回到了自己的房间…
+		ELSE
+			PRINTFORMW %CALLNAME:MASTER%抱住、就这様落入了深深的睡眠…
+			CFLAG:MASTER:一緒に寝た = TARGET
+			CFLAG:一緒に寝た = MASTER
+		ENDIF
+	ENDIF
+	CVARSET TEQUIP, GETNUM(TEQUIP, "推倒")
+
+CASE "添い寝"
+	NUM_PLAY = 1
+
+	;口上の前後が凝っている角色用
+	CALL KOJO_EVENT, "添い寝口上操作"
+	IF TFLAG:地の文スキップ
+		CALL KOJO_EVENT, CSTR:夜袭
+	ELSE
+		CALL EMOTION_PLUS, "害羞", TARGET
+
+		;PRINTL ＜添い寝？＞
+		IF COND("同衾イベント")
+			PRINTFORMW %CALLNAME:MASTER%躺在床上的时候、穿着睡衣的%CALLNAME:TARGET%悄悄地～爬到了床上
+			CALL KOJO_EVENT, CSTR:夜袭
+			PRINTFORMW 然后、抱住%CALLNAME:MASTER%露出了満足的表情、就这様睡着了……
+		ELSE
+			PRINTFORM %CALLNAME:MASTER%躺在床上时、
+			IF RAND:3 == 0
+				PRINT 抱着枕頭的
+			ELSEIF RAND:2
+				PRINT 睡衣姿的
+			ELSE
+				PRINT 穿着怪獣玩偶睡衣的
+			ENDIF
+			PRINTFORMW %CALLNAME:TARGET%偷偷溜进了房间
+			PRINTFORMW 显然的、是想和%CALLNAME:MASTER%一起睡觉…
+			PRINTFORMW 小声地叫了下正在装睡的%CALLNAME:MASTER%之后、%CALLNAME:TARGET%悄悄地～爬到了床上
+			CALL KOJO_EVENT, CSTR:夜袭
+			PRINTFORMW 然后、抱住%CALLNAME:MASTER%露出了満足的表情、就这様睡着了……
+		ENDIF
+	ENDIF
+	CFLAG:MASTER:一緒に寝た = TARGET
+	CFLAG:一緒に寝た = MASTER
+
+CASE "夜袭接吻"
+	IF TALENT:恋慕 && CFLAG:好感度 >= 3000 && TALENT:蕩唇
+		NUM_PLAY = RAND:3 + 1
+	ELSEIF TALENT:恋慕 && CFLAG:好感度 >= 3000 
+		NUM_PLAY = RAND:2 + 1
+	ELSE
+		NUM_PLAY = 1
+	ENDIF
+
+	;口上の前後が凝っている角色用
+	CALL KOJO_EVENT, "夜袭接吻口上操作"
+	IF TFLAG:地の文スキップ
+		CALL KOJO_EVENT, CSTR:夜袭
+	ELSE
+		CALL EMOTION_PLUS, "害羞", TARGET
+
+		;PRINTL ＜夜袭接吻＞
+		IF COND("同衾イベント")
+			PRINTFORMW %CALLNAME:MASTER%在床上刚刚睡着、%CALLNAME:TARGET%悄悄地～抱了过来
+		ELSE
+			PRINTFORMW %CALLNAME:MASTER%躺在床上时、%CALLNAME:TARGET%偷偷溜进了房间
+		ENDIF
+		PRINTFORMW %CALLNAME:TARGET%窥视着%CALLNAME:MASTER%的寝顔、抑制不住思念奪走了嘴唇
+		CALL KOJO_EVENT, CSTR:夜袭
+		PRINTFORMW 把%CALLNAME:MASTER%没有醒来当作是好事、一再貪婪地反复亲吻……
+	ENDIF
+	CALL SIMULATE_TRAIN, 6, NUM_PLAY
+
+	IF COND("同衾イベント") == 0
+		PRINTFORML 片刻后结束了着隐秘的行為、回想着嘴唇上残留的感触的
+		PRINTFORMW %CALLNAME:TARGET%依依不舍地离開了房间
+	ENDIF
+
+	CALL CALC, "欲求不満解消", TARGET, NUM_PLAY*5
+ENDSELECT
+PRINTL 
+
+;夜袭フラグOFF
+CLEARBIT FLAG:状況判定, 43
+
+DRAWLINE
+
+
+;-------------------------------------------------
+;夜袭イベントの決定。何をやるかは CSTR:夜袭 で記録する
+;-------------------------------------------------
+@PLAY_AT_EVENING
+#DIM LCOUNT
+;起きうるイベントの判定に使う
+VARSET STR:選択肢
+
+;実行可能指令の確認
+CALL CHECK_COM_ABLE, TARGET
+
+FOR LCOUNT, 0, 10
+	SELECTCASE LCOUNT
+	CASE 0
+		SIF PENIS(PLAYER) == 0 || TALENT:処女 || TALENT:PLAYER:童貞 || CANTRAIN("推倒騎乗位") == 0
+			CONTINUE
+		SIF COND("女性主導生性交") == 0
+			CONTINUE
+		STR:選択肢 += "夜袭騎乗位/"
+	CASE 1
+		SIF PENIS(PLAYER) == 0 || EXP:PLAYER:Ａ挿入経験 == 0 || CANTRAIN("推倒肛門騎乗位") == 0
+			CONTINUE
+		STR:選択肢 += "夜袭Ａ騎乗位/"
+
+	CASE 2
+		;欲求不満LV2or同衾イベント発生時には、ここより上の過激なPLAYを優先する
+		SIF COND("欲求不満") >= 2 || COND("同衾イベント")
+			BREAK
+
+		SIF (COND("欲求不満") || AGE(TARGET) >= 2) && COND("同衾イベント") == 0
+			CONTINUE
+		STR:選択肢 += "添い寝/"
+	CASE 3
+		SIF TALENT:恋慕 == 0 || CANTRAIN("接吻") == 0
+			CONTINUE
+		STR:選択肢 += "夜袭接吻/"
+	CASEELSE
+		BREAK
+	ENDSELECT
+NEXT
+CSTR:夜袭 = %TEXTR(STR:選択肢)%
+
+RETURN 0
+

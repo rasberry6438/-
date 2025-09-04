@@ -1,0 +1,489 @@
+﻿;-------------------------------------------------
+;取引画面と、购物の際の台詞を記述します
+;-------------------------------------------------
+;取引画面での台詞。悪魔以外は大部分が不要です
+;-------------------------------------------------
+@KOJO_WISH_K27, ARGS
+
+SELECTCASE ARGS
+CASE "取引開始"
+	;自分を相手にＨしてる最中にお願いされた
+	IF COND("Ｈ最中の取引")
+		;しかも挿入中！
+		IF INSERT("挿入相手") == MASTER
+
+		ELSE
+
+		ENDIF
+	ELSE
+		PRINTFORML 「有什么需要我做的吗？」
+		PRINTFORML 「我会在力所能及的范围内协助你。但是力所不及的话、我拒绝」
+	ENDIF
+CASE "愛の告白"
+	;告白成功！
+	IF TALENT:相思相愛
+		CALL PROPOSE_K27
+	;失敗
+	ELSE
+
+	ENDIF
+;胖次のお願いした時に相手が没穿内褲だった
+CASE "没穿内褲"
+	IF COND("合意：胖次交易")
+
+	ELSE
+
+	ENDIF
+;胖次を要前の会話。
+;ただし、悪魔の場合には魂を払っているので確実に渡すことになる
+;ここで本来胖次を给かどうかなどを加味して分岐を設ける事も出来る。特に書かなくてもよい
+;TFLAG:取引承諾 = 0とすると胖次拒否に行くようになり、TFLAG:取引承諾 = 1とすると判定無視で胖次を渡せるようになる
+;TFLAG:取引価格 に数字を入れる事で好きな額を要求できるようになる。基準相場は$500です
+;TFLAG:値上げ交渉 に数字を入れておくと、断られた際もその値上乗せで胖次を渡す展開に出来る
+;TFLAG:取引拒否 = 1 とすると本来取引できるかに関わらず、取引しなくなる
+CASE "胖次交易"
+	;ＯＫ！
+	IF TFLAG:取引承諾
+		;日期と時間参照随机
+		IF COND("合意：胖次交易") && RANDC(4) == 0
+			PRINTFORMW 
+			TFLAG:取引価格 = 1000
+		ELSE
+			PRINTFORMW
+		ENDIF
+	;断られる
+	ELSE
+		;これを指定しておくと、実行値が足りない際にこの額上乗せで応じてくれるようになる
+		TFLAG:値上げ交渉 = 500
+	ENDIF
+CASE "胖次"
+	;値上げ交渉した
+	IF TFLAG:値上げ交渉
+		PRINTFORMW 
+	;相場より高い額を要求されるままに払った
+	ELSEIF TFLAG:取引価格 > 500
+		PRINTFORMW 
+	;値切って相場と変わらず$500払う。ここでTFLAG:取引承諾 = 0とすることで拒否するのもよいでしょう
+	ELSEIF TFLAG:値切った
+		PRINTFORMW 
+	ELSE
+		PRINTFORMW 
+	ENDIF
+	;胖次を脱いで渡してくる汎用地の文
+	CALL DAILY_MESSAGE, "脱下内褲交了出去"
+
+CASE "胖次拒否"
+	;取引を拒否した際
+	IF TFLAG:取引拒否
+
+	ELSE
+
+	ENDIF
+CASE "同居拒否"
+	PRINTFORMW 「不用特意住在一起、也可以在学校见面的吧？」
+
+CASE "同居希望"
+	;実質「イベント名：K27_維吹の事情2」
+	IF DEVENT(ARGS) == 0
+		;初回
+		CALL AFFAIRS_K27_2
+	ELSE
+		IF TALENT:相思相愛
+			PRINTFORMW 「那样、是呢……。%CNAME("一人称")%也想在一起、不觉得打扰的话、我很乐意」
+		ELSEIF TALENT:恋慕
+			PRINTFORMW 「正好可以预先练习在山上的共同生活吗……。之后去打扰喲」
+		ELSE
+			PRINTFORMW 「嗯、邀请我吗。还留有、用过的空房间？」
+		ENDIF
+		
+	ENDIF
+
+CASE "同居頻度的相談"
+
+CASE "便当拒否"
+	PRINTFORML 「我不要。去拜托弗理希艾尔小姐吧」
+	PRINTFORMW 「说起来、%CNAME("一人称")%看起来像是会做饭的吗？」
+
+CASE "做便当"
+	;便当のお願い２回目以降
+	IF COND("合意：便当")
+		IF TALENT:相思相愛
+			PRINTFORML 「可以喲。你想吃什么？」
+			PRINTFORML 「什么都好的话、按%CNAME("二人称")%喜欢的口味、酌情来做吧」
+			PRINTFORML 「没问题。对恋人的口味喜好、已经掌握住了」
+		ELSE
+			PRINTFORML 「又来吗。明明也不怎么美味、还挺喜欢啊」
+			IF TALENT:恋慕
+				PRINTFORML 「我接受了喲。如果你喜欢的话、%CNAME("一人称")%也有制作的意义了」
+			ELSEIF CFLAG:好感度 >= 1000
+				PRINTFORML 「烦倒不烦。只是有点不好意思而已」
+			ENDIF
+		ENDIF
+		IF COND("同居中")
+			PRINTFORMW 「那让我、从明早開始使用厨房吧」
+		ENDIF
+	;以下は初めて作ってもらうよう变成了とき
+	ELSE
+		IF COND("同居中")
+			PRINTFORML 「可以喲。毕竟我是吃闲饭的呢」
+			PRINTFORML 「不过、对味道不要有所期待。许久没做了」
+		ELSE
+			PRINTFORML 「真是平白无故的奇怪请求啊、%CNAME("主人")%你」
+			PRINTFORML 「……可以喲。但是许久没做了、不知道能不能做好」
+		ENDIF
+		PRINTFORMW 「有什么不能吃的东西吗？　过敏之类的啦」
+	ENDIF
+
+;COND("口服避孕薬派")かどうかで初回が"口服避孕薬を飲んで欲しい"or"口服避孕薬を止めて欲しい"に分かれます
+CASE "口服避孕薬"
+	;角色が口服避孕薬派なら、こっちだけ書いてください
+	IF COND("口服避孕薬派")
+		;口服避孕薬を服用してもらう
+		IF CFLAG:口服避孕薬
+
+		;口服避孕薬の服用を止めてもらう
+		ELSE
+			;初回
+			IF DEVENT(ARGS) == 0
+
+			ELSE
+
+			ENDIF
+		ENDIF
+	;角色が口服避孕薬派でないなら、こっちだけ書いてください
+	ELSE
+		;口服避孕薬を服用してもらう
+		IF CFLAG:口服避孕薬
+			;初回
+			IF DEVENT(ARGS) == 0
+
+			ELSE
+
+			ENDIF
+		;口服避孕薬の服用を止めてもらう
+		ELSE
+
+		ENDIF
+	ENDIF
+;COND("口服避孕薬派")の人に口服避孕薬服用を止めてもらうお願いをしたけど聞き入れてもらえなかった場合
+CASE "口服避孕薬中断拒否"
+
+;COND("讨厌口服避孕薬")の人に口服避孕薬服用のお願いをしたけど聞き入れてもらえなかった場合
+CASE "口服避孕薬服用拒否"
+
+CASE "淫紋拒否"
+
+;"淫紋贴纸直前"or"淫紋贴纸"の片方を書けば十分だと思います
+CASE "淫紋贴纸直前"
+	;初回
+	IF DEVENT(ARGS) == 0
+
+	ELSE
+
+	ENDIF
+
+CASE "淫紋贴纸"
+	;初回
+	IF DEVENT(ARGS) == 0
+
+	ELSE
+
+	ENDIF
+;"淫紋直前"or"淫紋"の片方を書けば十分だと思います
+CASE "淫紋直前"
+	SELECTCASE MARK:淫紋
+	CASE 2
+
+	CASE 3
+
+	CASE 4
+
+	ENDSELECT
+CASE "淫紋"
+	SELECTCASE MARK:淫紋
+	CASE 2
+
+	CASE 3
+
+	CASE 4
+
+	ENDSELECT
+
+CASE "拜托処理性欲"
+
+CASE "性処理の一時中断"
+
+CASE "性処理拒否"
+
+;悪魔、淫魔、妖狐専用
+CASE "给我看尾巴"
+
+CASE "给我看尾巴拒否"
+
+;改变髪型のは、長さが披肩以上の人のみ。未設定だと披肩扱いです
+;髪型を弄る際に手伝ってくれる人がASSIになっています。お手伝い桑を指名したい場合にはその人をASSIにして下さい
+CASE "改变髪型"
+
+CASE "髪型変更の感想"
+	;どの髪型变成了かで分岐可能
+	SELECTCASE CONDS("髪型の種類")
+	CASE CONDS("普段の髪型")
+		PRINTFORMW 
+	CASE "齐刘海"
+		PRINTFORMW 
+	CASE "直髪"
+		PRINTFORMW 
+	CASE "卷髪"
+		PRINTFORMW 
+	CASE "外八"
+		PRINTFORMW 
+	CASE "双马尾"
+		PRINTFORMW 
+	CASE "马尾辫"
+		PRINTFORMW 
+	CASE "三股辫"
+		PRINTFORMW 
+	CASE "编起来"
+		PRINTFORMW 
+	CASE "団子頭"
+		PRINTFORMW 
+	;其他
+	CASEELSE
+		PRINTFORMW 
+	ENDSELECT
+CASE "改变髪型拒否"
+
+;これは普段から连褲襪を履く人じゃないとあんまり見る機会ないと思う
+CASE "连褲襪着替え"
+	;台詞を書いたら下のRETURN 1を消してください
+	RETURN 1
+	;どれに履き替えてもらったか
+	IF CHECK_BOTTOM("開放型连褲襪")
+		PRINTFORMW 
+	ELSEIF CHECK_BOTTOM("渔网连褲襪")
+		PRINTFORMW 
+	ELSEIF CHECK_BOTTOM("连褲襪")
+		PRINTFORMW 
+	;生足
+	ELSE
+		PRINTFORMW 
+	ENDIF
+CASE "连褲襪着替え拒否"
+
+CASE "巨根化して"
+	;これは"大きくなる前"のサイズなのに注意
+	SELECTCASE CONDS("基本阴茎尺寸")
+	CASE "短小"
+
+	CASE "普通"
+
+	CASE "巨根"
+
+	CASE "馬根"
+
+	;腕並以上
+	CASEELSE
+
+	ENDSELECT
+
+CASE "巨根化して拒否"
+
+CASE "短小化して"
+	;これは"小さくなる前"のサイズなのに注意
+	SELECTCASE CONDS("基本阴茎尺寸")
+	CASE "普通"
+
+	CASE "巨根"
+
+	CASE "馬根"
+
+	;腕並、規格外
+	CASEELSE
+
+	ENDSELECT
+
+CASE "短小化して拒否"
+
+;相思相愛　避妊の護符を取下
+CASE "避妊解除可"
+	;初回
+	IF DEVENT(ARGS) == 0
+		;そもそも子どもを産むこと自体に抵抗がある。恋人以外とか冗談じゃない
+		PRINTFORMW お願いを聞いた後、しばらく悩んだ顔をしていた%CALLNAME:TARGET%だったが、やがて契約書を取り出した
+		PRINTFORMW 「二つ、条件がある」
+		PRINTFORMW 「一つはもしも妊娠して子どもができたら、その子のことは愛してやってくれ」
+		PRINTFORMW 「もう一つはこの護符を解除してる間、%CNAME("一人称")%の膣を使えるのは%CNAME("二人称")%だけだ」
+		PRINTFORMW 「%CNAME("一人称")%が妊娠したいのは%CNAME("二人称")%の子どもだけ」
+		PRINTFORMW 「…もっと言えば%CNAME("一人称")%が抱かれたいのは%CNAME("二人称")%だけ。その…分かってくれるよな？」
+		PRINTFORMW こちらを伺うように訊く%CALLNAME:TARGET%に頷いて見せると、安心したような顔で契約書を破り捨てた
+		PRINTFORMW 「有がとう。%CNAME("一人称")%も覚悟を決めるよ」
+	ELSE
+		PRINTFORMW 「わかった。前に出した条件は忘れないでくれよ」
+	ENDIF
+	PRINTFORMW ＜%NAME:TARGET%失去了[避妊の護符]＞
+	CALL SETFLAG, "身嗜み：Ｖ独占", TARGET
+	;胎内精子で孕むの防止するためここで阴蒂ア
+	BASE:胎内精液量 = 0
+	BASE:胎内精子量 = 0
+CASE "避妊解除拒否"
+	;維吹は相思相愛まで解除しないので恋慕の場合の台詞を入れる
+	IF TALENT:恋慕
+		PRINTFORMW 「ごめん、%CNAME("二人称")%のお願いはなるべく叶えたいけど、それは無理」
+		PRINTFORMW 「%CNAME("一人称")%は%CNAME("一人称")%みたいな奴をこれ以上増やしたくない」
+	ELSE
+		PRINTFORMW お願いを聞いた瞬間、%CALLNAME:TARGET%正在认真地读着标题为嫌悪感を露わにした
+		PRINTFORMW 「その場合は契約違反だな。%CNAME("一人称")%はこの部を退部する」
+		PRINTFORMW どうやら本気で言っているようだ
+		PRINTFORMW 無理に護符の解除を迫ることはできないだろう
+	ENDIF
+
+;一度解除した避妊の護符の再装着をお願いした場合
+CASE "避妊の護符"
+
+
+;以下は悪魔専用
+CASE "魂が足りない"
+
+CASE "想要钱"
+
+CASE "甜言蜜语"
+
+CASE "謎之魅力"
+
+CASE "射精量強化"
+	;自分を相手にＨしてる最中にお願いされた
+	IF COND("Ｈ最中の取引")
+		;しかもＶ挿入中！
+		IF INSERT("Ｖ挿入相手") == MASTER
+
+		ELSE
+
+		ENDIF
+	ELSE
+
+	ENDIF
+CASE "巨根化"
+	;これは"大きくなる前"のサイズなのに注意
+	SELECTCASE CONDS("基本阴茎尺寸", PLAYER)
+	CASE "短小"
+
+	CASE "普通"
+
+	CASE "巨根"
+
+	CASE "馬根"
+
+	;腕並以上
+	CASEELSE
+
+	ENDSELECT
+CASE "短小化"
+	;これは"小さくなる前"のサイズなのに注意
+	SELECTCASE CONDS("基本阴茎尺寸", PLAYER)
+	CASE "普通"
+
+	CASE "巨根"
+
+	CASE "馬根"
+
+	;腕並、規格外
+	CASEELSE
+
+	ENDSELECT
+
+;其他汎用
+CASEELSE
+	;汎用拒否
+	IF STRCOUNT(ARGS, "拒否")
+		PRINTFORMW 
+	;汎用取引（特に記述することがないならスキップ）
+	ELSEIF STRCOUNT(ARGS, "取引")
+
+	ELSE
+		PRINTFORMW 
+	ENDIF
+ENDSELECT
+
+
+;-------------------------------------------------
+;购物での台詞
+;-------------------------------------------------
+@KOJO_SHOP_K27, ARGS
+
+SELECTCASE ARGS
+CASE "一緒に出発"
+	;初回
+	IF SEVENT(ARGS) == 0
+
+	;着替えてもらう
+	ELSEIF CHECK_CLO("裸体") || CHECK_CLO("泳装姿") || CHECK_CLO("体操服姿") || CHECK_CLO("内衣姿")
+
+	ELSE
+
+	ENDIF
+CASE "目送"
+
+CASE "没収胖次出発"
+	;初回
+	IF SEVENT(ARGS) == 0
+
+	;既に没穿内褲
+	ELSEIF EQUIP:胖次 == 0
+
+	ELSE
+
+	ENDIF
+CASE "保持现在的装扮出発"
+	IF CHECK_CLO("泳装姿")
+
+	ELSEIF CHECK_CLO("体操服姿")
+
+	ELSEIF CHECK_CLO("内衣姿") || CHECK_CLO("裸体")
+
+	ENDIF
+CASE "会計交代"
+	;初回
+	IF SEVENT(ARGS) == 0 || SEVENT("商品購入") == 0
+
+	ELSE
+
+	ENDIF
+CASE "商品購入"
+	;今買った物
+	SELECTCASE STR:購入道具
+	;ギリギリ通常商品の範疇or你用
+	CASE "撮影機材", "潤滑液", "媚薬", "飞机杯"
+
+	CASE "避孕套"
+		;この商品を初めて買わされた
+		IF SEVENT(STR:購入道具) == 0
+
+		ELSE
+
+		ENDIF
+	;えっちな商品
+	CASEELSE
+
+	ENDSELECT
+CASE "店内待機"
+	;とりあえず何か一個買った時or33％で喋る
+	SIF COND("買上品数") != 1 && RAND:3
+		RETURN 0
+	;胖次没収中
+	IF COND("買い物胖次没収中")
+
+	ELSE
+
+	ENDIF
+CASE "购物終了"
+	;胖次没収中
+	IF COND("買い物胖次没収中")
+
+	;なにも買わなかった
+	ELSEIF COND("買上品数") == 0
+
+	ELSEIF CHECK_CLO("泳装姿") || CHECK_CLO("体操服姿")
+	
+	ENDIF
+ENDSELECT
+

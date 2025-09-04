@@ -1,0 +1,621 @@
+﻿;質問ごとに全質問中の何問目かを横に出す
+;TFLAG:页数 で何問目かを記録
+@CREATE_CSV, ARG
+REDRAW 0
+TFLAG:页数 = 0
+TFLAG:指令中止 = 0
+CALL CREATE_CSV_MAIN, ARG
+
+@CREATE_CSV_MAIN, ARG
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+#DIM QNUM
+#DIMS DYNAMIC MEMO_BASE, 100
+#DIMS DYNAMIC MEMO_TALENT, 100
+#DIMS DYNAMIC MEMO_ABL, 100
+#DIMS DYNAMIC MEMO_EXP, 100
+#DIMS DYNAMIC MEMO_CSTR, 100
+#DIMS MEMO_CSV
+
+MEMO_LINECOUNT = LINECOUNT
+
+;現在的結果表示
+VARSET LOCALS
+MEMO_CSV = 
+SELECTCASE TFLAG:页数
+CASE 0
+	VARSET MEMO_BASE
+	VARSET MEMO_TALENT
+	VARSET MEMO_ABL
+	VARSET MEMO_EXP
+	VARSET MEMO_CSTR
+CASEELSE
+	FOR LCOUNT, 1, 100
+		SELECTCASE LCOUNT
+		CASE IS <= TFLAG:页数
+			MEMO_CSV += @"%MEMO_BASE:LCOUNT%"
+		CASEELSE
+			MEMO_BASE:LCOUNT = 
+		ENDSELECT
+	NEXT
+	FOR LCOUNT, 1, 100
+		SELECTCASE LCOUNT
+		CASE IS <= TFLAG:页数
+			MEMO_CSV += @"%MEMO_TALENT:LCOUNT%"
+		CASEELSE
+			MEMO_TALENT:LCOUNT = 
+		ENDSELECT
+	NEXT
+	FOR LCOUNT, 1, 100
+		SELECTCASE LCOUNT
+		CASE IS <= TFLAG:页数
+			MEMO_CSV += @"%MEMO_ABL:LCOUNT%"
+		CASEELSE
+			MEMO_ABL:LCOUNT = 
+		ENDSELECT
+	NEXT
+	FOR LCOUNT, 1, 100
+		SELECTCASE LCOUNT
+		CASE IS <= TFLAG:页数
+			MEMO_CSV += @"%MEMO_EXP:LCOUNT%"
+		CASEELSE
+			MEMO_EXP:LCOUNT = 
+		ENDSELECT
+	NEXT
+	FOR LCOUNT, 1, 100
+		SELECTCASE LCOUNT
+		CASE IS <= TFLAG:页数
+			MEMO_CSV += @"%MEMO_CSTR:LCOUNT%"
+		CASEELSE
+			MEMO_CSTR:LCOUNT = 
+		ENDSELECT
+	NEXT
+	IF MEMO_CSV != ""
+		PRINTFORML 現在設定済みのパラメータ：
+		SPLIT MEMO_CSV, "+", LOCALS
+		FOR LCOUNT, 0, 100
+			SELECTCASE LOCALS:LCOUNT
+			CASE ""
+				BREAK
+			CASEELSE
+				PRINTFORML %LOCALS:LCOUNT%
+			ENDSELECT
+		NEXT
+	ENDIF
+ENDSELECT
+PRINTL 
+
+QNUM = TFLAG:页数 + 1
+SELECTCASE TFLAG:页数
+CASE 0
+	TFLAG:指令中止 = 0
+	TALENT:ARG:男性 = 0
+	TALENT:ARG:女性 = 0
+	TALENT:ARG:伪娘 = 0
+	TALENT:ARG:萝莉老太婆 = 0
+	TALENT:ARG:扶她 = 0
+	PRINTFORML 性別は何ですか？
+	CALL PRINT_SELECT, "男/女/伪娘/萝莉老太婆/扶她"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:男性 = 1
+		MEMO_TALENT:QNUM += "素質,男性,1,+"
+	CASE 1
+		TALENT:ARG:女性 = 1
+		MEMO_TALENT:QNUM += "素質,女性,1,+"
+	CASE 2
+		TALENT:ARG:男性 = 1
+		TALENT:ARG:伪娘 = 1
+		MEMO_TALENT:QNUM += "素質,男性,1,+素質,伪娘,1,+"
+	CASE 3
+		TALENT:ARG:女性 = 1
+		TALENT:ARG:萝莉老太婆 = 1
+		TALENT:ARG:外見年齢 = 1
+		MEMO_TALENT:QNUM += "素質,女性,1,+素質,萝莉老太婆,1,+素質,外見年齢,1,+"
+	CASE 4
+		TALENT:ARG:扶她 = 1
+		MEMO_TALENT:QNUM += "素質,扶她,1,+"
+	ENDSELECT
+CASE 1
+	TFLAG:指令中止 = 0
+	PRINTFORML 体力はどんなもんですか？
+	CALL PRINT_SELECT, "よわよわ/普通/自信有/疲れ知らず/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0 TO 3
+		MAXBASE:ARG:体力 = 1500 + RESULT*500
+		MEMO_BASE:QNUM += @"基礎,体力,{1500 + RESULT*500},+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 2
+	TFLAG:指令中止 = 0
+	TALENT:ARG:肤色 = 0
+	PRINTFORML 肌の焼け具合はどんなもんですか？
+	CALL PRINT_SELECT, "普通/褐色/色白/青肌/色黒/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 1 TO 4
+		TALENT:ARG:肤色 = RESULT
+		MEMO_TALENT:QNUM += @"素質,肤色,{RESULT},+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 3
+	TFLAG:指令中止 = 0
+	TALENT:ARG:娇小 = 0
+	TALENT:ARG:高大 = 0
+	PRINTFORML 身高はどんなもんですか？
+	IF TALENT:ARG:萝莉老太婆
+		CALL PRINT_SELECT, "凄い娇小/娇小/一つ前の質問に返回"
+		SIF RESULT >= 2
+			RESULT = 99
+	ELSEIF TALENT:ARG:伪娘
+		CALL PRINT_SELECT, "凄い娇小/娇小/普通/一つ前の質問に返回"
+		SIF RESULT >= 3
+			RESULT = 99
+	ELSE
+		CALL PRINT_SELECT, "凄い娇小/娇小/普通/高大/凄い高大/一つ前の質問に返回"
+	ENDIF
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:娇小 = 2
+		MEMO_TALENT:QNUM += @"素質,娇小,2,+"
+	CASE 1
+		TALENT:ARG:娇小 = 1
+		MEMO_TALENT:QNUM += @"素質,娇小,1,+"
+	CASE 2
+	CASE 3
+		TALENT:ARG:高大 = 1
+		MEMO_TALENT:QNUM += @"素質,高大,1,+"
+	CASE 4
+		TALENT:ARG:高大 = 2
+		MEMO_TALENT:QNUM += @"素質,高大,2,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 4
+	IF TALENT:ARG:萝莉老太婆 == 0
+		TFLAG:指令中止 = 0
+		TALENT:ARG:外見年齢 = 0
+		IF TALENT:ARG:伪娘
+			PRINTFORML 外見年齢はどんなもんですか？
+			CALL PRINT_SELECT, "兒童/高校生ぐらい/一つ前の質問に返回"
+			SIF RESULT >= 2
+				RESULT = 99
+		ELSE
+			PRINTFORML 外見年齢はどんなもんですか？
+			CALL PRINT_SELECT, "兒童/高校生ぐらい/大学生ぐらい/大人/一つ前の質問に返回"
+		ENDIF
+		SELECTCASE RESULT
+		CASE 0 TO 3
+			TALENT:ARG:外見年齢 = RESULT + 1
+			MEMO_TALENT:QNUM += @"素質,外見年齢,{RESULT + 1},+"
+		CASEELSE
+			TFLAG:指令中止 = 1
+		ENDSELECT
+	ENDIF
+CASE 5
+	TFLAG:指令中止 = 0
+	TALENT:ARG:性器年齢 = 0
+	PRINTFORML 性器の見た目はどんなもんでしょうか？
+	CALL PRINT_SELECT, "美しい/普通/やや黑色/黒め/真っ黒/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0 TO 4
+		TALENT:ARG:性器年齢 = RESULT + 1
+		MEMO_TALENT:QNUM += @"素質,性器年齢,{RESULT + 1},+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 6
+	;女性でも具現があるので値が入力されている
+	TALENT:ARG:阴茎 = 1
+	IF PENIS(ARG)
+		TFLAG:指令中止 = 0
+		PRINTFORML 阴茎尺寸はどんなもんですか？
+		CALL PRINT_SELECT, "短小/普通/巨根/馬根/腕粗/規格外/一つ前の質問に返回"
+		SELECTCASE RESULT
+		CASE 0 TO 5
+			TALENT:ARG:阴茎 = RESULT
+			MEMO_TALENT:QNUM += @"素質,阴茎,{RESULT},+"
+		CASEELSE
+			TFLAG:指令中止 = 1
+		ENDSELECT
+	ENDIF
+CASE 7
+	;女性でも具現があるので値が入力されている
+	TALENT:ARG:包茎 = 0
+	IF PENIS(ARG)
+		TFLAG:指令中止 = 0
+		PRINTFORML 包茎具合はどんなもんですか？
+		CALL PRINT_SELECT, "露茎/假性/真性/一つ前の質問に返回"
+		SELECTCASE RESULT
+		CASE 0
+		CASE 1 TO 2
+			TALENT:ARG:包茎 = RESULT
+			MEMO_TALENT:QNUM += @"素質,包茎,{RESULT},+"
+		CASEELSE
+			TFLAG:指令中止 = 1
+		ENDSELECT
+	ENDIF
+CASE 8
+	TALENT:ARG:巨乳 = 0
+	TALENT:ARG:貧乳 = 0
+	TALENT:ARG:乳房 = 0
+	IF TALENT:ARG:男性 == 0
+		TFLAG:指令中止 = 0
+		TALENT:ARG:乳房 = 1
+		PRINTFORML 胸のサイズはどんなもんですか？
+		CALL PRINT_SELECT, "貧乳/普通/巨乳/爆乳/超乳/一つ前の質問に返回"
+		SELECTCASE RESULT
+		CASE 0
+			TALENT:ARG:貧乳 = 1
+			MEMO_TALENT:QNUM += @"素質,貧乳,1,+"
+		CASE 1
+		CASE 2 TO 4
+			TALENT:ARG:巨乳 = RESULT - 1
+			MEMO_TALENT:QNUM += @"素質,巨乳,{RESULT - 1},+"
+		CASEELSE
+			TFLAG:指令中止 = 1
+		ENDSELECT
+	ENDIF
+CASE 9
+	TFLAG:指令中止 = 0
+	TALENT:ARG:乳頭肥大 = 0
+	PRINTFORML 乳頭の尺寸はどんなもんですか？
+	CALL PRINT_SELECT, "普通/ＬＶ１/ＬＶ２/ＬＶ３/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+	CASE 1 TO 3
+		TALENT:ARG:乳頭肥大 = RESULT
+		MEMO_TALENT:QNUM += @"素質,乳頭肥大,{RESULT},+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 10
+	TFLAG:指令中止 = 0
+	TALENT:ARG:陥没乳頭 = 0
+	PRINTFORML 陥没乳頭ですか？
+	CALL PRINT_SELECT, "否/假性陥没/真性陥没/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+	CASE 1 TO 2
+		TALENT:ARG:陥没乳頭 = RESULT
+		MEMO_TALENT:QNUM += @"素質,陥没乳頭,{RESULT},+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 11
+	TFLAG:指令中止 = 0
+	TALENT:ARG:巨乳輪 = 0
+	PRINTFORML 乳輪の尺寸はどんなもんですか？
+	CALL PRINT_SELECT, "普通/ＬＶ１/ＬＶ２/ＬＶ３/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+	CASE 1 TO 3
+		TALENT:ARG:巨乳輪 = RESULT
+		MEMO_TALENT:QNUM += @"素質,巨乳輪,{RESULT},+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 12
+	TALENT:ARG:陰核肥大 = 0
+	IF PENIS(ARG) == 0
+		TFLAG:指令中止 = 0
+		PRINTFORML 陰核の尺寸はどんなもんですか？
+		CALL PRINT_SELECT, "普通/ＬＶ１/ＬＶ２/ＬＶ３/一つ前の質問に返回"
+		SELECTCASE RESULT
+		CASE 0
+		CASE 1 TO 3
+			TALENT:ARG:陰核肥大 = RESULT
+			MEMO_TALENT:QNUM += @"素質,陰核肥大,{RESULT},+"
+		CASEELSE
+			TFLAG:指令中止 = 1
+		ENDSELECT
+	ENDIF
+CASE 13
+	TALENT:ARG:陰核包茎 = 0
+	IF PENIS(ARG) == 0
+		TFLAG:指令中止 = 0
+		PRINTFORML 陰核の包茎具合はどんなもんですか？（通常は假性です）
+		CALL PRINT_SELECT, "露茎/假性/真性/一つ前の質問に返回"
+		SELECTCASE RESULT
+		CASE 0
+		CASE 1 TO 2
+			TALENT:ARG:陰核包茎 = RESULT
+			MEMO_TALENT:QNUM += @"素質,陰核包茎,{RESULT},+"
+		CASEELSE
+			TFLAG:指令中止 = 1
+		ENDSELECT
+	ENDIF
+CASE 14
+	TALENT:ARG:苗条 = 0
+	TALENT:ARG:豐腴 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 身体の太さはどんなもんでしょう？
+	CALL PRINT_SELECT, "苗条/普通/ぽっちゃり/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:苗条 = 1
+		MEMO_TALENT:QNUM += @"素質,苗条,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:豐腴 = 1
+		MEMO_TALENT:QNUM += @"素質,豐腴,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 15
+	TALENT:ARG:小尻 = 0
+	TALENT:ARG:巨尻 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML お尻の尺寸はどんなもんでしょう？
+	CALL PRINT_SELECT, "小さい/普通/巨尻/爆尻/超尻/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:小尻 = 1
+		MEMO_TALENT:QNUM += @"素質,小尻,1,+"
+	CASE 1
+	CASE 2 TO 4
+		TALENT:ARG:巨尻 = RESULT - 1
+		MEMO_TALENT:QNUM += @"素質,巨尻,{RESULT - 1},+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 16
+	TALENT:ARG:容易濕 = 0
+	TALENT:ARG:不易濕 = 0
+	IF TALENT:ARG:男性 == 0
+		TFLAG:指令中止 = 0
+		PRINTFORML 湿的やすさはどんなもんでしょう？
+		CALL PRINT_SELECT, "容易濕/普通/不易濕/一つ前の質問に返回"
+		SELECTCASE RESULT
+		CASE 0
+			TALENT:ARG:容易濕 = 1
+			MEMO_TALENT:QNUM += @"素質,容易濕,1,+"
+		CASE 1
+		CASE 2
+			TALENT:ARG:不易濕 = 1
+			MEMO_TALENT:QNUM += @"素質,不易濕,1,+"
+		CASEELSE
+			TFLAG:指令中止 = 1
+		ENDSELECT
+	ENDIF
+CASE 17
+	TALENT:ARG:早漏 = 0
+	TALENT:ARG:遅漏 = 0
+	IF PENIS(ARG)
+		TFLAG:指令中止 = 0
+		PRINTFORML 早漏ですか？遅漏ですか？
+		CALL PRINT_SELECT, "早漏/どちらでもない/遅漏/一つ前の質問に返回"
+		SELECTCASE RESULT
+		CASE 0
+			TALENT:ARG:早漏 = 1
+			MEMO_TALENT:QNUM += @"素質,早漏,1,+"
+		CASE 1
+		CASE 2
+			TALENT:ARG:遅漏 = 1
+			MEMO_TALENT:QNUM += @"素質,遅漏,1,+"
+		CASEELSE
+			TFLAG:指令中止 = 1
+		ENDSELECT
+	ENDIF
+CASE 18
+	TALENT:ARG:内気 = 0
+	TALENT:ARG:強気 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 内気ですか？強気ですか？
+	CALL PRINT_SELECT, "内気/どちらでもない/強気/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:内気 = 1
+		MEMO_TALENT:QNUM += @"素質,内気,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:強気 = 1
+		MEMO_TALENT:QNUM += @"素質,強気,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 19
+	TALENT:ARG:坦率 = 0
+	TALENT:ARG:傲慢 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 坦率ですか？傲慢ですか？
+	CALL PRINT_SELECT, "坦率/どちらでもない/傲慢/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:坦率 = 1
+		MEMO_TALENT:QNUM += @"素質,坦率,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:傲慢 = 1
+		MEMO_TALENT:QNUM += @"素質,傲慢,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 20
+	TALENT:ARG:高慢 = 0
+	TALENT:ARG:謙虚 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 高慢ですか？謙虚ですか？
+	CALL PRINT_SELECT, "高慢/どちらでもない/謙虚/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:高慢 = 1
+		MEMO_TALENT:QNUM += @"素質,高慢,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:謙虚 = 1
+		MEMO_TALENT:QNUM += @"素質,謙虚,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 21
+	TALENT:ARG:開朗 = 0
+	TALENT:ARG:冷静 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 開朗ですか？冷静ですか？
+	CALL PRINT_SELECT, "開朗/どちらでもない/冷静/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:開朗 = 1
+		MEMO_TALENT:QNUM += @"素質,開朗,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:冷静 = 1
+		MEMO_TALENT:QNUM += @"素質,冷静,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 22
+	TALENT:ARG:温柔 = 0
+	TALENT:ARG:坏心眼 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 温柔ですか？坏心眼ですか？
+	CALL PRINT_SELECT, "温柔/どちらでもない/坏心眼/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:温柔 = 1
+		MEMO_TALENT:QNUM += @"素質,温柔,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:坏心眼 = 1
+		MEMO_TALENT:QNUM += @"素質,坏心眼,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 23
+	TALENT:ARG:好奇心 = 0
+	TALENT:ARG:保守的 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 好奇心旺盛ですか？保守的ですか？
+	CALL PRINT_SELECT, "好奇心旺盛/どちらでもない/保守的/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:好奇心 = 1
+		MEMO_TALENT:QNUM += @"素質,好奇心,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:保守的 = 1
+		MEMO_TALENT:QNUM += @"素質,保守的,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 24
+	TALENT:ARG:贞操重视 = 0
+	TALENT:ARG:不在乎貞操 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 贞操重视はどうですか？
+	CALL PRINT_SELECT, "很强/普通/無い/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:贞操重视 = 1
+		MEMO_TALENT:QNUM += @"素質,贞操重视,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:不在乎貞操 = 1
+		MEMO_TALENT:QNUM += @"素質,不在乎貞操,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 25
+	TALENT:ARG:害羞 = 0
+	TALENT:ARG:不知羞恥 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 害羞が有些ますか？不知羞恥ですか？
+	CALL PRINT_SELECT, "害羞が有る/どちらでもない/不知羞恥/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:害羞 = 1
+		MEMO_TALENT:QNUM += @"素質,害羞,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:不知羞恥 = 1
+		MEMO_TALENT:QNUM += @"素質,不知羞恥,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 26
+	TALENT:ARG:容易迷恋 = 0
+	TALENT:ARG:難以越過的底線 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 容易迷恋ですか？惚れにくいですか？
+	CALL PRINT_SELECT, "容易迷恋/どちらでもない/惚れにくい/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:容易迷恋 = 1
+		MEMO_TALENT:QNUM += @"素質,容易迷恋,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:難以越過的底線 = 1
+		MEMO_TALENT:QNUM += @"素質,難以越過的底線,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 27
+	TALENT:ARG:高贵 = 0
+	TALENT:ARG:粗野 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 高贵が有ますか？それとも粗野ですか？
+	CALL PRINT_SELECT, "高贵がある/どちらでもない/粗野/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:高贵 = 1
+		MEMO_TALENT:QNUM += @"素質,高贵,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:粗野 = 1
+		MEMO_TALENT:QNUM += @"素質,粗野,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 28
+	TALENT:ARG:聰慧 = 0
+	TALENT:ARG:笨蛋 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 聰慧ですか？笨蛋ですか？
+	CALL PRINT_SELECT, "聰慧/どちらでもない/笨蛋/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:聰慧 = 1
+		MEMO_TALENT:QNUM += @"素質,聰慧,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:笨蛋 = 1
+		MEMO_TALENT:QNUM += @"素質,笨蛋,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASE 29
+	TALENT:ARG:接受快感 = 0
+	TALENT:ARG:否定快感 = 0
+	TFLAG:指令中止 = 0
+	PRINTFORML 接受快感ですか？それとも否定的ですか？
+	CALL PRINT_SELECT, "接受快感/どちらでもない/快感に否定的/一つ前の質問に返回"
+	SELECTCASE RESULT
+	CASE 0
+		TALENT:ARG:接受快感 = 1
+		MEMO_TALENT:QNUM += @"素質,接受快感,1,+"
+	CASE 1
+	CASE 2
+		TALENT:ARG:否定快感 = 1
+		MEMO_TALENT:QNUM += @"素質,否定快感,1,+"
+	CASEELSE
+		TFLAG:指令中止 = 1
+	ENDSELECT
+CASEELSE
+	PRINTW とりあえずここまで
+	RETURN 1
+ENDSELECT
+
+IF TFLAG:指令中止
+	TFLAG:页数 -= 1
+ELSE
+	TFLAG:页数 += 1
+ENDIF
+CLEARLINE LINECOUNT - MEMO_LINECOUNT
+
+RESTART
+
+
+
+

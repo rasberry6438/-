@@ -1,0 +1,108 @@
+﻿@COM107
+;逆Ａ振動棒
+;PLAYER側が振動棒で楽しむ指令。通常の振動棒指令とは違い、入れっぱ无にはしない。
+CALL PRINT_TRAIN_NAME(SELECTCOM)
+
+;-------------------------------------------------
+;実行できるかの判定
+;-------------------------------------------------
+CALL SHOW_COM_ORDER_COM, 107
+
+;実行できない
+SIF TCVAR:干劲 == 0
+	RETURN 0
+;-------------------------------------------------
+;実行決定
+;-------------------------------------------------
+CALL TRAIN_MESSAGE_B
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+STR:前回指令 = %STR:今回指令%
+
+;-------------------------------------------------
+;射精格子
+;-------------------------------------------------
+CALL SAMEN_CHECK
+
+RETURN 1
+
+@TRAIN_MESSAGE_COM107
+;振動棒選択
+CALL SELECT_VIB_A, PLAYER
+
+SIF REFUSE_CHECK()
+	RETURN 0
+
+PRINTFORM %CALLNAME:TARGET%對準%CALLNAME:PLAYER%的肛門、將
+SELECTCASE SIZE("Ａ振動棒", PLAYER)
+CASE IS >= 3
+	PRINT 極大振動棒
+CASE 2
+	PRINT 大型振動棒
+CASE 1
+	PRINT 振動棒
+CASE 0
+	PRINT 肛門振動棒
+ENDSELECT
+IF PREVCOM == SELECTCOM && COND("前Ｔ調教者") == PLAYER
+	PRINTW 繼續來回抽插、翻攪著……
+ELSE
+	PRINTW 來回地抽插、翻攪著……
+ENDIF
+
+
+@FLAG_COM107, ARG
+
+@SOURCE_COM107, ARG
+CALL VARSET_COMF
+
+CALL SOURCE_SERVICE_PLAY, "逆Ａ振動棒"
+
+CALL SOURCE_DOWNBASE_HP, 107
+
+SOURCE:0:情愛 = 500
+SOURCE:0:不潔 = 1000
+SOURCE:0:欲情追加 = CALCF("実行値による欲情追加")
+SOURCE:0:逸脱 = 1500
+
+CALL CALC, "調教ソース", ARG
+
+
+@COM_ORDER_COM107, ARG
+VARSET LOCAL
+LOCALS = 
+
+;すべての命令に共通の要素を考慮
+;(信頼が高いと命令に従いやすいなど)
+CALL COM_ORDER, ARG
+
+LOCAL = RESULT
+
+;ABL:奉仕精神
+IF ABL:奉仕精神
+	LOCAL += MIN(ABL:奉仕精神, 10) * 2
+	LOCALS = %LOCALS% + 奉仕精神LV{ABL:奉仕精神}({MIN(ABL:奉仕精神, 10) * 2})
+ENDIF
+;ABL:施虐属性
+IF ABL:施虐属性
+	LOCAL += MIN(ABL:施虐属性, 5) * 5
+	LOCALS = %LOCALS% + 施虐属性LV{ABL:施虐属性}({MIN(ABL:施虐属性, 5) * 5})
+ENDIF
+;献身的
+IF TALENT:献身
+	LOCAL += 6
+	LOCALS = %LOCALS% + 献身(6)
+ENDIF
+;否定快感
+IF TALENT:否定快感
+	LOCAL -= 1
+	LOCALS = %LOCALS% - 否定快感(1)
+ENDIF
+
+
+;合計を表示(40以上で実行)
+CALL PRINT_COM_ORDER_COM, LOCALS, ARG, LOCAL, 40
+
+RETURN RESULT

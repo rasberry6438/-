@@ -1,0 +1,325 @@
+﻿;ここでパラメータ関係処理するよ
+@K15_添い寝指令(CmdNo)
+	#DIM DYNAMIC CmdNo
+
+	#DIM DYNAMIC Juel恭順Memo
+	#DIM DYNAMIC Juel恥情Memo
+	#DIM DYNAMIC Juel屈服Memo
+	#DIM DYNAMIC Juel欲情Memo
+	;回合数が進まない指令
+	SELECTCASE CmdNo
+		CASE 添い寝終了ボタン
+			;ここでは何もやらへんで
+			RETURN -1
+		CASE 添い寝健全ボタン
+			Soine_BtnTab = 0
+			RETURN -1
+		CASE 添い寝えっちボタン
+			Soine_BtnTab = 1
+			RETURN -1
+		CASE -1
+			;なんか特殊な指令入力された時
+			RETURN -2
+	ENDSELECT 
+
+	;回合数が進む指令
+	VARSET STR
+	TCVAR:TARGET:回合数++
+	
+	Juel恭順Memo = JUEL:恭順
+	Juel恥情Memo = JUEL:恥情
+	Juel屈服Memo = JUEL:屈服
+	Juel欲情Memo = JUEL:欲情
+
+	;添い寝で感じる恥ずかしさ
+	JUEL:恥情 += RAND:10+1
+
+	STR:前回指令 = %STR:今回指令%
+	SELECTCASE CmdNo
+		CASE 添い寝什麼也不做
+			FLAG:情緒 += 10
+			STR:今回指令 = 什麼也不做
+			;添い寝興奮度が10%減り、500減少する
+			;添い寝興奮度 -= 添い寝興奮度/10 - 500
+			CALL K15_入眠度Calc(500)
+			CALL K15_安心度Calc(100)
+			CALL K15_興奮度Calc(-200)
+			JUEL:恭順 += 40+RAND:20+1 
+
+		CASE 添い寝話す
+			FLAG:情緒 += 15
+			STR:今回指令 = 話す
+			CALL K15_入眠度Calc(300)
+			CALL K15_安心度Calc(300)
+			JUEL:恭順 += 40+RAND:20+1 
+	
+		CASE 添い寝摸頭
+			FLAG:情緒 += 30
+			STR:今回指令 = 摸頭
+			CALL K15_入眠度Calc(400)
+			CALL K15_安心度Calc(500)
+			JUEL:恭順 += 50
+
+		CASE 添い寝手を握る
+			FLAG:情緒 += 40
+			STR:今回指令 = 手を握る
+			CALL K15_入眠度Calc(300)
+			CALL K15_安心度Calc(300)
+			JUEL:恭順 += 40+RAND:20+1 
+			JUEL:欲情 += 40 + RAND:40 +1
+			
+		CASE 添い寝抱きつく
+			FLAG:情緒 += 40
+			STR:今回指令 = 抱きつく
+			CALL K15_入眠度Calc(200)
+			CALL K15_安心度Calc(400)
+			CALL K15_興奮度Calc(500)
+			JUEL:恭順 += 30 + RAND:20 +1
+			JUEL:欲情 += 60 + RAND:30 +1
+			
+		CASE 添い寝足を絡める
+			FLAG:情緒 += 50
+			STR:今回指令 = 足を絡める
+			CALL K15_入眠度Calc(100)
+			CALL K15_安心度Calc(400)
+			CALL K15_興奮度Calc(500)
+			JUEL:恭順 += 20 + RAND:20 +1
+			JUEL:欲情 += 40 + RAND:20 +1
+			
+		CASE 添い寝接吻
+			STR:今回指令 = 接吻
+			CALL K15_入眠度Calc(100)
+			JUEL:恭順 += 10
+			JUEL:欲情 += 10
+
+		CASE 添い寝角を撫でる
+			STR:今回指令 = 角を撫でる
+			CALL K15_入眠度Calc(30)
+			JUEL:恭順 += 80 + RAND:10 +1
+			JUEL:屈服 += 30 + RAND:20 +1
+			
+		CASE 添い寝尾巴をさわる
+			FLAG:情緒 += 100
+			STR:今回指令 = 尾巴をさわる
+			CALL K15_入眠度Calc(20)
+			JUEL:欲情 += 80 + RAND:10 +1
+			JUEL:屈服 += 30 + RAND:20 +1
+			
+		CASE 添い寝胸を揉む
+			STR:今回指令 = 胸を揉む
+			CALL K15_入眠度Calc(50)
+			JUEL:欲情 += 20 + RAND:10 +1
+			JUEL:屈服 += 10
+			
+		CASE 添い寝お尻を揉む 
+			STR:今回指令 = お尻を揉む 
+			CALL K15_入眠度Calc(50)
+			JUEL:欲情 += 20 + RAND:10 +1
+			JUEL:屈服 += 15
+
+		CASE 添い寝阴蒂を触る
+			STR:今回指令 = 阴蒂を触る
+			CALL K15_入眠度Calc(20)
+			JUEL:欲情 += 10 + RAND:10 +1
+			JUEL:屈服 += 15
+			
+		CASE 添い寝中に指を入れる
+			STR:今回指令 = 中に指を入れる
+			
+		CASEELSE 
+	ENDSELECT
+
+	VARSET 添い寝システム文
+	CALL LIBT_添い寝システム(@"押された番号={CmdNo} STR:今回指令=%STR:今回指令% 回合数：{TCVAR:TARGET:回合数}")
+	CALL LIBT_添い寝システム(@"恭順の珠：{Juel恭順Memo} + {JUEL:恭順-Juel恭順Memo} = {JUEL:恭順}    恥情の珠：{Juel恥情Memo} + {JUEL:恥情-Juel恥情Memo} = {JUEL:恥情}")
+	CALL LIBT_添い寝システム(@"屈服の珠：{Juel屈服Memo} + {JUEL:屈服-Juel屈服Memo} = {JUEL:屈服}    欲情の珠：{Juel欲情Memo} + {JUEL:欲情-Juel欲情Memo} = {JUEL:欲情}")
+	;口上側で特別記載がない限りはこちらで添い寝グラの変更を行う
+	添い寝背景差分 = 
+	IF 添い寝入眠度 >= 8500
+		添い寝背景差分 += @"闭眼/" 
+	ELSEIF 添い寝入眠度 >= 6500
+		添い寝背景差分 += @"半目/" 
+	ENDIF
+	SIF 添い寝興奮度 >= 5000
+		添い寝背景差分 += @"赤面２/"
+	
+
+	RETURN 1
+
+	
+	
+
+
+@K15_添い寝口上処理
+
+	IF 添い寝入眠度 >= 8500
+		SELECTCASE STR:今回指令
+			CASE "什麼也不做"
+				SELECTCASE RAND:2
+					CASE 0
+						CALL K15_LIBT("添い寝中什麼也不做：眠さ高1")
+					CASE 1
+						CALL K15_LIBT("添い寝中什麼也不做：眠さ高2")
+				ENDSELECT
+			CASE "話す"
+				SELECTCASE RAND:2
+					CASE 0
+						CALL K15_LIBT("添い寝中話す：眠さ高1")
+					CASE 1
+						CALL K15_LIBT("添い寝中話す：眠さ高2")
+				ENDSELECT
+			CASE "摸頭"
+				CALL K15_LIBT("添い寝中摸頭：眠さ高")
+			CASE "手を握る"
+				CALL K15_LIBT("添い寝中手を握る：眠さ高")
+			CASE "抱きつく"
+				CALL K15_LIBT("添い寝中抱きつく：眠さ高")
+			CASE "足を絡める"
+				CALL K15_LIBT("添い寝中足を絡める：眠さ高")
+			CASE "接吻"
+				CALL K15_LIBT("添い寝中接吻：眠さ高")
+			CASE "角を撫でる"
+				CALL K15_LIBT("添い寝中角を撫でる：眠さ高")
+			CASE "尾巴をさわる"
+				CALL K15_LIBT("添い寝中尾巴をさわる：眠さ高")
+			CASE "胸を揉む"
+				CALL K15_LIBT("添い寝中胸を揉む：眠さ高")
+			CASE "お尻を揉む"
+				CALL K15_LIBT("添い寝中お尻を揉む：眠さ高")
+			CASE "阴蒂を触る"
+				CALL K15_LIBT("添い寝中阴蒂を触る：眠さ高")
+			CASEELSE
+		ENDSELECT 
+	ELSEIF 添い寝入眠度 >= 6500
+		SELECTCASE STR:今回指令
+			CASE "什麼也不做"
+				SELECTCASE RAND:2
+					CASE 0
+						CALL K15_LIBT("添い寝中什麼也不做：眠さ中1")
+					CASE 1
+						CALL K15_LIBT("添い寝中什麼也不做：眠さ中2")
+				ENDSELECT
+			CASE "話す"
+				SELECTCASE RAND:2
+					CASE 0
+						CALL K15_LIBT("添い寝中話す：眠さ中1")
+					CASE 1
+						CALL K15_LIBT("添い寝中話す：眠さ中2")
+				ENDSELECT
+			CASE "摸頭"
+				CALL K15_LIBT("添い寝中摸頭：眠さ中")
+			CASE "手を握る"
+				CALL K15_LIBT("添い寝中手を握る：眠さ中")
+			CASE "抱きつく"
+				CALL K15_LIBT("添い寝中抱きつく：眠さ中")
+			CASE "足を絡める"
+				CALL K15_LIBT("添い寝中足を絡める：眠さ高")
+			CASE "接吻"
+				CALL K15_LIBT("添い寝中接吻：眠さ中")
+			CASE "角を撫でる"
+				CALL K15_LIBT("添い寝中角を撫でる：眠さ中")
+			CASE "尾巴をさわる"
+				CALL K15_LIBT("添い寝中尾巴をさわる：眠さ中")
+			CASE "胸を揉む"
+				CALL K15_LIBT("添い寝中胸を揉む：眠さ中")
+			CASE "お尻を揉む"
+				CALL K15_LIBT("添い寝中お尻を揉む：眠さ中")
+			CASE "阴蒂を触る"
+				CALL K15_LIBT("添い寝中阴蒂を触る：眠さ中")
+			CASEELSE
+		ENDSELECT 
+	ELSE
+		SELECTCASE STR:今回指令
+			CASE "什麼也不做"
+				SELECTCASE RAND:2
+					CASE 0
+						CALL K15_LIBT("添い寝中什麼也不做：眠さ低1")
+					CASE 1
+						CALL K15_LIBT("添い寝中什麼也不做：眠さ低2")
+				ENDSELECT
+			CASE "話す"
+				SELECTCASE RAND:2
+					CASE 0
+						CALL K15_LIBT("添い寝中話す：眠さ低1")
+					CASE 1
+						CALL K15_LIBT("添い寝中話す：眠さ低2")
+				ENDSELECT
+			CASE "摸頭"
+				CALL K15_LIBT("添い寝中摸頭：眠さ低")
+			CASE "手を握る"
+				CALL K15_LIBT("添い寝中手を握る：眠さ低")
+			CASE "抱きつく"
+				CALL K15_LIBT("添い寝中抱きつく：眠さ低")
+			CASE "足を絡める"
+				CALL K15_LIBT("添い寝中足を絡める：眠さ低")
+			CASE "接吻"
+				CALL K15_LIBT("添い寝中接吻：眠さ低")
+			CASE "角を撫でる"
+				CALL K15_LIBT("添い寝中角を撫でる：眠さ低")
+			CASE "尾巴をさわる"
+				CALL K15_LIBT("添い寝中尾巴をさわる：眠さ低")
+			CASE "胸を揉む"
+				CALL K15_LIBT("添い寝中胸を揉む：眠さ低")
+			CASE "お尻を揉む"
+				CALL K15_LIBT("添い寝中お尻を揉む：眠さ低")
+			CASE "阴蒂を触る"
+				CALL K15_LIBT("添い寝中阴蒂を触る：眠さ低")
+			CASEELSE
+		ENDSELECT 
+	ENDIF
+	;CALL LIBT_セリフ("「添い寝口上样本」")
+	
+	;特に指定が無い場合はパラメータに応じた颜绘の変化を叫醒
+@LIBT_添い寝システム(ARGS)
+	#DIM Lcount
+	FOR Lcount,0,9
+		IF 添い寝システム文:Lcount == ""
+			SIF ARGS == ""
+				ARGS += "　"
+			添い寝システム文:Lcount = %ARGS%
+			BREAK
+		ENDIF
+	NEXT 
+@K15_入眠度Calc(変化量)
+	#DIM DYNAMIC 変化量
+	;興奮度が高いと入眠度が上がりにくくなり、安心度が高いと入眠度が上がりやすくなる？
+	;とりあえず計算式はあとで
+	
+	添い寝入眠度 += 変化量 
+	
+	IF 添い寝入眠度 > 12000
+		添い寝入眠度 = 12000
+	ELSEIF 添い寝入眠度 < 0
+		添い寝入眠度 = 0
+	ENDIF
+
+
+@K15_興奮度Calc(変化量)
+	#DIM DYNAMIC 変化量
+	添い寝興奮度 += 変化量
+
+	IF 添い寝興奮度 > 12000
+		添い寝興奮度 = 12000
+	ELSEIF 添い寝興奮度 < 0
+		添い寝興奮度 = 0
+	ENDIF
+
+@K15_安心度Calc(変化量)
+	#DIM DYNAMIC 変化量
+	添い寝安心度 += 変化量 
+
+	IF 添い寝安心度 > 12000
+		添い寝安心度 = 12000
+	ELSEIF 添い寝安心度 < 0
+		添い寝安心度 = 0
+	ENDIF
+
+@K15_絶頂度Calc(変化量)
+	#DIM DYNAMIC 変化量
+	添い寝絶頂度 += 変化量 
+	;ここで絶頂周り計算したけどな
+	IF 添い寝絶頂度 > 12000
+		添い寝絶頂度 = 12000
+	ELSEIF 添い寝絶頂度 < 0
+		添い寝絶頂度 = 0
+	ENDIF

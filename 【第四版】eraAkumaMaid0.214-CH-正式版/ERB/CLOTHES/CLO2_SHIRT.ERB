@@ -1,0 +1,710 @@
+﻿;-------------------------------------------------
+;角色ARGに服ARGSを着せる。ARGS == ""なら脱がす
+;連衣裙属性を持つ服は裙も同時に設定する
+;-------------------------------------------------
+@SET_SHIRT, ARGS, ARG
+#DIMS MEMO_CLO
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+MEMO_CLO = %CSTR:ARG:服%
+;汚れ＆移開たりしたフラグ等を初期化して新品にする	
+STAIN:ARG:服 = 0
+
+CALL PALAM_SHIRT, ARGS, ARG
+
+;コモンフラグを設定する
+CSTR:ARG:服 = %SET_CLO_COMMON(CSTR:ARG:服, ARG)%
+EQUIP:ARG:服 = STRLENS(CSTR:ARG:服)
+
+;裙もセット？
+IF CHECK_SHIRT("連衣裙", ARG)
+	;ワンピは裙に服の名称を加える
+	CSTR:ARG:裙 += @"%SHIRT(ARG, "種類")%/"
+
+	STR_ADD = %EXTSTR(ARGS, "/")%
+	CSTR:ARG:裙 = %MERGE_STR(CSTR:ARG:裙, STR_ADD)%
+
+	CSTR:ARG:裙 = %SET_CLO_COMMON(CSTR:ARG:裙, ARG)%
+	EQUIP:ARG:裙 = STRLENS(CSTR:ARG:裙)
+
+;服が連衣裙じゃない場合に裙が連衣裙なのは脱がせ忘れなので、裙を脱がす
+ELSEIF CHECK_SHIRT("連衣裙", ARG) == 0 && CHECK_SKIRT("連衣裙", ARG)
+	CALL SET_SKIRT, "", ARG
+ENDIF
+SIF MEMO_CLO != CSTR:ARG:服
+	TFLAG:着替えた = 1
+
+;-------------------------------------------------
+;ARGの恤の名前。ARGSに"略"と入れると略称になる
+;-------------------------------------------------
+@SHIRT(ARG, ARGS)
+#FUNCTIONS
+#DIMS CIPTYPE
+#DIMS SHIRT_TYPE
+#DIMS COLOR_TYPE
+
+VARSET LOCALS
+SELECTCASE ARGS
+;主に制服の下に着ている女式衬衫など
+CASE "内部"
+	RETURNF EXTSTR(CSTR:ARG:服, "内部：", "/")
+CASE "CIP正面衣领颜色"
+	IF CHECK_OTHER("前開V领毛衣", ARG)
+		LOCALS = V领毛衣前開
+	ENDIF
+	SIF LOCALS != ""
+		RETURNF @"正面%LOCALS%"
+CASE "CIP正面"
+	;連衣裙は裙の方で管理する
+	IF CHECK_SHIRT("連衣裙", ARG) && EQUIP:ARG:裙
+		RETURNF ""
+
+	;以下はワンピでない服
+	ELSEIF CHECK_SHIRT("縦毛衣", ARG)
+		LOCALS = 縦毛衣
+	ELSEIF CHECK_SHIRT("毛衣", ARG) && CHECK_SHIRT("提起裙角", ARG)
+		LOCALS = 長毛衣
+	ELSEIF CHECK_SHIRT("吊帯衫", ARG)
+		SIF CHECK_SHIRT("露脐", ARG)
+			RETURNF ""
+		LOCALS = 吊帯衫
+	ELSEIF CHECK_SHIRT("吊帯背心", ARG)
+		SIF CHECK_SHIRT("露脐", ARG)
+			RETURNF ""
+		LOCALS = 吊帯背心
+	ELSEIF CHECK_SHIRT("V领毛衣", ARG)
+		LOCALS = V领毛衣
+	ELSEIF CHECK_SHIRT("运动衫", ARG)
+		IF CHECK_SHIRT("詰襟", ARG)
+			LOCALS = 詰襟运动衫
+		ELSE
+			LOCALS = 运动衫
+		ENDIF
+	ELSEIF CHECK_SHIRT("背心", ARG)
+		LOCALS = 背心
+	ELSEIF CHECK_SHIRT("西装外衣", ARG)
+		LOCALS = 西装外衣
+	ELSEIF CHECK_SHIRT("Ｔ恤", ARG)
+		SIF CHECK_SHIRT("露脐", ARG)
+			RETURNF ""
+		LOCALS = Ｔ恤
+	ELSEIF CHECK_SHIRT("水手", ARG)
+		IF CHECK_SHIRT("露脐", ARG) || CHECK_SHIRT("超短", ARG)
+			LOCALS = 露脐水手
+		ELSE
+			LOCALS = 水手
+		ENDIF
+	ELSEIF CHECK_SHIRT("蕾丝女式衬衫")
+		RETURNF ""
+	ELSEIF CHECK_SHIRT("衬衫", ARG)
+		LOCALS = 女式衬衫
+
+	ELSEIF CHECK_SHIRT("女式衬衫", ARG) + CHECK_SHIRT("背心", ARG)
+		IF CHECK_SHIRT("露脐", ARG)
+			LOCALS = 露脐女式衬衫
+		;收下摆属性があると裙の中に下摆を入れる
+		ELSEIF CHECK_SHIRT("收下摆", ARG) + CHECK_SKIRT("收下摆", ARG) && SKIRT(ARG, "CIP正面") != "" && CHECK_SKIRT("裙", ARG)
+			LOCALS = 女式衬衫收下摆
+		ELSE
+			LOCALS = 女式衬衫
+		ENDIF
+	ELSEIF CHECK_SHIRT("体操服", ARG)
+		IF CHECK_SHIRT("露脐", ARG)
+			LOCALS = 露脐体操服
+		ELSEIF SKIRT(ARG, "CIP正面") != "" && CHECK_SKIRT("裙", ARG)
+			LOCALS = 露脐体操服
+		ELSE
+			LOCALS = 体操服
+		ENDIF
+	ELSE
+		RETURNF ""
+	ENDIF
+	SIF LOCALS != ""
+		RETURNF @"正面%LOCALS%"
+
+CASE "CIP背面"
+	RETURNF ""
+CASE "CIP正面カラー", "CIP背面カラー"
+	SELECTCASE ARGS
+	CASE "CIP正面カラー"
+		CIPTYPE = CIP正面
+	CASE "CIP背面カラー"
+		CIPTYPE = CIP背面
+	ENDSELECT
+
+	SHIRT_TYPE = %REPLACE(SHIRT(ARG, CIPTYPE), "正面", "")%
+	SHIRT_TYPE = %REPLACE(SHIRT_TYPE, "背面", "")%
+
+	COLOR_TYPE = %CLOCOLOR_MAIDFACE(SHIRT_TYPE, CHECK_CLOCOLOR(CSTR:ARG:服), ARG)%
+
+	;女式衬衫は衣领颜色しているため本来の色でない場合がある
+	IF STRCOUNT(SHIRT_TYPE, "女式衬衫")
+		SIF STRCOUNT(CUSEABLE("女式衬衫", ARG), CLOCOLOR_MAIDFACE(SHIRT_TYPE, CHECK_CLOCOLOR(CSTR:ARG:服), ARG) ) == 0
+			RETURNF "白"
+	ENDIF
+	RETURNF COLOR_TYPE
+
+CASE "柄"
+	SIF CHECK_SHIRT("柄：", ARG) == 0
+		RETURNF LOCALS
+	RETURNF EXTSTR(CSTR:ARG:服, "柄：", "/")
+CASE "略"
+	IF CHECK_SHIRT("鎧", ARG)
+		LOCALS = 鎧
+	ELSEIF CHECK_SHIRT("V领毛衣", ARG)
+		LOCALS = V领毛衣
+	ELSEIF CHECK_SHIRT("露肩夹克", ARG)
+		LOCALS = 露肩夹克
+	ELSEIF CHECK_SHIRT("夹克", ARG)
+		LOCALS = 夹克
+	ELSEIF CHECK_SHIRT("毛衣", ARG)
+		LOCALS = 毛衣
+	ELSEIF CHECK_SHIRT("睡衣", ARG)
+		LOCALS = 睡衣
+	ELSEIF CHECK_SHIRT("晨衣", ARG)
+		LOCALS = 晨衣
+	ELSEIF CHECK_SHIRT("情趣内衣", ARG)
+		LOCALS = 情趣内衣
+	ELSEIF CHECK_SHIRT("紧身胸衣", ARG)
+		LOCALS = 紧身胸衣
+	ELSEIF CHECK_SHIRT("修道服", ARG)
+		LOCALS = 修道服
+	;哥特蘿莉礼服と夏日礼服の略称は礼服で良いかも
+	;ELSEIF CHECK_SHIRT("哥特蘿莉礼服", ARG)
+	;	LOCALS = 哥特蘿莉礼服
+	;ELSEIF CHECK_SHIRT("夏日礼服", ARG)
+	;	LOCALS = 夏日礼服
+	ELSEIF CHECK_SHIRT("礼服", ARG)
+		LOCALS = 礼服
+	ELSEIF CHECK_SHIRT("巫女服", ARG)
+		LOCALS = 巫女服
+	ELSEIF CHECK_SHIRT("女式衬衫", ARG)
+		LOCALS = 女式衬衫
+	ELSEIF CHECK_SHIRT("西装外衣", ARG)
+		LOCALS = 西装外衣
+	ELSEIF CHECK_SHIRT("背心", ARG)
+		LOCALS = 背心
+	ELSEIF CHECK_SHIRT("水手", ARG)
+		LOCALS = 水手服
+	ELSEIF CHECK_SHIRT("旗袍", ARG)
+		LOCALS = 旗袍
+	ELSEIF CHECK_SHIRT("护士服", ARG)
+		LOCALS = 护士服
+	ELSEIF CHECK_SHIRT("体操服", ARG)
+		LOCALS = 体操服
+	ELSEIF CHECK_SHIRT("執事服", ARG)
+		LOCALS = 執事服
+	ELSEIF CHECK_SHIRT("女仆装", ARG)
+		LOCALS = 女仆装
+	ELSEIF CHECK_SHIRT("振袖", ARG)
+		LOCALS = 振袖
+	ELSEIF CHECK_SHIRT("浴衣", ARG)
+		LOCALS = 浴衣
+	ELSEIF CHECK_SHIRT("和服", ARG)
+		LOCALS = 和服
+	ELSEIF CHECK_SHIRT("吊帯衫", ARG)
+		LOCALS = 吊帯衫
+	ELSEIF CHECK_SHIRT("制服", ARG)
+		LOCALS = 制服
+	ELSEIF CHECK_SHIRT("衬衫", ARG)
+		LOCALS = 衬衫
+	ELSEIF CHECK_SHIRT("衬衫", ARG)
+		LOCALS = 衬衫
+	ELSEIF CHECK_SHIRT("Ｔ恤", ARG)
+		LOCALS = Ｔ恤
+	ELSEIF CHECK_SHIRT("侍者服", ARG)
+		LOCALS = 侍者服の制服
+	ELSEIF CHECK_SHIRT("运动衫", ARG)
+		LOCALS = 运动衫
+	ELSEIF CHECK_SHIRT("偶像衣装", ARG)
+		LOCALS = 偶像衣装
+	ELSEIF CHECK_SHIRT("ローブ", ARG)
+		LOCALS = ローブ
+	ELSEIF CHECK_SHIRT("聖誕服", ARG)
+		LOCALS = 聖誕服
+	ELSEIF CHECK_SHIRT("逆兔女郎套装", ARG)
+		LOCALS = 逆兔女郎套装
+	ELSE
+		LOCALS = 服
+	ENDIF
+CASE "種類"
+	;LOCALS:0に名称が入る
+	SPLIT CSTR:ARG:服, "/", LOCALS
+CASE ""
+	;LOCALS:0に名称が入る
+	SPLIT CSTR:ARG:服, "/", LOCALS
+	RETURNF @"%CLOCOLOR(CSTR:ARG:服, "形容詞")%%LOCALS%"
+ENDSELECT
+RETURNF LOCALS
+
+;-------------------------------------------------
+;ARG番の恤の名称。換装などで表を作る際に使う
+;-------------------------------------------------
+@NAME_SHIRT(ARG)
+#FUNCTIONS
+VARSET LOCALS
+
+SELECTCASE ARG
+CASE 0
+	LOCALS = 女仆装
+CASE 1
+	LOCALS = 护士服
+CASE 2
+	LOCALS = 旗袍
+CASE 3
+	LOCALS = 巫女服
+CASE 4
+	LOCALS = 婚纱礼服
+CASE 5
+	LOCALS = 修道服
+CASE 6
+	LOCALS = 哥特蘿莉礼服
+CASE 7
+	LOCALS = 情趣内衣
+CASE 8
+	LOCALS = 和服
+CASE 9
+	LOCALS = 振袖
+CASE 10
+	LOCALS = 浴衣
+CASE 11
+	LOCALS = 皮革夹克
+CASE 12
+	LOCALS = 水手服
+CASE 13
+	LOCALS = 西装外衣
+CASE 14
+	LOCALS = 校服
+CASE 15
+	LOCALS = 男子西装
+CASE 16
+	LOCALS = 体操服
+CASE 17
+	LOCALS = 运动衫
+CASE 18
+	LOCALS = 女式衬衫
+CASE 19
+	LOCALS = 領帯女式衬衫
+CASE 20
+	LOCALS = 无袖女式衬衫
+CASE 21
+	LOCALS = 宽松女式衬衫
+CASE 22
+	LOCALS = 褶边女式衬衫
+CASE 23
+	LOCALS = Ｔ恤
+CASE 24
+	LOCALS = 怪图案Ｔ恤
+CASE 25
+	LOCALS = 宽大的Ｔ恤
+CASE 26
+	LOCALS = 衬衫
+CASE 27
+	LOCALS = 半開衬衫
+CASE 28
+	LOCALS = 切驳服
+CASE 29
+	LOCALS = 后背蝴蝶結切驳服
+CASE 30
+	LOCALS = 開胸高領毛衣
+CASE 31
+	LOCALS = 蝴蝶結露肩外衣
+CASE 32
+	LOCALS = 针织露肩外衣
+CASE 33
+	LOCALS = 针织毛衣
+CASE 34
+	LOCALS = 露背针织毛衣
+CASE 35
+	LOCALS = 萌袖毛衣
+CASE 36
+	LOCALS = 吊帯背心
+CASE 37
+	LOCALS = 露脐吊帯背心
+CASE 38
+	LOCALS = 夏日礼服
+CASE 39
+	LOCALS = 連衣裙
+CASE 40
+	LOCALS = 洛丽塔連衣裙
+CASE 41
+	LOCALS = 哥特連衣裙
+CASE 42
+	LOCALS = 紧身長袍
+CASE 43
+	LOCALS = 連帽風衣
+CASE 44
+	LOCALS = 制服
+CASE 45
+	LOCALS = 執事服
+CASE 46
+	LOCALS = 前開的衬衫
+CASE 47
+	LOCALS = 背心
+CASE 48
+	LOCALS = V领毛衣
+CASE 49
+	LOCALS = 萌袖V领毛衣
+CASE 50
+	LOCALS = 聖誕服
+CASE 51
+	LOCALS = 逆兔女郎套装
+ENDSELECT
+
+RETURNF LOCALS
+
+;-------------------------------------------------
+;角色ARGに服ARGSを着せた場合のCSTR処理。ARGSは/で区切って追加属性をくっつける事も出来る
+;例）CALL SET_SHIRT, "前開的衬衫/緑色/腋露出" とすると、CSTR:ARG:服 の末尾に本来の文字列に加えて 緑色/腋露出/ が追加される
+;裙の設定追加は連衣裙属性以外は禁止
+;-------------------------------------------------
+@PALAM_SHIRT, ARGS, ARG
+;追加で記述された属性を一時的に保管する
+#DIMS STR_ADD
+
+SIF ARG == 0 && TARGET > 0
+	ARG = TARGET
+
+STR_ADD = %EXTSTR(ARGS, "/")%
+ARGS = %EXTSTR(ARGS, "", "/")%
+
+SELECTCASE ARGS
+CASE "", "没有"
+	IF CHECK_SHIRT("連衣裙", ARG)
+		CSTR:ARG:裙 = 
+		EQUIP:ARG:裙 = 0
+	ENDIF
+	CSTR:ARG:服 = 
+CASE @"%CALLNAME:MASTER%の衬衫", "你の恤"
+	IF TALENT:ARG:娇小
+		CSTR:ARG:服 = %CALLNAME:MASTER%の衬衫/連衣裙/白/
+		CSTR:ARG:裙 = 下摆/連衣裙/迷你/
+	ELSE
+		CSTR:ARG:服 = %CALLNAME:MASTER%の衬衫/白/
+	ENDIF
+
+;Cosplay
+CASE "女仆装"
+	CSTR:ARG:服 = 女仆装/連衣裙/
+	CSTR:ARG:裙 = 围裙/長/褶边/連衣裙/
+CASE "露脐装超短裙女仆"
+	CSTR:ARG:服 = 露脐装超短裙女仆/女仆装/連衣裙/
+	CSTR:ARG:裙 = 围裙/露脐装超短裙/褶边/連衣裙/
+CASE "法式女仆装"
+	CSTR:ARG:服 = 法式女仆装/腋露出/女仆装/褶边/連衣裙/
+	CSTR:ARG:裙 = 围裙/超露脐装超短裙/褶边/連衣裙/
+CASE "圍裙"
+	CSTR:ARG:服 = 圍裙/連衣裙/
+	CSTR:ARG:裙 = 下摆/圍裙/露脐装超短裙/褶边/連衣裙/
+CASE "护士服"
+	CSTR:ARG:服 = 护士服/連衣裙/
+	CSTR:ARG:裙 = 裙/迷你/連衣裙/
+CASE "旗袍"
+	CSTR:ARG:服 = 旗袍/腋露出/連衣裙/
+	CSTR:ARG:裙 = 前垂/紧身/開衩/連衣裙/
+CASE "開胸旗袍"
+	CSTR:ARG:服 = 開胸旗袍/腋露出/連衣裙/谷間露出/
+	CSTR:ARG:裙 = 前垂/紧身/開衩/連衣裙/
+CASE "巫女服"
+	CSTR:ARG:服 = 巫女服/
+CASE "腋巫女"
+	CSTR:ARG:服 = 腋巫女/巫女服/腋露出/
+CASE "婚纱礼服"
+	CSTR:ARG:服 = 婚纱礼服/谷間露出/連衣裙/
+	CSTR:ARG:裙 = 包臀裙/長/連衣裙/
+CASE "啦啦队制服"
+	CSTR:ARG:服 = 啦啦队制服/腋露出/提起裙角/
+CASE "修道服"
+	CSTR:ARG:服 = 修道服/提起裙角/連衣裙/
+	CSTR:ARG:裙 = 長裙/連衣裙/
+CASE "哥特蘿莉礼服"
+	CSTR:ARG:服 = 哥特蘿莉礼服/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "偶像衣装"
+	CSTR:ARG:服 = 偶像衣装/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "情趣内衣"
+	CSTR:ARG:服 = 情趣内衣/腋露出/透明/提起裙角/蕾丝情趣内衣/連衣裙/
+	CSTR:ARG:裙 = 下摆/超短迷你/情趣内衣/透明/連衣裙/
+CASE "晨衣"
+	CSTR:ARG:服 = 晨衣/腋露出/透明/提起裙角/連衣裙/
+	CSTR:ARG:裙 = 下摆/透明/連衣裙/
+CASE "睡衣"
+	CSTR:ARG:服 = 睡衣/萌袖/
+CASE "聖誕服"
+	CSTR:ARG:服 = 聖誕服/連衣裙/
+	CSTR:ARG:裙 = 圣诞裙/連衣裙/
+CASE "逆兔女郎套装"
+	CSTR:ARG:服 = 逆兔女郎套装/乳房露出/谷間露出/腋露出/露脐/半脱不可/
+
+;和装
+CASE "和服"
+	CSTR:ARG:服 = 和服/連衣裙/和服/
+	CSTR:ARG:裙 = 下摆/連衣裙/和服/
+CASE "振袖"
+	CSTR:ARG:服 = 振袖/連衣裙/和服/
+	CSTR:ARG:裙 = 下摆/振袖/連衣裙/和服/
+CASE "浴衣"
+	CSTR:ARG:服 = 浴衣/連衣裙/
+	CSTR:ARG:裙 = 下摆/浴衣/連衣裙/
+CASE "紋付袴"
+	CSTR:ARG:服 = 紋付袴/和服/
+
+;制服
+CASE "水手服"
+	CSTR:ARG:服 = 水手服/提起裙角/
+CASE "水手夏服"
+	CSTR:ARG:服 = 水手夏服/提起裙角/露脐/汗水浸湿的/
+CASE "超短水手服"
+	CSTR:ARG:服 = 超短水手服/提起裙角/腋露出/露脐/汗水浸湿的/
+CASE "无袖水手服"
+	CSTR:ARG:服 = 无袖水手服/提起裙角/腋露出/汗水浸湿的/
+
+;萌袖オプションが有ます
+CASE "V领毛衣"
+	CSTR:ARG:服 = V领毛衣/萌袖/
+CASE "萌袖V领毛衣"
+	CSTR:ARG:服 = 萌袖V领毛衣/萌袖/
+
+CASE "西装外衣"
+	CSTR:ARG:服 = 西装外衣/
+CASE "蝴蝶結領帯丝巾西装外衣"
+	CSTR:ARG:服 = 蝴蝶結領帯丝巾西装外衣/
+CASE "領帶西装"
+	CSTR:ARG:服 = 領帶西装/
+
+CASE "校服"
+	CSTR:ARG:服 = 校服/男物/黒/和裤子颜色搭配/
+CASE "男子西装"
+	CSTR:ARG:服 = 男子西装/男物/領帯
+
+CASE "皮革夹克"
+	CSTR:ARG:服 = 皮革夹克/谷間露出/露脐/皮革/黒/
+CASE "恤皮革夹克"
+	CSTR:ARG:服 = 恤皮革夹克/露脐/皮革/黒/
+CASE "前開的衬衫"
+	CSTR:ARG:服 = 前開的衬衫/谷間露出/汗水浸湿的/
+CASE "背心"
+	CSTR:ARG:服 = 背心/内部：蝴蝶結女式衬衫赤/
+;CASE "女子背心"
+;	CSTR:ARG:服 = 背心/内部：蝴蝶結女式衬衫赤/
+CASE "男子背心"
+	CSTR:ARG:服 = 男子背心/男物/内部：領帯女式衬衫赤/
+
+;体操服
+CASE "体操服"
+	CSTR:ARG:服 = 体操服/提起裙角/
+CASE "露脐体操服"
+	CSTR:ARG:服 = 露脐体操服/提起裙角/露脐/
+
+CASE "运动衫"
+	CSTR:ARG:服 = 运动衫/萌袖/
+CASE "詰襟运动衫"
+	CSTR:ARG:服 = 詰襟运动衫/
+
+;便装など
+CASE "女式衬衫"
+	CSTR:ARG:服 = 女式衬衫/汗水浸湿的/
+CASE "露脐女式衬衫"
+	CSTR:ARG:服 = 露脐女式衬衫/汗水浸湿的/露脐/
+CASE "領帯女式衬衫"
+	CSTR:ARG:服 = 領帯女式衬衫/汗水浸湿的/
+
+CASE "蝴蝶結領帯丝巾女式衬衫"
+	CSTR:ARG:服 = 蝴蝶結領帯丝巾女式衬衫/汗水浸湿的/
+
+CASE "无袖", "无袖女式衬衫"
+	CSTR:ARG:服 = 无袖女式衬衫/汗水浸湿的/腋露出/
+CASE "无袖Ｂ", "无袖女式衬衫Ｂ"
+	CSTR:ARG:服 = 无袖女式衬衫Ｂ/汗水浸湿的/腋露出/
+CASE "領帯无袖女式衬衫"
+	CSTR:ARG:服 = 領帯无袖女式衬衫/汗水浸湿的/腋露出/領帯/
+
+CASE "露脐无袖", "露脐无袖女式衬衫"
+	CSTR:ARG:服 = 露脐无袖女式衬衫/汗水浸湿的/腋露出/露脐/
+CASE "露脐領帯无袖女式衬衫"
+	CSTR:ARG:服 = 露脐領帯无袖女式衬衫/汗水浸湿的/腋露出/領帯/露脐/
+
+CASE "宽松女式衬衫"
+	CSTR:ARG:服 = 宽松女式衬衫/谷間露出/汗水浸湿的/露脐/
+CASE "美式校服女式衬衫"
+	CSTR:ARG:服 = 美式校服女式衬衫/谷間露出/汗水浸湿的/露脐/
+
+CASE "褶边女式衬衫"
+	CSTR:ARG:服 = 褶边女式衬衫/汗水浸湿的/褶边/
+CASE "蕾丝女式衬衫"
+	CSTR:ARG:服 = 蕾丝女式衬衫/汗水浸湿的/
+
+CASE "Ｔ恤"
+	CSTR:ARG:服 = Ｔ恤/提起裙角/
+CASE "露脐Ｔ恤"
+	CSTR:ARG:服 = 露脐Ｔ恤/露脐/提起裙角/
+CASE "怪图案Ｔ恤"
+	CSTR:ARG:服 = 怪图案Ｔ恤/提起裙角/
+CASE "宽大的Ｔ恤"
+	CSTR:ARG:服 = 宽大的Ｔ恤/連衣裙/提起裙角/
+	CSTR:ARG:裙 = 衬衫下摆/超短迷你/Ｔ恤/連衣裙/
+;衬衫と衬衫……？まぁ好きな方選んでよって事で
+CASE "衬衫"
+	CSTR:ARG:服 = 衬衫/汗水浸湿的/
+CASE "衬衫"
+	CSTR:ARG:服 = 衬衫/汗水浸湿的/
+CASE "半開衬衫"
+	CSTR:ARG:服 = 半開衬衫/提起裙角/
+
+CASE "切驳服"
+	CSTR:ARG:服 = 切驳服/
+CASE "后背蝴蝶結切驳服"
+	CSTR:ARG:服 = 后背蝴蝶結切驳服/
+
+CASE "蝴蝶結露肩外衣"
+	CSTR:ARG:服 = 蝴蝶結露肩外衣/
+CASE "针织露肩外衣"
+	CSTR:ARG:服 = 针织露肩外衣/
+CASE "露肩外衣"
+	CSTR:ARG:服 = 露肩外衣/
+CASE "哥特式披风"
+	CSTR:ARG:服 = 哥特式披风/
+
+CASE "縦毛衣"
+	CSTR:ARG:服 = 縦毛衣/提起裙角/
+CASE "针织毛衣"
+	CSTR:ARG:服 = 针织毛衣/提起裙角/
+;童貞を殺すあれです
+CASE "露背针织毛衣"
+	CSTR:ARG:服 = 露背针织毛衣/提起裙角/腋露出/連衣裙/
+	CSTR:ARG:裙 = 下摆/連衣裙/
+CASE "萌袖毛衣"
+	CSTR:ARG:服 = 萌袖毛衣/提起裙角/
+CASE "无袖毛衣"
+	CSTR:ARG:服 = 无袖毛衣/提起裙角/腋露出/
+
+CASE "高領毛衣"
+	CSTR:ARG:服 = 高領毛衣/提起裙角/
+CASE "開胸高領毛衣"
+	CSTR:ARG:服 = 開胸高領毛衣/谷間露出/提起裙角/
+CASE "无袖高領毛衣"
+	CSTR:ARG:服 = 无袖高領毛衣/提起裙角/腋露出/
+
+CASE "吊帯衫"
+	CSTR:ARG:服 = 吊帯衫/腋露出/提起裙角/
+CASE "露脐吊帯衫"
+	CSTR:ARG:服 = 露脐吊帯衫/腋露出/提起裙角/露脐/
+CASE "吊帯背心"
+	CSTR:ARG:服 = 吊帯背心/腋露出/汗水浸湿的/提起裙角/
+CASE "露脐吊帯背心"
+	CSTR:ARG:服 = 露脐吊帯背心/腋露出/汗水浸湿的/露脐/提起裙角/
+CASE "短外套"
+	CSTR:ARG:服 = 短外套/
+CASE "夏日礼服"
+	CSTR:ARG:服 = 夏日礼服/腋露出/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "連衣裙"
+	CSTR:ARG:服 = 連衣裙/提起裙角/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "格子連衣裙"
+	CSTR:ARG:服 = 格子連衣裙/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "格子連衣裙黒蝴蝶結"
+	CSTR:ARG:服 = 格子連衣裙黒蝴蝶結/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "格子連衣裙Ｂ"
+	CSTR:ARG:服 = 格子連衣裙Ｂ/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "格子連衣裙Ｂ黒蝴蝶結"
+	CSTR:ARG:服 = 格子連衣裙Ｂ黒蝴蝶結/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "格子連衣裙Ｂ"
+	CSTR:ARG:服 = 格子連衣裙Ｂ/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "褶边連衣裙"
+	CSTR:ARG:服 = 褶边連衣裙/提起裙角/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "露肩連衣裙"
+	CSTR:ARG:服 = 露肩連衣裙/腋露出/提起裙角/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "洛丽塔連衣裙"
+	CSTR:ARG:服 = 洛丽塔連衣裙/連衣裙/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "哥特連衣裙"
+	CSTR:ARG:服 = 哥特連衣裙/汗水浸湿的/褶边/連衣裙/
+	CSTR:ARG:裙 = 哥特連衣裙裙/褶边/連衣裙/
+CASE "哥特礼服"
+	CSTR:ARG:服 = 哥特礼服/汗水浸湿的/褶边/連衣裙/
+	CSTR:ARG:裙 = 哥特連衣裙裙/褶边/連衣裙/
+CASE "紧身長袍"
+	CSTR:ARG:服 = 紧身長袍/提起裙角
+CASE "中世紧身長袍"
+	CSTR:ARG:服 = 中世紧身長袍/提起裙角
+
+CASE "連帽風衣"
+	CSTR:ARG:服 = 連帽風衣/提起裙角/
+CASE "无袖連帽風衣"
+	CSTR:ARG:服 = 无袖連帽風衣/提起裙角/腋露出/
+CASE "長連帽風衣"
+	CSTR:ARG:服 = 長連帽風衣/提起裙角/連衣裙/
+	CSTR:ARG:裙 = 下摆/連衣裙/
+CASE "制服"
+	CSTR:ARG:服 = 制服/和裤子颜色搭配/黒/
+CASE "執事服"
+	CSTR:ARG:服 = 執事服/男物/和裤子颜色搭配/黒/
+CASE "浴衣"
+	CSTR:ARG:服 = 浴衣/連衣裙/提起裙角
+	CSTR:ARG:裙 = 下摆/連衣裙/
+CASE "軍服"
+	CSTR:ARG:服 = 軍服
+	CSTR:ARG:裙 = 軍用休闲褲
+
+;角色衣装
+CASE "红黑色无袖連帽風衣"
+	CSTR:ARG:服 = 红黑色无袖連帽風衣/腋露出/連衣裙/提起裙角/
+	CSTR:ARG:裙 = 下摆/連衣裙/長連帽風衣/
+CASE "白色和金色装饰的民族衣装"
+	CSTR:ARG:服 = 白色和金色装饰的民族衣装/連衣裙/提起裙角/萌袖/
+	CSTR:ARG:裙 = 裙/連衣裙/
+CASE "脏連体泳装"
+	CSTR:ARG:服 = 脏連体泳装/連衣裙/提起裙角/萌袖/
+	CSTR:ARG:裙 = 弄脏的裙/連衣裙/
+CASE "KANZAKI製プ重置制服"
+	CSTR:ARG:服 = KANZAKI製プ重置制服/牵手/銀色/
+CASEELSE
+	CSTR:ARG:服 = %ARGS%/
+ENDSELECT
+
+CSTR:ARG:服 = %MERGE_STR(CSTR:ARG:服, STR_ADD)%
+
+;-------------------------------------------------
+;ARGの恤が条件ARGSを満たすか確認する
+;-------------------------------------------------
+@CHECK_SHIRT(ARGS, ARG)
+#FUNCTION
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+SIF EQUIP:ARG:服 == 0
+	RETURNF 0
+SELECTCASE ARGS
+CASE "衬衫"
+	SIF STRCOUNTS(CSTR:ARG:服, "衬衫", "衬衫")
+		RETURNF 1
+CASE "領帶西装"
+	SIF STRCOUNT(CSTR:ARG:服, "西装外衣") && STRCOUNT(CSTR:ARG:服, "領帯")
+		RETURNF 1
+CASE "領帯女式衬衫"
+	SIF STRCOUNT(CSTR:ARG:服, "女式衬衫") && STRCOUNT(CSTR:ARG:服, "領帯")
+		RETURNF 1
+CASE "半脱可"
+	SIF STRCOUNT(CSTR:ARG:服, "半脱的")
+		RETURNF 0
+	SIF STRCOUNT(CSTR:ARG:服, "半脱不可")
+		RETURNF 0
+	RETURNF 1
+CASEELSE
+	SIF STRCOUNT(CSTR:ARG:服, ARGS)
+		RETURNF 1
+ENDSELECT
+
+RETURNF 0
+

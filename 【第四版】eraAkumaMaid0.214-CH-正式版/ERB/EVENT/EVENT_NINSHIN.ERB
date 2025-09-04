@@ -1,0 +1,1148 @@
+﻿;---------------------------------------------------------
+;妊娠イベントカウント処理
+;---------------------------------------------------------
+@EVENT_N1, ARG
+#DIM FATHER
+#DIM P_BASE
+#DIM 腰圍上昇幅
+#DIM LCOUNT
+
+LOCAL = TARGET
+TARGET = ARG
+
+CALL CHECK_NINSHIN, TARGET, "システム処理"
+
+;妊娠イベントカウント処理
+IF COND("夜")
+	;***着床判定追加パッチで追加
+	IF BASE:ARG:受精 > 0 && COND("精液の優勢")
+		;受精からの経過日数カウントアップ
+		BASE:ARG:受精からの日数 += 1
+		SIF CADV("繁栄の光")
+			BASE:ARG:受精からの日数 += RAND(1, 2)
+
+		;十分な日数が経っていたら着床判定(４～６日は長ので１日短縮)
+		IF BASE:ARG:受精からの日数 >= RAND(3, 6)
+			IF COND("着床確率")
+				;着床判定
+				DRAWLINE
+				DRAWLINE
+				PRINTFORM %CALLNAME:ARG%的受精卵准备着床了…　
+				CALL PRINT_STRW, @" (着床確率:_黄色_{COND("着床確率")}％)"
+				CALL PRINT_STRW, @"%CALLNAME:ARG%的子宮内的%CONDS("精液の優勢", ARG)%和%CALLNAME:ARG%的受精卵…"
+				;受精卵が子宮に着床するか判定…
+				IF RAND:100 <= COND("着床確率")
+					;おめでた
+					BASE:ARG:胎児 = 1
+					;***種付け強化パッチで追加
+					;父親の孕ませ経験UP
+					FATHER = COND("精液の優勢")
+					EXP:FATHER:孕ませ経験 += 1
+					;孕ませ素質の追加は妊娠発覚時に行う
+					;20%で息子（産まれる時に選べるようにもしてあるので実はなくても良い）
+					SIF RAND:5 == 0
+						CALL SETFLAG, "妊娠中：息子", ARG
+					CALL PRINT_STRW, "平安地着床了…_H"
+					PRINTFORMW %CONDS("精液の優勢")%の孕ませ経験+１ (現在：{EXP:FATHER:孕ませ経験})
+				ELSE
+					PRINTFORMW 没有着床
+				ENDIF
+			ENDIF
+
+			;着床確実フラグOFF(事后避孕药などで着床を阻止された場合は、ここでOFFになり効果を失う)
+			CFLAG:ARG:着床確実 = 0
+			;受精状態は解除
+			BASE:ARG:受精 = 0
+			BASE:ARG:受精からの日数 = 0
+		ENDIF
+	;受精状態じゃない時には着床確実フラグをOFFにしておく
+	ELSE
+		CFLAG:ARG:着床確実 = 0
+	ENDIF
+
+	;事后避孕药は徐々に効果を失う
+	SIF TALENT:ARG:事后避孕药 > 0
+		TALENT:ARG:事后避孕药 -= 1
+
+	;お腹の中の胎児の成長
+	IF COND("妊娠中")
+		;すくすく育ってます
+		BASE:胎児 += 1
+		;中出しによって速度アップ
+		SIF RAND:(3 + BASE:胎児への栄養/10)
+			BASE:胎児 += 1
+		SIF CADV("繁栄の光")
+			BASE:胎児 += 2
+
+		;分娩室待ち
+		IF COND("妊娠中：分娩直前")
+			CALL SETFLAG, "妊娠中：分娩", TARGET
+		;臨月～出産日(人なら三日ほど)
+		ELSEIF COND("妊娠中：臨月")
+			;出産間近イベント(子育て中には発生しない)
+			IF COND("妊娠中：各イベント進行度") >= 3
+				IF BASE:育児中
+					BASE:胎児 -= 1 + RAND:2
+				ELSE
+					CALL SETFLAG, "妊娠中：分娩直前", TARGET
+				ENDIF
+			ENDIF
+		;妊娠発覚終了～臨月まで(人なら10日ほど)
+		ELSEIF COND("妊娠中：妊娠発覚済み")
+			;臨月イベント
+			SIF COND("妊娠中：各イベント進行度") >= 11
+				CALL SETFLAG, "妊娠中：臨月", TARGET
+		;妊娠発覚イベント待ち
+		ELSEIF COND("妊娠中：妊娠発覚直前")
+
+		;妊娠潜伏期間～妊娠発覚イベント(人なら三日ほど)
+		ELSEIF COND("妊娠中：各イベント進行度") >= 4
+			CALL SETFLAG, "妊娠中：妊娠発覚直前", TARGET
+		ENDIF
+
+		;妊娠発覚後は腰圍が変化するように
+		IF COND("妊娠中：分娩")
+			BASE:腰圍 = CFLAG:妊娠前腰圍
+			CFLAG:妊娠前腰圍 = 0
+			CFLAG:腰圍増加フラグ = 0
+		ELSEIF COND("妊娠中：妊娠発覚済み")
+			;妊娠前腰圍が0の時（＝妊娠発覚時）、妊娠前腰圍に現在的腰圍を入力する
+			SIF CFLAG:妊娠前腰圍 == 0
+				CFLAG:妊娠前腰圍 = BASE:腰圍
+			
+			;前日腰圍、つまり計算前の腰圍をここで書き込む
+			CFLAG:前日腰圍 = BASE:腰圍
+
+			;妊娠の日数に合わせて増加の仕方を変えたいので、妊娠初期、中期、後期で底の値を変化させる
+			IF COND("妊娠初期")
+				P_BASE = 1
+			ELSEIF COND("妊娠中期")
+				P_BASE = 2
+			ELSEIF COND("妊娠後期")
+				P_BASE = 3
+			ENDIF
+			;さやえんどう桑のくださった計算結果を就这様パクり、直接追加する（少数の使い方とか現実的ではないので）
+			;一応変数の名前とか程度のオリジナル要素はある
+			FOR LCOUNT, 1, COND("妊娠中：各イベント進行度")+1
+				IF GETBIT(CFLAG:腰圍増加フラグ, LCOUNT) == 0 && COND("妊娠中：各イベント進行度") <= 10
+					SELECTCASE LCOUNT
+					CASE 1
+						腰圍上昇幅 = 0
+					CASE 2
+						腰圍上昇幅 = 0
+					CASE 3
+						腰圍上昇幅 = 1
+					CASE 4
+						腰圍上昇幅 = 2
+					CASE 5
+						腰圍上昇幅 = 3
+					CASE 6
+						腰圍上昇幅 = 5
+					CASE 7
+						腰圍上昇幅 = 5
+					CASE 8
+						腰圍上昇幅 = 3
+					CASE 9
+						腰圍上昇幅 = 2
+					CASE 10
+						腰圍上昇幅 = 1
+					ENDSELECT
+					SETBIT CFLAG:腰圍増加フラグ, LCOUNT
+				ENDIF
+			NEXT
+
+			;腰圍の計算。お腹が小さくなるのは理論上はあるかもしれない（酱と調べていないので不明）だが、なんかリアリティはないので前日腰圍と比べて小さい時は前日腰圍を維持することにする
+			;臨月以降は乗算を無くす
+			IF COND("妊娠中：臨月") || COND("妊娠中：分娩直前")
+				BASE:腰圍 = LIMIT(BASE:腰圍 + RAND:2, CFLAG:前日腰圍, 120)
+			ELSE
+				BASE:腰圍 = LIMIT(BASE:腰圍 + 腰圍上昇幅 + RAND(0, 1*P_BASE), CFLAG:前日腰圍, 100)
+			ENDIF
+		ENDIF
+	ENDIF
+
+	;子育て。人で２週間程度。
+	IF BASE:育児中
+		BASE:育児中 += 1
+		SIF CADV("繁栄の光")
+			BASE:育児中 += 2
+		;子育て終了
+		SIF COND("育児中：兒童が大きくなった")
+			CALL SETFLAG, "育児中：育児終了", TARGET
+	ENDIF
+ENDIF
+
+TARGET = LOCAL
+
+;---------------------------------------------------------
+;妊娠判定処理
+;ARGSには"システム処理"が入る。これ以外の場合は時間経過によるシステム処理以外での妊娠判定となる
+;CHECK_NINSHIN_ALLACTORは全部のPLAYER:0～1とTARGET:0～3について行う
+;---------------------------------------------------------
+@CHECK_NINSHIN_ALLACTOR, ARGS
+#DIM LCOUNT
+
+FOR LCOUNT, 1, CHARANUM
+	SELECTCASE LCOUNT
+	CASE PLAYER, PLAYER:1, TARGET, TARGET:1, TARGET:2, TARGET:3
+		CALL CHECK_NINSHIN, LCOUNT, ARGS
+	ENDSELECT
+NEXT
+
+@CHECK_NINSHIN, ARG, ARGS
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+#DIMS DYNAMIC NOTES
+
+SIF ARG < 0
+	RETURN 0
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+SELECTCASE ARGS
+CASE "システム処理"
+	;PRINTFORM [{ARG, 2}]%TEXT_LJ(CALLNAME:ARG, 16)% {DAY - CFLAG:ARG:最新中出し日, 3}日前, 妊娠率：{COND("受精確率"), 3}％, {COND("胎内の精液量", ARG), 6}/{BASE:ARG:胎内精子量, 4} → 
+
+	;中出し時に既に判定行っているので精子量の減少処理を行う
+	CALL CHECK_NINSHIN_SPERM, ARG
+
+	IF TALENT:ARG:Ａ妊娠体質 == 0
+		;***着床判定追加パッチで変更
+		;妊娠判定(出産後すぐに妊娠できるようにしてみる)　(着床判定有効時は、受精判定)
+		IF BASE:ARG:胎内精子量 && BASE:ARG:受精 == 0 && BASE:ARG:胎児 == 0 && COND("Ｖ妊娠可能", ARG)
+			IF CALCF("妊娠判定", ARG)
+				;受精
+				BASE:ARG:受精 = CALCF("受精強度算出", ARG)
+				BASE:ARG:受精からの日数 = 0
+				;超危険日ならば着床確実フラグON
+				SIF COND("排卵中", ARG)
+					CFLAG:ARG:着床確実 = 1
+			ENDIF
+		ENDIF
+	ELSE
+		IF BASE:ARG:Ａ胎内精子量 && BASE:ARG:受精 == 0 && BASE:ARG:胎児 == 0 && COND("Ａ妊娠可能", ARG)
+			IF CALCF("妊娠判定", ARG)
+				;受精
+				BASE:ARG:受精 = CALCF("受精強度算出", ARG)
+				BASE:ARG:受精からの日数 = 0
+				;超危険日ならば着床確実フラグON
+				SIF COND("排卵中", ARG)
+					CFLAG:ARG:着床確実 = 1
+			ENDIF
+		ENDIF
+	ENDIF
+
+	;創口貼装着日数カウント
+	SIF CFLAG:ARG:創口貼装着
+		CFLAG:ARG:創口貼装着 += 1
+	;5日で剥がれる
+	IF CFLAG:ARG:創口貼装着 > 9
+		PRINTFORML 　
+		DRAWLINE
+		PRINTFORML %CALLNAME:ARG%的創口貼由于时间而剥落了…
+		CFLAG:ARG:創口貼装着 = 0
+		;とりあえず半分に
+		SIF BASE:ARG:胎内精液量
+			BASE:ARG:胎内精液量 /= 2
+		SIF BASE:ARG:胎内精子量
+			BASE:ARG:胎内精子量 /= 2
+	ENDIF
+
+
+	;PRINTFORML 妊娠率：{COND("受精確率"), 3}％, {COND("胎内の精液量", ARG), 6}/{BASE:ARG:胎内精子量, 4}
+CASEELSE
+	;受精確率が変動しているかを格子
+	SIF COND("受精確率", ARG) == TCVAR:ARG:受精確率
+		RETURN 0
+	
+	;【イヴァ阴蒂ナ生理系】妊娠判定弾き処理
+	IF CEVENT("イヴァ阴蒂ナ：非求愛状態",ARG)
+		CALL PRINT_STRL, @"%CALLNAME:ARG%的受精確率：_青_%CALLNAME:ARG%的卵子还没有准备好。"
+		RETURN 0
+	ENDIF
+
+	;受精確率の変動を表示
+	IF CONFIG("妊娠設定：受精確率表示ＯＦＦ") == 0
+		LOCALS = %CALLNAME:ARG%の受精確率：_
+
+		;最終確率
+		SELECTCASE COND("受精確率", ARG)
+		CASE IS >= 100
+			;***着床判定追加パッチで変更
+			LOCALS = %LOCALS%爱心粉紅_受精確実！_ 
+		CASE IS > 50
+			LOCALS = %LOCALS%爱心粉紅_{COND("受精確率", ARG)}％_
+		CASE IS > 20
+			LOCALS = %LOCALS%黄色_{COND("受精確率", ARG)}％_
+		CASEELSE
+			LOCALS = %LOCALS%{COND("受精確率", ARG)}％_
+		ENDSELECT
+
+		NOTES = 
+		SIF TCVAR:ARG:濃厚中出しされた
+			NOTES = ：濃厚中出しBOUNS発生中！
+
+		;伸び幅
+		SELECTCASE COND("受精確率", ARG) - TCVAR:ARG:受精確率
+		CASE IS >= 15
+			LOCALS = %LOCALS%粉紅_（↑{COND("受精確率", ARG) - TCVAR:ARG:受精確率}％%NOTES%）_
+		CASE IS >= 10
+			LOCALS = %LOCALS%爱心粉紅_（↑{COND("受精確率", ARG) - TCVAR:ARG:受精確率}％%NOTES%）_
+		CASE IS >= 5
+			LOCALS = %LOCALS%黄色_（↑{COND("受精確率", ARG) - TCVAR:ARG:受精確率}％%NOTES%）_
+		CASE IS > 0
+			LOCALS = %LOCALS%（↑{COND("受精確率", ARG) - TCVAR:ARG:受精確率}％%NOTES%）_
+		CASE IS < 0
+			LOCALS = %LOCALS%青_（↓{TCVAR:ARG:受精確率 - COND("受精確率", ARG)}％%NOTES%）_
+		ENDSELECT
+
+		CALL PRINT_STRL, LOCALS
+		PRINTL 
+	ENDIF
+
+	;ここで妊娠判定も行ってしまう
+	IF CALCF("妊娠判定", ARG)
+		;***着床判定追加パッチで変更
+		;淫紋ビフォー
+		IF MARK:ARG:淫紋
+			CALL PRINT_CUTIN, "腹部", ARG
+			PRINTFORMW %CALLNAME:ARG%的淫紋的様子……颜色和形状不停变化着！
+			CALL ANIME_LEVELUP_INMON,  @"CIP淫紋%CONDS("淫紋の種類", ARG)%%CONDS("淫紋の色", ARG)%おめでた", ARG
+		ENDIF
+
+		;受精
+		BASE:ARG:受精 = CALCF("受精強度算出", ARG)
+		BASE:ARG:受精からの日数 = 0
+		;超危険日ならば着床確実フラグON
+		SIF COND("排卵中", ARG)
+			CFLAG:ARG:着床確実 = 1
+
+		CALL SETFLAG, "受精確認フラグ", ARG
+		CALL PRINT_CUTIN, "受精", TARGET
+		CALL PRINT_STRFW, @"UH_%CALLNAME:ARG%被%CONDS("精液の優勢", ARG)%的精子受精了_UH"
+		PRINTL 
+
+		IF MARK:ARG:淫紋
+			;セリフがあるかの判定
+			MEMO_LINECOUNT = LINECOUNT
+
+			CALL KOJO_GUEST, "受精確認", ARG
+
+			SIF LINECOUNT > MEMO_LINECOUNT
+				PRINTL 
+		ENDIF
+	ENDIF
+
+	TCVAR:ARG:受精確率 = COND("受精確率", ARG)
+
+ENDSELECT
+
+;---------------------------------------------------------
+;胎内の精液量＆精子量を減少させる。だいたい３日程で死滅。
+;ちなみにCFLAG:最新中出し日は最新の中出し日
+;Ａ妊娠体質は通常のＶ妊娠とは排他の関係にある
+;---------------------------------------------------------
+@CHECK_NINSHIN_SPERM, ARG
+#DIM TIME_PASS
+;DEC_VALUE:0は精液の減少レートで、DEC_VALUE:1は精子の減少レート
+#DIM DEC_VALUE, 2
+VARSET DEC_VALUE
+
+IF TALENT:ARG:Ａ妊娠体質
+	TIME_PASS = DAY - CFLAG:ARG:Ａ最新中出し日
+	BASE:ARG:胎内精液量 = 0
+	BASE:ARG:胎内精子量 = 0
+ELSE
+	TIME_PASS = DAY - CFLAG:ARG:最新中出し日
+	BASE:ARG:Ａ胎内精液量 = 0
+	BASE:ARG:Ａ胎内精子量 = 0
+ENDIF
+
+SELECTCASE TIME_PASS
+;出した直後
+CASE 0
+	DEC_VALUE:0 = 120 + TALENT:ARG:吸精体質*10 + MARK:ARG:淫紋*5 + 10*RAND:6
+	DEC_VALUE:1 = 100 + TALENT:ARG:吸精体質*10 + MARK:ARG:淫紋*5 + 10*RAND:6
+CASE 1
+	DEC_VALUE:0 = 150 + TALENT:ARG:吸精体質*10 + MARK:ARG:淫紋*5 + 10*RAND:11
+	DEC_VALUE:1 = 100 + TALENT:ARG:吸精体質*10 + MARK:ARG:淫紋*5 + 10*RAND:6
+CASE 2
+	SIF COND("昼")
+		DEC_VALUE:0 = 200 + TALENT:ARG:吸精体質*10 + MARK:ARG:淫紋*5 + 10*RAND:11
+	DEC_VALUE:1 = 100 + TALENT:ARG:吸精体質*10 + MARK:ARG:淫紋*5 + 10*RAND:6
+CASE IS >= 3
+	DEC_VALUE:0 = 200 + TALENT:ARG:吸精体質*10 + MARK:ARG:淫紋*5 + 10*RAND:11
+	SIF COND("昼")
+		DEC_VALUE:1 = 100 + TALENT:ARG:吸精体質*10 + MARK:ARG:淫紋*5 + 10*RAND:6
+ENDSELECT
+
+IF TALENT:ARG:Ａ妊娠体質
+	;肛塞没有だと精液が減少
+	SIF TALENT:ARG:常時Ａ肛塞 == 0 && DEC_VALUE:0
+		BASE:ARG:Ａ胎内精液量 = DIVIDE(BASE:ARG:Ａ胎内精液量, DEC_VALUE:0)
+
+	IF CONFIG("胎内精子で妊娠") && DEC_VALUE:1
+		BASE:ARG:Ａ胎内精子量 = DIVIDE(BASE:ARG:Ａ胎内精子量, DEC_VALUE:1)
+	ELSE
+		BASE:ARG:Ａ胎内精子量 = 0
+	ENDIF
+	;精子が死滅したら父親フラグは消滅
+	;***着床判定追加パッチで変更
+	SIF BASE:ARG:Ａ胎内精子量 == 0 && BASE:ARG:胎児 == 0 && BASE:ARG:受精 == 0
+		BASE:ARG:精液の優勢 = 0
+ELSE
+	;創口貼没有だと精液が減少
+	SIF CFLAG:ARG:創口貼装着 == 0 && DEC_VALUE:0
+		BASE:ARG:胎内精液量 = DIVIDE(BASE:ARG:胎内精液量, DEC_VALUE:0)
+	;胎内精子で妊娠がONでも精子は減っていく　4日程で死滅
+	IF CONFIG("胎内精子で妊娠") && DEC_VALUE:1
+		BASE:ARG:胎内精子量 = DIVIDE(BASE:ARG:胎内精子量, DEC_VALUE:1)
+	ELSE
+		BASE:ARG:胎内精子量 = 0
+	ENDIF
+	;精子が死滅したら父親フラグは消滅
+	;***着床判定追加パッチで変更
+	SIF BASE:ARG:胎内精子量 == 0 && BASE:ARG:胎児 == 0 && BASE:ARG:受精 == 0
+		BASE:ARG:精液の優勢 = 0
+ENDIF
+
+
+;---------------------------------------------------------
+;妊娠発覚＆出産予定報告＆子の親出口処理 ＆卵の孵化処理
+;---------------------------------------------------------
+@EVENT_N2, ARG
+#DIM MEMO_TARGET
+#DIM CHOICE
+MEMO_TARGET = TARGET
+
+TARGET = ARG
+
+;子育て中
+IF BASE:育児中
+	;子の親出口
+	IF COND("育児中：育児終了")
+		DRAWLINE
+		;PRINTFORMW %CALLNAME:TARGET%の育てていた兒童は館に充満する力のせいか、かなり早く大きくなりました。
+		PRINTFORMW %CALLNAME:TARGET%养育的孩子、很快就长大了。
+		PRINTFORMW 已经不需要再照顾了。
+
+		CALL KOJO_EVENT, "子出口"
+
+		BASE:育児中 = 0
+	ELSEIF COND("育児中：孵化") && COND("育児中：孵化中") 
+		DRAWLINE
+		;PRINTFORMW %CALLNAME:TARGET%の育てていた兒童は館に充満する力のせいか、かなり早く大きくなりました。
+		PRINTFORMW 从%CALLNAME:TARGET%温暖着的蛋中传出了摇晃的动静、接着外壳逐渐碎裂開从里面钻出了婴儿。
+		PRINTFORMW 从现在開始就要认真地培育孩子了。
+
+		;"育児中：孵化中"の取消
+		CLEARBIT BASE:育児中, 19
+
+		PRINTL 
+		PRINTFORML 出生的孩子……
+		PRINTFORML [ 0] 女孩子
+		PRINTFORML [ 1] 男孩子
+		CALL INPUT_SELECT, 2
+		CHOICE = RESULT
+			
+		CALL BIRTH_RECORD, "出産記録：保存", TARGET, CHOICE
+		IF CHOICE == 0
+			CLEARBIT BASE:胎児, 20
+		ELSE
+			CALL SETFLAG, "妊娠中：息子", TARGET
+		ENDIF
+					
+		IF COND("妊娠中：息子")
+			;ここで父親が你かどうかの判定どうやろうかね？
+			;PRINTFORMW \@ FATHER > 0 ? 长得和父親很像的 # \@元気的男孩子。
+			PRINTFORMW 元気な男の子です。
+			CFLAG:息子の数 += 1
+			;息子フラグ
+			CALL SETFLAG, "育児中：息子", TARGET
+		ELSE
+			PRINTFORMW \@ TARGET == MASTER ? %CALLNAME:MASTER% # 和母親 \@很像的可愛的女孩子。
+			CFLAG:娘の数 += 1
+		ENDIF
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 抱着从蛋中孵化出来的孩子的%CALLNAME:TARGET%、将孩子递给了%CALLNAME:MASTER%仔细观察。
+		ELSEIF TALENT:叛逆
+			PRINTFORMW 抱着从蛋中孵化出来的孩子的%CALLNAME:TARGET%、对着我们的孩子露出了微笑。
+		ELSEIF TARGET != MASTER
+			PRINTFORMW 抱着从蛋中孵化出来的孩子的%CALLNAME:TARGET%、对着我们的孩子和%CALLNAME:MASTER%露出了微笑。
+		ENDIF
+	ENDIF
+ENDIF
+
+;出産予定報告(子育て中には産まれない)
+IF COND("妊娠中：分娩直前") && TALENT:妊娠 == 2 && BASE:育児中 == 0
+	DRAWLINE
+	IF TALENT:卵生
+		PRINTFORMW %CALLNAME:TARGET%肚子中的蛋似乎逐渐变大了。
+	ELSE
+		PRINTFORMW 在%CALLNAME:TARGET%的腹中的胎儿活动得很活跃。
+	ENDIF
+	PRINTFORMW 好像明日就要出産的样子…
+	TALENT:妊娠 = 3
+ELSEIF COND("妊娠中：臨月") && TALENT:妊娠 == 1
+	DRAWLINE
+	PRINTFORMW %CALLNAME:TARGET%的肚子已经变大得很明显了。
+	PRINTFORMW 好像再过几天就能生産了…
+	TALENT:妊娠 = 2
+;子育て中以外の妊娠発覚
+ELSEIF COND("妊娠中：妊娠発覚直前") && TALENT:妊娠 == 0 && COND("妊娠中：各イベント進行度") >= 2
+	TALENT:妊娠 = 1
+	;妊娠確定フラグに変更
+	CALL SETFLAG, "妊娠中：妊娠発覚済み", TARGET
+
+	CALL EVENT_N2_TEXT
+
+	;【屯田兵メモ】
+	;卵生の場合でも巨乳化ってするのか...？哺乳類...？
+	;まぁ細かい事は置いておいて、巨乳化とかそういう現象はエロさ重視で介入しないでおこう
+	IF COND("妊娠中") && CFLAG:妊娠で巨乳化 == 0
+		PRINTL 
+		PRINTFORMW 伴随着妊娠、%CALLNAME:TARGET%的胸部膨胀起来了。
+		;素質変更など
+		IF TALENT:母乳体質 == 0
+			TALENT:母乳体質 = 2
+			SETBIT CFLAG:妊娠で巨乳化, 2
+		ENDIF
+		;胸の尺寸
+		IF TALENT:男性
+			PRINTFORMW 但是、好像变化不大的样子…
+			PRINTFORMW %CALLNAME:TARGET%獲得了[母乳体質]。
+		ELSEIF TALENT:貧乳
+			SETBIT CFLAG:妊娠で巨乳化, 0
+			;２階級特進
+			IF RAND:3 == 0
+				PRINTFORMW 这种事简直是不思議、变得\@ TALENT:娇小 ? 超出%CALLNAME:MASTER%预想般的 # \@巨大…
+				PRINTFORMW %CALLNAME:TARGET%獲得了\@ GETBIT(CFLAG:妊娠で巨乳化, 2) ? [母乳体質]和 # \@[巨乳]。
+				CALL SETFLAG_3SIZE, "巨乳化", TARGET
+			ELSE
+				PRINTFORMW 看了情况之后、只是变到了普通程度的样子…
+				PRINTFORMW %CALLNAME:TARGET%\@ GETBIT(CFLAG:妊娠で巨乳化, 2) ? 得到了[母乳体質]、 # \@失去了[貧乳]。
+				CALL SETFLAG_3SIZE, "並乳化", TARGET
+			ENDIF
+			PRINTFORMW 
+		ELSEIF TALENT:貧乳 == 0 && TALENT:巨乳 == 0
+			SETBIT CFLAG:妊娠で巨乳化, 1
+			PRINTFORMW 很显然、变得相当大了…
+			PRINTFORMW %CALLNAME:TARGET%獲得了\@ GETBIT(CFLAG:妊娠で巨乳化, 2) ? [母乳体質]和 # \@[巨乳]。
+			CALL SETFLAG_3SIZE, "巨乳化", TARGET
+		ELSEIF GETBIT(CFLAG:妊娠で巨乳化, 2)
+			PRINTFORMW %CALLNAME:TARGET%獲得了[母乳体質]。
+		ENDIF
+	ENDIF
+ENDIF
+
+;妊娠に付随する母乳体質や巨乳の消去
+IF CFLAG:妊娠で巨乳化 && COND("妊娠中") == 0 && BASE:育児中 == 0
+	PRINTL 
+	PRINTFORMW （完成了任务的%CALLNAME:TARGET%的胸回归了原来的大小）
+	SIF GETBIT(CFLAG:妊娠で巨乳化, 0)
+		CALL SETFLAG_3SIZE, "貧乳化", TARGET
+	SIF GETBIT(CFLAG:妊娠で巨乳化, 1)
+		CALL SETFLAG_3SIZE, "並乳化", TARGET
+	SIF GETBIT(CFLAG:妊娠で巨乳化, 2)
+		TALENT:母乳体質 = 0
+
+	CFLAG:妊娠で巨乳化 = 0
+ENDIF
+
+TARGET = MEMO_TARGET
+
+;---------------------------------------------------------
+;妊娠発覚イベント
+;CALLNAME:(COND("精液の優勢") ) とかなると見苦しいので、FATHER = COND("精液の優勢")とする
+;---------------------------------------------------------
+@EVENT_N2_TEXT
+#DIM FATHER
+
+FATHER = COND("精液の優勢")
+
+DRAWLINE
+
+IF TARGET == MASTER
+	PRINTFORMW %CALLNAME:MASTER%的身体不太舒服、稍微仔细检查了一下…
+	PRINTFORMW ………
+	PRINTFORMW ……
+	PRINTFORMW …
+	PRINTFORMW 調查的結果、\@ BASE:育児中 ? 在养育孩子的途中 # 很显然 \@
+	SELECTCASE FATHER
+	CASE IS > 0
+		PRINTFORM %CALLNAME:FATHER%の
+	ENDSELECT
+	PRINTFORML 孩子好像怀上了。
+;子育て中
+ELSEIF BASE:育児中
+	PRINTFORMW %CALLNAME:TARGET%诉说着身体的变化…
+	PRINTFORML 調查的結果、%CALLNAME:TARGET%在养育孩子的途中再次妊娠了。
+;恋慕
+ELSEIF TALENT:恋慕
+	PRINTFORMW %CALLNAME:TARGET%将妊娠的事说了出来…
+	PRINTFORML 調查的結果、%CALLNAME:TARGET%确实妊娠了。
+;其他
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%诉说着身体的变化…
+	PRINTFORML 調查的結果、%CALLNAME:TARGET%妊娠了。
+ENDIF
+
+FORCEWAIT
+
+CALL KOJO_EVENT, "妊娠発覚"
+
+;MASTER以外はリアクション
+IF TARGET == MASTER
+
+;恋慕
+ELSEIF TALENT:恋慕
+	;父親はMASTER
+	IF FATHER == MASTER
+		;叛逆or自尊心高いor強気
+		IF TALENT:叛逆 || TALENT:高慢 || TALENT:強気
+			PRINTFORMW %CALLNAME:TARGET%露出鼓起来的肚子、索求着抚摸…
+		;坦率or楽観的
+		ELSEIF TALENT:坦率 || TALENT:開朗
+			PRINTFORMW %CALLNAME:TARGET%微笑看着%CALLNAME:MASTER%、撫摸着鼓起来的肚子…
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%撫摸着鼓起来的肚子、笑得很開心…
+		ENDIF
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%对于怀上了不是%CALLNAME:MASTER%的孩子这件事很遗憾的様子…
+	ENDIF
+;子育て中
+ELSEIF BASE:育児中
+	PRINTFORMW %CALLNAME:TARGET%一副难以言喻的表情…
+;叛逆
+ELSEIF TALENT:叛逆
+	;出産経験有
+	IF TALENT:出産経験
+		PRINTFORMW %CALLNAME:TARGET%带着放弃了什么的微笑、撫摸着鼓起来的肚子…
+	;出産経験无
+	;叛逆or自尊心高いor強気
+	ELSEIF TALENT:叛逆 || TALENT:高慢 || TALENT:強気
+		PRINTFORMW %CALLNAME:TARGET%温柔地撫摸着鼓起来的肚子、但在%CALLNAME:MASTER%靠近的时候却狠狠地瞪着眼睛…
+	ELSEIF TALENT:内気
+		PRINTFORML 听到了这件事的%CALLNAME:TARGET%脸色发青、捂住了嘴但下一个瞬间就嘔吐了起来、
+		PRINTFORMW 吐瀉物洒落在床上…
+	;一線or保守的or堅強
+	ELSEIF TALENT:難以越過的底線 || TALENT:保守的 || TALENT:堅強
+		PRINTFORMW %CALLNAME:TARGET%用空洞的眼神看着鼓起来的肚子…
+	ELSE
+		PRINTFORMW 听到了这件事的%CALLNAME:TARGET%嗚咽了起来…
+	ENDIF
+;屈服刻印Lv2or信頼4LV
+ELSEIF MARK:屈服刻印 >= 2 || ABL:信頼 >= 4
+	;叛逆or自尊心高いor強気
+	IF TALENT:叛逆 || TALENT:高慢 || TALENT:強気
+		PRINTFORMW %CALLNAME:TARGET%露出了複雑的表情、但还是撫摸着鼓起来的肚子…
+	ELSEIF TALENT:内気
+		PRINTFORMW 听到了这件事的%CALLNAME:TARGET%非常不安、悄悄地握住了%CALLNAME:MASTER%的手…
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%用充满愛情的手抚摸着自己的肚子…
+	ENDIF
+;其他
+ELSEIF FATHER > 0
+	PRINTFORMW %CALLNAME:TARGET%对于和%CALLNAME:FATHER%之間有了孩子这件事很震惊…
+ELSE
+	PRINTFORMW %CALLNAME:TARGET%对于和有了孩子这件事很震惊…
+ENDIF
+
+
+;意外的妊娠の場合は特別経験Get
+CALL RECORD_SP_EXP
+
+;***種付け強化パッチで追加
+;父親は孕ませ経験により素質獲得
+IF EXP:FATHER:孕ませ経験 >= 30
+	SIF TALENT:FATHER:小种马 < 2
+		CALL SETFLAG, "大种马", FATHER
+ELSEIF EXP:FATHER:孕ませ経験 >= 10
+	SIF TALENT:FATHER:小种马 == 0
+		CALL SETFLAG, "小种马", FATHER
+ENDIF
+
+;---------------------------------------------------------
+;其他の妊娠イベント処理
+;CALLNAME:(COND("精液の優勢") ) とかなると見苦しいので、FATHER に代入する
+;---------------------------------------------------------
+@EVENT_N3, ARG
+#DIM FATHER
+#DIM CHOICE
+
+LOCAL = TARGET
+TARGET = ARG
+
+;お産(子育て中には出産しない)
+IF COND("妊娠中：分娩") && TALENT:妊娠 && BASE:育児中 == 0
+	FATHER = COND("精液の優勢")
+	DRAWLINE
+	IF TARGET == MASTER
+		PRINTFORM %CALLNAME:MASTER%
+		SELECTCASE FATHER
+		CASE IS > 0
+			PRINTFORM %CALLNAME:FATHER%
+			SIF TALENT:出産経験
+				PRINTFORM と兒童
+		CASEELSE
+			SIF TALENT:出産経験
+				PRINTFORM 自己的孩子
+		ENDSELECT
+		SIF CFLAG:息子の数 + CFLAG:娘の数 >= 2
+			PRINT 们
+		SIF FATHER > 0 || TALENT:出産経験
+			PRINT 的守望中
+		PRINT 、
+	ELSE
+		PRINTFORMW %CALLNAME:TARGET%快要生了。
+		PRINTFORMW ………
+		PRINTFORMW ……
+		PRINTFORMW …
+		PRINTFORMW 
+
+		PRINTFORM %CALLNAME:TARGET%
+		IF TALENT:子宮性感 && TALENT:淫壷
+			PRINTFORMW 在出產的淫悅中逐漸放鬆了表情
+		ELSEIF TALENT:出産経験 >= 3
+			PRINTFORM 幾乎沒有怎麼出汗的樣子
+		ELSE
+			PRINTFORM 大量的汗水佈滿了臉頰
+		ENDIF
+		PRINTFORMW 打開大腿。
+		;卵生の場合(まだ未実装)
+		IF TALENT:卵生
+			PRINTFORMW 在%CALLNAME:TARGET%不穩的喘息聲中、\@ TALENT:Ａ妊娠体質 ? 肛門 # 膣口 \@緩緩地擴張開……
+			IF TALENT:Ａ妊娠体質
+				PRINTFORML 本來作為排泄孔的%CALLNAME:TARGET%的肛門中出現了一個白色的物體、
+			ELSE
+				PRINTFORML %CALLNAME:TARGET%膣口大大地張開之後、其中一個白色的物體緩緩出現在了視野中、
+			ENDIF
+			PRINTFORMW 那――和%CALLNAME:TARGET%的愛的結晶帶著渾濁的聲響從%CALLNAME:TARGET%的身體中滑落出來、光滑的表面反射著妖艷的光澤展現在%CALLNAME:MASTER%的眼前。
+		ELSE
+			PRINTFORMW 在%CALLNAME:TARGET%不穩的喘息聲中、\@ TALENT:Ａ妊娠体質 ? 肛門 # 膣口 \@緩緩地擴張開……
+			PRINTFORM 最終在深處出現了一個
+			SELECTCASE CONDS("肤色")
+			CASE "褐色肌"
+				PRINTFORM 褐色的
+			CASE "色白"
+				PRINTFORM 純白的
+			CASE "青肌"
+				PRINTFORM 像是冬季的夜空一樣蒼青色的
+			CASE "普通"
+				PRINTFORM 橙紅色的
+			ENDSELECT
+			PRINTFORMW 頭、新的生命以這種姿態緩緩降生於這個世界。
+		ENDIF
+
+		PRINTL 
+		PRINTFORM %CALLNAME:TARGET%%CALLNAME:MASTER%
+		SIF TALENT:出産経験
+			PRINT 和兒童
+		SIF CFLAG:息子の数 + CFLAG:娘の数 >= 2
+			PRINT 们
+		PRINTFORM 一边鼓励着、
+	ENDIF
+
+	;【屯田兵メモ】
+	;PRINTFORMW 無事に\@ TTALENT:卵生 ? 産卵 # 出産 \@しました。
+	;でも別に良いんだけど、直感的に理解できないので
+	IF TALENT:卵生
+		PRINTFORMW 平安地産卵了。
+	ELSE
+		PRINTFORMW 平安地出産了。
+	ENDIF
+
+	;試しに兒童の性別選ばせてみるぜ
+	IF TALENT:卵生
+		CALL SETFLAG, "育児中：孵化中", TARGET
+		;【屯田兵メモ】
+		;PRINTFORMW 新たな命の結晶を%CALLNAME:TARGET%は、%CALLNAME:MASTER%に撫でてくれとせがんできました。
+		;みたいなテ接吻トを挿入しても良いかも知れない
+		;男女判定は孵化時に判定する
+	ELSE
+		PRINTL 
+		PRINTFORML 出生的孩子……
+		PRINTFORML [ 0] 女孩子
+		PRINTFORML [ 1] 男孩子
+		CALL INPUT_SELECT, 2
+		CHOICE = RESULT
+			
+		CALL BIRTH_RECORD, "出産記録：保存", TARGET, CHOICE
+
+		IF CHOICE == 0
+			CLEARBIT BASE:胎児, 20
+		ELSE
+			CALL SETFLAG, "妊娠中：息子", TARGET
+		ENDIF
+		
+
+		IF COND("妊娠中：息子")
+			PRINTFORMW \@ FATHER > 0 ? 长得和父親很像的 # \@元気的男孩子。
+			CFLAG:息子の数 += 1
+			;息子フラグ
+			CALL SETFLAG, "育児中：息子", TARGET
+		ELSE
+			PRINTFORMW \@ TARGET == MASTER ? %CALLNAME:MASTER% # 和母親 \@很像的可愛的女孩子。
+			CFLAG:娘の数 += 1
+		ENDIF
+
+		;恋慕
+		IF TALENT:恋慕
+			PRINTFORMW 抱着婴儿的%CALLNAME:TARGET%、让%CALLNAME:MASTER%也抱一抱这个孩子。
+		ELSEIF TALENT:叛逆
+			PRINTFORMW 抱着婴儿的%CALLNAME:TARGET%、正对孩子微笑着。
+		ELSEIF TARGET != MASTER
+			PRINTFORMW 抱着婴儿的%CALLNAME:TARGET%、朝孩子和%CALLNAME:MASTER%微笑着。
+		ENDIF
+	ENDIF
+
+
+	CALL KOJO_EVENT, "出産"
+
+	TARGET = ARG
+
+	;妊娠＆胎児フラグ終了
+	BASE:胎児 = 0
+	TALENT:妊娠 = 0
+
+	;創口貼を装備していた場合は取下
+	IF CFLAG:創口貼装着
+		CFLAG:創口貼装着 = 0
+		BASE:胎内精液量 = 0
+		BASE:胎内精子量 = 0
+	ENDIF
+
+	;子育て開始
+	BASE:育児中 += 1
+	;兒童の数+1
+	TALENT:出産経験 += 1
+	;父親フラグの確定
+	BASE:胎児の父親 = BASE:精液の優勢
+	BASE:精液の優勢 = 0
+
+	;一時的な素質の消去(まだ消えません)
+	IF CFLAG:妊娠で巨乳化
+		PRINTL 
+		PRINTFORMW （出産结束了、%CALLNAME:TARGET%的胸恢复了原来的样子…）
+	ENDIF
+	SETBIT CFLAG:MASTER:行動, 0
+;子育て中
+ELSEIF BASE:育児中 && RAND:4 && COND("手一杯", MASTER) + COND("同衾イベント", MASTER) == 0
+	FATHER = COND("胎児の父親")
+	DRAWLINE
+	IF COND("育児中：孵化中")
+		;妊娠しているのはMASTER
+		;...こんな事ある？一応異種族スタートが選択可能变成了時に向けて...？
+		IF TARGET == MASTER
+			PRINTFORMW %CALLNAME:MASTER%为了让蛋能够健康地孵化认真地在温暖蛋。
+			SETBIT CFLAG:MASTER:行動, 0
+		ELSEIF COND("同居中") == 0
+			CLEARLINE 1
+		ELSEIF FATHER == MASTER || FATHER < 0 || TALENT:恋慕
+			PRINTFORMW %CALLNAME:MASTER%去看望了%CALLNAME:TARGET%和蛋。
+			IF TALENT:叛逆 ;書いてて悲しくなるよう
+				IF RAND:5 == 0
+					PRINTFORMW 进不去房间…
+				ELSEIF RAND:4 == 0
+					PRINTFORMW %CALLNAME:TARGET%紧紧盯着%CALLNAME:MASTER%…
+				ELSEIF RAND:3 == 0
+					PRINTFORMW %CALLNAME:TARGET%看到了%CALLNAME:MASTER%的脸马上就把蛋抱得紧紧的…
+				ELSEIF RAND:2 == 0
+					PRINTFORML %CALLNAME:TARGET%爱惜地抚摸着蛋。
+					PRINTFORMW %CALLNAME:MASTER%就这样回到了自己的房间…
+				ELSE
+					PRINTFORML 看到了%CALLNAME:TARGET%幸福地孵蛋的样子、
+					PRINTFORMW 但在%CALLNAME:MASTER%進入房間时便停止了…
+				ENDIF
+			ELSEIF RAND:6 == 0
+				;PRINTFORMW %CALLNAME:TARGET%正在给孩子喂奶。
+				PRINTFORMW %CALLNAME:TARGET%认真地在孵蛋。
+				PRINTFORMW %CALLNAME:MASTER%看着%CALLNAME:TARGET%作为母親的样子、放松了下来…
+			ELSEIF RAND:5 == 0
+				PRINTFORMW 因为不放心一个人孵蛋、所以今晚变成了一起睡觉的样子…
+				SETBIT CFLAG:MASTER:行動, 0
+				CFLAG:MASTER:一緒に寝た = TARGET
+				CFLAG:一緒に寝た = MASTER
+			ELSEIF RAND:4 == 0
+				;PRINTFORMW 看到%CALLNAME:TARGET%正为睡不着觉的孩子发愁、决定一起熬夜到天亮…
+				PRINTFORMW 因为%CALLNAME:TARGET%也想要%CALLNAME:MASTER%来帮忙孵蛋、所以变成了一起钻被窝的情况…
+				SETBIT CFLAG:MASTER:行動, 0
+				CFLAG:MASTER:一緒に寝た = TARGET
+				CFLAG:一緒に寝た = MASTER
+			ELSEIF RAND:3 == 0
+				PRINTFORMW %CALLNAME:TARGET%幸福地看着%TEXTR("认真地/爱惜地/慎重地")%抚摸着蛋的%CALLNAME:MASTER%…
+			ELSEIF RAND:2 == 0
+				;PRINTFORMW 和在发呆的孩子３人一起玩了簡単的游戏、就这样快快乐乐地度过了…
+				PRINTFORMW 因为需要保持蛋的温度、所以在蛋的身边一起度过了一段时间…
+			ELSE
+				PRINTFORM %CALLNAME:TARGET%对养育孩子而感到不安、
+				IF RAND:3 == 0
+					PRINT 梳着頭髪的同时
+				ELSEIF RAND:2 == 0
+					PRINT 温柔地抚摸着的同时
+				ELSE
+					IF  TALENT:娇小
+						PRINT 抱着的同时
+					ELSE
+						PRINT 保持肌肤接觸的同时
+					ENDIF
+				ENDIF
+				PRINTFORMW 倾听着这些烦恼…
+			ENDIF
+		ENDIF
+	ELSE
+		;妊娠しているのはMASTER
+		IF TARGET == MASTER
+			PRINTFORMW %CALLNAME:MASTER%忙着照顾孩子…
+			SETBIT CFLAG:MASTER:行動, 0
+		;同居していない
+		ELSEIF COND("同居中") == 0
+			CLEARLINE 1
+		;父親はMASTERor既にいないor恋慕
+		ELSEIF FATHER == MASTER || FATHER < 0 || TALENT:恋慕
+			PRINTFORMW %CALLNAME:MASTER%去看%CALLNAME:TARGET%和孩子的情况。
+			IF TALENT:叛逆
+				IF RAND:5 == 0
+					PRINTFORMW 进不去房间…
+				ELSEIF RAND:4 == 0
+					PRINTFORMW %CALLNAME:TARGET%紧紧盯着%CALLNAME:MASTER%…
+				ELSEIF RAND:3 == 0
+					PRINTFORMW %CALLNAME:TARGET%一看到%CALLNAME:MASTER%的脸就像要保护孩子一样紧紧地抱住…
+				ELSEIF RAND:2 == 0
+					PRINTFORMW %CALLNAME:TARGET%開心地和孩子玩耍。
+					PRINTFORMW %CALLNAME:MASTER%就这样回到了自己的房间…
+				ELSE
+					PRINTFORMW %CALLNAME:TARGET%欢声笑语地和孩子玩耍、
+					PRINTFORMW 但在%CALLNAME:MASTER%進入房間时便停止了…
+				ENDIF
+			ELSEIF RAND:6 == 0
+				PRINTFORMW %CALLNAME:TARGET%正在给孩子喂奶。
+				PRINTFORMW %CALLNAME:MASTER%看着%CALLNAME:TARGET%作为母親的样子、放松了下来…
+			ELSEIF RAND:5 == 0
+				PRINTFORMW 二人睡意朦胧地来迎接了、所以决定今夜一起睡觉…
+				SETBIT CFLAG:MASTER:行動, 0
+				CFLAG:MASTER:一緒に寝た = TARGET
+				CFLAG:一緒に寝た = MASTER
+			ELSEIF RAND:4 == 0
+				PRINTFORMW 看到%CALLNAME:TARGET%正为睡不着觉的孩子发愁、决定一起熬夜到天亮…
+				SETBIT CFLAG:MASTER:行動, 0
+				CFLAG:MASTER:一緒に寝た = TARGET
+				CFLAG:一緒に寝た = MASTER
+			ELSEIF RAND:3 == 0
+				PRINTFORMW %CALLNAME:TARGET%幸福地看着和孩子一起吵吵闹闹的%CALLNAME:MASTER%…
+			ELSEIF RAND:2 == 0
+				PRINTFORMW 和在发呆的孩子３人一起玩了簡単的游戏、就这样快快乐乐地度过了…
+			ELSE
+				PRINTFORM %CALLNAME:TARGET%对养育孩子而感到不安、
+				IF RAND:3 == 0
+					PRINT 梳着頭髪的同时
+				ELSEIF RAND:2 == 0
+					PRINT 温柔地抚摸着的同时
+				ELSE
+					IF  TALENT:娇小
+						PRINT 抱着的同时
+					ELSE
+						PRINT 保持肌肤接觸的同时
+					ENDIF
+				ENDIF
+				PRINTFORMW 倾听着这些烦恼…
+			ENDIF
+		ENDIF
+		;父親はMASTER以外（現状保留）
+		;ELSEIF FATHER > MASTER
+	ENDIF
+;妊娠中
+ELSEIF TALENT:妊娠 && COND("手一杯", MASTER) + COND("同衾イベント", MASTER) == 0 && RAND:4
+	FATHER = COND("精液の優勢")
+	DRAWLINE
+	;妊娠しているのはMASTER
+	IF TARGET == MASTER
+		PRINTFORMW %CALLNAME:MASTER%由于不想出門、决定在自己的房间里休息。
+		SETBIT CFLAG:MASTER:行動, 0
+	;同居していない
+	ELSEIF COND("同居中") == 0
+		CLEARLINE 1
+	;父親はMASTERor既にいないor恋慕
+	ELSEIF FATHER == MASTER || FATHER < 0 || TALENT:恋慕
+		PRINTFORMW %CALLNAME:MASTER%决定去看看%CALLNAME:TARGET%的情况。
+		IF TALENT:叛逆 && TALENT:狂気
+			IF RAND:4 == 0
+				PRINTFORMW %CALLNAME:TARGET%用空洞的眼神看着隆起的肚子…
+			ELSEIF RAND:3 == 0
+				PRINTFORMW %CALLNAME:TARGET%毫无感情地俯视着把耳朵贴在肚子上的%CALLNAME:MASTER%…
+			ELSEIF RAND:2 == 0
+				PRINTFORMW %CALLNAME:TARGET%空虚地笑着和肚子里的孩子对着话…
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%開心地和肚子里的孩子对话、
+				PRINTFORMW 但看到%CALLNAME:MASTER%时突然開始流泪了…
+			ENDIF
+		ELSEIF FATHER == MASTER && RAND:4
+			IF RAND:4 == 0
+				PRINTFORMW %CALLNAME:TARGET%睡意朦胧地出来迎接、今夜决定一起睡觉…
+				SETBIT CFLAG:MASTER:行動, 0
+				CFLAG:MASTER:一緒に寝た = TARGET
+				CFLAG:一緒に寝た = MASTER
+			ELSEIF RAND:3 == 0
+				PRINTFORMW …但是、%CALLNAME:TARGET%好像已经睡着了、所以只是吻了一下便回去了…
+			ELSEIF RAND:2
+				PRINTFORMW %CALLNAME:TARGET%眯起眼睛開心地看着把耳朵贴在肚子上的%CALLNAME:MASTER%…
+			ELSE
+				PRINTFORMW 和%CALLNAME:TARGET%聊着生孩子的事情、愉快地度过了時間…
+			ENDIF
+		ELSE
+			PRINTFORM %CALLNAME:TARGET%总是感到不安、
+			IF RAND:3 == 0
+				PRINT 梳着頭髪的同时
+			ELSEIF RAND:2 == 0
+				PRINT 温柔地抚摸着的同时
+			ELSE
+				IF  TALENT:娇小
+					PRINT 抱着的同时
+				ELSE
+					PRINT 保持肌肤接觸的同时
+				ENDIF
+			ENDIF
+			PRINTFORMW 倾听着这些烦恼…
+		ENDIF
+	;父親はMASTER以外（現状保留）
+	;ELSEIF FATHER > MASTER
+	ENDIF
+ENDIF
+
+TARGET = LOCAL
+
+;---------------------------------------------------------
+;妊娠判定格子
+;シチュエーションARGSでARGが妊娠するかどうかを判定する。ARG:1は精液量。
+;ARGSは"一般人"or TOSTR(BASE:(精液を注いだ角色):識別番号)が入っている
+;SPERMで子宮に入る精子量、IS_FATHERで誰が父親になるかの番号管理を行う
+;ARGS:1でどっちに注がれたかを判断する
+;---------------------------------------------------------
+@CHECK_PREGNANT, ARG, ARG:1, ARGS, ARGS:1
+#DIM SPERM
+#DIM SPERM_DENS
+#DIM IS_FATHER
+
+;精液量がない場合
+SIF ARG:1 <= 0
+	RETURN 0
+
+;SPERMで子宮に入る精子量、IS_FATHERで誰が父親になるかの番号管理を行う
+SPERM = ARG:1 * (10 + RAND:21)
+SPERM_DENS = 90 + RAND:21
+
+SELECTCASE ARGS
+CASE "一般人"
+	;処女は判定しない
+	SIF TALENT:ARG:処女
+		RETURN 0
+	IS_FATHER = -4
+	;精液量は館のメンバーに比べると少ない
+	SPERM = MAX(SPERM/2, 1)
+
+CASEELSE
+	IS_FATHER = TO_NUMBER(TOINT(ARGS) )
+
+	SELECTCASE ARG
+	;調教者の妊娠格子
+	CASE PLAYER
+
+	;TARGETやASSI等の妊娠格子
+	CASEELSE
+		;絶頂を迎える事で確率上昇
+		SIF NOWEX:ARG:絶頂数合計
+			SPERM += MIN(NOWEX:ARG:絶頂数合計, 2)/2
+
+		IF COND("子宮挿入フラグ", ARG)
+			SPERM *= 10
+		;挿入子宮口玩弄の時には妊娠率上昇
+		ELSEIF SELECTCOM == 67
+			TIMES SPERM, 1.20
+		ENDIF
+	ENDSELECT
+	;濃厚精液判定
+	IF COND("濃厚射精", IS_FATHER)
+		SPERM *= 3
+		TCVAR:ARG:濃厚中出しされた = IS_FATHER
+	ENDIF
+ENDSELECT
+
+;妊娠判定フラグ
+SELECTCASE ARGS:1
+CASE "肛門", "Ａ"
+	BASE:ARG:Ａ胎内精液量 += SPERM * SPERM_DENS
+CASEELSE
+	BASE:ARG:胎内精液量 += SPERM * SPERM_DENS
+ENDSELECT
+
+;避妊中で妊娠不可能なら精子は受け入れない
+SIF COND("避妊中", ARG) && COND("避妊中だが妊娠可能", ARG) == 0
+	SPERM = 0
+;人形だと生殖能力没有
+SIF IS_FATHER > 0 && COND("種族：人形", IS_FATHER) + COND("種族：自动人形", IS_FATHER)
+	SPERM = 0
+;你以外は孕ませ不可にしている場合
+SIF CONFIG("允许女性为你以外的其他人受孕") == 0 && IS_FATHER != MASTER
+	SPERM = 0
+
+SELECTCASE ARGS:1
+CASE "肛門", "Ａ"
+	;吸精体質の人は精子を頂いちゃう
+	SIF TALENT:ARG:吸精体質
+		SPERM = MAX(MIN(1 + EX:ARG:Ａ中出し*2, SPERM), SPERM/POWER(2, TALENT:ARG:吸精体質) )
+	;夜袭などでの妊娠率を落とす
+	SIF COND("調教中", ARG) == 0
+		TIMES SPERM, 0.66
+
+	;父親一時フラグ
+	IF SPERM && BASE:ARG:胎児 == 0 && TALENT:ARG:Ａ妊娠体質
+		IF BASE:ARG:Ａ胎内精液量 == 0 || COND("精液の優勢", ARG) == 0 || RAND:3 == 0
+			SELECTCASE IS_FATHER
+			CASE IS > 0
+				BASE:ARG:精液の優勢 = BASE:IS_FATHER:識別番号
+			CASEELSE
+				BASE:ARG:精液の優勢 = IS_FATHER
+			ENDSELECT
+		ENDIF
+	ENDIF
+
+	SIF COND("精液の優勢", ARG)
+		BASE:ARG:Ａ胎内精子量 += SPERM
+
+	;排卵誘発剤
+	SIF TEQUIP:ARG:排卵誘発剤 && TALENT:ARG:Ａ妊娠体質
+		SETBIT BASE:ARG:バイオリズム, 13
+
+	;中出しされた最新の日期を上書き
+	CFLAG:ARG:Ａ最新中出し日 = DAY
+CASEELSE
+	;吸精体質の人は精子を頂いちゃう
+	SIF TALENT:ARG:吸精体質
+		SPERM = MAX(MIN(1 + EX:ARG:Ｖ中出し*2, SPERM), SPERM/POWER(2, TALENT:ARG:吸精体質) )
+	;夜袭などでの妊娠率を落とす
+	SIF COND("調教中", ARG) == 0
+		TIMES SPERM, 0.66
+
+	;父親一時フラグ
+	IF SPERM && BASE:ARG:胎児 == 0 && TALENT:ARG:Ａ妊娠体質 == 0
+		IF BASE:ARG:胎内精子量 == 0 || COND("精液の優勢", ARG) == 0 || RAND:3 == 0
+			SELECTCASE IS_FATHER
+			CASE IS > 0
+				BASE:ARG:精液の優勢 = BASE:IS_FATHER:識別番号
+			CASEELSE
+				BASE:ARG:精液の優勢 = IS_FATHER
+			ENDSELECT
+		ENDIF
+	ENDIF
+
+	SIF COND("精液の優勢", ARG)
+		BASE:ARG:胎内精子量 += SPERM
+
+	;排卵誘発剤
+	SIF TEQUIP:ARG:排卵誘発剤 && TALENT:ARG:Ａ妊娠体質 == 0
+		SETBIT BASE:ARG:バイオリズム, 13
+
+	CFLAG:ARG:最新中出し日 = DAY
+ENDSELECT
+

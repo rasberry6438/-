@@ -1,0 +1,155 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;X1は角色番号に置換してください
+;-------------------------------------------------
+;お願い・交易での選択肢を追加。番号は80～89を使ってよい
+;ここで TFLAG:交易可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K57_ADDSELECT
+;女装or男装に姿を変えるお願い
+;乃々君の女装を就这様移植したもの
+IF CEVENT("女装教習")
+	IF CEVENT("女装")
+		STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("服を戻して", 16)% … %CALLNAME:TARGET%の服を戻してもらいます/
+	ELSE
+		STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("女装して", 16)% … %CALLNAME:TARGET%に女装してもらいます/
+	ENDIF
+ENDIF
+
+;お願い・交易で増やした選択肢の地の文と台詞
+@KOJO_WISH_K57_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "服を戻して"
+	IF CFLAG:女装乗り気度 >= 30
+		PRINTFORMW 「诶？　已经可以了吗？」
+	ELSE
+		PRINTFORMW 「终、终于完了……」
+	ENDIF
+	PRINTL 
+	PRINTFORMW %CALLNAME:TARGET%明天会穿着男装来部室玩了。
+	CALL DEL_CEVENT, "女装"
+	CALL K57_CLOTHCHANGE
+	;フラグを弄る場合はそれもここで行う
+CASE "女装して"
+	CALL PRINT_STRW, @"「%CNAME("一人称")%、%CNAME("一人称")%知道啦……_H_」"
+	PRINTL 
+	PRINTFORMW %CALLNAME:TARGET%明天会穿着女装来部室玩了。
+	CALL SET_CEVENT, "女装"
+	CALL K57_CLOTHCHANGE
+	;フラグを弄る場合はそれもここで行う
+ENDSELECT
+
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K57_ADDSELECT
+
+SIF (TALENT:恋慕 == 0 || AIZOU() == 0) && CFLAG:魔法教授済 == 0
+	STR:選択肢 += "教魔法/"
+
+SIF CEVENT("女装")
+	STR:選択肢 += "女装を夸奖/"
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K57_ADDSELECT, ARGS
+#DIM ACTOR
+#DIM MCOUNT
+#DIMS ACTNAME
+#DIMS DYNAMIC NAR_SEL
+#DIMS DYNAMIC T_RES
+
+SELECTCASE ARGS
+CASE "魔法を教える"
+	PRINTFORMW 「欸！　你要教%CNAME("一人称")%魔法吗？！」
+	PRINTFORMW %CALLNAME:TARGET%一听到要%ARGS%就兴奋地欢呼起来
+	PRINTFORMW ……不过，%CALLNAME:MASTER%并不是真的魔法使
+	NAR_SEL = 乱说一通/
+	SIF BASE:MASTER:魂 > 100
+		NAR_SEL += "请弗理希艾尔帮忙（消耗魂）/"
+
+		IF FIND_COND("現在存在", "種族：魔法使")
+			PRINTFORMW 不过，借助社团成员的力量，还是能教一些东西的
+			IF BASE:MASTER:魂 > 100
+				PRINTFORMW 也可以请求弗理希艾尔的帮助
+				PRINTFORMW 但为了得到她的力量，似乎需要相应的魂……
+			ENDIF
+			ACTOR = FIND_COND("現在存在", "種族：魔法使")
+			ACTNAME = %CALLNAME:ACTOR%
+			NAR_SEL += @"借助的%ACTNAME%力量/"
+		ELSEIF BASE:MASTER:魂 <= 100
+			PRINTFORMW 现在魂数量也不多
+			PRINTFORMW 似乎只能说些无関紧要的话……
+		ELSE
+			PRINTFORMW 不过，若是借助弗理希艾尔的力量，事情就容易多了
+			PRINTFORMW 虽然可能需要魂が……
+		ENDIF
+
+		SIF BASE:MASTER:魂 > 100
+			PRINTFORMW 或者说完全是胡说八道，作为普通人的%CALLNAME:TARGET%也不会察觉到
+		
+		PRINTFORMW %CALLNAME:MASTER%……(现在的%CALLNAME:MASTER%的魂：%TEXTS("0.01", BASE:MASTER:魂)%)
+		CALL PRINT_SELECT, @"%NAR_SEL%"
+
+	SELECTCASE RESULT
+	CASE 0
+		PRINTFORMW %CALLNAME:MASTER%决定先教一些看似合理的东西
+		PRINTFORMW 虽然这纯属无意义的胡言乱语，%CALLNAME:TARGET%却眼中闪着光，聚精会神地听着……
+		SIF FIND_COND("現在存在", "弗理希艾尔") || FIND_COND("現在存在", "血縁")
+			PRINTFORMW ……背后传来的视线让人不适
+		T_RES = でたらめ
+	CASE 1
+		ACTOR = CNUM("弗理希艾尔")
+		ACTNAME = %CALLNAME:ACTOR%
+		PRINTFORMW 为了不让%CALLNAME:TARGET%察觉，给%ACTNAME%发了消息，请求她教些简单的魔法
+		PRINTFORMW 没过多久，手机收到了回复
+		PRINTFORMW ……看来必须支付魂
+		IF BASE:MASTER:魂 > 100
+			PRINTFORMW 无奈之下，%CALLNAME:MASTER%发送了同意的表情……
+			BASE:MASTER:魂 -= 100
+			BASE:ACTOR:魂 += 100
+			PRINTL 
+			PRINTFORMW 魂-1.00（%CALLNAME:MASTER%）
+			T_RES = 魔法
+		ELSE
+			PRINTFORMW 但是现在%CALLNAME:MASTER%没有足够的魂来支付
+			PRINTFORMW %CALLNAME:MASTER%只能遗憾地发了拒绝的消息……
+			T_RES = でたらめ
+		ENDIF
+	CASE 2
+		PRINTFORMW 为了不让%CALLNAME:TARGET%察觉，%ACTNAME%发了消息，请求教授一些魔法
+		PRINTFORMW 这样一来，总算能够满足%CALLNAME:TARGET%的愿望了……
+		T_RES = 魔法
+	ENDSELECT
+
+	IF T_RES == "でたらめ" && RAND:5 == 0
+		PRINTFORMW 「……欸——？　真的是这样吗——？」
+		PRINTFORMW %CALLNAME:TARGET%眯起眼睛，盯着%CALLNAME:MASTER%
+		PRINTFORMW 看来这招并没有奏效……
+	ELSE
+		PRINTFORMW 「欸——……魔法是这样的啊……！」
+		PRINTFORMW 「%CNAME("二人称")%！　谢谢你教我——！」
+		PRINTFORMW %CALLNAME:TARGET%对露出了%CALLNAME:MASTER%灿烂的笑容……
+		;好感度を上げる
+		CFLAG:好感度 += 10
+		CALL PRINT_STRW, @"_黄色_好感度＋１０"
+		;フラグを立てる
+		CFLAG:魔法教授済 = 1
+	ENDIF
+CASE "女装を夸奖"
+	PRINTFORMW %CALLNAME:MASTER%夸奖了%CALLNAME:TARGET%女装的样子
+	PRINTL 
+	SELECTCASE CFLAG:女装乗り気度
+	CASE IS >= 30
+		PRINTFORMW 「哼哼哼、对吧——？」
+		PRINTFORMW %CALLNAME:TARGET%看起来很開心……。
+	CASE IS >= 15
+		PRINTFORMW 「对、对吧……嘿嘿嘿……」
+		PRINTFORMW %CALLNAME:TARGET%红着脸……。
+	CASE IS >= 5
+		PRINTFORMW 「……那、那么合适吗……？」
+		PRINTFORMW %CALLNAME:TARGET%看起来并不是那么開心……。
+	CASEELSE
+		PRINTFORMW 「诶——？　才没那种事吧——？」
+		PRINTFORMW %CALLNAME:TARGET%用怪异的眼神盯着%CALLNAME:MASTER%……。
+	ENDSELECT
+	SIF CFLAG:女装乗り気度 <= 999
+		CFLAG:女装乗り気度++
+ENDSELECT

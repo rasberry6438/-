@@ -1,0 +1,2086 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;73は角色番号に置換してください
+;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+;ここで TFLAG:取引可能 = 1 とすると、Ｈの最中でもここの選択肢が出ます
+@WISH_K73_ADDSELECT
+;STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("フォントカラー", 16)% … %CALLNAME:TARGET%のセリフの色を変えます/
+;STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("追加選択肢之２", 16)% … %CALLNAME:TARGET%にＢＢＢしてもらいます/
+
+;お願い・取引で増やした選択肢の地の文と台詞
+@KOJO_WISH_K73_ADDSELECT, ARGS
+#DIM MEMO_LINECOUNT
+SELECTCASE ARGS
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+	;フラグを弄る場合はそれもここで行う
+ENDSELECT
+
+;-------------------------------------------------
+;Talk指令の選択肢を追加
+@DAILY1_K73_ADDSELECT
+
+;STR:選択肢 += "追加選択肢之２/"
+
+;選択後にＨに直接移動したい場合(ここの エッチする は好きに変えてよい)
+;STR:選択肢 += "エッチする/"
+;選択後にターンを終了したい場合(ここの ターンを終わらせる は好きに変えてよい)
+;STR:選択肢 += "ターンを終わらせる/"
+
+;Talk指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY1_K73_ADDSELECT, ARGS
+SELECTCASE ARGS
+CASE "追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+;直接Ｈしたい場合
+CASE "エッチする"
+	;前編
+	IF CEVENTS("追加選択肢からＨ") == ""
+		PRINTFORMW 接吻特
+		PRINTL [0]选项1(选择这个会H)
+		PRINTL [1]选项2(选择这个不会H)
+		CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+		FLAG:SELECT_USERSHOP = 100
+	ELSE
+		IF TFLAG:床イン
+			PRINTFORMW H时的情况展開
+		ELSE
+			PRINTFORMW 这边是不会H的情况展開
+		ENDIF
+	ENDIF
+;直接结束回合したい場合
+CASE "ターンを終わらせる"
+	;前編
+	IF CEVENTS("追加選択肢から结束回合") == ""
+		PRINTFORMW 接吻特
+		PRINTL [0]選択肢１(これを選ぶと结束回合します)
+		PRINTL [1]選択肢２(これを選ぶと结束回合しません)
+		CALL SET_CEVENT, @"追加選択肢から结束回合：%ARGS%"
+		FLAG:SELECT_USERSHOP = 998
+	ELSE
+		IF TFLAG:结束回合
+			PRINTFORMW 结束回合する場合の展開です
+		ELSE
+			PRINTFORMW こっちは结束回合しない場合の展開です
+		ENDIF
+	ENDIF
+
+ENDSELECT
+
+;-------------------------------------------------
+;互动指令の選択肢を追加
+@DAILY2_K73_ADDSELECT
+
+SIF TALENT:男性 && CHARA_NUM("室内の邪魔者") > 0 && FIND_COND("現在存在") && BASE:精力 > 1
+	STR:選択肢 += "傍から見つめる/"
+SIF CEVENT("日向の炮友交流") == 1
+	STR:選択肢 += "日向の炮友リスト/"
+
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+;選択後にＨに直接移動したい場合(ここの エッチする は好きに変えてよい)
+;STR:選択肢 += "エッチする/"
+;選択後にターンを終了したい場合(ここの ターンを終わらせる は好きに変えてよい)
+;STR:選択肢 += "ターンを終わらせる/"
+
+;睡眠時の互动指令の選択肢を追加
+@DAILY2_SLEEP_K73_ADDSELECT
+	;STR:選択肢 += "睡眠時追加選択肢その１/"
+	;STR:選択肢 += "睡眠時追加選択肢之２/"
+;互动指令で増やした選択肢の地の文と台詞
+@KOJO_DAILY2_K73_ADDSELECT, ARGS
+#DIMS GREETING
+#DIM MEMO_TARGET
+#DIM LCOUNT
+#DIM MEMO_PLAYER
+#DIMS DETAIL_1
+#DIMS DETAIL_2
+#DIMS DETAIL_3
+#DIM MEMO_LINECOUNT
+#DIM GET_REL
+#DIMS EVENT_TABLE
+#DIM MOB_A
+#DIM MOB_B
+#DIM MOB_C
+#DIM MOB_D
+#DIM MOB_E
+#DIM MOB_F
+#DIM MOB_G
+#DIM MOB_H
+#DIM MOB_I
+#DIM MOB_J
+#DIM MOB_K
+#DIM MOB_L
+#DIM MOB_M
+#DIM MOB_N
+#DIM MOB_O
+#DIM MOB_P
+#DIM MOB_Q
+#DIM MOB_R
+;誰の精液か
+#DIMS SPERMS
+#DIM ypos
+#DIMS MEMO_PANTIES, 6
+#DIMS INDENT_TEXT
+
+INDENT_TEXT = 
+
+MEMO_LINECOUNT = LINECOUNT
+SELECTCASE ARGS
+CASE "日向の炮友リスト"
+	CALL SEXFRIENDS_K73
+CASE "傍から見つめる"
+	MEMO_TARGET = TARGET
+	MEMO_PLAYER = PLAYER
+	PLAYER = FINDCHARA(NO, 73)
+	$OAITE
+	TARGET = FIND_COND("現在存在", "無自覚の毒牙ＯＫ")
+	SIF CFLAG:PLAYER:日向魔法飞机杯 == 1 && RAND:4 == 0
+		TARGET = FIND_COND("現在不在", "無自覚の毒牙ＯＫ")
+	SIF (COND("受精済", TARGET) || COND("着床済", TARGET) || BASE:TARGET:胎児 > 0 || CFLAG:TARGET:創口貼装着) && RAND:3 && CHARA_NUM("室内の邪魔者") > 2
+		GOTO OAITE
+	IF TARGET == 0
+		IF NO:TARGET == 54
+			PRINTFORMW 「ん？宇佐美酱……？」
+			PRINTFORMW 「あ～あの一年の…妊活頑張ってる娘だね。知ってるよ」
+			PRINTFORMW 「え？手を出さない理由……う～～ん。答えづらいな…」
+			PRINTFORMW 「なんて言ったらいいんだろう…臭いがちょっと合わないんだよね…なんか」
+			PRINTFORMW 「いや、その宇佐美酱がかわいくないとかじゃなくてね…うん…。」
+			TARGET = MEMO_TARGET
+			PLAYER = MEMO_PLAYER
+		RETURN 1
+		ENDIF
+		SELECTCASE RAND:3
+			CASE 0
+				CALL EMOTION_PLUS, "スマホ粉紅/对话框開心/ڡ", PLAYER
+				PRINTFORMW 「ふんふふ～ん♪」
+				PRINTFORMW 日向はスマホを使って女の子と連絡を取っているようだ
+			CASE 1
+				PRINTFORMW 「誰か孕みたがってる娘いないかな～？」
+				PRINTFORMW 日向は種付けする相手を探しているようだ
+			CASE 2
+				CALL EMOTION_PLUS, "送禮/对话框？/困惑眉/小口２", PLAYER
+				PRINTFORMW 「あの娘ってこういうのって好きだったけ？」
+				PRINTFORMW 日向は今夜会う相手に渡す送禮に悩んでいるようだ
+		ENDSELECT
+		TARGET = MEMO_TARGET
+		PLAYER = MEMO_PLAYER
+		RETURN 1
+	ENDIF
+	SIF COND("現在不在", TARGET)
+		CALL EMOTION_PLUS, "躁动难忍/紅潮２/对话框！？/困扰眉/へ字３"
+	PRINTFORM どうやら%CALLNAME:PLAYER%は
+	SIF COND("現在不在", TARGET)
+		PRINTFORM 魔法の飞机杯を使って
+	PRINTFORMW %CALLNAME:TARGET%に種付けを行っているようだ
+	PRINTFORML
+	CFLAG:PLAYER:日向地文前 = 1
+	IF COND("現在不在", TARGET)
+		IF TALENT:TARGET:処女 == 1 || RAND:3 == 0
+			PRINTFORMW 「あれ～？これ誰のおまんこだろう…もしかして、%CALLNAME:TARGET%酱かな？」
+		ELSEIF RAND:2
+			PRINTFORMW 「多分…この%TEXTR("絡みついてくる感じは/膣肉の形は")%…%CALLNAME:TARGET%酱っぽいな」
+		ELSE
+			PRINTFORMW 「ん～っと…これは…、%CALLNAME:TARGET%酱に繋がったみたいだね。」
+		ENDIF
+		IF TALENT:TARGET:処女 == 1
+			PRINTFORMW 「そういえば…%CALLNAME:TARGET%酱って処女だったような…」
+			PRINTFORMW 「ま～いっか♪」
+			CALL SYOZYOSOTU_K73
+			CSTR:TARGET:特別経験 = %CSTR:特別経験%処女喪失：　{DAY}日目 %CALLNAME:FINDCHARA(NO, 73)%の阴茎に魔法の飞机杯越しに夺去了処女/
+		ELSE
+			PRINTFORMW 「それじゃあ、いっぱい種付け%TEXTR("しちゃお/するぞ")%～！」
+		ENDIF
+		CFLAG:PLAYER:日向完美契合 = 1
+		PRINTFORML
+		JUMP MESSAGE_MAHOONAKAN_K73
+	ELSEIF CFLAG:TARGET:日向姉妹丼 == 1 && TALENT:MASTER:女性
+		CFLAG:TARGET:日向姉妹丼 = 2
+		PRINTFORMW 「いや～ごめんね。後輩酱。」
+		PRINTFORMW 「%CALLNAME:TARGET%酱としてる時に一緒にしようって話变成了んだ～♪」
+		PRINTFORM 「それじゃあ、%CALLNAME:TARGET%酱、
+		IF TALENT:TARGET:姉
+			PRINTFORM 妹桑
+		ELSE
+			PRINTFORM 欧内酱
+		ENDIF
+		CALL PRINT_STRW, @"の前でいっぱい気持ちよくなろうね～_BBHH_」"
+		DETAIL_1 = %CALLNAME:TARGET%
+		CALL MESSAGE_PLAY_K73
+		ASSI = TARGET
+		CFLAG:PLAYER:日向3P = 1
+		CFLAG:PLAYER:日向地文前 = 1
+		PRINTFORMW 「こうやって、食べ比べするのは楽しいね～」
+		PRINTFORMW 「それに…二人とも上の方を小突いて给とキュンキュン締圆圈のは、やっぱり姉妹なんだね」
+		PRINTFORML
+		TARGET = 0
+		TARGET = MASTER
+		IF TALENT:MASTER:処女 == 1
+			TALENT:MASTER:処女 = 0
+			EXP:MASTER:特別経験 += 1
+			SETCOLOR 255,255,0
+			PRINTL ＜処女喪失＞
+			PRINTL 特別経験＋１
+			RESETCOLOR
+			CSTR:MASTER:特別経験 = %CSTR:特別経験%処女喪失：　{DAY}日目 %CALLNAME:FINDCHARA(NO, 73)%の阴茎に%DETAIL_1%との姉妹丼として処女をおいしく頂かれた/
+		ENDIF
+		CFLAG:TARGET:日向姉妹丼 = 3
+	ELSEIF TALENT:TARGET:処女 == 1
+		IF NO:TARGET == 71
+			PRINTFORMW 「ねぇねぇ…%CALLNAME:TARGET%酱、游戏が大好きって聞いたんだけど僕と遊ばない？」
+			CALL EMOTION_PLUS, "对话框！/通常眉２/栗口２"
+			PRINTFORMW 『いいよ！それで何するの？私はなんでもいいよー！』
+			PRINTFORMW 「そうだなー？こすり相撲なんてどうかな？」
+			PRINTFORMW 『こすりずもう？初めて聞いたんだけど、どんなの？』
+			PRINTFORMW 「手押し相撲みたいに体を使った玩耍なんだけど、……やってみるのが一番だね。」
+			CALL SET_CEVENT, "こすり相撲"
+			CALL SYOZYOSOTU_K73
+			CSTR:TARGET:特別経験 = %CSTR:特別経験%処女喪失：　{DAY}日目 %CALLNAME:FINDCHARA(NO, 73)%とのこすり相撲で処女を消費した/
+		ELSEIF COND("入部初日", TARGET) && !COND("入部初日", PLAYER) && COND("昼")
+			CFLAG:TARGET:要受精確率 = 51
+			PRINTFORMW 「はじめまして。ここの部活に興味があるのかな？」
+			PRINTFORMW 「名前は……%CALLNAME:TARGET%酱っていうんだね。」
+			PRINTFORMW 「僕は日向、よろしくね♪」
+			PRINTFORML
+			PRINTFORMW 「で、早速で悪いんだけど…ちょっと床の方に来てもらえるかな？」
+			PRINTFORMW 「うん。この部活ちょっと特殊だから、早いうちがいいからね。」
+			PRINTFORML
+			PRINTFORMW 「是。処女卒業おめでとう～♪」
+			PRINTFORMW 「最初は痛むかもだけど、なるべく気持ちよくなるように頑張るね！」
+			CALL SYOZYOSOTU_K73
+			CSTR:TARGET:特別経験 = %CSTR:特別経験%処女喪失：　{DAY}日目 入部した%TEXTR("当日/その日の内")%に%CALLNAME:FINDCHARA(NO, 73)%の阴茎で処女を卒業した/
+		ELSEIF TALENT:相思相愛
+			PRINTFORMW 「%CALLNAME:TARGET%酱……ほんとうにいいの？」
+			PRINTFORMW 「後輩酱と恋仲なんだよね、大事な処女なんだよ？」
+			PRINTFORML
+			PRINTFORMW 「やった～、それじゃあ、たっぷり味わっちゃおっかな～」
+			PRINTFORMW 「後輩酱も、%CALLNAME:TARGET%酱のこと見守ってあげてね♪」
+			CALL SYOZYOSOTU_K73
+			CSTR:TARGET:特別経験 = %CSTR:特別経験%処女喪失：　{DAY}日目 大好きな你の目の前で%CALLNAME:FINDCHARA(NO, 73)%の阴茎に献出了処女/
+		ELSEIF TALENT:恋慕
+			PRINTFORMW 「%CALLNAME:TARGET%酱…いいの？」
+			PRINTFORMW 「後輩酱のことが好きなんでしょ。僕が処女奪っちゃったら初めてする時…感動とかなくなっちゃうよ。」
+			PRINTFORMW 「別にいいけど、後で後悔しても知らないよ」
+			CALL SYOZYOSOTU_K73
+			CSTR:TARGET:特別経験 = %CSTR:特別経験%処女喪失：　{DAY}日目 你に好意を寄せていたのにも関わらず%CALLNAME:FINDCHARA(NO, 73)%の阴茎に処女を奪わせた/
+		ELSE	
+			SELECTCASE CSTR:TARGET:学年
+			CASE "初等部"
+				PRINTFORMW 「ん～やっぱり萝莉の初物は締まりが違うね～♪」
+				CALL PRINT_STRW, @"「こんなに締まりが很强おまんこは味わえないからね、しっかりほぐしてあげなきゃね…_BBHH_」"
+				PRINTFORMW 「それにしても、こんな小小的女の子の処女を奪うのは背徳感がすごいな…」
+			CASEELSE
+				PRINTFORMW 「あっ…%CALLNAME:TARGET%酱処女だったの…」
+				PRINTFORMW 「も～言ってよ～、…女の子にとって処女って大事なものでしょ」
+				PRINTFORMW 「もう少し温柔的できたかもしれないのに…」
+			ENDSELECT
+			CALL SYOZYOSOTU_K73
+			CSTR:TARGET:特別経験 = %CSTR:特別経験%処女喪失：　{DAY}日目 %CALLNAME:FINDCHARA(NO, 73)%の阴茎に雑に夺去了処女/
+		ENDIF
+	ELSEIF CFLAG:TARGET:創口貼装着
+		CFLAG:TARGET:創口貼装着 = 0
+		PRINTFORMW 「おっ♪%CALLNAME:TARGET%酱…創口貼張ったままだね～」
+		CALL PRINT_STRW, @"「それじゃあ、僕が剥がして给ね_BBHH_」"
+		PRINTL 
+		PRINTFORM ﾍﾟﾛﾍﾟﾘﾍﾟﾘ……
+		SETCOLOR 255,192,203
+		PRINTFORML 　ﾄﾞﾛｫ……
+		RESETCOLOR
+		PRINTL 
+		CALL PRINT_STRW, @"「あらら、零れてきちゃった…_BBHH_」"
+		CALL PRINT_STRW, @"「これは…%TEXTR("注ぎ直す/また種付けする")%必要が有そうだね_BBHH_」"
+	;ELSEIF TALENT:TARGET:事后避孕药 > 0 
+	;	TALENT:TARGET:事后避孕药 = 0
+	;	CALL EMOTION_PLUS, "へ字４/蹙眉",PLAYER
+	;	PRINTFORMW 「え…%CALLNAME:TARGET%酱アフピ使ってるの…」
+	;	PRINTFORMW 「ふ～ん。別にいいけどさ…、はぁ…なんだかねぇ。」
+	;	CALL PRINT_STRW, @"「一応言っておくと、僕とエッチしたら多分それ無駄になると思うよ…_BBHH_」"
+	;	PRINTFORML
+	;	PRINTFORMW 日向の影響で%CALLNAME:TARGET%の事后避孕药は効果を失った…
+	ELSEIF COND("入部初日", PLAYER) && CFLAG:TARGET:要受精確率 != 51
+		CFLAG:TARGET:要受精確率 = 51
+		PRINTFORMW 「あっ、初めまして。」
+		PRINTFORMW 「今日から入部すること变成了日向って言います。」
+		PRINTFORMW 「僕三年生だから、短いつきあいになるかもしれないけど…」
+		CALL PRINT_STRW, @"「その…%CALLNAME:TARGET%酱とも仲良くなりたいな…_BBHH_」"
+	ELSEIF COND("入部初日", TARGET) && !COND("入部初日", PLAYER) && CFLAG:TARGET:要受精確率 != 51
+		CFLAG:TARGET:要受精確率 = 51
+		PRINTFORMW 「おや、見ない顔だね～。うちの部に興味があるのかな？」
+		PRINTFORMW 「あ、今日入部したばっかりなんだね♪」
+		CALL PRINT_STRW, @"「じゃあ、この部活のことを手取り足取り進行解答ね_BBHH_」"
+	;ELSEIF COND("身嗜み：Ｖ独占", TARGET) && RAND:3 == 0
+	;	PRINTFORMW 「あ～ぁ、%CALLNAME:TARGET%酱…しちゃったね…」
+	;	CALL PRINT_STRW, @"「知ってるよ。おまんこでエッチしないって後輩酱と約束してるの…_UH_」"
+	;	CALL PRINT_STRW, @"「いけないんだ～_BBHH_　ま、おまんこエッチ気持ちいから仕方ないもんね_BBHH_」"
+	;	CALL PRINT_STRW, @"「大丈夫_UH_後輩酱には内緒にして给から_BH_」"
+	ELSEIF BASE:PLAYER:精力 < 75 && ITEM:芳香醚 > 0 && !CFLAG:PLAYER:日向エテ == 1 && RAND:2
+		PRINTFORMW 「後輩酱って確か、すっごい精力剤持ってたよね。一つちょうだい」
+		PRINTFORML
+		PRINTFORMW 「ふ～おまたせ、%CALLNAME:TARGET%酱。」
+		PRINTFORMW 「今日は結構出したもんだから、勃ちづらくなっててね…だから精力剤貰ってきたんだ♪」
+		PRINTFORML 
+		PRINTFORMW ﾌﾟｼｭｯ…………ｺﾞｷｭｯｺﾞｷｭｯ…
+		BASE:PLAYER:精力 = 1000
+		PRINTFORML 日向の体力と精力が回復した！！
+		PRINTFORML
+		CFLAG:PLAYER:日向エテ = 1
+		ITEM:芳香醚 -= 1
+		CALL PRINT_STRW, @"「ふ～_UH_それじゃ、%CALLNAME:TARGET%酱に…い～っぱい種付けしちゃうね_BBHH_」"
+	ELSEIF NO:TARGET == 11 && RAND:4 == 0
+		CALL EMOTION_PLUS, "有頂天/いー３",PLAYER
+		PRINTFORMW 「%CALLNAME:TARGET%老师～い、種付けしてもいいですか～♪」
+		CALL EMOTION_PLUS, "心情好"
+		CALL PRINT_STRW, @"『もちろん%TEXTR("オッケー/いい")%ですよぉ_H_』"
+		IF BASE:TARGET:胎児
+			PRINTFORMW 『…と言いたいところなのですが、莉雅拉酱の赤酱のお部屋は、』
+			PRINTFORMW 『現在子育て中なので静かにお射精してくださいね♪』
+			PRINTFORMW 「はーい！分かりました！」
+		ELSE
+			PRINTFORMW 『%TEXTR("濃ゆい/ドロドロの/濃厚的//元気いっぱいの")%精液で莉雅拉酱のことを孕ませてくださいね。』
+			PRINTFORMW 『そ・し・て…身籠ったら、ちゃーんと赤酱産んであげますから頑張ってください♪』
+			PRINTFORMW 「やった～！種付けがんばりまーす！」
+		ENDIF
+	ELSEIF NO:TARGET == 22 && RAND:4 == 0
+		IF COND("発情期", TARGET) && RAND:2 == 0
+			SELECTCASE RAND:2
+				CASE 0
+					CALL EMOTION_PLUS, "通常眉２/对话框兴奋/蠕动/紅潮",PLAYER
+					CALL PRINT_STRW, @"「%CALLNAME:TARGET%ちゃ～ん♪発情期つらそうだね～_BBHH_」"
+					CALL EMOTION_PLUS, "困扰眉/紅潮２/对话框！？/栗口２",TARGET
+					PRINTFORMW 『ッ！？…い、いや大丈夫だから…』
+					PRINTFORMW 「あれ？僕まだ何も言ってないんだけどな～」
+					PRINTFORMW 『…いいから！…それに今シたら赤酱できちゃうって』
+					CALL PRINT_STRW, @"「ふ～ん。それじゃあ今から、お家に返回まで誰にも襲い掛かったりせずに我慢できるんだ～_BBHH_」"
+					PRINTFORMW 『うぅ…そ、それは…』
+					CALL PRINT_STRW, @"「どうせ我慢できないんだったら、顔を知ってる相手の方が後々ラクだとは思うけどな～_UH_」"
+					CALL EMOTION_PLUS, "困扰眉/半開２/紅潮２/对指/对话框爱心",TARGET
+					CALL PRINT_STRW, @"『ヤ、ヤります……_BBHH_』"
+				CASE 1
+					CALL PRINT_STRW, @"「んも～、%CALLNAME:TARGET%酱ってば、ずっとすっごいエッチな气味させちゃって～_BBHH_」"
+					IF RAND:2
+						PRINTFORMW 「そうやって腰にしがみつかれてたら歩けないよ。」
+					ELSE
+						PRINTFORMW 「もう、そんなに大変なら、後輩酱にお願いしなくて良いの～？」
+					ENDIF
+					CALL PRINT_STRW, @"『何でもいいからっ_UH_はやくっ_UH_はやくシてッ_BBHH_』"
+					CALL PRINT_STRW, @"「そこまで必死にお願いされたら、僕も断れないね_BBHH_」"
+					CALL PRINT_STRW, @"「その分たっぷり種付けしちゃおっかな～_BBHH_」"
+			ENDSELECT
+			CFLAG:PLAYER:日向ラディーネ = 1
+		ELSE
+			PRINTFORMW 「%CALLNAME:TARGET%酱、最近ご無沙汰って聞いたけど…僕が相手してあげよっか？」
+			CALL EMOTION_PLUS, "躁动难忍/半開３/对话框！？",TARGET
+			PRINTFORMW 『へっ…？！い、いや、我はそんなんじゃ…っていうか、こういう話はみんなに聞こえない所で…』
+			IF RAND:2
+				CALL PRINT_STRW, @"「え～、みんな今更気にしてないって_BBHH_」"
+			ELSE
+				CALL PRINT_STRW, @"「え～、部員のみんなともやりまくってるし、大丈夫だよ～_BBHH_」"
+			ENDIF
+			CALL PRINT_STRW, @"「それに、やっぱり…おまんこの方は我慢できないみたいだよ_BBHH_」"
+			CALL PRINT_STRW, @"『ちょっ、やッ、待って_UH_クチュクチュしないでっ_UH_』"
+			PRINTFORMW 「是是、じゃあ床行こうね～♪」
+		ENDIF
+	ELSEIF NO:TARGET == 30 && RAND:4 == 0
+		CALL EMOTION_PLUS, "红潮恍惚/左闭眼２/困扰眉/半開４/对话框乱",TARGET
+		CALL PRINT_STRW, @"『どうした…日向よ。妾%TEXTR("と性交/に種付け/と交尾")%するのではなかったのか…』"
+		PRINTFORMW 「ん？…ん～…いや、いつも僕から誘ってるけど楽しそうじゃないし…止めとこうかなって、」
+		CALL PRINT_STRW, @"『そ、そうか…では、また気が向く時に誘え……』"		
+		PRINTFORML
+		CALL PRINT_STRW, @"「………やっぱ、や～めた_BBHH_%CALLNAME:TARGET%酱可爱から種付けしちゃお～_UH_」"
+		CALL PRINT_STRW, @"『ッ…またか…_UH_こんな回りくどいこををせずに、さっさとヤれば良かろう_BBHH_』"
+	ELSEIF NO:TARGET == 35 && RAND:4 == 0
+		SELECTCASE KABURAND(2)
+			CASE 0
+			CALL EMOTION_PLUS, "红晕/通常眉３/いー２",PLAYER
+				PRINTFORMW 「ね～ね～、%CALLNAME:TARGET%酱。さっき見ちゃったよ～」
+				PRINTFORMW 「校舎裏で告白されてたよね、いいな～」	
+				CALL EMOTION_PLUS, "心情差/叹气"
+				PRINTFORMW 『你って、ほんっとデリカシーないよな。断る側の気持ちを分かってるもんだと思ってたわ。』
+				PRINTFORMW 『ってか、你も相当女食いまくってんだろ、』
+				PRINTFORMW 「え～、だって、色んな娘に種付けしたいじゃ～ん」
+				PRINTFORMW 「あっ、もちろん%CALLNAME:TARGET%酱にも種付けしたいよ。」
+				PRINTFORMW 『取ってつけたみてーに、俺に欲情すんなよ、……』
+				PRINTFORMW 「いい機会だし、種付けさせてよ～。一回だけだからさ、」
+				PRINTFORMW 『めんどくせ。一回だけな』
+			CASE 1
+				PRINTFORMW 「ね～ね～、%CALLNAME:TARGET%酱。妹桑がいるんだって～」
+				PRINTFORMW 「ちょっと紹介してよ～」
+				PRINTFORMW 『は？你頭おかしいだろ、紹介したら妹食いますって言ってるようなもんじゃねえか』
+				PRINTFORMW 「いやいやいやちょっと茶して種付けするだけだから、」
+				PRINTFORMW 『種付けにちょっともくそもあるか。』
+				PRINTL 
+				PRINTFORMW 『……で、なんでこんな変なこと言い始めたんだ？』
+				CALL EMOTION_PLUS, "困扰眉/へ字４/对指/对话框尷尬",PLAYER
+				PRINTFORMW 「だって、最近…%CALLNAME:TARGET%酱付き合い悪いんだもん…」
+				CALL EMOTION_PLUS, "有頂天/叹气/栗口/蹙眉"
+				PRINTFORMW 『はーあ、もうちっと誘い方とかあるだろ、日向桑よ…』
+				PRINTFORMW 『ったく、今日はどうしたらいいんだ？』
+				PRINTFORMW 「有がと、%CALLNAME:TARGET%酱。」
+				PRINTL 
+				PRINTFORMW 「……あ、それはそれとして妹桑と縁があったら、もちろん種付けするよ。」
+				PRINTFORMW 『やっぱ你頭おかしいわ』
+		ENDSELECT
+	ELSEIF NO:TARGET == 37 && RAND:4 == 0
+		CALL EMOTION_PLUS, "笑颜４/紅潮２/对话框爱心",TARGET
+		CALL PRINT_STRW, @"『早く性交しましょう、日向桑。さぁ！！早く_UH__UH_』"
+		PRINTFORMW 「も～、引っ張らないでよ%CALLNAME:TARGET%酱」
+		CALL PRINT_STRW, @"「酱と、ちんちん挿入して给って…_BBHH_」"
+	ELSEIF NO:TARGET == 40 && RAND:4 == 0
+		PRINTFORMW 「やっぱり後輩酱って責められてる時の顔可爱よね～」
+        PRINTFORMW 『あー…確かに、気持ちよさそ～な顔してるかなぁ…後輩酱』
+        PRINTFORMW 「でしょ～、あの顔見ると勃起止まんないんだよね。」
+        PRINTFORML
+        CALL PRINT_STRW, @"「……なんか後輩酱の話してたら勃ってきちゃった_BBHH_」"
+		CALL EMOTION_PLUS, "通常眉３/栗口２/对话框？"
+        PRINTFORMW 『えー……？そんなに興奮しちゃった……？おちんちん、もう我慢できなさそう……？』
+		CALL EMOTION_PLUS, "＞＜/对话框汗３/へ字３/紅潮２",PLAYER
+        CALL PRINT_STRW, @"「ごめんね、%CALLNAME:TARGET%酱……一回だけ種付けさてよ_BBHH_」"
+        CALL PRINT_STRW, @"『もー……仕方ないなあ……でも日向酱、いつも一回%TEXTR("びゅぅー……って/お射精")%しただけじゃ済まないけど、ほんとうに大丈夫そう……？』_W"
+        CALL PRINT_STR, @"『そのわがままなおちんちん……_BH_一回だけで満足してくれそう……？_BH_ かえって物足りなくなっちゃって、もっとむずむずしてきちゃうんじゃないかな……_BH_』_W"
+        PRINTFORMW 「うぅ、痛いとこつかれちゃうな……じゃあ…二回だけ…」
+        CALL PRINT_STR, @"『是是、しょうがないなあ……_BH_　じゃあその二回だけできちんとおちんちん気持ちよくなれるように、%TEXTR("たまたまの中身、ぜーんぶ出しちゃおう/遠慮しないで、奥の奥まで突き込んでいいから/しろーいおしっこ、我慢しないでびゅーしちゃおう")%ね…_BH_』_W"
+	ELSEIF NO:TARGET == 53 && RAND:4 == 0
+		CALL EMOTION_PLUS, "躁动难忍/通常眉３",TARGET
+		PRINTFORMW 『やぁやぁ、最近は随分とお盛んらしいね…你、』
+		CALL EMOTION_PLUS, "困扰眉/对话框汗/微笑４",PLAYER
+		PRINTFORMW 「うぅ…、それは、そうだね…。今日はどうしたの%CALLNAME:TARGET%酱…」
+		PRINTFORMW 『いや何同輩として、你のことが心配でねぇ。ただの親切心さ。いきなり道行く女子を襲ったりしないかどうかのね』
+		CALL PRINT_STRW, @"「…そんなに言うなら、僕の性欲抑えるの手伝ってよ。おちんちん随便いいからさ…_UH_」"
+		PRINTFORMW 『まったく、仕方のないヤツだ……せいぜい満足させてくれたまえよ？』
+	ELSEIF NO:TARGET == 70 && RAND:4 == 0
+		PRINTFORMW 「ねぇねぇ、%CALLNAME:TARGET%酱。後輩酱から聞いたんだけど……」
+		CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱に種付けしたら元気な赤酱産んでくれるって、ほんとかな_BBHH_」"
+		CALL PRINT_STRW, @"『…はぁ、それは大小姐が本当に…いえ、そういえば、そんなことを…おっしゃってましたね…』"
+		CALL PRINT_STRW, @"『これも給仕の務めでしょうか…、仕方有ませんね。日向様…子種の方をお注ぎくださいませ』"
+		CALL PRINT_STRW, @"「ほんとに…いいんだ…。へへっ…じゃあ、いっぱい種付けしちゃお～っと_BBHH_」"
+	ELSEIF NO:TARGET == 71 && RAND:4 == 0
+		IF CEVENT("こすり相撲") == 0
+			PRINTFORMW 「ねぇねぇ…%CALLNAME:TARGET%酱、游戏が大好きって聞いたんだけど僕と遊ばない？」
+			CALL EMOTION_PLUS, "对话框！/通常眉２/栗口２"
+			PRINTFORMW 『いいよ！それで何するの？私はなんでもいいよ！』
+			PRINTFORMW 「そうだなー？こすり相撲なんてどうかな？」
+			PRINTFORMW 『こすりずもう？初めて聞いたんだけど、どんなの？』
+			PRINTFORMW 「手押し相撲みたいに体を使った玩耍なんだけど、……やってみるのが一番だね。」
+			CALL SET_CEVENT, "こすり相撲"
+		ELSE
+			CALL EMOTION_PLUS, "对话框爱心/紅潮２"
+			PRINTFORMW 『日向前輩！また、%TEXTR("こすり相撲/気持ちいいの")%したい！』
+			PRINTFORMW 「おっ、%CALLNAME:TARGET%酱…また大姐姐と玩耍たいのかな？」
+			PRINTFORMW 「…それじゃあ、お被窝のところいこうね～♪」
+			PRINTFORMW 『うん！』
+		ENDIF
+	ELSE
+		$BUNKI
+		[IF_DEBUG]
+			PRINTFORML る～ぷしたみたいだよ
+		[ENDIF]
+		SELECTCASE KABURAND(106)
+			CASE 0
+				SIF TEXTS("日期対応イベント") != "大晦日" 
+				GOTO BUNKI
+				PRINTFORMW 「いや～、一年あっという間だったね%CALLNAME:TARGET%酱。」
+				IF RAND:2
+					PRINTFORMW 「大掃除の方は終わった？僕はちょっとだけ残っててね…」
+					PRINTFORMW 「すぐに終わるから手伝てくれる？」
+					PRINTFORML
+					CALL PRINT_STRW, @"「よし、今年の子種は今年の内に種付けしてと…_BBHH_」"
+					CALL PRINT_STRW, @"「ふーっ、終わった終わった。じゃあ、来年も種付けさせてね%CALLNAME:TARGET%酱_BBHH_」"
+				ELSE
+					PRINTFORMW 「なんか、この一年はずっと種付けしてばっかだった気がするな」
+					CALL PRINT_STRW, @"「あ、そうそう…これはちょっとしたお誘いなんだけど…_BBHH_」"
+					CALL PRINT_STRW, @"「今夜、年越し性交しない_BBHH_」"
+					CALL PRINT_STRW, @"「年が明けた瞬間に種付けしたら、きっと気持ちいいとおもうんだ～_BBHH_」"
+					CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱はどうかな_BBHH_」"
+				ENDIF
+			CASE 1
+				SIF TEXTS("日期対応イベント") != "即将到来文化祭"
+					GOTO BUNKI
+				PRINTFORMW 「ねぇ、%CALLNAME:TARGET%酱…今度の文化祭一緒に回らない？」
+				CALL PRINT_STRW, @"「僕たちこんなに仲いいんだし、悪くないとおもうんだけど…_BBHH_」"
+			CASE 2
+				SIF TEXTS("日期対応イベント") != "新年"
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱、明けまして祝贺您！。今年もよろしくお願いします。」
+				PRINTFORMW 「よし！堅苦しいあいさつも終わったし、一緒に正月を楽しもう！」
+				SELECTCASE RAND:3
+					CASE 0
+						PRINTFORMW 「そうだな～、%CALLNAME:TARGET%酱、羽根つきしない？」
+						PRINTFORMW 「羽子板を持って互いに羽根をつきあい落とさないようにして玩遊戲んだ」
+						PRINTFORMW 「落としちゃった時は墨を塗られる罰もあるのを忘れないでね♪」
+						CALL PRINT_STRW, @"「そうそう、僕は特殊な白色墨を使うから、覚えておいてね_BBHH_」"
+					CASE 1
+						PRINTFORMW 「そうだな～、%CALLNAME:TARGET%酱、餅つきしない？」
+						CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱のお尻を突いたり_BBHH_」"
+						CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱の子宮をこねこねしたりして_BBHH_」"
+						CALL PRINT_STRW, @"「子宝祈願をするんだ。楽しそうじゃない_BBHH_」"
+					CASE 2
+						CALL PRINT_STRW, @"「そうだな～、%CALLNAME:TARGET%酱、姫はじめしない_BBHH_」"
+						CALL PRINT_STRW, @"「聞き馴帯污迹的がないかもだけど、ひめいっていう柔らかいご飯を食べるんだ♪」"
+						CALL PRINT_STRW, @"「僕が準備の方をしておくから、%CALLNAME:TARGET%酱はゆっくり待っててね_BBHH_」"
+				ENDSELECT
+			CASE 3
+				SIF TEXTS("日期対応イベント") != "圣诞节"
+					GOTO BUNKI
+				PRINTFORMW 「メリ～阴蒂スマ～ス♪%CALLNAME:TARGET%酱」
+				PRINTFORMW 「ということで、今年いい娘にしていた%CALLNAME:TARGET%酱にはヒナタ大姐姐から送禮が有ま～す♪」
+				CALL PRINT_STRW, @"「ほ～ら、送禮を给から、おまた開いてね～とっておきの子種だよ～_BBHH_」"
+			CASE 4
+				SIF TEXTS("日期対応イベント") != "白色情人節"
+					GOTO BUNKI
+				PRINTFORMW 「情人節の時は有がとね。%CALLNAME:TARGET%酱の巧克力おいしかったよ」
+				CALL PRINT_STRW, @"「で、……そのお返しとして今日は子種をいっぱい注いで给ね_BBHH_」"
+				CALL PRINT_STRW, @"「食べるものじゃないけど、白色情人節にはぴったりだと思ってね_BBHH_」"
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱は気に入ってくれたかな_BBHH_」"
+			CASE 5
+				SIF TEXTS("日期対応イベント") != "万圣节"
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「万圣节だね、%CALLNAME:TARGET%酱♪」"
+				PRINTFORMW 「Trick or Seeding？（種付けかいたずらか？）」
+				PRINTFORMW 「……」
+				CALL PRINT_STRW, @"「おっ！%TEXTR("種付け/いたずら")%だね_BBHH_おっけ～_BBHH_」"
+				CALL PRINT_STRW, @"「じゃあ、隣的房間の床を使おっか_BBHH_」"
+			CASE 6
+				SIF TEXTS("日期対応イベント") != "情人節"
+					GOTO BUNKI
+				CALL PRINT_STRW, @"黄色_日向は%CALLNAME:TARGET%から%TEXTR("義理/友")%巧克力を貰った！"
+				PRINTFORMW 「え！？巧克力くれるの。うれしい！有がとう%CALLNAME:TARGET%酱」
+				PRINTFORMW 「そうだ！こういうのは、すぐお返ししなきゃね。あ…、」
+				PRINTFORMW 「ごめん。お返し用の巧克力、クラスメートに渡した分でなくなってたんだ…。」
+				CALL PRINT_STRW, @"「とりあえず今は子種で给から、これで我慢して_BBHH_」"
+				CALL PRINT_STRW, @"「もちろん白色情人節には３倍の量の子種用意するから、ねっ、_BH_ゆるして_BBHH_」"
+			CASE 7
+				SIF !TALENT:TARGET:相思相愛
+					GOTO BUNKI
+				CALL EMOTION_PLUS, "叹气/小口３/困扰眉",PLAYER
+				PRINTFORMW 「%CALLNAME:TARGET%酱さぁ…」
+				PRINTFORMW 「後輩酱と恋人なんでしょ、それなのに…こんな簡単に股を開いて…」
+				CALL PRINT_STRW, @"「これは僕が%TEXTR("躾/叱っ")%た方がよさそうだね_BBHH_」"
+				CALL PRINT_STRW, @"「ほら、お股全開にして、いつもより很多に種付けするよ_BBHH_」"
+				CALL PRINT_STRW, @"「あっ！気持ちよさそう%TEXTR("な顔/に痙攣")%しない、これは罰なんだよ！」"
+				CALL PRINT_STRW, @"「反省したら後輩酱と３Pだからね！……まったく。」"
+			CASE 8
+				SIF TALENT:TARGET:相思相愛
+					GOTO BUNKI
+				SIF !TALENT:TARGET:恋慕
+					GOTO BUNKI
+				PRINTFORMW 「え！？%CALLNAME:TARGET%酱って後輩酱のこと好きなの、」
+				PRINTFORMW 「なら、早い内に告っておいた方がいいよ！ライバル多いと思うから、」
+				CALL PRINT_STRW, @"「あっ…でも%CALLNAME:TARGET%酱は僕のちんちんで%TEXTR("ヒィヒィいってる/アンアンいってる/気持ちよくなっちゃう")%変態桑だからなぁ…」"
+				CALL PRINT_STRW, @"「後輩酱が好きになってくれるかは、分からないね_BBHH_」"
+			CASE 9
+				SIF !TALENT:TARGET:Ｖ損傷
+					GOTO BUNKI
+				PRINTFORMW 「え…%CALLNAME:TARGET%酱…おまんこ切れてるの…」
+				PRINTFORMW 「その…そうとは知らず挿入しちゃって…ごめんね。」
+				PRINTFORMW 「…なるべき痛まないように動かないようにするよ…ほんとごめんね…。」
+			CASE 10
+				SIF CFLAG:TARGET:口服避孕薬 == 0
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱口服避孕薬飲んでるんだ」
+				CALL PRINT_STRW, @"「実は、僕…口服避孕薬使ってる子を妊娠させたことあるんだ_BBHH_」"
+				CALL PRINT_STRW, @"「もちろん口服避孕薬使ってない子でも妊娠しないこともあるよ。」"
+				CALL PRINT_STRW, @"「でも、%CALLNAME:TARGET%酱はどうなっちゃうんだろうね_BBHH_」"
+			CASE 11
+				SIF CFLAG:TARGET:淋浴済 == 0
+					GOTO BUNKI
+				PRINTFORMW 「え、%CALLNAME:TARGET%酱淋浴済ましてたの…」
+				PRINTFORMW 「ごめんね、そうとは知らずに推倒ちゃって…」
+				CALL PRINT_STRW, @"「その…種付けすんだら、一緒に淋浴浴びよっか_BBHH_」"
+			CASE 12
+				SIF CFLAG:TARGET:水泳 == 0
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱は今日水泳の授業あったんだ。……あっそういえば、」
+				CALL PRINT_STRW, @"「その～%CALLNAME:TARGET%酱って泳げる？」"
+				PRINTFORMW 「実は僕そんなに、泳げないんだよね。だからもし良かったら泳ぎ方とか教えてくれない？」
+				PRINTFORML
+				PRINTFORMW %CALLNAME:TARGET%通过マットの上に寝そべって、腕や脚の動かし方をレクチャーした
+				PRINTFORMW 水の蹴り方をよく見るため从后面将%CALLNAME:TARGET%を覗くこむと…
+				PRINTFORMW 日向は下半身に興奮してしまい、水泳どころではなくなってしまった
+				CALL PRINT_STRW, @"「ご、ごめんね教えてもらってる所だったのに…我慢できなくなっちゃて_BBHH_」"
+				CALL PRINT_STRW, @"「すぐに射精するから、%CALLNAME:TARGET%酱許して…_BBHH_」"
+			CASE 13
+				SIF CFLAG:TARGET:体育 == 0
+					GOTO BUNKI
+				PRINTFORMW 「おっ！今日は体育の授業があったんだ、」
+				PRINTFORMW 「どう…体育。%CALLNAME:TARGET%酱は楽しかった？」
+				PRINTFORML
+				CALL PRINT_STRW, @"「じゃあ、放課後はさ…僕と保健の実技練習しよっか_BBHH_」"
+				CALL PRINT_STRW, @"「性交の仕方から、赤酱がどう産まれるかまで手取り足取り進行解答ね_BBHH_」"
+			CASE 14
+				SIF !(CHECK_PANTIES("Micro比基尼", TARGET) || CHECK_PANTIES("ディアドロップ比基尼", TARGET))
+					GOTO BUNKI
+				CALL EMOTION_PLUS, "紅潮/对话框！/通常眉２/いー３",PLAYER
+				PRINTFORMW 「なにこの内衣、もうヒモじゃん！」
+				PRINTFORMW 「え、ずらすだけで…おまんこ丸見えになっちゃうよ！」
+				CALL PRINT_STRW, @"「いいの！？%CALLNAME:TARGET%酱、こんな簡単に%TEXTR("種付け/挿入")%されちゃうんだよ_BBHH_」"
+				CALL PRINT_STRW, @"「本当にいいの！？もう%TEXTR("出されちゃうんだ/出しちゃう")%よ_BBHH_」"
+				CALL PRINT_STRW, @"「おまんこの中に%TEXTR("精液/子種")%出されて孕んじゃうかもしれないんだよ_BBHH_」"
+			CASE 15
+				SIF !(CHECK_PANTIES("透明, TARGET") || CHECK_PANTIES("開放型開洞胖次, TARGET"))
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱は、なんでこんな%TEXTR("エッチ/卑猥")%な胖次履いてるのかな？」
+				CALL PRINT_STRW, @"「もしかしてさ…誘ってるの_BBHH_」"
+				CALL PRINT_STRW, @"「ふふっ、可爱_BBHH_いいよ、お望み街道たっく桑種付けしたげる_BBHH_」"
+			CASE 16
+				SIF !CHECK_SHIRT("女仆装", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「女仆装だね～♪それじゃあ、ご奉仕してもらおっかな～」
+				CALL PRINT_STRW, @"「そうそう、そうやって綺麗に舐め取ってね…_BBHH_」"
+				CALL PRINT_STRW, @"「いいね～じゃあご褒美に……おほん。われの子種をくれてやろう～…_BBHH_」"
+				PRINTFORMW 「这个、一度言ってみたかったんだよね♪」
+			CASE 17
+				SIF !(CHECK_BODYS("兔", TARGET) || CHECK_SHIRT("逆兔女郎套装", TARGET))
+					GOTO BUNKI
+				PRINTFORMW 「わぁ～兔桑だ、…%CALLNAME:TARGET%酱すっごく似合ってるよ」
+				CALL PRINT_STRW, @"「特にボディラインが丸見えですっごくエロいね…_BBHH_」"
+				CALL PRINT_STRW, @"「ふ～、僕も本物のうさぎ桑を見習って沢山種付けしなきゃね…_BBHH_」"
+			CASE 18
+				SIF !CHECK_BOTTOM("热褲", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「なんかさ…热褲って裙なんかより、よっぽどエロいよね…」
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱への興奮が止圆圈气息がないし…_BBHH_」"
+			CASE 19
+				SIF !COND("身嗜み：没穿内褲", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「あれ、%CALLNAME:TARGET%酱胖次履いてないね…」
+				CALL PRINT_STRW, @"「確か後輩酱に言いつけられてたんだっけ？」"
+				PRINTFORMW 「僕としては簡単に挿入できるからいいんだけど、日常生活では大変そうだね…」
+			CASE 20
+				SIF !CHECK_CLO("裸体", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「いい、今は種付けの最中だから服来てなくても大丈夫だけど…」
+				CALL PRINT_STRW, @"「種付けが終わったらすぐに服を着るんだよ…_BBHH_」"
+				CALL PRINT_STRW, @"「まったく…あんな痴女みたいな恰好ほんとはダメだからね_BBHH_」"
+			CASE 21
+				SIF !CHECK_SKIRT("Micro", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「何この裙丈…もう胖次見えてるじゃん。」
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱は、ちんちん%TEXTR("イライラさせる/刺激する")%のが擅長だね、ほんと_BBHH_」"
+				CALL PRINT_STRW, @"「今回は普通の種付けで許して给けど、次からはこんな裙履いちゃだめだからね_BBHH_」"
+			CASE 22
+				SIF BASE:TARGET:欲求不満 < 50
+					GOTO BUNKI
+				PRINTFORMW 「へ～、%CALLNAME:TARGET%酱ってば最近は後輩酱に相手されてないから躁动难忍しちゃってるんだ～」
+				CALL PRINT_STRW, @"「僕ならその躁动难忍…解消させられるかもだけど_BBHH_」"
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱はどうしたいかな……_BBHH_」"
+				BASE:欲求不満 = 20
+			CASE 23
+				SIF CFLAG:TARGET:闲 == 0
+					GOTO BUNKI
+				PRINTFORMW 「あれ？%CALLNAME:TARGET%酱。ボーっとして、どしたの？」
+				PRINTFORMW 「もしかして、今闲？それじゃあ子ども作るの手伝ってくれる？」
+				CALL PRINT_STRW, @"「うん、一回%TEXTR("中出し/種付け/生ハメ")%するだけだからすぐ終わるし、どうかな……_BBHH_」"
+			CASE 24
+				SIF !CHECK_SHIRT("修道服", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「ねぇ、一応確認なんだけど……%CALLNAME:TARGET%酱、」
+				PRINTFORMW 「修女服服着ながらエッチな事して大丈夫？」
+				PRINTFORMW 「いや、僕的には背徳感があって大歓迎なんだけど、」
+				PRINTFORMW 「あ、気にしなくていい。おっけじゃあ種付けもしちゃうね」
+			CASE 25
+				SIF !COND("受精済", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱！受精してるみたいだよ。おめでと～！」
+				IF COND("精液の優勢") == PLAYER
+					PRINTFORMW 「着床はまだ、だけど…お祝いの種付けして给♪」
+					PRINTFORMW 「僕の子産んでくれたら、嬉しいな～！」
+				ELSE
+					PRINTFORML
+					PRINTFORMW （でも、僕の子じゃないっぽいな…）
+					PRINTFORMW （ここは僕の精子で塗り替えてあげよ♪）
+					PRINTFORML
+					PRINTFORMW 「産まれてくる子が楽しみだね～♪」
+					PRINTFORMW 「お祝い種付けして给ね♪」
+				ENDIF
+			CASE 26
+				SIF !CFLAG:TARGET:ご褒美権
+					GOTO BUNKI
+				PRINTFORMW 「ん～？%CALLNAME:TARGET%酱は後輩酱とご褒美Ｈするの？…いいな～♪」
+				PRINTFORMW 「そっか～みんな、テスト頑張ってたもんね、そっかそっか。」
+				PRINTFORML
+				PRINTFORMW 「………ねぇねぇ、僕もテスト頑張ったからさ…」
+				CALL PRINT_STRW, @"「種付けさせてよ、……いいじゃん、後で後輩酱ともするんだしさ…_BBHH_」"
+			CASE 27
+				SIF !CFLAG:TARGET:刚睡醒
+					GOTO BUNKI
+				PRINTFORMW 「あ、%CALLNAME:TARGET%酱早上好～」
+				PRINTFORMW 「お午睡気持ちよかった？………そう。顔洗ってきなよ」
+				CALL PRINT_STRW, @"「寝覚めに種付けして给よ。……んふふ～_BBHH_」"
+			CASE 28
+				SIF !COND("種族：悪魔", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「いや～%CALLNAME:TARGET%酱もそうだけど悪魔の娘とえっちするの怖いんだよね～」
+				PRINTFORMW 「部活以外にも悪魔の娘と関係持ってるんだけど、契約の履行ミス一つで魂獲られるからさ…」
+				PRINTFORMW 「その点%CALLNAME:TARGET%酱は安心だね。後輩酱経由だから安心して種付けできるもん」
+			CASE 29
+				SELECTCASE CEVENTS("陰毛の名称", TARGET)
+				CASE "心型"
+					CALL PRINT_CUTIN, "贴身", TARGET
+					PRINTFORMW 「あれ～？%CALLNAME:TARGET%酱のお股のおけけ…爱心みたいな形してるね～♪」
+					CALL PRINT_STRW, @"「もしかして、性交アピールってやつだね～_BBHH_」"
+					CALL PRINT_STRW, @"「ふふっ、それじゃあ種付けいっぱいしちゃおっかな～_BBHH_」"
+				CASEELSE
+					GOTO BUNKI
+				ENDSELECT
+			CASE 30
+				SIF CONDS("晒痕下身衣装", TARGET) != "Micro比基尼"
+					GOTO BUNKI
+				PRINTFORMW 「ねぇ、%CALLNAME:TARGET%酱。な～んかとっても特徴的な日焼後してるね～♪」
+				CALL PRINT_CUTIN, "贴身", TARGET
+				CALL PRINT_STRW, @"「夏の間はこ～んな布面積が小さい泳装着てたんだ～_BBHH_　ふ～ん_BH_」"
+				CALL PRINT_STRW, @"「いいな～僕も%CALLNAME:TARGET%酱と夏の思い出作りたいな～_BBHH_」"
+				PRINTFORML
+				CALL PRINT_STRW, @"「……良かったら一直陪着我くれる…？」"
+			CASE 31
+				SIF !TALENT:TARGET:有男朋友
+					GOTO BUNKI	
+				IF TALENT:TARGET:有男朋友 == 1
+					PRINTFORMW 「え～%TEXTR("彼氏桑に悪いよ～/確認なんだけど彼氏桑いたよね？")%」	
+				ELSEIF TALENT:TARGET:有男朋友 == 2
+					PRINTFORMW 「え～%TEXTR("旦那桑に悪いよ～/確認なんだけど旦那桑いたよね？")%」
+				ENDIF
+				PRINTFORMW 「後でトラブルになっても知らないよ、まったく…」
+				PRINTFORML
+				PRINTFORMW %CALLNAME:TARGET%通过partnerのことを忘れ、日向を受け入れてしまう…
+				PRINTFORML
+				CALL PRINT_STRW, @"「ふふっ_BH_浮気えっち楽しいね_BH_」"
+				IF RAND:2
+					IF TALENT:TARGET:有男朋友 == 1
+						CALL PRINT_STRW, @"「それに彼氏桑の話すると%CALLNAME:TARGET%酱、おまんこ締まってるの気づいてるかな_BBHH_」"
+					ELSEIF TALENT:TARGET:有男朋友 == 2
+						CALL PRINT_STRW, @"「それに旦那桑の話すると%CALLNAME:TARGET%酱、おまんこ締まってるの気づいてるかな_BBHH_」"
+					ENDIF
+				ELSE
+					CALL PRINT_STRW, @"「それにしても、このまま挿入し続けたら托卵えっちになるけど…大丈夫かな～_BBHH_」"
+				ENDIF
+			CASE 32
+				SIF !TALENT:TARGET:子宮性感
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱は奥の方が感じやすいんだ～」
+				IF RAND:2
+					CALL PRINT_STRW, @"「そうだよね。今もちんちんの先っぽ離してくれないもんね_BBHH_」"
+				ELSE
+					CALL PRINT_STRW, @"「じゃあ、子宮口にちゅーなんてしたらどうなっちゃうんだろうね_BBHH_」"
+				ENDIF
+			CASE 33
+				SIF !STATE("酔酒", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「あれ～%CALLNAME:TARGET%酱酔ってる%TEXTR("の？/ねぇ")%」
+				IF STATE("酔酒", PLAYER)
+					PRINTFORMW 「ま、僕も酔ってるんだけどね♪」
+					CALL PRINT_STRW, @"「ん？…お～い、……%CALLNAME:TARGET%酱眠いのかな…_BBHH_」"
+					PRINTFORML
+					CALL PRINT_STRW, @"「ふふふっ%CALLNAME:TARGET%酱ってば寝てたら変なやつに襲われちゃうよ_BBHH_」"
+				ELSE
+					PRINTFORMW 「おっと、大丈夫？足元がおぼつかないね…」
+					CALL PRINT_STRW, @"「酔酒を醒ますために水分とろっか_BBHH_」"
+					PRINTFORML
+					CALL PRINT_STRW, @"「すご～い、%CALLNAME:TARGET%酱。おまんこがどんどん精液を飲み込んじゃってるよ_BBHH_」"
+				ENDIF
+			CASE 34
+				SIF !COND("豐腴", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「どしたの、このお腹…」
+				PRINTFORMW 「もしかして最近動いてないの？」
+				CALL PRINT_STRW, @"「も～…%CALLNAME:TARGET%酱ってば、食べるの是いけどその分何かしなきゃ」"
+				CALL PRINT_STRW, @"「う～ん。仕方ないから、取り敢えず僕と性交するよ_BBHH_」"
+			CASE 35
+				SIF !COND("苗条", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱は、すごくお腹がスッキリしてるよね」
+				PRINTFORMW 「でも、過度なダイエットはダメだよ。酱と食べてしっかり動君だよ」
+				CALL PRINT_STRW, @"「運動に困ったら、僕が相手して给から、ね_BBHH_」"
+			CASE 36
+				SIF ABL:露出癖 < 3
+					GOTO BUNKI
+				PRINTFORMW 「ねぇ、%CALLNAME:TARGET%酱写真とってもいいかな？」
+				PRINTFORMW 「うん、有がと。それじゃあ笑着～是、ちーず♪」
+				PRINTL 
+				PRINTFORMW ﾊﾟｼｬﾘ
+				PRINTL 
+				CALL PRINT_STRW, @"「いい感じに撮れたね%CALLNAME:TARGET%酱_BBHH_」"
+				PRINTFORML
+				PRINTFORMW （そうだ、後輩酱にも見せてあげよ♪）
+				STR:写真 = 
+				STR:補足 = 
+				SELECTCASE RAND:3
+				CASE 0
+					STR:写真 += "日向の"
+					IF SIZE("阴茎", PLAYER) >= 4
+						STR:写真 += "規格外の阴茎"
+					ELSEIF SIZE("阴茎", PLAYER) >= 2
+						STR:写真 += "巨根"
+					ELSE
+						STR:写真 += "阴茎"
+					ENDIF
+					STR:写真 += "に"
+					IF TALENT:巨尻
+						STR:写真 += "大号的"
+					ELSEIF TALENT:小尻
+						STR:写真 += "小"
+					ENDIF
+					STR:写真 += @"お尻を%TEXTR("突き/差し")%出す格好で犯されている"
+				CASE 1
+					STR:写真 += "日向の"
+					IF SIZE("阴茎", PLAYER) >= 4
+						STR:写真 += "規格外の阴茎"
+					ELSEIF SIZE("阴茎", PLAYER) >= 2
+						STR:写真 += "巨根"
+					ELSE
+						STR:写真 += "阴茎"
+					ENDIF
+					STR:写真 += @"の上に跨り、"
+					IF RAND:2
+						STR:写真 += "大腿张開露出结合部の"
+					ELSE
+						STR:写真 += "十分享受地摇着腰の"
+					ENDIF
+				CASE 2
+					SELECTCASE RAND:4
+					CASE 0
+						STR:写真 += "笑着" 
+					CASE 1
+						STR:写真 += "被单手压住"
+					CASE 2
+						STR:写真 += "両手捂住脸"
+					CASE 3
+						STR:写真 += "在背后抓住床单"
+					ENDSELECT
+					STR:写真 += "ながら日向"
+					IF RAND:2
+						STR:写真 += "との子作り性交を楽しんでいる"
+					ELSE
+						STR:写真 += "进行着生性交在享受着の"
+					ENDIF
+				ENDSELECT
+				STR:写真 += @"%CALLNAME:TARGET%"
+				STR:写真 += "のハメ撮り"
+				STR:補足 += @"_日期%TOSTR(DAY*10 + TIME)%"
+				SAVESTR:写真 = 
+				EVENT_TABLE = 
+				SAVESTR:写真 = %STR:写真%
+				CALL SAVE_PHOTO, @"%STR:写真%%STR:補足%"
+				PRINTFORML
+				PRINTFORMW %CALLNAME:PLAYER%から『%SAVESTR:写真%』の写真が送られてきた
+			CASE 37
+				SIF ITEM:創口貼 == 0
+					GOTO BUNKI	
+				ITEM:創口貼 -= 1
+				PRINTFORMW 「後輩酱、創口貼一つ使うよ。」
+				PRINTFORML
+				PRINTFORMW 「ねぇ、%CALLNAME:TARGET%酱。」
+				PRINTFORMW 「今から、%CALLNAME:TARGET%酱に種付けするんだけど…」
+				PRINTFORMW 「膣内の子種って時間がたつと垂れてきちゃうよね。」
+				CALL PRINT_STRW, @"「だから、種付けしたら創口貼で塞いで漏れないようにするね_BBHH_」"
+				CFLAG:日向創口貼 = 1
+			CASE 38
+				SIF !CFLAG:TARGET:汗
+					GOTO BUNKI	
+				IF RAND:3
+					PRINTFORMW 「おぉ…大分汗かいてるね、%CALLNAME:TARGET%酱」
+					CALL PRINT_STRW, @"「どうする？一緒に淋浴でも浴びちゃおっか_BBHH_」"
+					TEQUIP:浴室PLAY = 1
+					CFLAG:TARGET:汗 = 0
+				ELSE
+					PRINTFORMW 「いや～浑身是汗エッチもいいね、%CALLNAME:TARGET%酱」
+					PRINTFORMW 「汗の气味が広がって…興奮してきちゃう…、」
+					CALL PRINT_STRW, @"「終わったら一緒に淋浴も浴びよっか_BBHH_」"
+				ENDIF
+			CASE 39
+				SIF !COND("成績：赤点", TARGET)
+					GOTO BUNKI	
+				PRINTFORMW 「聞いたよ～%CALLNAME:TARGET%酱。」
+				PRINTFORMW 「最近赤点続きなんだって、それなのに…いいのかな～？」
+				CALL PRINT_STRW, @"「僕と性交ばかりしてて_BBHH_」"
+				PRINTFORMW 「ま、困ったら僕を頼ってよ。勉強くらいなら進行解答からね♪」
+			CASE 40
+				SIF !COND("成績：学年上位", TARGET)
+					GOTO BUNKI	
+				PRINTFORMW 「%CALLNAME:TARGET%酱テストの成績いいんだっけ、」
+				PRINTFORMW 「すごいな～、……ねぇ、ちょっと種付けして给からさ、」
+				PRINTFORMW 「今度勉強教えてよ、おねが～い」
+			CASE 41
+				SIF !COND("膣内射精弱点", TARGET)
+					GOTO BUNKI	
+				PRINTFORMW 「へ～%CALLNAME:TARGET%酱は、膣内に射精されるとすぐイっちゃうんだ」
+				SELECTCASE RAND:2
+					CASE 0
+						PRINTFORMW 「そう言われると、どんな風にイくのか気になってくるね…」
+						CALL PRINT_STRW, @"「じゃあ、いっぱい種付けしちゃおっかな～_BBHH_」"
+					CASE 1
+						PRINTFORMW 「それだと、出される度にすぐイっちゃうのか…」
+						PRINTFORMW 「う～ん。……可哀そうだから、今日は外にだしておこうかな…」
+						PRINTL 
+						CALL PRINT_STRW, @"「冗談だって、そんな悲しそうな顔しないでよ」"
+						CALL PRINT_STRW, @"「ちゃ～んと中に出して给からさ_BBHH_」"
+				ENDSELECT
+			CASE 42
+				SIF !COND("相性◎", PLAYER)
+					GOTO BUNKI	
+				PRINTFORMW 「ねぇねぇ、%CALLNAME:TARGET%酱…僕ら結構性交してる仲だけど、」
+				PRINTFORMW 「最近身体の相性もいいなって思わない？」
+				CALL PRINT_STRW, @"「でね、今度さ……泊まりで旅行とかどうかな_BBHH_」"
+			CASE 43
+				SIF !PLACE("野外")
+					GOTO BUNKI	
+				PRINTFORMW 「%TEXTR("青姦だ/お外でエッチする")%とやっぱり解放感があるね」
+				CALL PRINT_STRW, @"「あ、%CALLNAME:TARGET%酱声漏らしちゃダメだってば_BBHH_」"
+				CALL PRINT_STRW, @"「公園に人がいたら見つかっちゃうよ_BBHH_」"
+				TEQUIP:野外PLAY = 1
+			CASE 44
+				SIF !COND("種族：淫魔", TARGET)
+					GOTO BUNKI	
+				PRINTFORMW 「%CALLNAME:TARGET%酱…そんなに子種が欲しいの～？」
+				SELECTCASE RAND:2
+					CASE 0
+						CALL PRINT_STRW, @"「それならさ……%TEXTR("お股をかっぴろげて/お尻をふりふりして")%…%TEXTR("種乞い/ちん媚")%ダンスでもしてみたら_BBHH_」"
+						PRINTFORML
+						CALL PRINT_STRL, @" 『………_BBHH_』"
+						PRINTFORMW %CALLNAME:TARGET%通过、日向の精液が%TEXTR("欲しいがために身体を使って誘惑/欲しいことを身体を使ってアピール")%した
+						PRINTFORML
+						CALL PRINT_STRW, @"「うわ～_BBHH_こんな下品な%TEXTR("腰の振/踊")%り方見たことないよ_UH_」"
+						CALL PRINT_STRW, @"「ま、こんな必死なお願いをされたら僕も応えてあげなきゃだね_UH_」"
+					CASE 1
+						CALL PRINT_STRW, @"「種族柄…精液が大事なのは分かるけど…発情したメスイヌみたいだよ_BBHH_」"
+						CALL PRINT_STRW, @"「そうだ……。ほ～ら%CALLNAME:TARGET%酱ご飯の時間ですよ～_BBHH_」"
+				ENDSELECT
+			CASE 45
+				SIF !TALENT:TARGET:角
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱…バックで突かれ的同时、」
+				PRINTFORMW 「角握られるの好きだよね♪」
+				CALL PRINT_STRW, @"「もしかして…%CALLNAME:TARGET%酱って、ドＭってやつなのかな…_BBHH_」"
+			CASE 46
+				SELECTCASE TEXTS("季節")
+				CASE "春"
+					IF RAND:2
+						PRINTFORMW 「春といえば、種蒔きの季節だね～♪」
+						CALL PRINT_STRW, @"「今、こうやって%CALLNAME:TARGET%酱にまいた種が、いつ芽吹くか楽しみだな～_BBHH_」"
+					ELSE
+						PRINTFORMW 「春になると身体がぽかぽかしてくるね～♪」
+						PRINTFORMW 「%CALLNAME:TARGET%酱はどう？」
+						CALL PRINT_STRW, @"「ちなみに僕は躁动难忍しちゃったりもしてるかな_BBHH_」"
+						CALL PRINT_STRW, @"「ちょっと%CALLNAME:TARGET%酱のおまんこ借りるね_BBHH_」"
+					ENDIF
+				CASE "夏"
+					IF RAND:2 && CFLAG:TARGET:晒痕強度 == 0
+						PRINTFORMW 「夏は暑いね…それに最近は陽ざしも很强し…%CALLNAME:TARGET%酱は晒痕止め足りてるかな？」
+						CALL PRINT_STRW, @"「そうだな～…僕がとっておきの晒痕止め给ね_BBHH_」"
+					ELSE
+						PRINTFORMW 「なんか、夏になると体が火照って勃起が止まらないんだよね…」
+						CALL PRINT_STRW, @"「こうやって%CALLNAME:TARGET%酱に種付けする時には便利なんだけど_BBHH_」"
+						CALL PRINT_STRW, @"「やっぱり日常生活では大変になっちゃうな_BBHH_」"
+					ENDIF
+				CASE "秋"
+					IF COND("夜") && RAND:2
+						PRINTFORMW 「秋といえば、お赏月だよね♪」
+						PRINTFORML
+						PRINTFORMW
+						PRINTFORML
+						PRINTFORMW 「餅食べて、鈴虫の鳴き声を聴いてたらあっという間だったね%CALLNAME:TARGET%酱。」
+						CALL PRINT_STRW, @"「にしてもちょっと肌寒いね…性交して暖まってかない_BBHH_」"
+					ELSE
+						PRINTFORMW 「秋といえば、蘑菇狩り！」
+						CALL PRINT_STRW, @"「ということで、%CALLNAME:TARGET%酱。僕の蘑菇下のお口で食べてみない_BBHH_」"
+						PRINTFORML
+						CALL PRINT_STRW, @"「…ま、適当な理由つけて%CALLNAME:TARGET%酱に種付けしたいだけなんだけどね_BBHH_」"
+					ENDIF
+				CASE "冬"
+					IF TALENT:TARGET:体寒 && RAND:2
+						PRINTFORMW 「最近凍えそうなくらい寒いね…」
+						PRINTFORMW 「あれ…%CALLNAME:TARGET%酱、うずくまってどうしたの？大丈夫？」
+						PRINTFORMW 「そっか…%CALLNAME:TARGET%酱体寒だったね。分かった、大姐姐どうにかしてみるよ」
+						PRINTL 
+						CALL PRINT_STRW, @"「まず、ちんちんとおまたを擦り合わせて身体の芯から暖圆圈_BBHH_」"
+						CALL PRINT_STRW, @"「次に白色カイロを膣内に入れてっと…_BBHH_」"
+						CALL PRINT_STRW, @"「…これでちょっとは持つと思う。カイロが冷めてきたら言ってね。また注ぎ直して给から_BBHH_」"
+					ELSE
+						SELECTCASE RAND:2
+						CASE 0
+							CALL PRINT_STRW, @"「んんっ、おぉ…_BBHH_」"
+							CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱の膣%TEXTR("内/肉")%、%TEXTR("ぬくぬく/ほっかほか")%だ～_BBHH_」"
+							PRINTFORMW 「こんなにあったかいなら、寒い冬も越せそうだね♪」
+						CASE 1
+							PRINTFORMW 「うぅ…寒いね～最近は朝起きるのも辛いよ…」
+							CALL PRINT_STRW, @"「こういう時は身体を動かしてあったまろっか_BBHH_」"
+							CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱の中あったかいなぁ…こうやってずっと繋がってたいよぉ_BBHH_」"
+							CALL PRINT_STRW, @"「じゃあ…暖めてくれた礼物に種付けするね、これで%CALLNAME:TARGET%酱もきっとポカポカになるよ_BBHH_」"
+						ENDSELECT	
+					ENDIF
+				ENDSELECT	
+			CASE 47
+				SIF !TALENT:TARGET:尾巴
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱の尾巴の付け根をトントンってすると…」
+				CALL PRINT_STRW, @"「キュ～っておまんこ締圆圈のほんと可爱よ_BBHH_」"
+				CALL PRINT_STRW, @"「尾巴、もっと弄ってもいいかな…_BBHH_」"
+			CASE 48
+				SIF !TALENT:TARGET:性反転
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱って確か昔は男の子だったんだよね？」
+				IF RAND:2
+					CALL PRINT_STRW, @"「今じゃこんなにお股びちゃびちゃにしてるのに不思議だよね～_BBHH_」"
+				ELSE
+					CALL PRINT_STRW, @"「なら、せっかく女の子变成了んだから赤酱をたく桑産もうね～_BBHH_」"
+				ENDIF
+			CASE 49
+				SIF TALENT:TARGET:巨尻 == 0
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱は、お尻が大きいのが可爱よね♪」
+				PRINTFORMW 「いわゆる安産型ってやつなのかな～」
+				CALL PRINT_STRW, @"「こういうお尻の女の子に赤酱産んでほしいな～_BBHH__BBHH_」"
+			CASE 50
+				SIF TALENT:TARGET:Ｖ名器 == 0
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「お、ぉ…おまんこが吸いついてくる_BBHH_」"
+				CALL PRINT_STRW, @"「す、すごいよ……%CALLNAME:TARGET%酱_UH_」"
+				CALL PRINT_STRW, @"「これは、いっぱい種付けしなきゃ…_UH_」"
+			CASE 51
+				SIF !TALENT:TARGET:淫壷
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「な、なにこれ…%CALLNAME:TARGET%酱のおまんこ気持ちいいぃ～_BBHH_」"
+				CALL PRINT_STRW, @"「にゅるにゅる絡みついてきてるよ_BBHH_」"
+				CALL PRINT_STRW, @"「あぁ、いけない…種付けのこと忘れてた…_BBHH_」"
+				CALL PRINT_STRW, @"「じゃあ、これから腰胖次胖次するから、すぐ出しちゃうかもだけど…僕がんばるから、_BBHH_」"
+				CALL PRINT_STRW, @"「…%CALLNAME:TARGET%酱も全部受け止めて酱と妊娠してね_BBHH__BBHH_」"
+			CASE 52
+				SIF !(TALENT:TARGET:妹 || TALENT:TARGET:姉)
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱は後輩酱に似てすっごく可爱ね♪」
+				CALL PRINT_STRW, @"「そうだ！今度する時後輩酱も混ぜて３Pしよ、ねっ、約束だよ_BBHH_」"
+				CALL PRINT_STRW, @"「じゃあ、約束のびゅ～するよ。びゅ～～_BBHH__BBHH_」"
+				CFLAG:TARGET:日向姉妹丼 = 1
+			CASE 53
+				SIF COND("胎内の精液量", TARGET) < 100000
+					GOTO BUNKI
+				SIF COND("妊娠中：妊娠発覚済み", TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「おぉ…%CALLNAME:TARGET%酱のお腹胖次胖次だね…」
+				PRINTFORMW 「これ全部精液なんだぁ…ふふっ」
+				IF RAND:2
+					CALL PRINT_STRW, @"「…圆圈で妊婦桑みたいだね」"
+					CALL PRINT_STRW, @"「じゃあ…僕が酱と孕ませてあげなきゃね_BBHH_」"
+				ELSE
+					CALL PRINT_STRW, @"「もし、%CALLNAME:TARGET%酱が妊娠したらこんな風になるのかな…_BBHH_」"
+				ENDIF
+			CASE 54
+				SIF CFLAG:TARGET:Ｖ已中出 == 0
+					GOTO BUNKI
+				PRINTFORMW 「あれ？%CALLNAME:TARGET%酱膣内に精液残ってるね」
+				PRINTFORMW 「これ僕が出したやつだっけ…それとも他の人とした？」
+				CALL PRINT_STRW, @"「う～ん分からないから全部掻きだして種付けしなおすね_BBHH_」"
+			CASE 55
+				SIF !COND("中出し嫌い",TARGET)
+					GOTO BUNKI
+				PRINTFORMW 「う～ん…%CALLNAME:TARGET%酱中出しされるのいやなの？」
+				SELECTCASE RAND:2
+					CASE 0
+						PRINTFORMW 「困ったな～、種付けするためにはどうしても中出ししないといけないからね…」
+						CALL PRINT_STRW, @"「そうだ…お試しで中出しさせてよ_UH_」"
+						CALL PRINT_STRW, @"「もしかしたら、中出しされるのハマっちゃうかもだし…_UH_」"
+					CASE 1
+						PRINTFORMW 「そっか～、ならしょうがないね。ん～～～、そうだ！射精する前にちんちん拔出からさ」
+						PRINTFORMW 「性交だけしようよ。…………有がとう。」
+						PRINTFORMW 「それじゃ、おちんちん入れるね～%TEXTR("にゅるにゅるにゅるにゅる/ぬぷぬぷぬぷぬぷ")%～♪」
+						CALL PRINT_STRW, @"「ふふっ、性交だけでも気持ちいいね_UH_」"
+						PRINTFORML
+						PRINTFORML
+						IF RAND:2
+							PRINTFORMW 「あ、あれ…なんか腰抜けない……、」
+							CALL PRINT_STRW, @"「ねぇ、%CALLNAME:TARGET%酱の脚で腰押さえつけられちゃってるっぽいけど、_BBHH_」"
+							PRINTFORMW 「ダメだって、約束したんだから。ほら、んっ！……あれ？ぬけない…。」
+							CALL PRINT_STRW, @"「まってまって%CALLNAME:TARGET%酱本当に中出しになっちゃうって_BBHH_」"
+							CALL PRINT_STRW, @"「あっ_UH_気持ちいい……_BH_う゛っ、ほんと…あっ、っく_BBHH__BBHH__BBHH_」"
+						ELSE
+							PRINTFORMW 「その、約束した手前悪いんだけどさ、」
+							CALL PRINT_STRW, @"「激烈地しすぎて腰が抜けちゃって……ちんちん抜けそうにないや_BBHH_」"
+							CALL PRINT_STRW, @"「まぁ、生で挿入させてくれたんだから、このまま種付けしちゃうけど…いいよね_BBHH_」"
+						ENDIF
+				ENDSELECT
+			CASE 56
+				IF TALENT:TARGET:避孕套派 == 1
+					PRINTFORMW 「へ～、%CALLNAME:TARGET%酱って普段は避孕套付けて性交してるんだ」
+					SELECTCASE RAND:3
+						CASE 0
+							CALL PRINT_STRW, @"「僕とは避孕套付けてしたことなんて無いのに以外だね_BBHH_」"
+						CASE 1
+							CALL PRINT_STRW, @"「じゃあ僕の生ちんちんと普段の避孕套ちんちん、どっちが好きなのかな…_BBHH_」"
+						CASE 2
+							CALL PRINT_STRW, @"「それじゃあ、他の子は%CALLNAME:TARGET%酱の気持ちいい生膣を楽しめないのか…かわいそうだな～_BBHH_」"
+					ENDSELECT
+				ELSEIF TALENT:TARGET:避孕套派 == -1
+					PRINTFORMW 「%CALLNAME:TARGET%酱も讨厌避孕套なんだ～」
+					PRINTFORMW 「わかる～。やっぱり種付けは精液を奥にびちゃびちゃぶちまけないと、ヤった気にならないよね～」
+				ELSE
+					GOTO BUNKI
+				ENDIF
+			CASE 57
+				SIF BASE:PLAYER:精力 < 216
+					GOTO BUNKI
+				SIF BASE:PLAYER:濃厚精液 == 0
+					GOTO BUNKI
+				PRINTFORMW 「今日は種付けするの初めてなんだよね、」
+				CALL PRINT_STRW, @"「だから…僕の一番搾りたっぷり味わってね%CALLNAME:TARGET%酱_BBHH_」"
+			CASE 58
+				SIF BASE:PLAYER:濃厚精液 == 0
+					GOTO BUNKI
+				PRINTFORMW 「あっ、あっ濃いの出ちゃうよ～%CALLNAME:TARGET%酱」
+				CALL PRINT_STRW, @"「ぷりぷりの子種いっぱい受け取って_BBHH_」"
+			CASE 59
+				SIF BASE:TARGET:母乳 < 3000
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱の胸部、すっごくおいしい_BH_」"
+				PRINTFORMW 「%CALLNAME:TARGET%酱が妈妈だったら赤酱もきっと喜ぶだろうな～」
+				CALL PRINT_STRW, @"「だ・か・ら僕の子産んで_BBHH_」"
+				CALL PRINT_STRW, @"「きっと可爱よ、いいでしょ。ねっ_BBHH_ねっ_BBHH_」"
+				BASE:TARGET:母乳 = 3000
+			CASE 60
+				SIF !TALENT:TARGET:温柔
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱の優しさはさ、…僕は美徳だと思うんだけどね」
+				PRINTFORMW 「でも、少しは人を疑うこともおぼえた方がいいと思うんだ」
+				CALL PRINT_STRW, @"「だって…ほら、今も悪い男に騙されて生ハメを許しちゃってる_BBHH_」"
+				CALL PRINT_STRW, @"「僕は生でしても種付けだけ済むけどさ_BBHH_」"
+				PRINTFORMW 「…ひどい時だと暴力を使ってくる相手もいるんだよ。これからは気を付けてよ…」
+			CASE 61
+				SIF !(TALENT:TARGET:傲慢 || TALENT:TARGET:小悪魔)
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱みたいな煽ってくる感じの娘、僕好きだよ♪」
+				CALL PRINT_STRW, @"「でも悪口はほどほどにしておかないと、後々困ることになるよ……」"
+				CALL PRINT_STRW, @"「例えば、こわ～い大姐姐に種付けされちゃうかもしれないよ～_BBHH_」"
+			CASE 61
+				SIF !(TALENT:TARGET:難以越過的底線 || TALENT:TARGET:清楚)
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱%TEXTR("守備固/隙がな")%くて大変だった～」
+				CALL PRINT_STRW, @"「…それなのに僕のちんちんを%TEXTR("いやらしく/卑猥に")%咥えこんじゃってるね_BBHH_」"
+				CALL PRINT_STRW, @"「あんなに清楚っぽい雰囲気だしておいて、これはひどいよ」"	
+				CALL PRINT_STRW, @"「僕のイメージ崩した罰として種付けの刑だから、覚悟してね_BBHH_」"
+			CASE 62
+				SIF !(TALENT:TARGET:娇小 || TALENT:TARGET:外見年齢 == 1)
+					GOTO BUNKI
+				SIF	BASE:TARGET:胎児 > 0
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱、小さいから赤酱無事に産めるかな～」
+				CALL PRINT_STRW, @"「でも、早い内から慣れておいた方がいいって聞くし…一回お試しで性交しとこっか_BBHH_」"
+				CALL PRINT_STRW, @"「大丈夫、大丈夫大姐姐温柔的して给からね～_BBHH_」"
+			CASE 63
+				SIF !(TALENT:TARGET:否定快感 || TALENT:TARGET:害羞)
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱…もっと坦率になりなよ」
+				PRINTFORMW 「口では『気持ちよくない』って言ってもさ…」
+				IF RAND:2
+					CALL PRINT_STRW, @"「こんな%TEXTR("にビクビクイきまくってたら/、お潮吹きまくりおまんこじゃ")%、誰も信じてくれないよ_BBHH_」"
+				ELSE
+					CALL PRINT_STRW, @"「ｷｭﾝｷｭﾝ締め付けられたらさ、嘘だってすぐ分かっちゃうよ_BBHH_」"
+				ENDIF
+			CASE 64
+				SIF !TALENT:TARGET:高贵
+					GOTO BUNKI
+				PRINTFORMW 「すごいね…%CALLNAME:TARGET%酱、おまんこからも高贵を感じる」
+				CALL PRINT_STRW, @"「こんなロイヤルおまんこ中々出会えないよ_BBHH_」"
+				CALL PRINT_STRW, @"「しっかり種付けしなきゃ失礼になっちゃう…_BBHH_」"
+			CASE 65
+				SIF !(EXP:TARGET:百合経験 > 30 || TALENT:TARGET:兩面通吃)
+					GOTO BUNKI
+				PRINTFORMW 「へ～%CALLNAME:TARGET%酱って女の子ともエッチするんだ～」
+				CALL PRINT_STRW, @"「今度女の子紹介してよ_BBHH_」"
+				CALL PRINT_STRW, @"「いっぱい種付けして给からさ、どうかな…_BBHH_」"
+			CASE 66
+				SIF !(TALENT:TARGET:討厭男人 || TALENT:TARGET:叛逆)
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱、最初の方はあんなにツンケンしてたのに…」
+				CALL PRINT_STRW, @"「物の数分で心開いちゃうんだね、可爱_BBHH_」"
+				CALL PRINT_STRW, @"「でも勇気を出した%CALLNAME:TARGET%酱のために今回は很多に種付けして给ね_BBHH_」"
+			CASE 67
+				SIF !(COND("美穴", TARGET) || COND("萝莉小穴", TARGET))
+					GOTO BUNKI
+				PRINTFORMW 「わ～♪%CALLNAME:TARGET%酱のおまんこ、ちょ～きれ～」
+				CALL PRINT_STRW, @"「すっごい、可爱粉紅色だよ_BBHH_」"
+				CALL PRINT_STRW, @"「これは種付けのしがいが有そうだね_BBHH_」"
+			CASE 68
+				SIF CHARA_NUM("室内の邪魔者") < 2
+					GOTO BUNKI
+				IF RAND:2 == 0 && TALENT:MASTER:処女 == 0 && CHARA_NUM("無自覚の毒牙ＯＫ") > 5 && TALENT:MASTER:女性
+					PRINTFORMW 「今日は部員の娘も沢山いるみたいだし、４Pでもしようかな～」
+					PRINTFORMW 「%CALLNAME:TARGET%酱、こっち来て。そうそう…僕にお尻向けてみて」
+					CALL PRINT_STRW, @"「いいね～_BBHH_それじゃあ、一発目と…_UH_」"
+					DETAIL_1 = %CALLNAME:TARGET%
+					ASSI = TARGET
+					CALL MESSAGE_PLAY_K73
+					CFLAG:PLAYER:日向地文前 = 1
+					CFLAG:TARGET:要受精確率 = 50
+					PRINTFORML
+					TARGET = FIND_COND("現在存在", "無自覚の毒牙ＯＫ")
+					PRINTFORMW 「それじゃあ、次は…%CALLNAME:TARGET%酱としよっかな♪」
+					CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱もお尻向けて、ん、しょっと_BBHH_」"
+					CFLAG:PLAYER:日向3P = 1
+					CALL MESSAGE_PLAY_K73
+					CFLAG:PLAYER:日向地文前 = 1
+					ASSI = TARGET
+					DETAIL_2 = %CALLNAME:TARGET%
+					PRINTFORML
+					CALL PRINT_STRW, @"「さてと最後はやっぱり……、お～い後輩酱_BBHH_」"
+					CALL PRINT_STRW, @"「大家一緒にえっちしよ_BBHH_」"
+					PRINTFORML
+					PRINTFORMW 「あ、来てくれた。後輩酱とは普段床でしかしないからね…」
+					CALL PRINT_STRW, @"「でも、こうやって大家するのも気持ちいいってこと、体に進行解答_BBHH_」"
+					TARGET = 0
+					TARGET = MASTER
+					CFLAG:PLAYER:日向3P = 1
+					CALL MESSAGE_PLAY_K73
+					STR:写真 = 
+					STR:補足 = 
+					IF RAND:2
+						SELECTCASE RAND:5
+						CASE 0
+							STR:写真 += @"日向の阴茎を仲良く%TEXTR("お掃除/綺麗に")%する%DETAIL_1%と%DETAIL_2%と你の"
+						CASE 1
+							STR:写真 += @"日向が%DETAIL_1%と你に清洁口交をさせながら%DETAIL_2%と熱い接吻をしている"
+						CASE 2
+							STR:写真 += @"性行為中の%DETAIL_2%の%TEXTR("尻/背中")%が大きく写り、隅には精液に塗れて倒れ伏している%DETAIL_1%と你の"
+						CASE 3
+							STR:写真 += @"日向が%DETAIL_2%と濃厚的接吻をし的同时、你の性器を弄りつつ、%DETAIL_1%に種付けをしている"
+						CASE 4
+							STR:写真 += @"%DETAIL_1%と%DETAIL_2%と你が日向の肉棒を競うように奉仕している"
+						CASE 5
+							STR:写真 += @"%DETAIL_1%と%DETAIL_2%と你が股間を指で広げ、日向に注がれた精液をアピールしている"
+						CASE 6
+							STR:写真 += @"%DETAIL_2%と%DETAIL_1%と你が身体にかかった日向の精液を互いに拭いあっている"
+						ENDSELECT	
+					ELSE
+						SELECTCASE RAND:3
+						CASE 0
+							STR:写真 += @"種付け%TEXTR("が終わり精根尽きた/の沉浸在余韻里/された女性器をみせびらかす")%"
+						CASE 1
+							STR:写真 += @"日向の濃厚的%TEXTR("子種/精液")%を%TEXTR("身に纏っている/股間から垂れ流す")%"
+						cASE 2
+							STR:写真 += @"快感で突っ伏してしまっている"
+						ENDSELECT	
+						STR:写真 += @"%DETAIL_1%と%DETAIL_2%と你"
+						SELECTCASE RAND:5
+						CASE 0
+							STR:写真 += @"の%TEXTR("太もも/お尻/お腹")%の上に身分証が置いてある"
+						CASE 1
+							STR:写真 += "の前で日向が可愛く自撮りしている" 
+						CASE 2
+							STR:写真 += "がだらしなく股を開いている" 
+						CASE 3
+							STR:写真 += "の尻を並べた"
+						CASE 4
+							STR:写真 += "が快楽で蕩けた顔でＷ剪刀手をしている"
+						ENDSELECT
+					ENDIF
+					STR:写真 += "ハメ撮り"
+					SAVESTR:写真 = %STR:写真%
+					PRINTFORMW 「そうだ！してる時に撮った写真。良い感じに撮れたから、部活のチャットにも送っておくね♪」
+					STR:補足 += @"_日期%TOSTR(DAY*10 + TIME)%"
+					SAVESTR:写真 = 
+					SAVESTR:写真 = %STR:写真%
+					CALL SAVE_PHOTO, @"%STR:写真%%STR:補足%"
+					PRINTFORML
+					PRINTFORMW %CALLNAME:PLAYER%が『%SAVESTR:写真%』の写真を送ってきた
+					PRINTFORML
+					PRINTFORMW 「ふぅ、楽しかったね……、」
+					PRINTFORML
+					PRINTFORML
+					CALL PRINT_STRW, @"「…なんか一息ついたら、また勃ってきちゃった_BBHH_」"
+					PRINTFORMW 「それじゃあ、……後輩酱にはサービスでもう一回種付けしとこうかな♪」
+				ELSEIF ABL:露出癖 >= 3 && RAND:2
+					CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱ってば、みんな見てるのに…お構い无でイキまくってるね_BBHH_」"
+					CALL PRINT_STRW, @"「見られて興奮しちゃうならさ、今度は誰が来るかも分からない廊下でしてみようよ_BBHH_」"
+					TEQUIP:室内露出PLAY = 1
+				ELSE
+					SELECTCASE RAND:2
+						CASE 0
+							PRINTFORMW 「おぉ～、今日は人がいっぱいいるね～♪」
+							CALL PRINT_STRW, @"「ビュッフェ形式でいっぱい%TEXTR("種付けし/ハメハメし/食べ")%ちゃお～っと_BBHH_」"
+						CASE 1
+							CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱…みんな種付けの順番待ちしてるんだから、_BBHH_」"
+							CALL PRINT_STRW, @"「そろそろ僕のちんちん離してよ_BBHH_」"
+							CALL PRINT_STRW, @"「あ～、もう…また締め付け強くした～、も～%CALLNAME:TARGET%酱は撒娇鬼桑だね」"
+							TEQUIP:室内露出PLAY = 1 
+					ENDSELECT
+				ENDIF
+			CASE 69
+				SIF CHARA_NUM("無自覚の毒牙ＯＫ") != 1
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「も、もう…ダメだよ%CALLNAME:TARGET%酱…後輩酱が見てるよ_BBHH_」"
+				CALL PRINT_STRW, @"「あぁ…見られていっちゃてる…_BBHH_」"
+				PRINTFORML
+				CALL PRINT_STRW, @"「後輩酱もごめんね、後で相手して给から…待っててね_BBHH_」"
+			CASE 70
+				SIF CONFIG("乱性") != 0
+					GOTO BUNKI
+				PRINTFORMW 「もうっ、後輩酱ってば…ひどいよね…。」
+				PRINTFORMW 「部長権限使って部員同士のエッチを禁止するなんて…」
+				PRINTFORMW 「%CALLNAME:TARGET%酱もそう思わない？」
+				PRINTFORML
+				CALL PRINT_STRW, @"「だから……僕たちは隠れてエッチしようね_BBHH_」"	
+			CASE 71
+				SIF SIZE("阴茎", PLAYER) > ABL:TARGET:Ｖ拡張
+					GOTO BUNKI
+				PRINTFORMW 「ね…、%CALLNAME:TARGET%酱…おちんちん根本まで入っちゃった♪」
+				CALL PRINT_STRW, @"「これなら、%CALLNAME:TARGET%酱のこと…いっぱい気持ちよくさせられそうだね_BBHH_」"
+			CASE 72
+				SIF SIZE("阴茎", PLAYER) < ABL:TARGET:Ｖ拡張
+					GOTO BUNKI
+				PRINTFORMW 「おぉ…%CALLNAME:TARGET%酱の膣内…ミチミチだね…」
+				CALL PRINT_STRW, @"「これは、ちょっと%TEXTR("ほぐ/耕")%してあげた方がよさそうだね_BBHH_」"
+			CASE 73
+				SIF !COND("学生", TARGET)
+					GOTO BUNKI
+				SELECTCASE CSTR:TARGET:学年
+					CASE "初等部"
+						PRINTFORMW 「%CALLNAME:TARGET%酱って、初等部だったの…」
+						PRINTFORMW 「大人びてたから、１年の子だと思ってたよ、」
+						CALL PRINT_STRW, @"「ごめんね、そうとは知らずに手…出しちゃって…_BBHH_」"
+						PRINTFORMW 「あぁ…ごめんね、こども扱いしないって…分かったよ…最後までするって、」
+						CALL PRINT_STRW, @"「その代わり…爸爸と妈妈には内緒にしてね_BBHH_」"
+					CASE "中等部"
+						PRINTFORMW 「最近の中等部の子って、発育いいよね」
+						PRINTFORMW 「それとも%CALLNAME:TARGET%酱が成長期なだけかな？」
+						CALL PRINT_STRW, @"「う～ん、発育は問題ないみたいだし、とりあえず種付けだけしとくね…_BBHH_」"
+					CASEELSE
+						PRINTFORMW 「僕と性交するの楽しい？」
+						PRINTFORMW 「いや、その…酱と満足させられてるのかなって…きになってね…」
+						CALL PRINT_STRW, @"「うん。大丈夫、酱と種付けはするからね_BBHH_」"
+				ENDSELECT
+			CASE 74
+				SIF !COND("教員", TARGET)
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%老师ごめんなさい_BBHH_」"
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%老师がとても綺麗でどうしても孕ませたくって_BBHH_」"
+				CALL PRINT_STRW, @"「お説教は後で聞きますので、今は射精させてください！」"
+			CASE 75
+				SIF BASE:TARGET:尿意 < 2000
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱、…顔赤くなっちゃってるよ♪」
+				PRINTFORMW 「もしかして恥ずかし………ぁ」
+				PRINTFORML
+				PRINTFORMW ﾎﾟﾀﾎﾟﾀ、チョロロロロー
+				PRINTFORML
+				BASE:TARGET:尿意 = 0
+				PRINTFORMW %CALLNAME:TARGET%通过失禁してしまったようだ…
+				CALL PRINT_STRW, @"「ごめんね、気づけなくて…でも…恥ずかしがってる時ｷｭ～って締まって気持ちよかったよ_BBHH_」"
+			CASE 76
+				SIF !BASE:TARGET:育児中
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱って確か子育て中だったよね」"
+				PRINTFORMW 「やっぱり、まだ幼いと育児は大変なのかな、僕にできることがあったら何でも言ってね♪」
+				CALL PRINT_STRW, @"「それと…年子は育てるのがもっと大変らしいから…子種の量もほどほどにしておくね_BBHH_」"
+			CASE 77
+				SIF !PLACE("部室")
+					GOTO BUNKI
+				PRINTFORMW 「ねぇ、%CALLNAME:TARGET%酱。」
+				CALL PRINT_STRW, @"「今度する時さ、僕的家でしようよ…_BBHH_」"
+				CALL PRINT_STRW, @"「ア布ト貸りてるから夜通しできるけど、どうかな…_BBHH_」"
+			CASE 78
+				SIF !PLACE("自室")	
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱…、ここ後輩酱的房間なんだよ」
+				CALL PRINT_STRW, @"「それなのにもう…床汚れちゃってるし…_BBHH_」"
+				CALL PRINT_STRW, @"「いい！種付けはして给けど、終わったら一緒に掃除だよ分かった！」"
+			CASE 79
+				SELECTCASE CONDS("陰毛", TARGET)
+				CASE "白虎", "無毛", "脱毛処理", "光滑无毛"
+					PRINTFORMW 「おっ、%CALLNAME:TARGET%酱のおまんこ光滑无毛だね～」
+					PRINTFORMW 「綺麗なおまんこも可爱よ♪」
+					PRINTFORML
+					CALL PRINT_STRW, @"「にしても……性交するの気持ちいいね_BBHH_」"
+				CASEELSE
+					PRINTFORMW 「ふーっ、んっしょ…っと」
+					PRINTFORMW 「やっぱり種付けするのにも体力いるね…」
+					PRINTFORMW 「%CALLNAME:TARGET%酱も水分補給忘れないでよ、」
+				ENDSELECT
+			CASE 80
+				SELECTCASE KABURAND(2)
+				CASE 0
+					PRINTFORMW 「は～い、%CALLNAME:TARGET%酱今からおちんちん挿入れますからね～」
+					PRINTFORMW 「力抜いてね～……よいっしょ。それじゃあ腰動かしてくからね～♪」
+					CALL PRINT_STRW, @"「ぱん、ぱんっ……ぱん、ぱんっ。掻いて欲しいところはございますか～_BBHH_」"
+				CASE 1
+					PRINTFORMW 「ほ～ら、お股広げようね～%CALLNAME:TARGET%酱♪」
+					PRINTFORMW 「いーっぱい種付けして给から、期待しててね」
+				ENDSELECT
+			CASE 81
+				SIF TALENT:PLAYER:阴茎 < 3
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「実は僕のちんちんって人よりも%TEXTR("太/長/大き")%いらしいんだ」"
+				CALL PRINT_STRW, @"「そのせいか、女の子の中に全部収まりきらないから大変なんだよね_BBHH_」"
+				CALL PRINT_STRW, @"「これから、%CALLNAME:TARGET%酱にも種付けするわけだけど…気絶しないでね_BBHH_」"
+			CASE 82
+				SIF !TALENT:TARGET:未成熟 
+					GOTO BUNKI
+				PRINTFORMW 「あれ？%CALLNAME:TARGET%酱、まだ生理来てないの？」
+				PRINTFORMW 「…そっかー、じゃあ…欧内酱と一緒に赤酱の作り方を練習しよっか♪」
+				CALL PRINT_STRW, @"「それで%CALLNAME:TARGET%酱に初潮が来たら、お祝いの種付けして给ね_BBHH_」"
+			CASE 83
+				SIF !TALENT:TARGET:避妊の護符
+					GOTO BUNKI
+				PRINTFORMW 「よ～し、それじゃあ%CALLNAME:TARGET%酱とえっちしちゃおっか～♪………あれ？」
+				PRINTFORMW （これってもしかして避妊の護符ってやつかな…ちょっと厄介だな。僕の力じゃ剥がせないし孕ませらんないや、）
+				CALL PRINT_STRW, @"「……%CALLNAME:TARGET%酱が良かったら僕の子産んでほしいな～_BBHH_……なんて、」"
+				PRINTFORMW （一応、揺さぶってみたはしたけど効果は单薄的だろうな…）
+			CASE 84
+				SIF !COND("妊娠中：妊娠発覚済み", TARGET)
+					GOTO BUNKI
+				IF COND("妊娠中：臨月", TARGET) || COND("妊娠中：分娩直前", TARGET)
+					PRINTFORMW 「お腹も大きくなったね、%CALLNAME:TARGET%酱。」
+					PRINTFORMW 「もうすぐ赤酱産まれちゃうね」
+				ELSE
+					PRINTFORMW 「まだお腹は目だってないけど、妊娠してるんだよね」
+					PRINTFORMW 「%CALLNAME:TARGET%酱も{TALENT:TARGET:出産経験 + 1}児の妈妈か…」
+				ENDIF
+				IF COND("精液の優勢") == PLAYER
+					PRINTFORMW 「ふふっ楽しみだな～、%CALLNAME:TARGET%酱と僕との子だよ。絶対可爱よ」
+					PRINTFORMW 「早く産まれてこないかな～♪」
+				ELSE
+					PRINTFORMW 「それにしても…%CALLNAME:TARGET%酱いいの？」
+					PRINTFORMW 「父亲、僕じゃないんでしょ。」
+					PRINTFORMW 「まぁ、僕は種付けできるからいいんだけどさ、」
+				ENDIF
+			CASE 85
+				SIF !COND("種族：精灵", TARGET)
+					GOTO BUNKI
+				SIF	BASE:TARGET:胎児 > 0
+					GOTO BUNKI
+				PRINTFORMW 「確か、精灵って種族の都合上人类とは兒童できづらいんだよね」
+				CALL PRINT_STRW, @"「でも、そういうの聞くと一層孕ませたくなってくるな_BBHH_」"
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱は、人类との子ども孕むつもりとかあるのかな…_BBHH_」"
+			CASE 86
+				SIF MARK:TARGET:淫紋 == 0
+					GOTO BUNKI
+				SIF	BASE:TARGET:胎児 > 0
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「あれ～%CALLNAME:TARGET%酱、お腹にエッチな模様があるねぇ_BBHH_」"
+				CALL PRINT_STRW, @"「ふふふ_BH_知ってるよ、淫紋ってやつだよね_BBHH_」"
+				CALL PRINT_STRW, @"「確か、受精すると爱心マークで教えてくれるんだよね_BBHH_」"
+				CALL PRINT_STRW, @"「じゃあ、僕がエッチな爱心マーク%TEXTR("刻んで/付けて")%给ね_BBHH_」"
+			CASE 87
+				IF	BASE:TARGET:胎児 > 0
+					GOTO BUNKI
+				ELSEIF TALENT:TARGET:难以妊娠
+					PRINTFORMW 「へ～%CALLNAME:TARGET%酱、体質的に难以妊娠んだね…大変そう…」
+					CALL PRINT_STRW, @"「…じゃあ、%CALLNAME:TARGET%酱が妈妈になれるようにいっぱい種付けしておくね_BBHH_」"
+				ELSE
+					GOTO BUNKI
+				ENDIF
+			CASE 88
+				SIF !TALENT:TARGET:不在乎貞操
+					GOTO BUNKI
+				SIF	BASE:TARGET:胎児 > 0
+					GOTO BUNKI
+				PRINTFORMW 「へ～%CALLNAME:TARGET%酱ってば、色んな男の子と性交してるんだ」
+				PRINTFORMW 「じゃあ、%CALLNAME:TARGET%酱のこと孕ませられるかは競争になっちゃうのか…」
+				PRINTFORMW 「まっ、僕負けるつもりないけどね♪」
+			CASE 89
+				SIF !COND("発情期", TARGET)
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「はぁ、はぁ_BH_%CALLNAME:TARGET%酱のおまんこ…」"
+				PRINTFORMW 「すっごく%TEXTR("ぬちゃぬちゃ/とろとろ")%…これは%TEXTR("孕ませ/種付けのし")%がいが有そうだよ」
+				CALL PRINT_STRW, @"「じゃあ全部出しちゃうから、受け止めてね_BBHH_」"
+			CASE 90
+				SIF !COND("排卵中", TARGET)
+					GOTO BUNKI
+				SIF	BASE:TARGET:胎児 > 0
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「あれれ、%CALLNAME:TARGET%酱、今日って%TEXTR("アタル/孕んじゃう/できちゃう")%日？」"
+				CALL PRINT_STRW, @"「えへへー、じゃあ%CALLNAME:TARGET%酱の事ちゃ～んと%TEXTR("妈妈/お母桑")%にして给ね_BBHH_」"
+			CASE 91
+				SIF !COND("安全日", TARGET) 
+					GOTO BUNKI
+				SIF	BASE:TARGET:胎児 > 0
+					GOTO BUNKI
+				PRINTFORMW 「もしかして%CALLNAME:TARGET%酱、今日赤酱できずらい日？」
+				PRINTFORMW 「……う～ん。そういう日もあるよね。じゃあ今日は純粋に性交を楽しもっか♪」
+			CASE 92
+				SIF !COND("危険日", TARGET)
+					GOTO BUNKI
+				SIF	BASE:TARGET:胎児 > 0
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「%CALLNAME:TARGET%酱ってば…すっごい%TEXTR("孕み/妈妈になり")%たがってる」"
+				PRINTFORMW 「これは射精しないと失礼だよね。ほら出すよ、受け取ってね。」
+			CASE 93
+				SIF CONDS("晒痕下身衣装", TARGET) != "淚珠泳衣"
+					GOTO BUNKI
+				PRINTFORMW 「ねぇ、%CALLNAME:TARGET%酱。な～んかとっても特徴的な日焼後してるね～♪」
+				CALL PRINT_CUTIN, "贴身", TARGET
+				CALL PRINT_STRW, @"「夏の間はこ～んな布面積が小さい泳装着てたんだ～_BBHH_　ふ～ん_BH_」"
+				CALL PRINT_STRW, @"「いいな～僕も%CALLNAME:TARGET%酱と夏の思い出作りたいな～_BBHH_」"
+				PRINTFORML
+				CALL PRINT_STRW, @"「……良かったら一直陪着我くれる…？」"
+			CASE 94
+				SIF CONDS("晒痕下身衣装", TARGET) != "丁字褲"
+					GOTO BUNKI
+				PRINTFORMW 「ねぇ、%CALLNAME:TARGET%酱。な～んかとっても特徴的な日焼後してるね～♪」
+				CALL PRINT_CUTIN, "贴身", TARGET
+				CALL PRINT_STRW, @"「夏の間はこ～んな布面積が小さい泳装着てたんだ～_BBHH_　ふ～ん_BH_」"
+				CALL PRINT_STRW, @"「いいな～僕も%CALLNAME:TARGET%酱と夏の思い出作りたいな～_BBHH_」"
+				PRINTFORML
+				CALL PRINT_STRW, @"「……良かったら一直陪着我くれる…？」"
+			CASE 95
+				SIF !TALENT:TARGET:容易濕
+					GOTO BUNKI
+				PRINTFORMW 「おわぁ…、%CALLNAME:TARGET%酱のおまんこ、」
+				CALL PRINT_STRW, @"「ちょっと触っただけなのに、もうこんな%TEXTR("にゅるにゅる/ぬとぬと/ぬるぬる")%になってる…_BBHH_」"
+				CALL PRINT_STRW, @"「もしかして期待してたのかな…_BBHH_」"
+				CALL PRINT_STRW, @"「今から僕におまんこ、ほじほじされて…子宮の奥に%TEXTR("びゅ～/ビューッ")%って%TEXTR("射精/種付け/")%されるの_BBHH_」"
+				CALL PRINT_STRW, @"「ふふふっ、それじゃあ…おまんこの方に聞いてみよっか…_BBHH_」"
+			CASE 96
+				SIF TALENT:TARGET:巨乳 < 2
+					GOTO BUNKI
+				PRINTFORMW 「おぉ、%CALLNAME:TARGET%酱の胸部おっきいね～」
+				CALL PRINT_STRW, @"「尺寸的にはどんな感じなの？………え、%CONDS("罩杯尺寸", TARGET)%罩杯！？……すごいね～_BBHH_」"
+				SELECTCASE RAND:3
+					CASE 0
+						CALL PRINT_STRW, @"「それじゃあ%CONDS("罩杯尺寸", TARGET)%罩杯胸部堪能しちゃおっかな～_BBHH_」"
+					CASE 1
+						PRINTFORMW 「こんなサイズの胸部だと男の子の視線釘付けなんだろうな～」
+						PRINTFORMW （ここは、他の子に取られちゃう前にいっぱい種付けしとかなきゃだね♪）
+					CASE 2
+						CALL PRINT_STRW, @"「でも、このサイズだと肩とか凝っちゃいそうだね…_BBHH_」"
+						CALL PRINT_STRW, @"「僕が全身のマッサージでもしてあげようかな…_BBHH_」"
+				ENDSELECT
+			CASE 97
+				SIF !TALENT:TARGET:吸精体質
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「それじゃあ、%CALLNAME:TARGET%酱…挿入れちゃうね_BBHH_」"
+				PRINTFORMW 「ん？……これは、な、なんかこれ吸われてる！な、なにこれ！？」
+				PRINTFORMW 「ん…んぐ…ふぅ…もしかして…%CALLNAME:TARGET%酱吸精体質ってやつ？」
+				CALL PRINT_STRW, @"「这个、すごい精力取られてる……けどすっごい気持ちいい～_BBHH_」"
+				CALL PRINT_STRW, @"「はぁはぁ、……もっと種付けしたい_BBHH_いいよね？%CALLNAME:TARGET%酱_BBHH_」"
+			CASE 98
+				SIF !(COND("黑木耳", TARGET) || COND("色素沉淀（強）", TARGET))
+					GOTO BUNKI
+				PRINTFORMW （むむ…このおまんこの黒ずみ…間違いなく歴戦のおまんこだね…）
+				PRINTFORMW （ここまで経験豊富なおまんことなると種付けできる機会も貴重になってくるから、気合いれなきゃね）
+				CALL PRINT_STRW, @"「…%CALLNAME:TARGET%酱今日はよろしくね_BBHH_」"
+			CASE 99
+				SIF CONDS("晒痕トップ", TARGET) != "高開衩競泳泳装"
+					GOTO BUNKI
+				PRINTFORMW 「ねぇ、%CALLNAME:TARGET%酱。な～んかとっても特徴的な日焼後してるね～♪」
+				CALL PRINT_CUTIN, "贴身", TARGET
+				CALL PRINT_STRW, @"「こんな際どい高開衩の跡が残っちゃってるけどいいのかな～_BBHH_」"
+				CALL PRINT_STRW, @"「ちょっと日焼跡…エッチすぎるからダメだよほんと_BBHH_」"
+				CALL PRINT_STRW, @"「反省のためにも強めに種付けするから、分かった_BBHH_」"
+				PRINTFORML
+			CASE 100
+				SIF !PLACE("体育倉庫")
+					GOTO BUNKI
+				PRINTFORMW 「いぃ、%CALLNAME:TARGET%酱。よく聞いてね」
+				PRINTFORMW 「ここは換気ができないから臭いとかが籠っちゃうから、エッチなことしたらバレちゃうんだ」
+				PRINTFORMW 「愛液をこぼしたりお潮を吹いたりするのは勿論！」
+				CALL PRINT_STRW, @"「注がれた僕の精液を一滴も零しちゃダメだからね_BBHH_」"
+				CALL PRINT_STRW, @"「もし、マットに精液が付いたりしたらエッチな臭いが…こびりついちゃうからね_BBHH_」"
+			CASE 101
+				SIF !PLACE("情人旅館")
+					GOTO BUNKI
+				CALL PRINT_STRW, @"「せっかく情人旅館来了んだから…%CALLNAME:TARGET%酱も子作りのことは忘れてラ胸罩ブエッチしたいよね_BBHH_」"
+				CALL PRINT_STRW, @"「それじゃあ、前戯も兼ねて…一回だけ種付け済ましちゃおっか_BBHH_」"
+			CASE 102
+				SIF !PLACE("做爱房")
+					GOTO BUNKI	
+				PRINTFORMW 「%CALLNAME:TARGET%酱…こ的房間、部長酱が用意してくれた做爱房なんだって…」
+				CALL PRINT_STRW, @"「人……全然来ないらしいよ_BBHH_」"
+				CALL PRINT_STRW, @"「ふふっ……だからね学校なのに、大号的声出しても大丈夫なんだって_BBHH_」"
+				CALL PRINT_STRW, @"「それじゃあ、これから%CALLNAME:TARGET%酱に種付けするんだけど……_BBHH_」"
+				CALL PRINT_STRW, @"「イキそうな時は大号的声で僕に教えてね_BBHH_」"
+			CASE 103
+				;SIF ITEM:排卵誘発剤 == 0 && COND("排卵誘発剤", TARGET)
+					GOTO BUNKI	
+				;ITEM:排卵誘発剤 -= 1
+				PRINTFORMW 「じゃじゃ～ん、こちらの薬…なんでしょ～か？%CALLNAME:TARGET%酱は分かるかな～？」
+				CALL PRINT_STRW, @"「この薬はね、飲むと…赤酱ができやすくなるんだって_BBHH_」"
+				IF TALENT:TARGET:难以妊娠
+					PRINTFORMW 「%CALLNAME:TARGET%酱难以妊娠って聞いたから後輩酱から譲ってもらったんだ♪」
+				ELSE
+					PRINTFORMW 「後輩酱が薬余ってるから使っていいよって、くれたんだ～♪」
+				ENDIF
+				PRINTFORML
+				CALL PRINT_STRW, @"「それでね…%CALLNAME:TARGET%酱、僕の赤酱産んでくれるかな_BBHH_」"
+			CASE 104
+				SIF !COND("種族：兎")
+					GOTO BUNKI	
+				PRINTFORMW 「%CALLNAME:TARGET%酱って兔の獣人なんだよね。」
+				CALL PRINT_STRW, @"「それじゃあ…耳が長ほど性欲が很强って噂…試してもいいかな_BBHH_」"
+			CASE 105
+				SIF !DAYEV("周考")
+					GOTO BUNKI
+				PRINTFORMW 「%CALLNAME:TARGET%酱さぁ…僕が言うのも変だけど…」
+				CALL PRINT_STRW, @"「週末にテストあるのに性交してていいの_BBHH_」"
+				PRINTFORMW 「いや、僕は別にいいんだよ。でも%CALLNAME:TARGET%酱は大丈夫なのかな～って」
+			ENDSELECT
+	ENDIF
+	CALL MESSAGE_PLAY_K73
+	PRINTFORML
+	IF CFLAG:PLAYER:日向完美契合 == 1 || CFLAG:TARGET:日向完美契合 == 20
+		SELECTCASE RAND:5
+			CASE 0
+				PRINTFORMW 「ふぅ～、出した出した。」
+			CASE 1
+				CALL PRINT_STRW, @"「あ、精液溢れてる…出しすぎちゃったみたいだね_BBHH_」"
+			CASE 2
+				PRINTFORMW 「種付け完了っと」
+			CASE 3
+				PRINTFORMW 「おぉ～、われながらいっぱい出たね…」
+		ENDSELECT
+		CFLAG:PLAYER:日向完美契合 = 0
+	ELSEIF CFLAG:TARGET:日向姉妹丼 == 2
+		PRINTFORMW 「よし、それじゃ次は後輩酱の番だよ～♪」
+		CFLAG:TARGET:日向姉妹丼 = 0
+	ELSEIF CFLAG:TARGET:日向姉妹丼 == 3
+		PRINTFORMW 「ふぅ～。種付け完了！
+		PRINTFORMW 「それにしてもどっちのおまんこも甲乙つけがたいね～」
+		PRINTFORMW 「今度…もっかい３人で集まってしない？」
+		CFLAG:TARGET:日向姉妹丼 = 0
+	ELSEIF CFLAG:日向創口貼 == 1
+		CFLAG:日向創口貼 = 0
+		PRINTFORMW 「よしっ、それじゃあ創口貼を貼ってと…」
+		PRINTFORMW 「これで精液が無駄にならないね♪」
+		CFLAG:TARGET:創口貼装着 += 1
+	ELSEIF NO:TARGET == 30 && RAND:3
+		SELECTCASE RAND:2
+			CASE 0
+				CALL PRINT_STRW, @"『んぉお゛ッ…♪_BBHH_』"
+				PRINTFORMW 「うわぁ、%CALLNAME:TARGET%酱派手にイってるね。」
+			CASE 1
+				CALL PRINT_STRW, @"『ククッ、日向よ…貴様のチンポは引き抜いても脈を打っておるな_BBHH_』"
+				CALL PRINT_STRW, @"『そんなに妾のまんこは気持ちよかったのか…_BBHH_』"
+				PRINTFORMW 「はぁ……はぁ…そりゃ、こんなに綺麗な娘に種付けできたんだもん。当たり前だよ。」
+		ENDSELECT
+	ELSEIF COND("受精確認フラグ", TARGET)
+		IF MARK:TARGET:淫紋
+			SELECTCASE RAND:3
+				CASE 0
+					CALL PRINT_STRW, @"「おや…まずは受精したみたいだね♪」"
+				CASE 1
+					CALL PRINT_STRW, @"「淫紋…ピカピカ光っちゃってるね～_BBHH_」"
+				CASE 2
+					PRINTFORMW (やっぱり、これ分かりやすくていいな…)
+					PRINTFORMW (炮友の娘にも付けてあげよっかな～♪)
+			ENDSELECT
+		ELSE
+			SELECTCASE RAND:3
+				CASE 0
+					PRINTFORMW (あっ…これ…多分できたっぽいね…)
+				CASE 1
+					CALL PRINT_STRW, @"「ねぇ、%CALLNAME:TARGET%酱僕直感で分かるんだけどさ、今の射精で多分受精したよ_BBHH_」"
+				CASE 2
+					CALL PRINT_STRW, @"「あっ…ふふっ…♪」"
+					PRINTFORMW (僕の精子受け入れてくれたみたい♪)
+					PRINTFORML
+					PRINTFORMW 「ん、急に笑いだしてどうしたのかって？」
+					CALL PRINT_STRW, @"「ん～…%CALLNAME:TARGET%酱には内緒_BBHH_」"
+			ENDSELECT
+		ENDIF
+	ELSEIF (COND("受精済", TARGET) || COND("着床済", TARGET) || BASE:TARGET:胎児 > 0) && RAND:2
+		PRINTFORMW 「おぉ…結構出たね。」
+		SELECTCASE RAND:2
+			CASE 0
+				PRINTFORMW （まぁ、もうできてるから必要ないっちゃ、必要ないんだけどね…）
+			CASE 1
+				PRINTFORMW （でも、%CALLNAME:TARGET%酱できてるから、あんまり精子無駄にしない方がいいんだけどね…）
+		ENDSELECT
+	ELSE
+		SELECTCASE COND("受精確率")
+		CASE IS < 85 && !COND("受精済", TARGET) || !COND("着床済", TARGET) && RAND:3
+			PRINTFORMW （あれ～？まだできないのか…、ちょっとしぶといな…）
+		CASE IS < 65 && RAND:3 && !COND("受精済", TARGET) || !COND("着床済", TARGET)
+			PRINTFORMW （もうちょっと種付けしたら、できそうだね。がんばろ～っと♪）
+		CASEELSE
+			SELECTCASE RAND:5
+				CASE 0
+					PRINTFORMW 「ふぅ～、出した出した。」
+				CASE 1
+					CALL PRINT_STRW, @"「あ、精液溢れてる…出しすぎちゃったみたいだね_BBHH_」"
+				CASE 2
+					PRINTFORMW 「種付け完了っと」
+				CASE 3
+					CALL PRINT_STRW, @"「気持ちよかったよ…%CALLNAME:TARGET%酱_BBHH_」"
+				CASE 4
+					PRINTFORMW 「おぉ～、われながらいっぱい出たね…」
+			ENDSELECT
+		ENDSELECT
+	ENDIF
+	PRINTFORML
+	CALL CHANGE_RELATION, 2, PLAYER, TARGET
+	PRINTFORMW 二人の仲良し度+2
+
+	TARGET = MEMO_TARGET
+	PLAYER = MEMO_PLAYER
+
+CASE "追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "追加選択肢その"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+
+;直接Ｈしたい場合
+CASE "エッチする"
+	;前編
+	IF CEVENTS("追加選択肢からＨ") == ""
+		PRINTFORMW 接吻特
+		PRINTL [0]选项1(选择这个会H)
+		PRINTL [1]选项2(选择这个不会H)
+		CALL SET_CEVENT, @"追加選択肢からＨ：%ARGS%"
+		FLAG:SELECT_USERSHOP = 100
+	ELSE
+		IF TFLAG:床イン
+			PRINTFORMW H时的情况展開
+		ELSE
+			PRINTFORMW 这边是不会H的情况展開
+		ENDIF
+	ENDIF
+;直接结束回合したい場合
+CASE "ターンを終わらせる"
+	;前編
+	IF CEVENTS("追加選択肢から结束回合") == ""
+		PRINTFORMW 接吻特
+		PRINTL [0]選択肢１(これを選ぶと结束回合します)
+		PRINTL [1]選択肢２(これを選ぶと结束回合しません)
+		CALL SET_CEVENT, @"追加選択肢から结束回合：%ARGS%"
+		FLAG:SELECT_USERSHOP = 998
+	ELSE
+		IF TFLAG:结束回合
+			PRINTFORMW 结束回合する場合の展開です
+		ELSE
+			PRINTFORMW こっちは结束回合しない場合の展開です
+		ENDIF
+	ENDIF
+CASE "睡眠時追加選択肢その１"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+CASE "睡眠時追加選択肢之２"
+	PRINTFORMW %CALLNAME:MASTER%进行了%ARGS%。
+	PRINTL 
+	PRINTFORMW 「台詞」
+	PRINTL 
+	PRINTFORMW 受到%ARGS%的%CALLNAME:TARGET%的反应
+ENDSELECT
+
+;-------------------------------------------------
+;约会行き先の選択肢を追加。
+@DATE_K73_ADDSELECT
+;ここで増やした選択肢を選ぶと、それがSAVESTR:约会 に代入される仕組みです
+SIF TALENT:MASTER:女性 && TALENT:MASTER:処女 == 0
+	STR:選択肢 += "いきなり情人旅館に行く/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;増やした行先での地の文と台詞。起きうるイベントのフラグもここで決める
+@KOJO_DATE_K73_ADDSELECT
+#DIM MEMO_TARGET
+#DIM LCOUNT
+#DIM MEMO_PLAYER
+#DIM MEMO_LINECOUNT
+#DIM GET_REL
+#DIM MEMO_ORGASM
+#DIM GO_BEGIN_TRAIN
+#DIM GO_BEGIN_TURNEND
+SELECTCASE SAVESTR:约会
+CASE "いきなり情人旅館に行く"
+	CALL PRINT_STRW, @"_緑_午前　9:00_緑_"
+	PRINTFORML 
+	CALL EMOTION_PLUS, "重置/对话框兴奋/斜眉/ヮ/紅潮"
+	PRINTFORMW 「朝一番から情人旅館に行きたいの…%CNAME("二人称")%」
+	CALL PRINT_STRW, @"「そっか～%CNAME("二人称")%もどんどんエッチな娘になっちゃってるね～_BBHH_」"
+	PRINTFORML
+	CALL EMOTION_PLUS, "有頂天/对指/得意２"
+	SELECTCASE RAND:2
+	CASE 0
+		CALL PRINT_STRW, @"「…もしかして独占欲ってやつかな_BBHH_」"
+		CALL PRINT_STRW, @"「ならしょうがないね_BBHH_%CNAME("一人称")%も朝まで一直陪着我给_BBHH_」"
+	CASE 1
+		CALL PRINT_STRW, @"「朝からするってなら%CNAME("二人称")%のこと翌朝までハメ倒す気でいるけど…」"
+		CALL PRINT_STRW, @"「%CNAME("二人称")%の体力持つかな…_BBHH__BBHH_」"
+	ENDSELECT
+	PRINTFORML
+	SAVESTR:現在位置 = 情人旅館
+	PRINTFORMW %CALLNAME:TARGET%通过%CALLNAME:MASTER%の%TEXTR("尻を揉みしだき/腰を抱き寄せ/乳頭を弄り/胸を揉みしだき")%的同时、格子インを済ませた…
+	PRINTFORML
+	PRINTFORML
+	PRINTFORML
+	CALL PRINT_STRW, @"_緑_午前　10:00_緑_"
+	PRINTFORML 
+	PRINTFORMW 進入房間と%CALLNAME:MASTER%に淋浴を浴びるように促し、%CALLNAME:TARGET%通过衣類を脱ぎ捨てている。
+	PRINTFORMW 準備を整えた%CALLNAME:TARGET%通过浴室に突入し、%TEXTR("すぐ大人/間髪入れずに")%%CALLNAME:MASTER%に抱き着いてきた
+	CALL SETFLAG, "扒成裸体", TARGET
+	CALL EMOTION_PLUS, "胖次花绳/红晕/对话框開心/微笑２/通常眉/BG=0お浴室"
+	CALL PRINT_STRW, @"「じゃ～ん_BBHH_サプラ～イズ_BH_ふふふっおどろいた？」"
+	CALL PRINT_STRW, @"「せっかく情人旅館来了んだからさ一緒に体…洗おっか_BBHH_」"
+	CALL PRINT_STRW, @"「ふふふっ、あわあわ楽しいね～_BBHH_」"
+	PRINTFORMW %CALLNAME:TARGET%と背中を流し合ったりして、身体の隅々まで綺麗にした。
+	PRINTFORML
+	CALL PRINT_STRW, @"「そろそろ綺麗になってきたかな～_BBHH_」"
+	MEMO_TARGET = TARGET
+	TARGET = 0
+	MEMO_PLAYER = PLAYER
+	PLAYER = FINDCHARA(NO, 73)
+	TARGET = MASTER
+	PRINTFORMW 「ふ～、そろそろ淋浴おわろっか」
+	PRINTFORMW 身体の火照りが冷めることなく、床に赴く…
+	PRINTFORML 
+	IF BASE:TARGET:受精からの日数 == 0 || BASE:TARGET:胎児 == 0
+	CALL PRINT_STRW, @"_緑_午前　10:45_緑_"
+	PRINTFORML 
+	CALL EMOTION_PLUS, "对话框兴奋/布右/笑顔３" ,PLAYER
+	PRINTFORMW 「じゃあ、そろそろ種付けしようと思うんだけど……、その前にマッサージしよっか♪」
+	PRINTFORMW 「後輩酱、床の上であおむけになってね～」
+	CALL PRINT_STRW, @"「今から後輩酱には排卵マッサージを受けてもらうね_BBHH_」"
+	CALL PRINT_STRW, @"「お腹の外から子宮をグッグッって刺激して妊娠しやすくするよ～_BBHH_」"
+	PRINTFORMW ｸﾞﾘｸﾞﾘ……ｸﾞﾘｸﾞﾘ……
+	PRINTFORML
+		IF COND("排卵中", TARGET)
+			SETCOLOR 239,14,239
+			CALL PRINT_STRW, @"ぷちゅっ_BBHH_"
+			RESETCOLOR
+			PRINTFORML
+			PRINTFORMW 你は強制的に排卵させられて受精しやすくなった。
+		ELSEIF COND("危険日", TARGET)
+			SETCOLOR 255,192,203
+			CALL PRINT_STRW, @"ぷりっ_UH_"
+			RESETCOLOR
+			PRINTFORML
+			PRINTFORMW 你はものすごく受精しやすくなった。
+		ELSEIF COND("安全日", TARGET)
+			PRINTFORMW ぷつっ……
+			PRINTFORML
+			PRINTFORMW 効果は单薄的が…受精しやすくなったようだ。
+			CFLAG:TARGET:要受精確率 -= 5
+		ELSE
+			PRINTFORMW ぷつっ……
+			PRINTFORML
+			PRINTFORMW 少しだけ、你は受精しやすくなったようだ。
+			CFLAG:TARGET:要受精確率 -= 10
+		ENDIF
+		PRINTFORML
+	ENDIF
+	CALL PRINT_STRW, @"_緑_午前　11:00_緑_"
+	PRINTFORML 
+	CALL EMOTION_PLUS, "重置/紅潮/斜眼３/对话框爱心/微笑３" ,PLAYER
+	PRINTFORMW 「ねぇ…後輩酱……僕も我慢できなくなっちゃった♪」
+	CALL PRINT_STRW, @"「そろそろ…いいよね_BBHH_」"
+	PRINTFORMW そう言って、日向は你の股間を押し広げ…陰茎の鈴口を膣口に添える
+	CALL PRINT_STRW, @"「後輩酱……今日を長一日にしようね_BBHH_」"
+	MEMO_LINECOUNT = LINECOUNT
+		CALL SIMULATE_TRAIN_FIRST
+		FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, 60, 4
+		SIF NOWEX:PLAYER:射精
+			BREAK
+		NEXT
+		CALL SIMULATE_TRAIN_CALC
+		CALL SIMULATE_TRAIN_SHOW
+		CALL MESSAGE_SYASEION_K73
+		CALL SAMEN_SHOOT_MESSAGE
+		CALL CHECK_NINSHIN_ALLACTOR
+		PRINTFORML
+	CALL PRINT_STRW, @"_緑_午前　11:30_緑_"
+	PRINTFORML 
+	CALL EMOTION_PLUS, "有頂天/赤面/ni↘/通常眉２" ,PLAYER
+	CALL PRINT_STRW, @"「まだまだおわらないよ～_BBHH_」"
+	PRINTFORMW 日向は姿勢を変え、从后面将突きこむようにしている。
+	PRINTFORMW 腰を振る速度は加速し、射精の勢いは止圆圈ことを知らない…
+		CALL SIMULATE_TRAIN_FIRST
+		MEMO_ORGASM = EXP:PLAYER:射精経験
+		FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, 61, 4
+		SIF EXP:PLAYER:射精経験 > MEMO_ORGASM
+			BREAK
+		NEXT
+		CALL SIMULATE_TRAIN_CALC
+		CALL SIMULATE_TRAIN_SHOW
+		CALL MESSAGE_SYASEION_K73
+		CALL SAMEN_SHOOT_MESSAGE
+		CALL CHECK_NINSHIN_ALLACTOR
+	PRINTFORML
+	CALL PRINT_STRW, @"_緑_午後　12:00_緑_"
+	PRINTFORML 
+	CALL EMOTION_PLUS, "斜眉２/小口/紅潮/叹气" ,PLAYER
+	PRINTFORMW 「ふ～～、ちょっと休憩しよっか、もうお昼みたいだし…」
+	PRINTFORML
+	PRINTFORMW
+	PRINTFORML
+	PRINTFORMW 「ルームサービスでご飯頼んでみたけど、味は悪くないね、」
+	CALL PRINT_STRW, @"「後輩酱はどう？上のお口と下のお口どっちがおいしいかな_BBHH_」"
+	PRINTFORMW 日向は吃飯中であろうと阴茎を拔出ことはせずに、你の口に吃飯を運びながら抽挿を繰り返す…
+		CALL SIMULATE_TRAIN_FIRST
+		MEMO_ORGASM = EXP:PLAYER:射精経験
+		FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, 61, 4
+		SIF EXP:PLAYER:射精経験 > MEMO_ORGASM
+			BREAK
+		NEXT
+		CALL SIMULATE_TRAIN_CALC
+		CALL SIMULATE_TRAIN_SHOW
+		CALL MESSAGE_SYASEION_K73
+		CALL SAMEN_SHOOT_MESSAGE
+		CALL CHECK_NINSHIN_ALLACTOR
+		PRINTFORML
+	CALL PRINT_STRW, @"_緑_午後　1:00_緑_"
+	PRINTFORML 
+	CALL EMOTION_PLUS, "躁动难忍/会話口３" ,PLAYER
+	PRINTFORMW 「お～い、後輩酱…食後の運動も忘れちゃだめだよ～」
+	CALL PRINT_STRW, @"「もっと腰動かしなよ、もっと気持ちよくなれるからさ_BBHH_」"
+		CALL SIMULATE_TRAIN_FIRST
+		MEMO_ORGASM = EXP:PLAYER:射精経験
+		FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, 65, 4
+		SIF EXP:PLAYER:射精経験 > MEMO_ORGASM
+			BREAK
+		NEXT
+		CALL SIMULATE_TRAIN_CALC
+		CALL SIMULATE_TRAIN_SHOW
+		CALL MESSAGE_SYASEION_K73
+		CALL SAMEN_SHOOT_MESSAGE
+		CALL CHECK_NINSHIN_ALLACTOR
+		PRINTFORML
+	CALL PRINT_STRW, @"_緑_午後　2:00_緑_"
+	PRINTFORML 
+	PRINTFORMW 日向は射精を繰り返す…
+	PRINTFORMW 挿入してから一度も拔出ことはなく、溢れた精液は行き場を失い你の子宮を拡張している
+	PRINTFORMW 你の腹部は妊婦のように膨れ上がり、意識を保つのが難しくなってくる…
+		CALL SIMULATE_TRAIN_FIRST
+		MEMO_ORGASM = EXP:PLAYER:射精経験
+		FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, 65, 4
+		SIF EXP:PLAYER:射精経験 > MEMO_ORGASM
+			BREAK
+		NEXT
+		CALL SIMULATE_TRAIN_CALC
+		CALL SIMULATE_TRAIN_SHOW
+		CALL MESSAGE_SYASEION_K73
+		CALL SAMEN_SHOOT_MESSAGE
+		CALL CHECK_NINSHIN_ALLACTOR
+		PRINTFORML
+	CALL PRINT_STRW, @"_緑_午後　2:30_緑_"
+	PRINTFORML
+	PRINTFORMW 日向は你の疲労状態であろうと容赦なく動起腰身
+	PRINTFORMW しばらくすると…你は疲労からか意識を手放す………
+	PRINTFORML
+		CALL SIMULATE_TRAIN_FIRST
+		MEMO_ORGASM = EXP:PLAYER:射精経験
+		FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, 68, 4
+		SIF EXP:PLAYER:射精経験 > MEMO_ORGASM
+			BREAK
+		NEXT
+		CALL SIMULATE_TRAIN_CALC
+		CALL SIMULATE_TRAIN_SHOW
+		CALL MESSAGE_SYASEION_K73
+		CALL CHECK_NINSHIN_ALLACTOR
+		PRINTFORML
+		PRINTFORML
+		PRINTFORMW
+		PRINTFORML
+		CALL PRINT_STRW, @"_緑_午後　3:00_緑_"
+		PRINTFORML
+		CALL SIMULATE_TRAIN_FIRST
+		MEMO_ORGASM = EXP:PLAYER:射精経験
+		FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, 68, 4
+		SIF EXP:PLAYER:射精経験 > MEMO_ORGASM
+			BREAK
+		NEXT
+		CALL SIMULATE_TRAIN_CALC
+		CALL SIMULATE_TRAIN_SHOW
+		CALL MESSAGE_SYASEION_K73
+		CALL CHECK_NINSHIN_ALLACTOR
+		PRINTFORML
+		PRINTFORML
+		PRINTFORMW
+		PRINTFORML
+		CALL PRINT_STRW, @"_緑_午後　4:00_緑_"
+		PRINTFORML
+		CALL SIMULATE_TRAIN_FIRST
+		MEMO_ORGASM = EXP:PLAYER:射精経験
+		FOR LCOUNT, 0, 100
+		CALL SIMULATE_TRAIN_COM, 68, 4
+		SIF EXP:PLAYER:射精経験 > MEMO_ORGASM
+			BREAK
+		NEXT
+		CALL SIMULATE_TRAIN_CALC
+		CALL SIMULATE_TRAIN_SHOW
+		CALL MESSAGE_SYASEION_K73
+		CALL CHECK_NINSHIN_ALLACTOR
+		PRINTFORML
+		PRINTFORML
+		PRINTFORMW
+		PRINTFORML
+		CALL PRINT_STRW, @"_緑_午後　5:00_緑_"
+		PRINTFORML
+		PRINTFORMW ………あれから何時間経ったのだろうか、まだ下半身に違和感を感じる。
+		CALL EMOTION_PLUS, "紅潮２/对话框！/通常眉/いー" ,PLAYER
+		CALL PRINT_STRW, @"「あ_UH_やっと起きたね後輩酱…_BBHH_」"
+		PRINTFORMW まだ日向は種付けを続けていたようだ。
+		PRINTFORMW 「…う～ん、さすがにずっとしてると疲れるね～」
+		PRINTFORMW 「これで一旦区切りをつけようかな。」
+		CALL MESSAGE_PLAY_K73
+		PRINTFORMW 種付けに区切りが付けられ…ようやく阴茎を引き抜かれたが、数時間你の中に埋まっていたせいか喪失感がある。
+		PRINTFORMW 腹部に溜まっていた子種は剛直という支えを失い、下品な音を立てて体外に放出されていく…
+		PRINTFORMW 不久、溢れ出した精液は床からも零れ落ち…床までも汚した…
+		CALL SIMULATE_TRAIN_COM, 265, 2
+	TARGET = MEMO_TARGET
+	PLAYER = MEMO_PLAYER
+	;地の文
+	CFLAG:TARGET:日向约会 = 1
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 60
+	;それぞれ可能なもののコメントアウトを取下
+	TFLAG:约会中H可能 = 0
+	TFLAG:约会中牵手可能 = 0
+	TFLAG:偷瞄内衣可能 = 0
+	TFLAG:泳装约会 = 0
+CASE "追加選択肢之２"
+	PRINTFORMW 「台詞」
+	;地の文
+	PRINTFORMW %SAVESTR:约会%での%CALLNAME:TARGET%の反応
+	;地の文を用意していない場合には汎用のものを使う
+	;CALL DAILY_MESSAGE, "约会本番"
+	PRINTL 
+	;情緒BOUNSが高い場所でFLAG:情緒+60、普通ならFLAG:情緒+30、约会っぽくない場所だと修正无
+	FLAG:情緒 += 30
+	;それぞれ可能なもののコメントアウトを取下
+	;TFLAG:约会中H可能 = 1
+	;TFLAG:约会中牵手可能 = 1
+	;TFLAG:偷瞄内衣可能 = 1
+	;TFLAG:泳装约会 = 1
+ENDSELECT
+
+;-------------------------------------------------
+;换地方指令の選択肢を追加
+@MOVE_K73_ADDSELECT
+;STR:選択肢 += "追加選択肢その１/"
+;STR:選択肢 += "追加選択肢之２/"
+
+;-------------------------------------------------
+@SYOZYOSOTU_K73
+PRINTL
+TALENT:TARGET:処女 = 0
+EXP:TARGET:特別経験 += 1
+EXP:PLAYER:処女簒奪経験 += 1
+SETCOLOR 255,255,0
+PRINTL ＜処女喪失＞
+PRINTL 特別経験＋１
+RESETCOLOR

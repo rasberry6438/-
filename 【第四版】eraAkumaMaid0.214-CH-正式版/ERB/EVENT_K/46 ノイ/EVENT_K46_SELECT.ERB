@@ -1,0 +1,383 @@
+﻿;-------------------------------------------------
+;ここに記述する事で各指令の選択肢を増やすことができる
+;X1は角色番号に置換してください
+;-------------------------------------------------
+;お願い・取引での選択肢を追加。番号は80～89を使ってよい
+@WISH_K46_ADDSELECT
+;女装or男装に姿を変えるお願い
+;乃々君の女装を就这様移植したもの
+IF CEVENT("女装")
+	STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("服を戻して", 16)% … %CALLNAME:TARGET%の服を戻してもらいます/
+ELSE
+	STR:選択肢 = %STR:選択肢% [80] %TEXT_LJ("女装して", 16)% … %CALLNAME:TARGET%に女装してもらいます/
+ENDIF
+
+SIF CEVENT("诺伊七変化")
+	STR:選択肢 = %STR:選択肢% [81] %TEXT_LJ("口調を変えて", 16)% … %CALLNAME:TARGET%とエッチするときの口調を変えてもらいます/
+
+IF CONFIG("部員間Ｈ") && MARK:屈服刻印 >= 1
+	IF CEVENT("部員間交流")
+		STR:選択肢 = %STR:選択肢% [82] %TEXT_LJ("交流を止める", 16)% … %CALLNAME:(TO_NUMBER(CFLAG:お相手))%との交流
+		IF CEVENTS("部員間交流") == "エロ有"
+			SIF FIL_COMP("交流接吻")
+				STR:選択肢 += "[接吻]"
+			SIF FIL_COMP("交流Ｖ性交")
+				STR:選択肢 += "[Ｖ性交]"
+			SIF FIL_COMP("生許可")
+				STR:選択肢 += "[生許可]"
+			SIF FIL_COMP("奪処女")
+				STR:選択肢 += "[奪処女]"
+			SIF FIL_COMP("交流Ａ性交")
+				STR:選択肢 += "[Ａ性交]"
+			SIF FIL_COMP("交流Ａ挿入")
+				STR:選択肢 += "[Ａ挿入]"
+		ENDIF
+		STR:選択肢 += "を止めてもらう/"
+
+		SIF CEVENTS("部員間交流") == "エロ有"
+			STR:選択肢 = %STR:選択肢% [83] %TEXT_LJ("Ｈ的交流の内容", 16)% … %CALLNAME:(TO_NUMBER(CFLAG:お相手))%との交流について細かく拜托了/
+	ELSE
+		STR:選択肢 = %STR:選択肢% [82] %TEXT_LJ("交流してもらう", 16)% … 他生徒と交流してもらう（部員間のＨ表現有）/
+	ENDIF
+ENDIF
+
+
+;お願い・取引で増やした選択肢の地の文と台詞
+@KOJO_WISH_K46_ADDSELECT, ARGS
+#DIMS R_TABLE
+#DIMS R_CHOICE
+#DIM ACTOR
+#DIM CHOICE
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+
+SELECTCASE ARGS
+CASE "服を戻して"
+	PRINTFORMW %CALLNAME:MASTER%希望他%ARGS%。
+	PRINTL 
+	PRINTFORMW 「哦？你是希望我穿平时那样的衣服来的吗？」
+	PRINTFORMW 「明白。但现在不行，我明天再换衣服」
+	PRINTL 
+	PRINTFORMW %CALLNAME:TARGET%明天会穿着男装来部室玩了。
+	CALL DEL_CEVENT, "女装"
+	CALL TIMEEVENT_K46
+	;フラグを弄る場合はそれもここで行う
+CASE "女装して"
+	PRINTFORMW %CALLNAME:MASTER%希望他%ARGS%。
+	PRINTL 
+	PRINTFORMW 「你想我穿女装吗」
+	PRINTFORMW 「我知道了。……不要笑哦？」
+	PRINTL 
+	PRINTFORMW %CALLNAME:TARGET%明天会穿着女装来部室玩了。
+	CALL SET_CEVENT, "女装"
+	CALL TIMEEVENT_K46
+	;フラグを弄る場合はそれもここで行う
+CASE "口調を変えて"
+	PRINTFORMW %CALLNAME:MASTER%希望他%ARGS%。
+	PRINTL 
+	PRINTFORMW 「嗯？你想我换个语气？」
+	PRINTFORMW 「如果只是一会儿也没関系，但是……你喜欢什么样的感觉？」
+	CALL PRINT_SELECT, "落ち着いた感じで/敬語で精心/自分に甘えてくれる感じで/傲嬌っぽく/いつもと同じ感じで", "果然还是算了"
+	IF RESULT == 100
+		PRINTFORMW 「嗯，不用改吗？行」
+	ELSE
+		;PRINT_SELECTが答えの文字列を保存しないのを忘れていたので、ここでR_CHOICEに移しておく
+		SELECTCASE RESULT
+		CASE 0
+			R_CHOICE = 落ち着いた感じで
+		CASE 1
+			R_CHOICE = 敬語で精心
+		CASE 2
+			R_CHOICE = 自分に甘えてくれる感じで
+		CASE 3
+			R_CHOICE = 傲嬌っぽく
+		CASE 4
+			R_CHOICE = いつもと同じ感じで
+		ENDSELECT
+		CALL DEL_CEVENT, "口調：穏やか"
+		CALL DEL_CEVENT, "口調：丁寧"
+		CALL DEL_CEVENT, "口調：甘えんぼ"
+		CALL DEL_CEVENT, "口調：傲嬌"
+		PRINTFORMW 「原来如此……希望用%R_CHOICE%的语气来聊天吗」
+		PRINTFORM 「那么等等……
+		SELECTCASE R_CHOICE
+		CASE "落ち着いた感じで"
+			PRINTFORMW 这样的感觉可以吗？」
+			PRINTFORMW 「以后和%CALLNAME:MASTER%桑做色情的事的时候、我会这样说哟」
+			PRINTFORMW 「以后也多多指教了、%CALLNAME:MASTER%桑」
+			CALL SET_CEVENT, "口調：穏やか"
+		CASE "敬語で精心"
+			PRINTFORMW 这样可以吗」
+			PRINTFORMW 「%CALLNAME:MASTER%老师做性方面的事情的话，就用这种说话方式吧」
+			PRINTFORMW 「那么，今后也请继续指导我」
+			CALL SET_CEVENT, "口調：丁寧"
+		CASE "自分に甘えてくれる感じで"
+			PRINTFORMW 这样的感觉可以吗？」
+			PRINTFORMW 「和%CALLNAME:MASTER%\@TRUE_SEX(MASTER) == "男性" && TALENT:MASTER:伪娘 == 0 ? 做爱 # 做爱\@的时候我就这样说」
+			CALL PRINT_STRW, @"「呼呼_H_我最喜欢了，我想要更多_H_」"
+			CALL SET_CEVENT, "口調：甘えんぼ"
+		CASE "傲嬌っぽく"
+			PRINTFORMW 这样你满意了吧」
+			PRINTFORMW 「只会对你这样说话……啊，别误会了」
+			PRINTFORMW 「总之，请多関照了」
+			CALL SET_CEVENT, "口調：傲嬌"
+		CASE "いつもと同じ感じで"
+			PRINTFORMW 虽然这样说，但是说话方式和平时没什么不同」
+			PRINTFORMW 「今后也请多多関照吧？　%CNAME("主人")%」
+		ENDSELECT
+	ENDIF
+CASE "交流を止める"
+	PRINTFORMW 「就这样结束吗？我知道了」
+	PRINTFORMW 「……说真的、%CNAME("二人称")%该不会是因为好奇才这样要求的吧？」
+	CHOICE = TO_NUMBER(CFLAG:お相手)
+	CFLAG:CHOICE:お相手 = 0
+	CFLAG:お相手 = 0
+	CFLAG:交流詳細过滤器 = 0
+	CALL DEL_CEVENT_GROUP, "部員間交流"
+CASE "交流してもらう"
+	IF CEVENT("注意事項") == 0
+		PRINTFORML 
+		CALL PRINT_STRW, @"_黄色_注意！"
+		CALL PRINT_STRW, @"_黄色_这个请求会根据选择对PLAY者产生性交描写"
+		CALL PRINT_STRW, @"_黄色_那也可以吗？（按「是」则開启事件，并且上述注意事项将不再显示）"
+		CALL PRINT_SELECT, "是的/算了"
+		IF RESULT == 0
+			CALL SET_CEVENT, "注意事項"
+		ELSE
+			RETURN 0
+		ENDIF
+	ENDIF
+
+	PRINTFORMW 「……也就是说、要让%CNAME("一人称")%来满足其他部员的性欲吗？」
+	PRINTFORMW 「嗯，没事的。……虽然%CNAME("一人称")%不是很忙、说起来平时也总是一个人呆着」
+	PRINTFORMW 「那么，需要我帮谁？」
+	PRINTFORML 
+
+	PRINTFORML (関于没有特别注意事项的角色,在和诺伊関系好的时候也可以叫醒H的活动)
+	FOR LCOUNT, 2, CHARANUM
+		SIF LCOUNT == TARGET
+			CONTINUE
+		PRINTFORM  [{LCOUNT, 2}] %TEXT_LJ(CALLNAME:LCOUNT, 16)%
+		;どうあがいてもＨはしない相手
+		IF CFLAG:LCOUNT:ＮＴＲ禁止 == 1 || TALENT:LCOUNT:討厭男人 >= 2
+			CALL PRINT_STRL, "黄色_※绝对不会发生H的活动。只是喝茶※"
+		ELSEIF CONDS("部員間Ｈ条件", LCOUNT) != ""
+			CALL PRINT_STRL, @"爱心粉紅_%CONDS("部員間Ｈ条件", LCOUNT)%仅限情况H发生"
+		ELSE
+		;	CALL PRINT_STRL, "爱心粉紅_Ｈ発生"
+			PRINTL 
+		ENDIF
+	NEXT
+	PRINTFORML [100] 还是算了
+	$INPUT_LOOP
+	CALL INPUT_SELECT, LCOUNT, 100
+	CHOICE = RESULT
+
+	SELECTCASE CHOICE
+	CASE 100
+		PRINTFORMW 「算了？好的」
+		PRINTFORMW 「……说真的、%CNAME("二人称")%该不会是因为好奇才这样要求的吧？」
+		RETURN 0
+	CASE TARGET, IS < 2, IS >= CHARANUM
+		GOTO INPUT_LOOP
+	ENDSELECT
+	DRAWLINE
+
+	;並び替え対策で識別番号を使う。TO_NUMBER(BASE:ARG:識別番号) = ARGとなることに注意
+	;BASE:識別番号 が 寝取り中の角色は FINDCHARA(CFLAG:お相手, BASE:識別番号)で叫出来こともできる
+	CFLAG:CHOICE:お相手 = BASE:識別番号
+	CFLAG:お相手 = BASE:CHOICE:識別番号
+
+	ACTOR = TO_NUMBER(CFLAG:お相手)
+
+	;交流確率は默认ルトでは50%
+	;诺伊君に持たせたほうが検索しやすいのでそうする
+	;現状は設定の度重置される方式で
+	CFLAG:交流確率 = 50
+	PRINTFORMW %CALLNAME:MASTER%要求%CALLNAME:TARGET%和%CALLNAME:ACTOR%搞好関系
+
+	IF (CFLAG:ACTOR:ＮＴＲ禁止 == 1 || TALENT:ACTOR:討厭男人 >= 2) == 0
+		PRINTFORML 
+		PRINTFORMW ……这时、%CALLNAME:MASTER%的脑子里突然来了灵感
+		PRINTFORMW 『如果%CALLNAME:TARGET%和%CALLNAME:ACTOR%发生了関系会怎样呢』或者说……
+		PRINTFORMW ……你允许%CALLNAME:TARGET%和%CALLNAME:ACTOR%发生肉体上的関系吗？
+		CALL PRINT_SELECT, "允许(部員間有可能发生H交流)/不允许"
+		IF RESULT == 0
+			CALL SET_CEVENT, "部員間交流：エロ有"
+		ELSE
+			CALL SET_CEVENT, "部員間交流：非エロ"
+		ENDIF
+	ELSE
+		CALL SET_CEVENT, "部員間交流：非エロ"
+	ENDIF
+
+	PRINTFORML 
+	IF CEVENTS("部員間交流") == "エロ有"
+		PRINTFORMW 「……%CNAME("二人称")%啊」
+		PRINTFORMW 「本来就是社团活动、%CNAME("一人称")%也会来帮忙的」
+		PRINTFORMW 「当然，我是不会理睬完全不感兴趣的人的。」
+	ELSE
+		PRINTFORMW 「嗯，我明白了」
+		PRINTFORMW 「%CNAME("二人称")%不用担心%CNAME("一人称")%」
+	ENDIF
+	PRINTFORMW %CALLNAME:TARGET%和%CALLNAME:ACTOR%開始了\@ CEVENTS("部員間交流") == "エロ有" ? 工口意义上的 # \@交流
+
+	SIF CEVENTS("部員間交流") != "エロ有"
+		RETURN 1
+
+	ARGS = Ｈ的交流の内容
+	RESTART
+
+CASE "Ｈ的交流の内容"
+	ACTOR = TO_NUMBER(CFLAG:お相手)
+
+	MEMO_LINECOUNT = LINECOUNT
+
+	PRINTL 
+	PRINTFORML 你想要什么样的H内容？(通过选择项目〇(ON)和－(OFF)来切换)
+	SIF COND("身嗜み：接吻独占", ACTOR) == 0
+		PRINTFORML  [ 0] \@ FIL_COMP("交流接吻") ? ○ # －\@ 允许接吻
+	IF TALENT:ACTOR:男性 == 0 && COND("身嗜み：Ｖ独占", ACTOR) == 0
+		PRINTFORML  [ 1] \@ FIL_COMP("交流Ｖ性交") ? ○ # －\@ 允许性交
+		PRINTFORML  [ 2] \@ FIL_COMP("生許可") ? ○ # －\@ 允许无套性交
+		SIF TALENT:ACTOR:処女
+			PRINTFORML  [ 3] \@ FIL_COMP("奪処女") ? ○ # －\@ 允许破处
+	ENDIF
+	SIF COND("身嗜み：Ａ独占", ACTOR) == 0
+		PRINTFORML  [ 4] \@ FIL_COMP("交流Ａ性交") ? ○ # －\@ 允许菊穴性交
+	SIF COND("身嗜み：Ａ独占") == 0
+		PRINTFORML  [ 5] \@ FIL_COMP("交流Ａ挿入") ? ○ # －\@ 允许对诺伊的菊穴性交
+	PRINTFORML  [ 6] 交流の頻度を設定する(現在は{CFLAG:交流確率}％)
+
+	PRINTFORML [100] 以上的安排就OK了
+
+	CALL INPUT_SELECT, 7, 100
+
+	SELECTCASE RESULT
+	CASE 100
+		PRINTFORMW 「哦，是吗」
+		PRINTFORMW 「有什么事你说吧」
+		RETURN 1
+	CASE 0
+		IF COND("身嗜み：接吻独占", ACTOR) == 0
+			INVERTBIT CFLAG:交流詳細过滤器, 0
+			IF FIL_COMP("交流接吻")
+				PRINTFORMW 「可以接吻吗，我知道了。」
+				PRINTFORMW 「啊，虽说是初吻，但本人同意了就行」
+			ELSE
+				PRINTFORMW 「嗯，还是算了比较好」
+				PRINTFORMW 「……话说回来、%CNAME("二人称")%的想法真是出人意料啊」
+			ENDIF
+		ENDIF
+	CASE 1
+		IF TALENT:ACTOR:男性 == 0 && COND("身嗜み：Ｖ独占", ACTOR) == 0
+			INVERTBIT CFLAG:交流詳細过滤器, 1
+			IF FIL_COMP("交流Ｖ性交")
+				PRINTFORMW 「可以插进去吗」
+				PRINTFORMW 「……啊？想我干这种事。%CNAME("二人称")%这么说的话倒也不太惊讶」
+			ELSE
+				PRINTFORMW 「不用性交了吗？」
+				PRINTFORMW 「明白了。也是，没人喜欢自己被人动手动脚」
+			ENDIF
+		ENDIF
+	CASE 2
+		IF TALENT:ACTOR:男性 == 0 && COND("身嗜み：Ｖ独占", ACTOR) == 0
+			INVERTBIT CFLAG:交流詳細过滤器, 2
+			IF FIL_COMP("生許可")
+				PRINTFORMW 「和%CNAME(CALLNAME:ACTOR)%无套吗……%CNAME("二人称")% 真是变态啊……」
+				PRINTFORMW 「……算了。必须要先和%CNAME(CALLNAME:ACTOR)%说一声」
+				;自動的にＶ性交も許可
+				SETBIT CFLAG:交流詳細过滤器, 1
+			ELSE
+				PRINTFORMW 「是应该使用安全套啊」
+				PRINTFORMW 「……说实话、%CNAME("二人称")%说出这样正经的话真令人放心」
+			ENDIF
+		ENDIF
+	CASE 3
+		IF TALENT:ACTOR:男性 == 0 && TALENT:ACTOR:処女 && COND("身嗜み：Ｖ独占", ACTOR) == 0
+			INVERTBIT CFLAG:交流詳細过滤器, 3
+			IF FIL_COMP("奪処女")
+				PRINTFORMW 「连%CNAME("一人称")%的处女都不在意吗……%CNAME("二人称")%、真是变态啊……」
+				PRINTFORMW 「……算了。必须要先和%CNAME(CALLNAME:ACTOR)%说一声」
+				;自動的にＶ性交も許可
+				SETBIT CFLAG:交流詳細过滤器, 1
+			ELSE
+				PRINTFORMW 「处女不是可以随随便便的东西……唉，第一次还是很重要的」
+				PRINTFORMW 「……别人这么说都正常、%CNAME("二人称")%说这样的话真的很违和……」
+			ENDIF
+		ENDIF
+	CASE 4
+		IF COND("身嗜み：Ａ独占", ACTOR) == 0
+			INVERTBIT CFLAG:交流詳細过滤器, 4
+			IF FIL_COMP("交流Ａ性交")
+				PRINTFORMW 「肛交也行啊」
+				PRINTFORMW 「有人认为肛交不能算出轨……%CNAME("二人称")%也这样想吗？」
+			ELSE
+				PRINTFORMW 「不能插菊花了吗」
+				PRINTFORMW 「好吧、%CNAME("一人称")%还真不习惯」
+			ENDIF
+		ENDIF
+	CASE 5
+		IF COND("身嗜み：Ａ独占") == 0
+			INVERTBIT CFLAG:交流詳細过滤器, 5
+			IF FIL_COMP("交流Ａ挿入")
+				PRINTFORMW 「要用%CNAME("一人称")%的屁股啊」
+				PRINTFORMW 「……不过，要和其他家伙做的话，那可真是少见的请求啊」
+			ELSE
+				PRINTFORMW 「不想%CNAME("一人称")%去肛交吗」
+				PRINTFORMW 「都不带贞操带，只有口頭约定吗……行吧」
+			ENDIF
+		ENDIF
+	;CASE 6
+	;	IF (CFLAG:ACTOR:ＮＴＲ禁止 == 1 || TALENT:ACTOR:討厭男人 >= 2) == 0
+	;		IF CEVENTS("部員間交流") == "エロ有"
+	;			PRINTFORMW 「おう、了解した」
+	;			PRINTFORMW 「……別に%CNAME(CALLNAME:ACTOR)%は悪くなかったぞ。両方とも合意の上でだしな」
+	;			PRINTFORMW 「ただ%CNAME("二人称")%が嫌がるのは%CNAME("一人称")%にとっても%CNAME(CALLNAME:ACTOR)%にとっても好ましくないってだけだよ」
+	;			CALL DEL_CEVENT_GROUP, "部員間交流"
+	;			CALL SET_CEVENT, "部員間交流：非エロ"
+	;		ELSE
+	;			PRINTFORMW 「……%CNAME("二人称")%ってヤツは……」
+	;			PRINTFORMW 「……まあいい。相手も別に嫌そうじゃないならやってやるよ」
+	;			PRINTFORMW 「どうしても嫌变成了のならすぐ止めるからもう一度言ってくれ」
+	;			CALL DEL_CEVENT_GROUP, "部員間交流"
+	;			CALL SET_CEVENT, "部員間交流：エロ有"
+	;		ENDIF
+	;	ENDIF
+	CASE 6
+		PRINTFORMW 「嗯，那么我们的事多久一次合适呢？」
+		$INPUT_LOOP_2
+		CALL PRINT_STRL, @"_黄色_设定%CALLNAME:TARGET%和%CALLNAME:ACTOR%的交流频率（最低1％、最高100％）。输入999频率不变"
+		CALL PRINT_STRL, @"_黄色_现在的频率（概率）是{CFLAG:交流確率}％"
+		CALL INPUT_SELECT, 101, 999
+		SELECTCASE RESULT
+		CASE 999
+			PRINTFORMW 「保持这个频率吗，明白了。」
+		CASE 0
+			GOTO INPUT_LOOP_2
+		CASE 1 TO 100
+			CFLAG:交流確率 = RESULT
+			SELECTCASE CFLAG:交流確率
+			CASE IS >= 90
+				PRINTFORMW 「……可以经常进行吗」
+				PRINTFORMW 「那么说、%CNAME("二人称")%很忙或者说很特别啊……」
+			CASE IS >= 60
+				PRINTFORMW 「好好见面真好啊」
+				PRINTFORMW 「我会照顾好别人的、%CNAME("二人称")%不要对这种事有感觉啊」
+			CASE IS >= 30
+				PRINTFORMW 「适当地做一次就好了。」
+				PRINTFORMW 「我会在%CNAME("二人称")%忙的时候努力的」
+			CASE IS >= 10
+				PRINTFORMW 「偶尔来一次就行了吧」
+				PRINTFORMW 「%CNAME("二人称")%也要努力别让%CNAME(CALLNAME:ACTOR)%寂寞哦」
+			CASEELSE
+				PRINTFORMW 「这么久才来一次啊」
+				PRINTFORMW 「……嘛、偶尔不带%CNAME("二人称")%玩也很有趣吧」
+			ENDSELECT
+		ENDSELECT
+	ENDSELECT
+
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+
+ENDSELECT

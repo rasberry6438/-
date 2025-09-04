@@ -1,0 +1,161 @@
+﻿;-------------------------------------------------
+;角色ARGの淫紋を選ぶ。ARG == 0 の場合はドッペル你を使ってのシミュレーションモード
+;-------------------------------------------------
+@SIMULATE_INMON, ARG
+#DIM MEMO_INMON
+#DIM MEMO_REDRAW
+
+MEMO_REDRAW = CURRENTREDRAW()
+REDRAW 0
+
+;淫紋設定中フラグＯＮ
+SETBIT FLAG:状況判定, 44
+
+SELECTCASE ARG
+CASE 0
+	ADDCHARA 99
+	ARG = CHARANUM - 1
+	CALL SET_3SIZE, ARG
+	BASE:ARG:腰圍 = BASE:ARG:身高 * 38 /100
+	TALENT:ARG:肤色 = 0
+	MARK:ARG:淫紋 = 2
+	CALL SIMULATE_INMON_MAIN, ARG
+	CALL DELETE_CHARA, CHARANUM - 1
+CASEELSE
+	MEMO_INMON = MARK:ARG:淫紋
+	SIF MARK:ARG:淫紋 == 0
+		MARK:ARG:淫紋 = 1
+	CALL SIMULATE_INMON_MAIN, ARG
+	;仮想角色で無いなら淫紋を元に戻す
+	SIF COND("仮想角色", ARG) == 0
+		MARK:ARG:淫紋 = MEMO_INMON
+ENDSELECT
+
+CLEARBIT FLAG:状況判定, 44
+REDRAW MEMO_REDRAW
+
+@SIMULATE_INMON_MAIN, ARG
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+#DIMS CHOICES
+MEMO_LINECOUNT = LINECOUNT
+
+PRINTL 
+CALL PRINT_CUTIN, "腹部", ARG
+
+IF COND("仮想角色", ARG)
+	CALL SELECTSL, "普通/褐色肌/色白/青肌/色黒", "肤色：", @"　　　　肤色:%TEXT_LJ(CONDS("肤色", ARG), 13)%"
+	CALL SELECTSL, "普通/苗条/筋肉/豐腴", "肚子周围：", @"　　　肚子周围:%TEXT_LJ(CONDS("お腹の見た目", ARG), 13)%"
+	CALL SELECTSL, "没有/H型/棒型/十字架型/♂型/♀型/心型", "肚脐环：", @"　　肚脐环:%TEXT_LJ(CEVENTS("肚脐环", ARG), 13)%"
+	CALL SELECTSL, "没有/銀色/金色/赤/緑/紫/青", "恥丘穿環：", @"　　恥丘穿環:%TEXT_LJ(CEVENTS("恥丘穿環", ARG), 13)%"
+ENDIF
+PRINTL 
+
+CALL SELECTSL, "基本/羽化/改造/開花/寄生", "", @"　　　　　形状:%TEXT_LJ(CONDS("淫紋の種類", ARG), 13)%"
+CALL SELECTSL, "浸食/堕落/隷属/封入/聖翼", "", @"　　　　　　　　　　　　　　"
+PRINTL 
+CALL SELECTSL, "0LV/1LV/2LV/3LV/4LV", "", @"　　　　　段階:{MARK:ARG:淫紋}LV　　　　　"
+IF COND("仮想角色", ARG)
+	CALL SELECTSL, "平常/欲求不満/満足", "様子：", @"　　淫紋の様子:%TEXT_LJ(CONDS("淫紋の様子", ARG), 13)%"
+	CALL SELECTSL, "平常/妊娠中", "妊娠：", @"　　母体の状態:\@ BASE:ARG:受精 ? 妊娠中 # 平常　 \@ 　　　"
+ENDIF
+PRINTL 
+CALL PRINT_STRL, "　　　这様就好？　　　　　_BUTTON_[ＯＫ！]"
+
+INPUTS
+CHOICES = %EXTSTR(RESULTS, "[", "]")%
+CLEARLINE 1
+
+SELECTCASE CHOICES
+CASE "ＯＫ！"
+	SIF CEVENTS("淫紋", ARG) == ""
+		CALL SET_CEVENT, "淫紋：基本", ARG
+
+	PRINTL 
+	RETURN 1
+CASE "肤色：普通"
+	TALENT:ARG:肤色 = 0
+CASE "肤色：褐色肌"
+	TALENT:ARG:肤色 = 1
+CASE "肤色：色白"
+	TALENT:ARG:肤色 = 2
+CASE "肤色：青肌"
+	TALENT:ARG:肤色 = 3
+CASE "肤色：色黒"
+	TALENT:ARG:肤色 = 4
+
+CASE "肚子周围：普通"
+	TALENT:ARG:筋肉 = 0
+	BASE:ARG:腰圍 = BASE:ARG:身高 * (CALCF("苗条倍数", ARG) + CALCF("豐腴倍数", ARG) ) /200
+CASE "肚子周围：苗条"
+	TALENT:ARG:筋肉 = 0
+	BASE:ARG:腰圍 = BASE:ARG:身高 * (CALCF("苗条倍数", ARG) - 1) /100
+CASE "肚子周围：筋肉"
+	TALENT:ARG:筋肉 = 1
+	BASE:ARG:腰圍 = BASE:ARG:身高 * 38 /100
+CASE "肚子周围：豐腴"
+	TALENT:ARG:筋肉 = 0
+	BASE:ARG:腰圍 = BASE:ARG:身高 * (CALCF("豐腴倍数", ARG) + 1) /100
+
+;形状
+CASE "基本", "羽化", "改造", "開花", "寄生", "浸食", "堕落", "隷属", "封入", "聖翼"
+	CALL DEL_CEVENT_GROUP, "淫紋", ARG
+	CALL SET_CEVENT, @"淫紋：%CHOICES%", ARG
+;段階
+CASE "0LV"
+	MARK:ARG:淫紋 = 0
+CASE "1LV"
+	MARK:ARG:淫紋 = 1
+CASE "2LV"
+	MARK:ARG:淫紋 = 2
+CASE "3LV"
+	MARK:ARG:淫紋 = 3
+CASE "4LV"
+	MARK:ARG:淫紋 = 4
+
+;淫紋の様子
+CASE "様子：平常"
+	CFLAG:ARG:躁动难忍 = 0
+	CFLAG:ARG:Ａ已中出 = 0
+	CFLAG:ARG:Ｖ已中出 = 0
+CASE "様子：欲求不満"
+	CFLAG:ARG:躁动难忍 = 1
+	CFLAG:ARG:Ａ已中出 = 0
+	CFLAG:ARG:Ｖ已中出 = 0
+CASE "様子：満足"
+	CFLAG:ARG:躁动难忍 = 0
+	IF TALENT:ARG:男性 || TALENT:ARG:尻穴狂い
+		CFLAG:ARG:Ａ已中出 = 1
+	ELSE
+		CFLAG:ARG:Ｖ已中出 = 1
+	ENDIF
+
+;妊娠状態
+CASE "妊娠：妊娠中"
+	BASE:ARG:受精 = 1
+CASE "妊娠：平常"
+	BASE:ARG:受精 = 0
+
+;肚脐环
+CASE "肚脐环：没有"
+	CALL DEL_CEVENT_GROUP, "肚脐环", ARG
+	TALENT:ARG:肚脐环 = 0
+CASE "肚脐环：H型", "肚脐环：棒型", "肚脐环：十字架型", "肚脐环：♂型", "肚脐环：♀型", "肚脐环：心型"
+	CALL DEL_CEVENT_GROUP, "肚脐环", ARG
+	CALL SET_CEVENT, CHOICES, ARG
+	TALENT:ARG:肚脐环 = 1
+;恥丘穿環
+CASE "恥丘穿環：没有"
+	CALL DEL_CEVENT_GROUP, "恥丘穿環", ARG
+	TALENT:ARG:恥丘穿環 = 0
+CASE "恥丘穿環：銀色", "恥丘穿環：金色", "恥丘穿環：赤", "恥丘穿環：緑", "恥丘穿環：紫", "恥丘穿環：青"
+	CALL DEL_CEVENT_GROUP, "恥丘穿環", ARG
+	CALL SET_CEVENT, CHOICES, ARG
+	TALENT:ARG:恥丘穿環 = 1
+ENDSELECT
+
+CLEARLINE LINECOUNT - MEMO_LINECOUNT
+RESTART
+
+
+

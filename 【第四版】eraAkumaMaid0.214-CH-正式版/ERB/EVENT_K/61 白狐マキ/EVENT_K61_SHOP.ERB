@@ -1,0 +1,352 @@
+﻿;-------------------------------------------------
+;交易画面と、购物の際の台詞を記述します
+;-------------------------------------------------
+;交易画面での台詞。悪魔以外は大部分が不要です
+;-------------------------------------------------
+@KOJO_WISH_K61, ARGS
+#DIM MEMO_LINECOUNT
+
+MEMO_LINECOUNT = LINECOUNT
+
+SELECTCASE ARGS
+	CASE "交易開始"
+		;自分を相手にＨしてる最中にお願いされた
+		IF COND("Ｈ最中の交易")
+			;しかも挿入中！
+			IF INSERT("挿入相手") == MASTER
+
+			ELSE
+
+			ENDIF
+		ELSE
+			PRINTDATAW
+				DATA 「嗯~？」
+				DATA 「嗯？」
+				DATA 「什么？」
+				DATA 「怎么啦？」
+			ENDDATA
+			RETURN 1
+		ENDIF
+	CASE "愛の告白"
+		;告白成功！
+		IF TALENT:相思相愛
+			PRINTFORMW 「嗯、%CNAME("一人称")%也」
+			PRINTFORMW 「……喜欢」
+			PRINTFORML %CALLNAME:TARGET%紧紧抱住%CALLNAME:PLAYER%、把脸埋进怀里。
+			PRINTFORMW %CALLNAME:TARGET%可爱的小脸红扑扑的。
+			RETURN 1
+		ELSE
+			;失敗
+			PRINTDATAW
+				DATA 「为什么？」
+				DATA 「好麻烦」
+				DATA 「诶~」
+				DATA 「嗯？」
+			ENDDATA
+			RETURN 1
+		ENDIF
+	CASE "胖次交易"
+		;胖次を要前の会話。
+		;ただし、悪魔の場合には魂を払っているので確実に渡すことになる
+		;ここで本来胖次を给かどうかなどを加味して分岐を設ける事も出来る。特に書かなくてもよい
+		;TFLAG:取引承諾 = 0とすると胖次拒否に行くようになり、TFLAG:取引承諾 = 1とすると判定無視で胖次を渡せるようになる
+		;TFLAG:取引価格 に数字を入れる事で好きな額を要求できるようになる。基準相場は$500です
+		;TFLAG:値上げ交渉 に数字を入れておくと、断られた際もその値上乗せで胖次を渡す展開に出来る
+		;TFLAG:取引拒否 = 1 とすると本来交易できるかに関わらず、交易しなくなる
+		;ＯＫ！
+		IF TFLAG:取引承諾
+			;心情がよければタダ
+			IF COND("合意：胖次交易") && (CFLAG:心情好|| !RANDC(4))
+				PRINTDATAW
+					DATA 「嗯」
+					DATA 「知道啦」
+					DATA 「可以哦」
+				ENDDATA
+				TFLAG:取引価格 = 0
+				RETURN 1
+			ELSE
+				PRINTDATAW
+					DATA 「……那、给我零食」
+					DATA 「……那、给我零食嘛」
+				ENDDATA
+				TFLAG:取引価格 = 10
+				RETURN 1
+			ENDIF
+		ELSE
+			;断られる
+			;これを指定しておくと、実行値が足りない際にこの額上乗せで応じてくれるようになる
+			TFLAG:取引価格 = 10
+			TFLAG:値上げ交渉 = 10
+			RETURN 1
+		ENDIF
+	CASE "胖次"
+		;角色的には、お願い→拒否→それでもお願い、の流れの時点でもうあげちゃうくらいには押しに弱い
+		;値上げ交渉した
+		IF TFLAG:取引価格
+			PRINTDATAW
+				;餌につられると元気
+				DATA 「嗯！」
+			ENDDATA
+		ELSEIF TFLAG:取引価格 > 500
+			;相場より高い額を要求されるままに払った
+			DEBUGPRINTFORML KOJO_WISH_K61 ARGS %ARGS%, 相場より高額
+			PRINTFORMW 
+		ELSEIF TFLAG:値切った
+			;値切って相場と変わらず$500払う。ここでTFLAG:取引承諾 = 0とすることで拒否するのもよいでしょう
+			DEBUGPRINTFORML KOJO_WISH_K61 ARGS %ARGS%, 値切り
+			PRINTFORMW 
+			;基本ちょろいけど値切られると多分心情が悪くなる
+			TFLAG:取引承諾 = 0
+		ELSE
+			PRINTDATAW
+				DATA 「嗯」
+				DATA 「请」
+				DATA 「请便」
+			ENDDATA
+		ENDIF
+		;胖次を脱いで渡してくる汎用地の文
+		CALL DAILY_MESSAGE, "脱下胖次交了出去"
+		RETURN 1
+	CASE "全裸交易"
+		;TFLAG:値上げ交渉 に数字を入れておくと、断られた際もその値上乗せで服を脱掉展開に出来る
+		;TFLAG:取引拒否 = 1 とすると本来交易できるかに関わらず、交易しなくなる
+		;ＯＫ！
+		IF TFLAG:取引承諾
+
+		ELSE
+			;断られる
+			;これを指定しておくと、実行値が足りない際にこの額上乗せで応じてくれるようになる
+			;TFLAG:値上げ交渉 = 2000
+		ENDIF
+	CASE "全裸"
+		;値上げ交渉した("全裸交易"で設定した場合のみ)
+		IF TFLAG:値上げ交渉
+
+		ELSEIF COND("合意：全裸化") == 0
+			;交易初成功
+
+		ELSE
+
+		ENDIF
+		;汎用地の文
+		CALL EVENT_DATUI, "裸体"
+	CASE "全裸拒否"
+		IF TFLAG:取引拒否
+			;交易を拒否した際("全裸交易"で設定した場合のみ)
+
+		ELSEIF COND("合意：全裸化") && (CHARA_NUM("室内の邪魔者") || PLACE("個室") == 0)
+			;二人きりなら脱いでくれるけど状況が悪い
+
+		ELSE
+
+		ENDIF
+	CASE "髪型変更の感想"
+		;どの髪型变成了かで分岐可能
+		SELECTCASE CONDS("髪型の種類")
+			CASE CONDS("普段の髪型")
+				DEBUGPRINTFORML KOJO_WISH_K61 ARGS %ARGS%, 髪型の種類 %CONDS("髪型の種類")%
+			CASEELSE
+				DEBUGPRINTFORML KOJO_WISH_K61 ARGS %ARGS%, 髪型の種類 %CONDS("髪型の種類")%
+		ENDSELECT
+	CASE "胖次拒否"
+		;TODO なんか地の文のつながりと違和感ある
+		IF TFLAG:値上げ交渉
+			PRINTDATAW
+				DATA 「……那、给我一大堆零食」
+				DATA 「……那就、给我一大堆零食嘛」
+			ENDDATA
+			RETURN 1
+		ELSE
+			;おかしがもらえない
+			PRINTDATAW
+				DATA 「嗯」
+				DATA 「……这样吗」
+				DATA 「什么嘛」
+				DATA 「那就、不行」
+				DATA 「下次再说吧」
+				DATA 「切」
+				DATA 「零食……」
+				DATA 「嗯~……」
+			ENDDATA
+		ENDIF
+	CASE "爱称変更"
+		PRINTDATAW
+			DATA 「要做什么？」
+			DATA 「叫什么名字？」
+			DATA 「嗯」
+		ENDDATA
+	CASE "爱称変更中止"
+		PRINTDATAW
+			DATA 「嗯」
+			DATA 「这样啊」
+			DATA 「什么嘛」
+			DATA 「嗯~……」
+		ENDDATA
+	CASE "淫紋贴纸直前"
+		PRINTDATAW
+			DATA 「什么样的？」
+			DATA 「哪种的？」
+			DATA 「什么类型？」
+			DATA 「什么类型的？」
+		ENDDATA
+	CASE "淫紋贴纸"
+		PRINTDATAW
+			DATA 「可爱吗？」
+			DATA 「帅气吗？」
+		ENDDATA
+	CASE "爱称変更完了", "淫紋拒否", "连褲襪着替え拒否"
+		;汎用
+	CASEELSE
+		DEBUGPRINTFORML KOJO_WISH_K61 ARGS %ARGS%
+ENDSELECT
+
+;以下は汎用台詞(すでに喋っている場合には下には行かない)
+SIF LINECOUNT > MEMO_LINECOUNT
+	RETURN 1
+
+;汎用拒否
+IF STRCOUNT(ARGS, "拒否")
+	PRINTDATAW
+		DATA 「……不要」
+		DATA 「好麻烦」
+		DATA 「诶~、不要嘛」
+		DATA 「诶~」
+		DATA 「不要」
+		DATA 「为什么？」
+	ENDDATA
+	RETURN 1
+ELSEIF STRCOUNT(ARGS, "交易")
+	;汎用交易（特に記述することがないならスキップ）
+	;nothing
+	RETURN 0
+ELSE
+	;汎用ＯＫ
+	PRINTDATAW
+		DATA 「嗯」
+		DATA 「嗯~」
+		DATA 「可以哦」
+		DATA 「知道啦」
+	ENDDATA
+	RETURN 1
+ENDIF
+
+DEBUGPRINTFORML KOJO_WISH_K61 ARGS %ARGS%
+RETURN 0
+
+;-------------------------------------------------
+;购物での台詞
+;-------------------------------------------------
+@KOJO_SHOP_K61, ARGS
+;TODO なんかテンション高い
+
+SELECTCASE ARGS
+	CASE "一緒に出発"
+		;TODO なんか違和感ある
+		PRINTDATAL
+			DATA 「嗯！」
+			DATA 「出发」
+			DATA 「我出发啦~」
+			DATA 「我出門喏啦~」
+		ENDDATA
+		PRINTFORMW %CALLNAME:TARGET%通过開心地目を輝かせている。
+		RETURN 1
+	CASE "目送"
+		;NOTE テンポ悪くなりそうだけどどうしようか
+		PRINTDATAL
+			DATA 「嗯、路上小心」
+			DATA 「路上~小心」
+			DATA 「一路顺风~」
+		ENDDATA
+		PRINTDATAW
+			DATAFORM %CALLNAME:TARGET%随意地挥了挥手。
+			DATAFORM %CALLNAME:TARGET%用尾巴代替手摇晃了几下。
+		ENDDATA
+
+		RETURN 1
+	CASE "会計交代"
+		;保護者の代わりに何かするってなんかわくわくしたよね
+		PRINTDATAL
+			DATA 「可以吗？」
+			DATA 「到、底、要、选、哪、个、呢」
+			DATA 「嗯！」
+			DATA 「借我钱！」
+		ENDDATA
+		PRINTFORMW %CALLNAME:TARGET%通过楽しそうに目を輝かせている。
+		RETURN 1
+	CASE "商品購入"
+		;今買った物
+		SELECTCASE STR:購入道具
+				;NOTE 買ったものに対する反応が思いつかん
+			CASE "創口貼"
+				PRINTDATAL
+					DATA 「哪里受伤了？」
+					DATA 「伤到哪了吗？」
+					DATA 「哪里疼？」
+				ENDDATA
+				PRINTW 虽然买这个根本不是因为受伤呢。
+				RETURN 1
+			CASEELSE
+				PRINTDATAL
+					DATA 「请给我这个！」
+					DATA 「这个！」
+					DATA 「嗯！」
+					;よくわからないまま買う
+					DATA 「这是什么啊！」
+				ENDDATA
+				PRINTW 她真的知道自己在买什么吗……。
+				RETURN 1
+		ENDSELECT
+	CASE "询问有什么想要的东西"
+		PRINTDATAL
+			;基本便利店のノリ
+			DATA 「沙丁鱼干！」
+			DATA 「橘子牛奶果冻！」
+			DATA 「嗯、披萨派！」
+			DATA 「鱿鱼干！」
+			DATA 「炸鸡！」
+			DATA 「羊羹！」
+			DATA 「火腿片！」
+			DATA 「助眠药！」
+			;DATA 「んー……なんでもいい」
+		ENDDATA
+		PRINTL 很可惜、这里似乎没有卖呢。
+		RETURN 1
+	CASE "店内待機"
+		;とりあえず何か一個買った時or33％で喋る
+		SIF COND("買上品数") != 1 && RAND:3
+			RETURN 0
+
+		;TODO 薄着だとさむい分岐
+		PRINTDATAW
+			;買ってなくてもまいど有ー
+			DATA 「多谢惠顾~」
+			DATA 「要买什么？」
+			DATA 「嗯~」
+		ENDDATA
+		PRINTFORMW %CALLNAME:TARGET%通过どことなく楽しそうだ。
+		RETURN 1
+	CASE "购物終了"
+		;なにも買わなかった
+		IF COND("買上品数") == 0
+			PRINTDATAL
+				DATA 「这就要回去了吗？」
+				DATA 「什么都不买吗？」
+				DATA 「不买点什么嘛？」
+				DATA 「嗯~？」
+			ENDDATA
+			PRINTFORMW %CALLNAME:TARGET%通过どこかか无そうだ。
+			RETURN 1
+		ENDIF
+
+		PRINTDATAL
+			DATA 「多谢惠顾~」
+			DATA 「哎呀呀~真是多谢惠顾啦~」
+			DATA 「唔呼~」
+		ENDDATA
+		PRINTFORML %CALLNAME:TARGET%看起来心情不错。
+		PRINTFORMW 似乎一起购物让她非常開心。
+		RETURN 1
+	CASEELSE
+		DEBUGPRINTFORML KOJO_SHOP_K61 ARGS %ARGS%
+ENDSELECT
+

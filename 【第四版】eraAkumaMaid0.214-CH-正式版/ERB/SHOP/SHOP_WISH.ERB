@@ -1,0 +1,2379 @@
+﻿;-------------------------------------------------
+;悪魔と交易
+;-------------------------------------------------
+@EVENT_WISH
+PRINTL 
+CALL KOJO_WISH, "取引開始"
+IF COND("魂の取引可能")
+	PRINTFORMW  以一单位魂为代价、和[%CSTR:称号%]%NAME:TARGET%做交易。
+ELSEIF COND("天使の取引可能")
+	PRINTFORMW  付出一单位魂、 由[%CSTR:称号%]%NAME:TARGET%来实现愿望。
+ELSE
+	PRINTFORMW  拜托[%CSTR:称号%]%NAME:TARGET%。
+	PRINTFORMW ……根据要求的不同可能会被要求某些支付代价也说不定。
+ENDIF
+SIF COND("調教中")
+	CALL PRINT_STRW, "黄色_※因为是在H的过程所以大部分都是不能選択的※"
+CALL EVENT_WISH_MAIN
+
+CFLAG:刚睡醒 = 0
+SIF CFLAG:汗 >= 3
+	CFLAG:汗 = 2
+SIF CFLAG:MASTER:汗 >= 3
+	CFLAG:MASTER:汗 = 2
+
+
+@EVENT_WISH_MAIN
+#DIM MEMO_LINECOUNT
+#DIM MEMO_LINECOUNT2
+#DIM CHOICE
+#DIM ADDCOND_RESULT
+#DIM LCOUNT
+;例外的に不需要魂变成了場合にONになる
+#DIM NO_SOUL, 101
+;望みの名前。選択肢が存在するかの判定にも使う
+#DIMS WISHNAME, 101
+#DIM NO_WISH
+#DIM IS_CANCEL
+;肉体変化の望みで使用
+#DIMS MEMO_BODY
+;悪魔用の注釈
+#DIMS TEXT_AKUMA
+;具現用の注釈
+#DIMS TEXT_GUGEN_PLAYER
+#DIMS TEXT_GUGEN_TARGET
+;呼び名の記録
+#DIMS MEMO_CNAME
+#DIMS MEMO_CNAME_KANA
+#DIMS MEMO_MASTERCALLNAME
+#DIMS MEMO_NICKNAME
+;起きうるイベントの判定に使う
+#DIMS EVENT_TABLE
+#DIMS MEMO_STR
+#DIM TARGET_WISH
+
+MEMO_LINECOUNT = LINECOUNT
+
+;取引に関わるTFLAG初期化
+TFLAG:取引承諾 = 0
+TFLAG:取引価格 = 0
+TFLAG:値切った = 0
+TFLAG:値上げ交渉 = 0
+TFLAG:取引拒否 = 0
+
+PRINTL 
+DRAWLINE
+IF COND("魂の取引可能")
+	PRINTFORML  想要什么呢？(現在的%CALLNAME:MASTER%の魂：%TEXTS("0.01", BASE:MASTER:魂)%)
+ELSEIF COND("天使の取引可能")
+	PRINTFORML  想要什么呢？(現在的%CALLNAME:MASTER%の魂：%TEXTS("0.01", BASE:MASTER:魂)%)
+ELSE
+	PRINTFORML  想要什么呢？（所持金：%MONEY_C(MONEY)%）
+ENDIF
+PRINTL 
+
+TEXT_AKUMA = 
+SIF COND("魂の取引可能") || COND("天使の取引可能")
+	TEXT_AKUMA = \(不需要魂\)
+TEXT_GUGEN_PLAYER = 
+TEXT_GUGEN_TARGET = 
+SIF PENIS(PLAYER) == 0 && TALENT:PLAYER:具現
+	TEXT_GUGEN_PLAYER = 用[具現]自己长出的阴茎的大小为
+SIF PENIS(TARGET) == 0
+	TEXT_GUGEN_TARGET = 用[具現]长出的阴茎的大小为
+VARSET WISHNAME
+VARSET NO_SOUL
+
+STR:選択肢 = 
+
+;性処理など各種指令が実行できるか格子
+CALL CHECK_COM_ABLE, TARGET
+
+IF TALENT:相思相愛 == 0
+	STR:選択肢 = %STR:選択肢% [ 0] %TEXT_LJ("成为恋人！", 16)% … 进行愛的告白%TEXT_AKUMA%/
+	WISHNAME:0 = 愛の告白
+ENDIF
+
+IF COND("調教中") == 0
+	IF COND("胖次没収実行可能") == 0 || COND("胖次交易お願い可能") == 0
+		STR:選択肢 = %STR:選択肢%灰色/
+	ELSE
+		WISHNAME:1 = 胖次
+	ENDIF
+	;今は死に分岐
+	IF COND("合意：胖次没収")
+		STR:選択肢 = %STR:選択肢% [ 1] %TEXT_LJ("胖次", 16)% … 没収现在穿着的胖次/
+	ELSEIF COND("魂の取引可能") || COND("天使の取引可能")
+		IF COND("合意：胖次交易")
+			STR:選択肢 = %STR:選択肢% [ 1] %TEXT_LJ("胖次", 16)% … 獲得现在穿的胖次(已支付魂)/
+		ELSE
+			STR:選択肢 = %STR:選択肢% [ 1] %TEXT_LJ("胖次", 16)% … 用魂交换现在穿着的胖次/
+		ENDIF
+	ELSE
+		STR:選択肢 = %STR:選択肢% [ 1] %TEXT_LJ("胖次", 16)% … 用交渉让对方交出现在穿着的胖次/
+	ENDIF
+	IF COND("同居中")
+		IF COND("部室出現可能") && COND("同居解消可能")
+			WISHNAME:2 = 同居頻度的相談
+			IF COND("同居：一直")
+				IF CHARA_NUM("同居：一直") >= 2
+					STR:選択肢 = %STR:選択肢% [ 2] %TEXT_LJ("同居頻度的相談", 16)% … 同居状态(现在一直同居)変更%TEXT_AKUMA%/
+				ELSE
+					STR:選択肢 = %STR:選択肢%灰色/ [ 2] %TEXT_LJ("同居頻度的相談", 16)% … 同居状态(现在一直同居)変更%TEXT_AKUMA%/
+				ENDIF
+			ELSEIF COND("同居：一周間")
+				STR:選択肢 = %STR:選択肢% [ 2] %TEXT_LJ("同居頻度的相談", 16)% … 同居状态(剩余同居時间为{COND("残り同居日数")}日)変更%TEXT_AKUMA%/
+			ELSEIF COND("同居：仅周末")
+				STR:選択肢 = %STR:選択肢% [ 2] %TEXT_LJ("同居頻度的相談", 16)% … 同居状态(仅在周末)変更%TEXT_AKUMA%/
+			ENDIF
+		ENDIF
+	ELSE
+		WISHNAME:2 = 同居希望
+		STR:選択肢 = %STR:選択肢% [ 2] %TEXT_LJ("想要同居", 16)% … 选择一个時间、一起在家里生活%TEXT_AKUMA%/
+	ENDIF
+
+	IF CHARA_NUM("便当の約束")
+		STR:選択肢 = %STR:選択肢%灰色/
+	ELSE
+		WISHNAME:3 = 做便当
+	ENDIF
+	STR:選択肢 = %STR:選択肢% [ 3] %TEXT_LJ("做便当", 16)% … 想在午休的時候吃手制便当%TEXT_AKUMA%/
+
+	IF TALENT:男性 == 0 && COND("種族：人形") == 0 && TALENT:処女 == 0
+		WISHNAME:4 = 口服避孕薬
+		IF CFLAG:口服避孕薬 == 0
+			STR:選択肢 = %STR:選択肢% [ 4] %TEXT_LJ("服用避孕药", 16)% … 服用避孕药来避妊%TEXT_AKUMA%/
+		ELSE
+			STR:選択肢 = %STR:選択肢% [ 4] %TEXT_LJ("避孕药服用中断", 16)% … 停止使用避妊薬%TEXT_AKUMA%/
+		ENDIF
+	ENDIF
+
+	IF MARK:淫紋 < 4 && TALENT:MASTER:淫紋刻印
+		;淫紋時計が0なら彫ることが可能
+		IF MARK:淫紋時計 == 0
+			WISHNAME:5 = 淫紋
+		ELSE
+			STR:選択肢 += "灰色/"
+		ENDIF
+		IF MARK:淫紋 >= 2
+			IF MARK:淫紋時計
+				STR:選択肢 = %STR:選択肢% [ 5] %TEXT_LJ("雕绘淫紋", 16)% … 刻まれた紋章の画数を増やし強化します(定着まであと{MARK:淫紋時計}日必要です)/
+			ELSE
+				STR:選択肢 = %STR:選択肢% [ 5] %TEXT_LJ("雕绘淫紋", 16)% … 增加强化刻绘紋章的画数%TEXT_AKUMA%/
+			ENDIF
+		ELSE
+			STR:選択肢 = %STR:選択肢% [ 5] %TEXT_LJ("雕绘淫紋", 16)% … 在下腹部刻绘上激起情欲的紋章%TEXT_AKUMA%/
+		ENDIF
+	ENDIF
+
+	IF COND("性処理指名中")
+		WISHNAME:6 = 性処理の一時中断
+		STR:選択肢 = %STR:選択肢% [ 6] %TEXT_LJ("性処理の一時中断", 16)% … 停止用性欲処理目的叫出来%TEXT_AKUMA%/
+	ELSE
+		WISHNAME:6 = 拜托処理性欲
+		SIF COND("性処理指令実行可能") == 0
+			STR:選択肢 = %STR:選択肢%灰色/
+		STR:選択肢 = %STR:選択肢% [ 6] %TEXT_LJ("拜托処理性欲", 16)% … 在学園的休息時間叫出来、处理自己的性欲%TEXT_AKUMA%/
+	ENDIF
+
+	IF COND("尾巴隠蔽中")
+		WISHNAME:7 = 给我看尾巴
+		STR:選択肢 = %STR:選択肢% [ 7] %TEXT_LJ("给我看尾巴", 16)% … 把平常藏起来的尾巴和耳朵露出来给我看%TEXT_AKUMA%/
+	ENDIF
+
+	IF CHECK_CLO("裸体") || COND("全裸化お願い可能") == 0
+		STR:選択肢 = %STR:選択肢%灰色/
+	ELSE
+		WISHNAME:8 = 裸体希望
+	ENDIF
+	STR:選択肢 = %STR:選択肢% [ 8] %TEXT_LJ("裸体希望", 16)% … 在自己眼前把衣服脱了%TEXT_AKUMA%/
+
+	;***着床判定追加パッチで追加
+	;うっかり受精させちゃったり、心配な場合に緊急避妊薬を飲んで貰います。
+	;着床判定がONの場合だけ有効です。OFFの場合は何の効果もないので
+	;避妊不要だったり、もう事后避孕药が効果中だったりする場合は無効
+	IF COND("避妊不要") || COND("事后避孕药") || TALENT:処女
+		STR:選択肢 = %STR:選択肢%灰色/
+	ELSE
+		WISHNAME:9 = 事后避孕药
+	ENDIF
+	STR:選択肢 = %STR:選択肢% [ 9] %TEXT_LJ("事后避孕药", 16)% … 緊急避妊薬を飲んで貰います%TEXT_AKUMA%/
+ENDIF
+
+IF COND("種族：驱魔人")
+	IF COND("調教中") == 0
+		STR:選択肢 = %STR:選択肢% [10] %TEXT_LJ(MONEY_C(50000), 16)% … 獲得了%MONEY_C(50000)%/
+		WISHNAME:10 = 想要钱
+	ENDIF
+
+	SELECTCASE TALENT:MASTER:大力士
+	CASE IS < 9
+		STR:選択肢 = %STR:選択肢% [13] %TEXT_LJ("大力士", 16)% … 獲得[%TALENT_NAME(GETNUM(TALENT, "大力士"), TALENT:MASTER:大力士 + 1)%]。就算被推倒也不用担心了。而且不会变成筋肉人/
+		WISHNAME:13 = 大力士
+	ENDSELECT
+ELSEIF COND("悪魔の取引可能") || COND("天使の取引可能") || COND("魂の取引可能")
+	IF COND("調教中") == 0
+		STR:選択肢 = %STR:選択肢% [10] %TEXT_LJ(MONEY_C(50000), 16)% … 獲得了%MONEY_C(50000)%/
+		WISHNAME:10 = 想要钱
+	ENDIF
+
+	SELECTCASE TALENT:MASTER:甜言蜜语
+	CASE IS < 9
+		STR:選択肢 = %STR:選択肢% [11] %TEXT_LJ("甜言蜜语", 16)% … 獲得[%TALENT_NAME(GETNUM(TALENT, "甜言蜜语"), TALENT:MASTER:甜言蜜语 + 1)%]。哄骗别人的話術/
+		WISHNAME:11 = 甜言蜜语
+	ENDSELECT
+
+	SELECTCASE TALENT:MASTER:謎之魅力
+	CASE IS < 9
+		STR:選択肢 = %STR:選択肢% [12] %TEXT_LJ("謎之魅力", 16)% … 獲得[%TALENT_NAME(GETNUM(TALENT, "謎之魅力"), TALENT:MASTER:謎之魅力 + 1)%]。容易被对方喜欢了/
+		WISHNAME:12 = 謎之魅力
+	ENDSELECT
+
+	SELECTCASE TALENT:MASTER:大力士
+	CASE IS < 9
+		STR:選択肢 = %STR:選択肢% [13] %TEXT_LJ("大力士", 16)% … 獲得[%TALENT_NAME(GETNUM(TALENT, "大力士"), TALENT:MASTER:大力士 + 1)%]。就算被推倒也不用担心了。而且不会变成筋肉人/
+		WISHNAME:13 = 大力士
+	ENDSELECT
+
+	SELECTCASE TALENT:MASTER:性豪
+	CASE IS < 9
+		STR:選択肢 = %STR:選択肢% [14] %TEXT_LJ("性豪", 16)% … 獲得[%TALENT_NAME(GETNUM(TALENT, "性豪"), TALENT:MASTER:性豪 + 1)%]。精力上限ＵＰ！/
+		WISHNAME:14 = 性豪
+	ENDSELECT
+
+
+	IF TALENT:MASTER:豊穣 == 0
+		STR:選択肢 = %STR:選択肢% [16] %TEXT_LJ("豊穣", 16)% … 獲得[豊穣]。对着胸部射精or尽情揉就会变大了/
+		WISHNAME:16 = 豊穣
+	ENDIF
+
+	IF PENIS(PLAYER) || TALENT:PLAYER:具現
+		SELECTCASE TALENT:MASTER:射精量強化
+		CASE IS < 9
+			STR:選択肢 = %STR:選択肢% [17] %TEXT_LJ("射精量強化", 16)% … 獲得[%TALENT_NAME(GETNUM(TALENT, "射精量強化"), TALENT:MASTER:射精量強化 + 1)%]。射精量大幅上升/
+			WISHNAME:17 = 射精量強化
+		ENDSELECT
+		SELECTCASE TALENT:MASTER:業物
+		CASE IS < 9
+			STR:選択肢 = %STR:選択肢% [18] %TEXT_LJ("業物", 16)% … 獲得[%TALENT_NAME(GETNUM(TALENT, "業物"), TALENT:MASTER:業物 + 1)%]。变成绝妙的硬度和形状的肉棒、给予的快感ＵＰ＆疼痛ＤＯＷＮ/
+			WISHNAME:18 = 業物
+		ENDSELECT
+	ENDIF
+
+	IF COND("悪魔の取引可能") || COND("天使の取引可能")
+		IF COND("調教中") == 0
+			IF TALENT:PLAYER:高大
+				STR:選択肢 = %STR:選択肢%灰色/
+			ELSE
+				WISHNAME:20 = 高大化
+			ENDIF
+			STR:選択肢 = %STR:選択肢% [20] %TEXT_LJ("身材变大", 16)% … 变成[高大]/
+
+			IF TALENT:PLAYER:娇小
+				STR:選択肢 = %STR:選択肢%灰色/
+			ELSE
+				WISHNAME:21 = 娇小化
+			ENDIF
+			STR:選択肢 = %STR:選択肢% [21] %TEXT_LJ("身材变小", 16)% … 变成[娇小]/
+		ENDIF
+
+		IF PENIS(PLAYER) || TALENT:PLAYER:具現
+			WISHNAME:22 = 巨根化
+			IF COND("調教中") && INSERT("挿入中", PLAYER)
+				STR:選択肢 = %STR:選択肢%灰色/
+				WISHNAME:22 = 
+			ENDIF
+			SELECTCASE CONDS("基本阴茎尺寸", PLAYER)
+			CASE "規格外"
+				STR:選択肢 = %STR:選択肢%灰色/ [22] %TEXT_LJ("阴茎变大", 16)% … 已经是最大了/
+				WISHNAME:22 = 
+			CASE "腕粗"
+				STR:選択肢 = %STR:選択肢% [22] %TEXT_LJ("阴茎变大", 16)% … %TEXT_GUGEN_PLAYER%变成[規格外]/
+			CASE "馬根"
+				STR:選択肢 = %STR:選択肢% [22] %TEXT_LJ("阴茎变大", 16)% … %TEXT_GUGEN_PLAYER%变成[腕並]/
+			CASE "巨根"
+				STR:選択肢 = %STR:選択肢% [22] %TEXT_LJ("阴茎变大", 16)% … %TEXT_GUGEN_PLAYER%变成[馬根]/
+			CASE "普通"
+				STR:選択肢 = %STR:選択肢% [22] %TEXT_LJ("阴茎变大", 16)% … %TEXT_GUGEN_PLAYER%变成[巨根]/
+			CASE "短小"
+				STR:選択肢 = %STR:選択肢% [22] %TEXT_LJ("阴茎变大", 16)% … %TEXT_GUGEN_PLAYER%变成[普通]/
+			ENDSELECT
+
+			WISHNAME:23 = 短小化
+			IF COND("調教中") && INSERT("挿入中", PLAYER)
+				STR:選択肢 = %STR:選択肢%灰色/
+				WISHNAME:23 = 
+			ENDIF
+			SELECTCASE CONDS("基本阴茎尺寸", PLAYER)
+			CASE "規格外"
+				STR:選択肢 = %STR:選択肢% [23] %TEXT_LJ("阴茎变小", 16)% … %TEXT_GUGEN_PLAYER%变成[腕並]/
+			CASE "腕粗"
+				STR:選択肢 = %STR:選択肢% [23] %TEXT_LJ("阴茎变小", 16)% … %TEXT_GUGEN_PLAYER%变成[馬根]/
+			CASE "馬根"
+				STR:選択肢 = %STR:選択肢% [23] %TEXT_LJ("阴茎变小", 16)% … %TEXT_GUGEN_PLAYER%变成[巨根]/
+			CASE "巨根"
+				STR:選択肢 = %STR:選択肢% [23] %TEXT_LJ("阴茎变小", 16)% … %TEXT_GUGEN_PLAYER%变成[普通]/
+			CASE "普通"
+				STR:選択肢 = %STR:選択肢% [23] %TEXT_LJ("阴茎变小", 16)% … %TEXT_GUGEN_PLAYER%变成[短小]/
+			CASE "短小"
+				STR:選択肢 = %STR:選択肢%灰色/ [23] %TEXT_LJ("阴茎变小", 16)% … 已经是最小了/
+				WISHNAME:23 = 
+			ENDSELECT
+		ENDIF
+
+		IF TALENT:PLAYER:男性 == 0 && COND("調教中") == 0
+			WISHNAME:24 = 巨乳化
+			WISHNAME:25 = 貧乳化
+			SELECTCASE CONDS("胸部", PLAYER)
+			CASE "超乳"
+				STR:選択肢 = %STR:選択肢%灰色/ [24] %TEXT_LJ("胸部变大", 16)% … 已经是最大了/
+				WISHNAME:24 = 
+				STR:選択肢 = %STR:選択肢% [25] %TEXT_LJ("胸部变小", 16)% … 变成[爆乳]/
+			CASE "爆乳"
+				STR:選択肢 = %STR:選択肢% [24] %TEXT_LJ("胸部变大", 16)% … 变成[超乳]/
+				STR:選択肢 = %STR:選択肢% [25] %TEXT_LJ("胸部变小", 16)% … 变成[巨乳]/
+			CASE "巨乳"
+				STR:選択肢 = %STR:選択肢% [24] %TEXT_LJ("胸部变大", 16)% … 变成[爆乳]/
+				STR:選択肢 = %STR:選択肢% [25] %TEXT_LJ("胸部变小", 16)% … 变成[並乳]/
+			CASE "並乳"
+				STR:選択肢 = %STR:選択肢% [24] %TEXT_LJ("胸部变大", 16)% … 变成[巨乳]/
+				STR:選択肢 = %STR:選択肢% [25] %TEXT_LJ("胸部变小", 16)% … 变成[貧乳]/
+			CASE "貧乳"
+				STR:選択肢 = %STR:選択肢% [24] %TEXT_LJ("胸部变大", 16)% … 变成[並乳]/
+				STR:選択肢 = %STR:選択肢%灰色/ [25] %TEXT_LJ("胸部变小", 16)% … 已经是最小了/
+				WISHNAME:25 = 
+			ENDSELECT
+
+			WISHNAME:26 = 巨尻化
+			WISHNAME:27 = 小尻化
+			SELECTCASE CONDS("お尻", PLAYER)
+			CASE "超尻"
+				STR:選択肢 = %STR:選択肢%灰色/ [26] %TEXT_LJ("臀部变大", 16)% … 已经是最大了/
+				WISHNAME:26 = 
+				STR:選択肢 = %STR:選択肢% [27] %TEXT_LJ("臀部变小", 16)% … 变成[爆尻]/
+			CASE "爆尻"
+				STR:選択肢 = %STR:選択肢% [26] %TEXT_LJ("臀部变大", 16)% … 变成[超尻]/
+				STR:選択肢 = %STR:選択肢% [27] %TEXT_LJ("臀部变小", 16)% … 变成[巨尻]/
+			CASE "巨尻"
+				STR:選択肢 = %STR:選択肢% [26] %TEXT_LJ("臀部变大", 16)% … 变成[爆尻]/
+				STR:選択肢 = %STR:選択肢% [27] %TEXT_LJ("臀部变小", 16)% … 变成[並尻]/
+			CASE "並尻"
+				STR:選択肢 = %STR:選択肢% [26] %TEXT_LJ("臀部变大", 16)% … 变成[巨尻]/
+				STR:選択肢 = %STR:選択肢% [27] %TEXT_LJ("臀部变小", 16)% … 变成[小尻]/
+			CASE "小尻"
+				STR:選択肢 = %STR:選択肢% [26] %TEXT_LJ("臀部变大", 16)% … 变成[並尻]/
+				STR:選択肢 = %STR:選択肢%灰色/ [27] %TEXT_LJ("臀部变小", 16)% … 已经是最小了/
+				WISHNAME:27 = 
+			ENDSELECT
+		ENDIF
+
+		IF PENIS(PLAYER)
+			IF TALENT:PLAYER:早漏
+				WISHNAME:28 = 早漏治療
+				STR:選択肢 = %STR:選択肢% [28] %TEXT_LJ("早漏治療", 16)% … 失去[早漏]/
+			ELSEIF TALENT:PLAYER:遅漏
+				WISHNAME:28 = 遅漏治療
+				STR:選択肢 = %STR:選択肢% [28] %TEXT_LJ("遅漏治療", 16)% … 失去[遅漏]/
+			ENDIF
+		ENDIF
+
+		IF PENIS(PLAYER)
+			WISHNAME:29 = 包茎ONOFF
+			STR:選択肢 = %STR:選択肢% [29] %TEXT_LJ("包茎程度的変更", 16)% … [包茎]变成了り[露茎]变成了り/
+		ENDIF
+
+
+		IF COND("調教中") == 0
+			IF COND("性転換可能", PLAYER)
+				IF TALENT:PLAYER:女性
+					STR:選択肢 = %STR:選択肢%灰色/
+				ELSE
+					WISHNAME:30 = 女性化
+				ENDIF
+				IF TALENT:PLAYER:具現 && TALENT:PLAYER:扶她
+					STR:選択肢 = %STR:選択肢% [30] %TEXT_LJ("女性化", 16)% … 在[具現]的力量下性别向[女性]\@ TRUE_SEX(PLAYER) == "女性" ? 恢复 # 转变 \@%TEXT_AKUMA%/
+					NO_SOUL:30 = 1
+				ELSE
+					STR:選択肢 = %STR:選択肢% [30] %TEXT_LJ("女性化", 16)% … 性别向[女性]\@ TRUE_SEX(PLAYER) == "女性" ? 恢复 # 转变 \@/
+				ENDIF
+
+				IF TALENT:PLAYER:男性
+					STR:選択肢 = %STR:選択肢%灰色/
+				ELSE
+					WISHNAME:31 = 男性化
+				ENDIF
+				STR:選択肢 = %STR:選択肢% [31] %TEXT_LJ("男性化", 16)% … 性别向[男性]\@ TRUE_SEX(PLAYER) == "男性" ? 恢复 # 转变 \@/
+			ENDIF
+			IF TALENT:PLAYER:扶她
+				STR:選択肢 = %STR:選択肢%灰色/
+			ELSE
+				WISHNAME:32 = 扶她化
+			ENDIF
+			IF TALENT:PLAYER:具現 && TALENT:PLAYER:女性
+				STR:選択肢 = %STR:選択肢% [32] %TEXT_LJ("扶她化", 16)% … 在[具現]的力量下性别向[扶她]\@ TRUE_SEX(PLAYER) == "扶她" ? 恢复 # 转变 \@%TEXT_AKUMA%/
+				NO_SOUL:32 = 1
+			ELSE
+				STR:選択肢 = %STR:選択肢% [32] %TEXT_LJ("扶她化", 16)% … 性别向[扶她]\@ TRUE_SEX(PLAYER) == "扶她" ? 恢复 # 转变 \@/
+			ENDIF
+
+			IF COND("悪魔の取引可能") && TALENT:MASTER:淫紋刻印 && MARK:MASTER:淫紋 < 4
+				;淫紋時計が0なら彫ることが可能
+				IF MARK:MASTER:淫紋時計 == 0
+					WISHNAME:38 = 帮忙雕刻淫纹
+				ELSE
+					STR:選択肢 += "灰色/"
+				ENDIF
+				IF MARK:MASTER:淫紋 >= 2
+					IF MARK:MASTER:淫紋時計
+						STR:選択肢 = %STR:選択肢% [38] %TEXT_LJ("帮忙雕刻淫纹", 16)% … 增加刻印在%CALLNAME:MASTER%身上的紋章的画数(距离固定下来还有{MARK:MASTER:淫紋時計}天)/
+					ELSE
+						STR:選択肢 = %STR:選択肢% [38] %TEXT_LJ("帮忙雕刻淫纹", 16)% … 增加刻印在%CALLNAME:MASTER%身上的紋章的画数/
+					ENDIF
+				ELSE
+					STR:選択肢 = %STR:選択肢% [38] %TEXT_LJ("帮忙雕刻淫纹", 16)% … %CALLNAME:MASTER%的下腹部刻绘上了激起情欲的紋章/
+				ENDIF
+			ENDIF
+		ENDIF
+	ENDIF
+ENDIF
+
+IF TALENT:避妊の護符
+	STR:選択肢 = %STR:選択肢% [39] %TEXT_LJ("避妊護符の解除", 16)% … 解除[避妊の護符]、现在可以妊娠了/
+	WISHNAME:39 = 避妊解除
+ELSEIF COND("初期避妊の護符")
+	STR:選択肢 = %STR:選択肢% [39] %TEXT_LJ("避妊護符の装着", 16)% … 再次装着[避妊の護符]、进行避妊/
+	WISHNAME:39 = 避妊の護符
+ENDIF
+
+IF COND("調教中") == 0
+	IF PLACE("髪型変更可能")
+		;髪型を弄るには髪長が巻髪以上必要
+		SELECTCASE CONDS("髪長")
+		CASE "巻髪", "披肩", "長", "超長"
+			WISHNAME:40 = 改变髪型
+			STR:選択肢 = %STR:選択肢% [40] %TEXT_LJ("改变髪型", 16)% … 在不会改変髪型的長度的範囲内稍作改变%TEXT_AKUMA%/
+		CASEELSE
+			STR:選択肢 = %STR:選択肢%灰色/
+			STR:選択肢 = %STR:選択肢% [40] %TEXT_LJ("改变髪型", 16)% … 在不会改変髪型的長度的範囲内稍作改变(至少要有一定的長度)/
+		ENDSELECT
+	ELSE
+		STR:選択肢 = %STR:選択肢%灰色/
+		STR:選択肢 = %STR:選択肢% [40] %TEXT_LJ("改变髪型", 16)% … 在不会改変髪型的長度的範囲内稍作改变(只能在部室或自宅进行)/
+	ENDIF
+
+	;普段连褲襪履かない人に頼むのはなんか違う気がする？
+	WISHNAME:41 = 换上褲襪
+	STR:選択肢 = %STR:選択肢% [41] %TEXT_LJ("换上褲襪", 16)% … 把裤袜换成%CALLNAME:MASTER%喜欢的款式%TEXT_AKUMA%/
+
+	WISHNAME:42 = 拜託身嗜
+	STR:選択肢 = %STR:選択肢% [42] %TEXT_LJ("拜託身嗜", 16)% … 拜託和H相關的日常嗜好%TEXT_AKUMA%/
+
+
+	IF TALENT:具現 && CEVENT("性別変化のお願い不可") == 0
+		IF TALENT:女性
+			STR:選択肢 = %STR:選択肢%灰色/
+		ELSE
+			WISHNAME:50 = 女性化して
+		ENDIF
+		STR:選択肢 = %STR:選択肢% [50] %TEXT_LJ("女性化して", 16)% … 向[女性]\@ TRUE_SEX(TARGET) == "女性" ? 恢复 # 转变 \@了%TEXT_AKUMA%/
+
+		IF TALENT:扶她
+			STR:選択肢 = %STR:選択肢%灰色/
+		ELSE
+			WISHNAME:52 = 扶她化して
+		ENDIF
+		STR:選択肢 = %STR:選択肢% [52] %TEXT_LJ("扶她化して", 16)% … 向[扶她]\@ TRUE_SEX(TARGET) == "扶她" ? 恢复 # 转变 \@了%TEXT_AKUMA%/
+	ENDIF
+
+	IF PENIS(TARGET) || (STRCOUNT(CSTR:特別経験, "扶她化") && TALENT:PLAYER:具現 + TALENT:具現)
+		IF BASE:MASTER:魂 > 100 && (COND("悪魔の取引可能") + COND("天使の取引可能") || (ASSI && COND("悪魔の取引可能", ASSI) + COND("天使の取引可能", ASSI) ) )
+			WISHNAME:53 = 巨根化して
+			SELECTCASE CONDS("基本阴茎尺寸", TARGET)
+			CASE "規格外"
+				STR:選択肢 = %STR:選択肢%灰色/ [53] %TEXT_LJ("巨根化して", 16)% … 已经是最大了/
+				WISHNAME:53 = 
+			CASE "腕粗"
+				STR:選択肢 = %STR:選択肢% [53] %TEXT_LJ("巨根化して", 16)% … %TEXT_GUGEN_TARGET%变成了[規格外]/
+			CASE "馬根"
+				STR:選択肢 = %STR:選択肢% [53] %TEXT_LJ("巨根化して", 16)% … %TEXT_GUGEN_TARGET%变成了[腕並]/
+			CASE "巨根"
+				STR:選択肢 = %STR:選択肢% [53] %TEXT_LJ("巨根化して", 16)% … %TEXT_GUGEN_TARGET%变成了[馬根]/
+			CASE "普通"
+				STR:選択肢 = %STR:選択肢% [53] %TEXT_LJ("巨根化して", 16)% … %TEXT_GUGEN_TARGET%变成了[巨根]/
+			CASE "短小"
+				STR:選択肢 = %STR:選択肢% [53] %TEXT_LJ("巨根化して", 16)% … %TEXT_GUGEN_TARGET%变成了[普通]/
+			ENDSELECT
+
+			WISHNAME:54 = 短小化して
+			SELECTCASE CONDS("基本阴茎尺寸", TARGET)
+			CASE "規格外"
+				STR:選択肢 = %STR:選択肢% [54] %TEXT_LJ("短小化して", 16)% … %TEXT_GUGEN_TARGET%变成了[腕並]/
+			CASE "腕粗"
+				STR:選択肢 = %STR:選択肢% [54] %TEXT_LJ("短小化して", 16)% … %TEXT_GUGEN_TARGET%变成了[馬根]/
+			CASE "馬根"
+				STR:選択肢 = %STR:選択肢% [54] %TEXT_LJ("短小化して", 16)% … %TEXT_GUGEN_TARGET%变成了[巨根]/
+			CASE "巨根"
+				STR:選択肢 = %STR:選択肢% [54] %TEXT_LJ("短小化して", 16)% … %TEXT_GUGEN_TARGET%变成了[普通]/
+			CASE "普通"
+				STR:選択肢 = %STR:選択肢% [54] %TEXT_LJ("短小化して", 16)% … %TEXT_GUGEN_TARGET%变成了[短小]/
+			CASE "短小"
+				STR:選択肢 = %STR:選択肢%灰色/ [54] %TEXT_LJ("短小化して", 16)% … 已经是最小了/
+				WISHNAME:54 = 
+			ENDSELECT
+		ELSE
+			STR:選択肢 = %STR:選択肢%灰色/ [53] %TEXT_LJ("巨根化して", 16)% … 需要%TEXTS("対象の名称")%%TEXTS("助手の名称")%的魂的交易可能＆%CALLNAME:MASTER%的魂至少为1.01/
+			STR:選択肢 = %STR:選択肢%灰色/ [54] %TEXT_LJ("短小化して", 16)% … 需要%TEXTS("対象の名称")%%TEXTS("助手の名称")%的魂的交易可能＆%CALLNAME:MASTER%的魂至少为1.01/
+		ENDIF
+	ENDIF
+ENDIF
+
+;标记
+IF COND("調教中") == 0
+	IF TALENT:TARGET:男性 == 0 && CONFIG("路人Ｈ") 
+		WISHNAME:55 = 乘坐电车去学校
+		STR:選択肢 = %STR:選択肢% [55] %TEXT_LJ("乘坐电车去学校", 16)% … 要求%CALLNAME:TARGET%乘坐电车去学校.../
+	ENDIF
+ENDIF
+
+;60番台は禁断的知識
+IF COND("悪魔の取引可能") || COND("天使の取引可能") || COND("魂の取引可能")
+	IF TALENT:MASTER:淫紋刻印 == 0
+		WISHNAME:60 = 淫紋刻印
+		STR:選択肢 = %STR:選択肢% [60] %TEXT_LJ("淫紋刻印", 16)% … 獲得[淫紋刻印]。可以雕绘淫紋了/
+	ENDIF
+
+	IF TALENT:MASTER:具現 == 0
+		WISHNAME:61 = 具現
+		STR:選択肢 = %STR:選択肢% [61] %TEXT_LJ("具現", 16)% … 獲得[具現]。能够自由地变化阴茎了/
+	ENDIF
+
+	IF TALENT:MASTER:認識阻害 == 0
+		WISHNAME:62 = 認識阻害
+		STR:選択肢 = %STR:選択肢% [62] %TEXT_LJ("認識阻害", 16)% … 獲得[認識阻害]。能够在他人面前隐藏自己的身份/
+	ENDIF
+ENDIF
+
+MEMO_STR = %STR:選択肢%
+;口上側で選択肢を自由に作ることができる。番号は80番台
+TRYCALLFORM WISH_K{NO:TARGET}_ADDSELECT
+IF COND("調教中")
+	SIF TFLAG:取引可能 == 0
+		STR:選択肢 = %MEMO_STR%
+ENDIF
+
+IF COND("調教中") == 0
+	WISHNAME:98 = 爱称変更
+	IF NICKNAME:TARGET != ""
+		STR:選択肢 = %STR:選択肢% [98] %TEXT_LJ("爱称変更", 16)% … 変更%CALLNAME:TARGET%的爱称、原称呼为%NICKNAME:TARGET%%TEXT_AKUMA%/
+	ELSE
+		STR:選択肢 = %STR:選択肢% [98] %TEXT_LJ("爱称変更", 16)% … 给%CALLNAME:TARGET%起爱称%TEXT_AKUMA%/
+	ENDIF
+
+	WISHNAME:99 = 称呼変更
+	IF CEVENT("二人称主人")
+		STR:選択肢 = %STR:選択肢% [99] %TEXT_LJ("称呼変更", 16)% … 变更在与%CALLNAME:MASTER%说话时的第二人称、原称呼为%CEVENTS("二人称主人")%%TEXT_AKUMA%/
+	ELSE
+		STR:選択肢 = %STR:選択肢% [99] %TEXT_LJ("称呼変更", 16)% … 变更在与%CALLNAME:MASTER%说话時对主人公的称呼%TEXT_AKUMA%/
+	ENDIF
+ENDIF
+
+;現在的指导者が弗理希艾尔の場合は周回のお願いが出来るかも
+IF PLAYER == MASTER && COND("弗理希艾尔")
+	IF COND("周回可能")
+		WISHNAME:100 = 进入下周目
+		STR:選択肢 = %STR:選択肢%[100] %TEXT_LJ("进入下周目", 16)% … 開始新游戏/
+	ELSE
+		STR:選択肢 = %STR:選択肢%灰色/
+		IF FLAG:周回数 == 0
+			STR:選択肢 = %STR:選択肢%[100] %TEXT_LJ("进入下周目", 16)% … 開始新游戏(需要:时间到达第二年以后＆弗理希艾尔收集到30以上的魂＆陥落人数３人)/
+		ELSE
+			STR:選択肢 = %STR:選択肢%[100] %TEXT_LJ("进入下周目", 16)% … 開始新游戏(需要:时间到达第二年以后 or 本周回陥落人数３人)/
+		ENDIF
+	ENDIF
+ENDIF
+
+VARSET LOCALS
+SPLIT STR:選択肢, "/", LOCALS
+
+;これがONだとWISHNAMEを消す
+IS_CANCEL = 0
+;取引画面の表示
+FOR LCOUNT, 0, 200
+	SELECTCASE LOCALS:LCOUNT
+	CASE ""
+		BREAK
+	;灰色の場合は選択不能
+	CASE "灰色"
+		SETCOLOR DEF_COLOR(LOCALS:LCOUNT)
+		IS_CANCEL = 1
+		CONTINUE
+	CASE "水色", "爱心粉紅", "青", "緑", "黄色"
+		SETCOLOR DEF_COLOR(LOCALS:LCOUNT)
+		CONTINUE
+	ENDSELECT
+
+	PRINTFORML %LOCALS:LCOUNT%
+
+	RESETCOLOR
+
+	NO_WISH = TOINT_BL(EXTSTR(LOCALS:LCOUNT, "[", "]") )
+	IF IS_CANCEL
+		WISHNAME:NO_WISH = 
+	ELSEIF WISHNAME:NO_WISH == ""
+		WISHNAME:NO_WISH = %EXTSTR_BL(LOCALS:LCOUNT, "] ", " …")%
+	ENDIF
+	IS_CANCEL = 0
+NEXT
+
+PRINTFORML 
+PRINTFORML [999] \@ COND("魂の取引可能") ? 交易结束 # 返回 \@
+
+CALL INPUT_SELECT, 101, 999
+CHOICE = RESULT
+
+;選択肢がない場合
+IF CHOICE <= 100 && WISHNAME:CHOICE == ""
+	CLEARLINE LINECOUNT - MEMO_LINECOUNT
+	RESTART
+ENDIF
+
+SELECTCASE CHOICE
+CASE 80 TO 89
+	;口上で作った選択肢を選んだならここで地の文と台詞が出る
+	TRYCALLFORM KOJO_WISH_K{NO:TARGET}_ADDSELECT, WISHNAME:CHOICE
+CASE 999
+	PLAYER = MASTER
+	;何か契約したりしたなら行動の記録
+	SIF STR:日常イベント名 != ""
+		CALL SET_PREV_DAILYCOM
+	RETURN 0
+;強くてニュー游戏
+CASE 100
+	CALL EMOTION_PLUS, "重置/普通眼", TARGET
+	PRINTFORMW 「主人様。在进行这项交易的时候、虽然会得到很多特典好处但是也有很多失去的东西」
+	PRINTFORMW 「具体来说的话……」
+	PRINTL 
+	CALL PRINT_STRL, "黄色_※选择跳到下一周目的话会发生以下的事情※"
+	CALL PRINT_STRL, "黄色_1.日期回到第一年第一天、角色初期化＆恢复到未勧誘状态"
+	CALL PRINT_STRL, "黄色_2.根据你的角色属性可进行周回限定的操作"
+	CALL PRINT_STRL, "黄色_3.根据周数和[恋慕]or[淫乱]人数得到相应的実行値BOUNS(永続＆每周目都会增加)"
+	PRINTL 
+	PRINTFORMW 「……真的确定要实行吗？」
+	CALL PRINT_SELECT, "大丈夫。没问题。/再考虑一下"
+	IF RESULT == 0
+		PRINTFORMW 「明白了。……请稍微闭上眼睛等待一会」
+		PRINTFORMW %CALLNAME:TARGET%将%CALLNAME:MASTER%的脸抱在胸前、温柔地抚摸着頭。
+		PRINTL 
+		PRINTL ・・
+		PRINTL ・・・・
+		PRINTW ・・・・・・
+		PRINTL 
+		CALL GAME_RENEWAL
+		RETURN 1
+	ENDIF
+CASE 0
+	IF TALENT:相思相愛 == 0
+		PRINTFORMW %CALLNAME:MASTER%想让%CALLNAME:TARGET%更加的思念自己！
+		PRINTL 
+
+		STR:実行条件 = 
+		RESULT = 0
+		TRYCALLFORM ADDCOND_K{NO:TARGET}("相思相愛")
+		ADDCOND_RESULT = RESULT
+
+		;ダメだった場合
+		IF STR:実行条件 != ""
+			CALL KOJO_WISH, WISHNAME:CHOICE
+			CALL PRINT_STRW, STR:実行条件
+		ELSEIF TALENT:恋慕 || ADDCOND_RESULT
+			TALENT:相思相愛 = 1
+			TALENT:MASTER:相思相愛 = 1
+
+			CALL KOJO_WISH, WISHNAME:CHOICE
+
+			CALL RECORD_SP_EXP, TARGET
+
+			STR:日常イベント名 = %WISHNAME:CHOICE%
+			;其他合意格子
+			CALL CHECK_GOUI, "汎用", TARGET
+		ELSE
+			CALL KOJO_WISH, WISHNAME:CHOICE
+			PRINTFORMW ……似乎没有打动%CALLNAME:TARGET%的心。
+			PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+			CALL PRINT_STRW, "イエロー_(想变成[相思相愛]的话、需要对方先獲得[恋慕])"
+		ENDIF
+	ENDIF
+CASE 1
+	;イベントとして呼び出せるように関数化
+	CALL EVENT_WISH_PANTU
+
+CASE 2
+	IF COND("同居可能") == 0
+		CALL KOJO_WISH, "同居拒否"
+		IF COND("同居中")
+			PRINTFORMW ……%CALLNAME:TARGET%拒绝了変更同居状態。
+			PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+			CALL PRINT_STR, "イエロー_(※想変更現状的话、需要对方先拥有[恋慕]or[屈服刻印LV3]or[信頼LV5])_W_"
+		ELSE
+			PRINTFORMW ……%CALLNAME:TARGET%拒绝了同居。
+			PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+			CALL PRINT_STR, "イエロー_(※想同居的话、需要对方先拥有[恋慕]or[屈服刻印LV3]or[信頼LV5])_W_"
+		ENDIF
+	ELSEIF COND("同居：一直") && CHARA_NUM("同居：一直") <= 1
+		PRINTFORMW 重新恢复和%CALLNAME:TARGET%的同居関系……这么想着果然还是不行的様子。
+		CALL PRINT_STR, "イエロー_(※最低要有至少一人处在一直同居的状态。提议先去寻找其他的同居对象)_W_"
+	ELSE
+		CALL KOJO_WISH, WISHNAME:CHOICE
+
+		SELECTCASE WISHNAME:CHOICE
+		CASE "同居希望"
+			PRINTFORML %CALLNAME:TARGET%同意了同居……期間该定什么様的？
+		CASE "同居頻度的相談"
+			PRINTFORML 可以恢复和%CALLNAME:TARGET%的同居関係了……要这么做吗？
+		ENDSELECT
+
+		EVENT_TABLE = 果然还是算了\/
+		SIF COND("同居中")
+			EVENT_TABLE += "同居解消/"
+		SIF COND("同居：一直") == 0
+			EVENT_TABLE += "一直！/"
+		SIF COND("同居：一周間") == 0
+			EVENT_TABLE += "总而言之先１周吧/"
+		SIF COND("同居：仅周末") == 0
+			EVENT_TABLE += "毎周周六(晚上)到周一(早上)为止"
+
+		VARSET LOCALS
+		SPLIT EVENT_TABLE, "/", LOCALS
+		CALL PRINT_SELECT, EVENT_TABLE
+
+		SELECTCASE LOCALS:RESULT
+		CASE "果然还是算了"
+
+		CASE "同居解消"
+			PRINTFORMW 暂時解除了和%CALLNAME:TARGET%的同居関係。
+			CALL SETFLAG, "同居解消", TARGET
+		CASE "一直！"
+			PRINTFORMW 在某一方提出中断之前、会一直这么同居下去。
+			CALL SETFLAG, "同居：一直", TARGET
+		CASE "总而言之先１周吧"
+			PRINTFORMW 从今天開始的一个星期内、%CALLNAME:TARGET%来家里暂住了
+			CALL SETFLAG, "同居：一周間", TARGET
+		CASE "毎週周六(夜)から周一(朝)まで"
+			PRINTFORMW 仅限周末、%CALLNAME:TARGET%会过来玩了
+			CALL SETFLAG, "同居：仅周末", TARGET
+		ENDSELECT
+
+		SELECTCASE WISHNAME:CHOICE
+		CASE "同居希望"
+			;同居中＆個室が必要な関係なら用意する
+			IF FLAG:個室 == 0 && COND("同居中") && COND("要個室")
+				IF FIND_COND("弗理希艾尔")
+					PRINTL 
+					PRINTFORMW 関于%CALLNAME:TARGET%的房间的问题、[%CSTR:FIND_COND("弗理希艾尔"):称号%]%NAME:FIND_COND("弗理希艾尔")%会想办法解决的
+					PRINTFORMW 今後和%CALLNAME:MASTER%一起生活的人会不断增多、收拾房间啊掃除啊什么的得好好准备一下了
+				ENDIF
+				FLAG:個室 = 1
+			ENDIF
+		ENDSELECT
+	ENDIF
+CASE 3
+	;すでに誰かに依頼中…もういいなんて言うのは無礼過ぎですよ！
+	IF CHARA_NUM("便当の約束")
+	;作ってくれない……
+	ELSEIF COND("便当可能") == 0
+		CALL KOJO_WISH, "便当拒否"
+		PRINTFORMW ……%CALLNAME:TARGET%不再做便当了。
+
+		IF CEVENT("合意禁止：便当")
+			PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+			CALL PRINT_STRW, @"イエロー_(※%CALLNAME:TARGET%、不知道为什么不想继续为你做便当了)"
+		ELSEIF COND("部室出現可能") == 0
+			CALL PRINT_STRW, "イエロー_(※如果部室中的对象有[恋慕]or[屈服刻印LV1]or[奉仕精神LV3]的话可以为你做便当)"
+		ELSE
+			PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+			CALL PRINT_STRW, "イエロー_(※想让对方给你做便当的话、需要对方先拥有[恋慕]or[屈服刻印LV1]or[奉仕精神LV3])"
+		ENDIF
+	;作ってくれる！
+	ELSE
+		CALL KOJO_WISH, WISHNAME:CHOICE
+		PRINTFORMW %CALLNAME:TARGET%開始为你准备便当了。
+		CALL SETFLAG, "便当", TARGET
+		PRINTFORMW 经过讨论、决定把便当的時间定为到\@ (CFLAG:便当 > 7) ? 下週 # 本週 \@的周六为止。
+		CALL CHECK_GOUI, "便当", TARGET
+	ENDIF
+
+CASE 4
+	;口服避孕薬服用
+	IF CFLAG:口服避孕薬 == 0
+		;讨厌口服避孕薬の人に服用してもらうのは条件有些
+		IF COND("讨厌口服避孕薬")
+			IF TALENT:恋慕
+				CFLAG:口服避孕薬 = 1
+				CALL KOJO_WISH, "口服避孕薬"
+				PRINTFORMW 拜托%CALLNAME:TARGET%用避孕药来避妊了。
+			ELSE
+				CALL KOJO_WISH, "口服避孕薬服用拒否"
+				PRINTFORMW ……%CALLNAME:TARGET%拒绝服用避孕药。
+				PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+				CALL PRINT_STR, "イエロー_(※想让对方服用避孕药来避妊的话、需要对方先拥有[恋慕])_W_"
+			ENDIF
+		ELSE
+			CFLAG:口服避孕薬 = 1
+			CALL KOJO_WISH, "口服避孕薬"
+			PRINTFORMW 拜托%CALLNAME:TARGET%用避孕药来避妊了。
+		ENDIF
+	ELSE
+		;口服避孕薬派の人にやめてもらうのは条件有些
+		IF COND("口服避孕薬派")
+			IF TALENT:恋慕
+				CFLAG:口服避孕薬 = 0
+				CALL KOJO_WISH, "口服避孕薬"
+				PRINTFORMW %CALLNAME:TARGET%中断使用避孕药来避妊了。
+				;念のため避妊処理を行って直前までの行為での妊娠の危険性をつぶす
+				CALL SETFLAG, "避妊", TARGET
+			ELSE
+				CALL KOJO_WISH, "口服避孕薬中断拒否"
+				PRINTFORMW ……%CALLNAME:TARGET%拒绝中止服用避孕药。
+				PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+				CALL PRINT_STR, "イエロー_(※想让对方放弃避妊的话、需要对方先拥有[恋慕])_W_"
+			ENDIF
+		ELSE
+			CFLAG:口服避孕薬 = 0
+			CALL KOJO_WISH, "口服避孕薬"
+			PRINTFORMW %CALLNAME:TARGET%中断使用避孕药来避妊了。
+			;念のため避妊処理を行って直前までの行為での妊娠の危険性をつぶす
+			CALL SETFLAG, "避妊", TARGET
+		ENDIF
+	ENDIF
+;38は你に淫紋を彫る
+CASE 5, 38
+	TARGET_WISH = TARGET
+	SIF CHOICE == 38
+		TARGET_WISH = MASTER
+
+	STR:実行条件 = 
+	RESULT = 0
+	TRYCALLFORM ADDCOND_K{NO:TARGET_WISH}("淫紋")
+	ADDCOND_RESULT = RESULT
+
+	;淫紋刻印OK
+	IF STR:実行条件 == "" && (COND("淫紋刻印可能", TARGET_WISH) == 2 || ADDCOND_RESULT)
+		IF MARK:TARGET_WISH:淫紋 == 0
+			IF TARGET_WISH == MASTER
+				PRINTFORML 借由%CALLNAME:TARGET%的帮助可以给自己雕刻上淫紋……该怎么做呢？
+			ELSE
+				PRINTFORMW %CALLNAME:TARGET%觉得贴纸的话无所谓、接受了刻印。
+				PRINTFORML ……那么要怎么做呢？
+			ENDIF
+
+			CALL PRINT_SELECT, "贴上试用的贴纸（１週后就会失效）/刻入実際的刻印　　（注意！一生都不会消失！）/果然还是算了"
+
+			SELECTCASE RESULT
+			CASE 0
+				WISHNAME:CHOICE = 淫紋贴纸
+			CASE 1
+				WISHNAME:CHOICE = 淫紋
+			CASEELSE
+				WISHNAME:CHOICE = 
+			ENDSELECT
+		ELSE
+			WISHNAME:CHOICE = 淫紋
+		ENDIF
+	;シールならどうか？
+	ELSE
+		STR:実行条件 = 
+		RESULT = 0
+		TRYCALLFORM ADDCOND_K{NO:TARGET_WISH}("淫紋贴纸")
+		ADDCOND_RESULT = RESULT
+
+		;淫紋贴纸ならOK
+		IF STR:実行条件 == "" && (COND("淫紋刻印可能", TARGET_WISH) || ADDCOND_RESULT)
+			;刻印の実行条件が特殊な場合にはそれを表示
+			STR:実行条件 = 
+			TRYCALLFORM ADDCOND_K{NO:TARGET_WISH}("淫紋")
+
+			PRINTFORMW 如果是淫紋贴纸的话%CALLNAME:TARGET_WISH%好像不介意的様子。
+			IF STR:実行条件 != ""
+				CALL PRINT_STRW, STR:実行条件
+			ELSEIF TALENT:TARGET_WISH:有男朋友
+				CALL PRINT_STRW, @"イエロー_(※想让%TALENT_NAME(GETNUM(TALENT, "有男朋友"), TALENT:TARGET_WISH:有男朋友)%接受刻印的话、需要[欲望LV5]+[屈服刻印LV3]+[受虐属性LV3])"
+			ELSE
+				CALL PRINT_STRW, "イエロー_(※想让对方接受刻印的话、需要[淫乱]or[屈服刻印LV3]or[受虐属性LV3])"
+			ENDIF
+			PRINTFORML 要怎么做呢？
+
+			CALL PRINT_SELECT, "贴纸也ＯＫ/还是算了吧"
+
+			SELECTCASE RESULT
+			CASE 0
+				WISHNAME:CHOICE = 淫紋贴纸
+			CASEELSE
+				WISHNAME:CHOICE = 
+			ENDSELECT
+		ELSE
+			WISHNAME:CHOICE = 淫紋拒否
+		ENDIF
+	ENDIF
+
+	SELECTCASE WISHNAME:CHOICE
+	CASE "淫紋拒否"
+		;刻印の実行条件が特殊な場合にはそれを表示
+		STR:実行条件 = 
+		IF MARK:TARGET_WISH:淫紋 >= 2
+			TRYCALLFORM ADDCOND_K{NO:TARGET_WISH}("淫紋")
+		ELSE
+			TRYCALLFORM ADDCOND_K{NO:TARGET_WISH}("淫紋贴纸")
+		ENDIF
+		SIF TARGET_WISH == TARGET
+			CALL KOJO_WISH, WISHNAME:CHOICE
+
+		PRINTFORMW ……%CALLNAME:TARGET_WISH%拒绝了淫紋的刻印。
+		PRINTFORMW 还是先改变%CALLNAME:TARGET_WISH%对你的看法再说吧……
+		IF STR:実行条件 != ""
+			CALL PRINT_STRW, STR:実行条件
+		ELSEIF TALENT:TARGET_WISH:有男朋友
+			IF MARK:TARGET_WISH:淫紋 >= 2
+				CALL PRINT_STRW, @"イエロー_(※想让%TALENT_NAME(GETNUM(TALENT, "有男朋友"), TALENT:TARGET_WISH:有男朋友)%接受刻印的话、需要[欲望LV5]+[屈服刻印LV3]+[受虐属性LV3])"
+			ELSE
+				CALL PRINT_STRW, @"イエロー_(※想让%TALENT_NAME(GETNUM(TALENT, "有男朋友"), TALENT:TARGET_WISH:有男朋友)%接受刻印的话、需要[欲望LV3]+[屈服刻印LV1])"
+			ENDIF
+		ELSE
+			IF MARK:TARGET_WISH:淫紋 >= 2
+				CALL PRINT_STRW, "イエロー_(※想让对方接受刻印的话、需要[淫乱]or[屈服刻印LV3]or[受虐属性LV3])"
+			ELSE
+				CALL PRINT_STRW, "イエロー_(※想让对方接受淫紋的话、需要[欲望LV3]or[屈服刻印LV1])"
+			ENDIF
+		ENDIF
+	CASE "淫紋贴纸"
+		MARK:TARGET_WISH:淫紋時計 = 7
+		MARK:TARGET_WISH:淫紋 = 1
+		;貼る前のセリフ
+		SIF TARGET_WISH == TARGET
+			CALL KOJO_WISH, "淫紋贴纸直前"
+
+		;どの領帯プかの決定
+		PRINTFORMW 要给%CALLNAME:TARGET_WISH%刻印哪种淫紋呢？请选择形状
+		PRINTFORMW 淫紋贴纸相当于LV1的阶段、选择LV2以上时可以确认雕刻的形状
+		CALL SIMULATE_INMON, TARGET_WISH
+
+		SELECTCASE CONDS("淫紋の種類", TARGET_WISH)
+		CASE "基本"
+			PRINTFORMW %NAME:TARGET_WISH%的下腹部、贴上了可愛的心形贴纸。
+		CASEELSE
+			CALL PRINT_STRW, @"%CALLNAME:TARGET_WISH%贴上了_黄色_%CONDS("淫紋の種類", TARGET_WISH)%_类型的贴纸。"
+		ENDSELECT
+		PRINTL 
+
+		SIF TARGET_WISH == TARGET
+			CALL KOJO_WISH, WISHNAME:CHOICE
+
+		PRINTFORMW %CALLNAME:TARGET_WISH%贴上的贴纸从现在開始一週間有効。
+	CASE "淫紋"
+		;淫紋LVを１つ上げる
+		MARK:TARGET_WISH:淫紋 = MAX(MARK:TARGET_WISH:淫紋 + 1, 2)
+
+		SIF MARK:TARGET_WISH:淫紋 <= 3
+			MARK:TARGET_WISH:淫紋時計 = 7
+
+		;彫る前のセリフ
+		SIF TARGET_WISH == TARGET
+			CALL KOJO_WISH, "淫紋直前"
+
+		SELECTCASE MARK:TARGET_WISH:淫紋
+		CASE 2
+			;どの領帯プを彫るかの決定
+			PRINTFORMW 要给%CALLNAME:TARGET_WISH%刻印哪种淫紋呢？请选择形状
+			PRINTFORMW 刚刚雕绘上时是LV2阶段、可以通过其他选择来确认淫纹画数增加时的形状
+			PRINTFORMW (淫紋贴纸相当于LV1阶段)
+			CALL SIMULATE_INMON, TARGET_WISH
+
+			SELECTCASE CONDS("淫紋の種類", TARGET_WISH)
+			CASE "基本"
+				IF TALENT:TARGET_WISH:男性
+					PRINTFORMW %NAME:TARGET_WISH%的下腹部、刻绘上了心形标记的图案。
+				ELSE
+					PRINTFORMW %NAME:TARGET_WISH%的下腹部、刻绘上了象征子宫的心形标记的图案。
+				ENDIF
+			CASEELSE
+				CALL PRINT_STRW, @"给%CALLNAME:TARGET_WISH%雕绘上了_黄色_%CONDS("淫紋の種類")%_类型的淫紋。"
+			ENDSELECT
+		CASE 3
+			MARK:TARGET_WISH:淫紋 -= 1
+			CALL PRINT_CUTIN, "腹部", TARGET_WISH
+			MARK:TARGET_WISH:淫紋 += 1
+			CALL ANIME_LEVELUP_INMON,  @"CIP淫紋%CONDS("淫紋の種類", TARGET_WISH)%%CONDS("淫紋の色", TARGET_WISH)%%CONDS("淫紋の段階", TARGET_WISH)%", TARGET_WISH
+
+			IF TALENT:男性
+				PRINTFORMW 在%NAME:TARGET_WISH%刻绘的淫紋上增加了装飾、効果变得更高了。
+			ELSE
+				PRINTFORMW %NAME:TARGET_WISH%的下腹部…在子宮对应的位置雕绘的刻印、增加了代表卵管和卵巣的纹様。
+			ENDIF
+		CASE 4
+			MARK:TARGET_WISH:淫紋 -= 1
+			CALL PRINT_CUTIN, "腹部", TARGET_WISH
+			MARK:TARGET_WISH:淫紋 += 1
+			CALL ANIME_LEVELUP_INMON,  @"CIP淫紋%CONDS("淫紋の種類", TARGET_WISH)%%CONDS("淫紋の色", TARGET_WISH)%%CONDS("淫紋の段階", TARGET_WISH)%", TARGET_WISH
+
+			IF TALENT:男性
+				PRINTFORMW %NAME:TARGET_WISH%的下腹部的刻印的雕绘的紋様、淫紋已经彻底完成了。
+			ELSE
+				PRINTFORMW 在%NAME:TARGET_WISH%可以清楚地展现子宮的淫靡的紋章上面、加入了代表子宮頸部的具象的紋様、淫紋已经彻底完成了。
+			ENDIF
+		ENDSELECT
+
+		PRINTL 
+		SIF TARGET_WISH == TARGET
+			CALL KOJO_WISH, WISHNAME:CHOICE
+
+		CALL PRINT_STRW, @"爱心粉紅_＜%NAME:TARGET_WISH%は淫紋LV{MARK:TARGET_WISH:淫紋}を得た＞"
+
+		;素質の変化
+		IF TALENT:TARGET_WISH:不易濕
+			SIF TALENT:TARGET_WISH:男性 == 0
+				PRINTFORMW ＜%NAME:TARGET_WISH%は[%TALENT_NAME(GETNUM(TALENT, "不易濕"), TALENT:TARGET_WISH:不易濕)%]を失った＞
+			TALENT:TARGET_WISH:不易濕 = 0
+		ENDIF
+		IF TALENT:TARGET_WISH:容易濕 == 0 && MARK:TARGET_WISH:淫紋 >= 2
+			TALENT:TARGET_WISH:容易濕 = 1
+			SIF TALENT:TARGET_WISH:男性 == 0
+				PRINTFORMW ＜%NAME:TARGET_WISH%は[%TALENT_NAME(GETNUM(TALENT, "容易濕"), TALENT:TARGET_WISH:容易濕)%]を得た＞
+		ENDIF
+		IF TALENT:TARGET_WISH:子宮性感 == 0 && MARK:TARGET_WISH:淫紋 >= 2
+			TALENT:TARGET_WISH:子宮性感 = 1
+			SIF TALENT:TARGET_WISH:男性 == 0
+				PRINTFORMW ＜%NAME:TARGET_WISH%獲得了[子宮性感]＞
+		ENDIF
+
+		;你以外ならいくつかのBOUNS
+		IF TARGET_WISH == TARGET
+			MAXBASE:TARGET_WISH:体力 += 200
+			BASE:TARGET_WISH:体力 += 200
+			PRINTFORMW ＜%NAME:TARGET_WISH%的体力上昇200＞
+			MAXBASE:TARGET_WISH:精力 += 5
+			BASE:TARGET_WISH:精力 += 5
+			PRINTFORMW ＜%NAME:TARGET_WISH%的精力上昇５＞ 
+
+			SELECTCASE MARK:TARGET_WISH:淫紋
+			CASE 2
+
+			CASE 3
+				TALENT:TARGET_WISH:吸精体質 += 1
+				PRINTFORMW ＜%NAME:TARGET_WISH%の吸精体質がLV{TALENT:TARGET_WISH:吸精体質}へと上昇した＞
+			CASE 4
+				SIF TALENT:TARGET_WISH:男性 == 0
+					PRINTFORMW ＜%NAME:TARGET_WISH%的子宮口的柔軟性上昇了＞
+			ENDSELECT
+
+			IF TALENT:TARGET_WISH:射精量強化 < 2 && MARK:TARGET_WISH:淫紋 == 4
+				TALENT:TARGET_WISH:射精量強化 = 2
+				SIF PENIS(TARGET_WISH)
+					PRINTFORMW ＜%NAME:TARGET_WISH%は[%TALENT_NAME(GETNUM(TALENT, "射精量強化"), TALENT:TARGET_WISH:射精量強化)%]を得た＞
+			ELSEIF TALENT:TARGET_WISH:射精量強化 == 0 && MARK:TARGET_WISH:淫紋 <= 3
+				TALENT:TARGET_WISH:射精量強化 = 1
+				SIF PENIS(TARGET_WISH)
+					PRINTFORMW ＜%NAME:TARGET_WISH%は[%TALENT_NAME(GETNUM(TALENT, "射精量強化"), TALENT:TARGET_WISH:射精量強化)%]を得た＞
+			ENDIF
+		ENDIF
+
+		IF MARK:TARGET_WISH:淫紋 <= 3
+			PRINTL 
+			PRINTFORMW 想要%NAME:TARGET_WISH%习惯这次雕绘的淫紋的话大约需要一周時间。
+			PRINTFORMW ……想要再增加画数的话、还需要一段時间。
+		ENDIF
+	ENDSELECT
+
+	SELECTCASE WISHNAME:CHOICE
+	CASE "淫紋贴纸", "淫紋"
+		SIF CHOICE == 38
+			STR:日常イベント名 = 帮忙雕刻淫纹
+	ENDSELECT
+	CALL RECORD_SP_EXP_ALLACTOR
+
+CASE 6
+	;念のためもう一回格子
+	CALL CHECK_COM_ABLE, TARGET
+	;すでに頼んでいる場合には中断
+	IF COND("性処理指名中")
+		CALL KOJO_WISH, WISHNAME:CHOICE
+		PRINTFORMW 停止了为了性処理目的而把%CALLNAME:TARGET%叫出来的行为。
+		;颈环を取下
+		CALL RESET_OTHER, "黒色颈环"
+		CFLAG:性処理 = 0
+	ELSEIF COND("性処理可能") == 0
+		CALL KOJO_WISH, "性処理拒否"
+		PRINTFORMW ……被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+		IF COND("性処理指令実行可能") == 0
+			CALL PRINT_STRW, @"イエロー_(※想要这様的话、需要一定程度的程度的性経験再加上[欲望LV5]or[奉仕精神LV5]or[屈服刻印LV2])"
+		ELSE
+			CALL PRINT_STRW, "イエロー_(※想要对方来进行性処理的话、需要[欲望LV5]or[奉仕精神LV5]or[屈服刻印LV2])"
+		ENDIF
+	;してくれる！
+	ELSE
+		CALL KOJO_WISH, WISHNAME:CHOICE
+		PRINTFORMW 现在会在休息時間把%CALLNAME:TARGET%叫出来、进行性処理。
+
+		;性処理係の証を送禮
+		SIF COND("合意：性処理") == 0
+			CALL PRINT_STRW, @"作为%CALLNAME:MASTER%的性処理者的証明、向%CALLNAME:TARGET%贈送了_黄色_[黒色颈环]_。"
+
+		CALL CHECK_GOUI, "性処理", TARGET
+		CALL SETFLAG, "性処理係の証"
+		CFLAG:性処理 = 1
+
+		;条件など
+		PRINTFORMW 関于PLAY的内容、需要事先决定好。
+		CALL SETFLAG, "性処理でのPLAY内容", TARGET
+	ENDIF
+
+CASE 7
+	;見せてくれる
+	IF COND("给看尾巴可能") || COND("合意：给看尾巴")
+		CALL KOJO_WISH, WISHNAME:CHOICE
+		CALL SETFLAG, "给看尾巴", TARGET
+		CALL CHECK_GOUI, "给看尾巴", TARGET
+	ELSE
+		CALL KOJO_WISH, "给我看尾巴拒否"
+		PRINTFORMW ……被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+		CALL PRINT_STR, "イエロー_(※想要对方把尾巴给自己看的话、需要[信頼LV5]or[屈服刻印LV1]or[恋慕])_W_"
+	ENDIF
+;裸体希望
+CASE 8
+	;イベントとして呼び出せるように関数化
+	CALL EVENT_WISH_HADAKA
+
+;***着床判定追加パッチで追加
+;事后避孕药
+CASE 9
+	;取引に関わるTFLAG初期化
+	TFLAG:値切った = 0
+	TFLAG:値上げ交渉 = 0
+	TFLAG:取引拒否 = 0
+
+	;基本価格は$1,500
+	TFLAG:取引価格 = 1500
+
+	MEMO_LINECOUNT = LINECOUNT
+	CALL KOJO_WISH, "事后避孕药取引"
+	;もしも口上側で拒否したなら…
+	IF TFLAG:取引拒否
+		TFLAG:取引承諾 = 0
+	ELSE
+		TFLAG:取引承諾 = 1
+	ENDIF
+
+	IF TFLAG:取引承諾
+		;事后避孕药は高価ですし、你へのペナルティも兼ねてただでは飲んでもらえません
+		PRINTFORMW %CALLNAME:TARGET%接受了使用事后避孕药。
+		PRINTFORMW ……但是、要求%CALLNAME:MASTER%来支付%MONEY_C(TFLAG:取引価格)%。
+
+		PRINTFORML 要怎么做？（所持金：%MONEY_C(MONEY)%）
+		EVENT_TABLE = 按照%CALLNAME:TARGET%的要求%MONEY_C(TFLAG:取引価格)%支付\/不支付\/低声恳求
+
+		VARSET LOCALS
+		SPLIT EVENT_TABLE, "/", LOCALS
+		CALL PRINT_SELECT, EVENT_TABLE
+
+		SELECTCASE LOCALS:RESULT
+		CASE @"按照%CALLNAME:TARGET%的要求支付%MONEY_C(TFLAG:取引価格)%"
+			;お金を払う場合
+			IF MONEY >= TFLAG:取引価格
+			;お金がない
+			ELSE
+				PRINTFORMW ……想要付钱但是没有带够！！
+				;危ないときは仕方ないので許してくれます。相手も妊娠したいわけではないので
+				IF COND("受精確認") || COND("胎内の精液量")
+					IF TALENT:恋慕
+						TFLAG:取引承諾 = 0
+					ELSE
+						TFLAG:取引価格 = MONEY
+						TFLAG:値切った = 1
+					ENDIF
+				ELSE
+					TFLAG:取引承諾 = 0
+				ENDIF
+			ENDIF
+		CASE "不支付"
+			TFLAG:取引承諾 = 0
+		CASE "拝み倒す"
+			PRINTFORMW %CALLNAME:PLAYER%、因为付不起钱所以拼命地拜托%CALLNAME:TARGET%了。
+			TFLAG:取引価格 = 0
+			;恋慕状態なら仕方なく許してくれます
+			SIF TALENT:恋慕 == 0
+				TFLAG:取引承諾 = 0
+		ENDSELECT
+	ENDIF
+
+	PRINTL 
+	MEMO_LINECOUNT = LINECOUNT
+	IF TFLAG:取引承諾
+		CALL KOJO_WISH, "事后避孕药"
+		;台詞が無い場合には展開に応じた地の文を出す
+		IF LINECOUNT == MEMO_LINECOUNT
+			;代金をまけてくれた場合
+			IF TFLAG:値切った
+				PRINTFORMW %CALLNAME:TARGET%像是非常吃惊的様子、不想妊娠的话\@ MONEY ? 所持金全額で # \@就原谅你。
+			;代金を払わなくても許してくれた場合
+			ELSEIF TFLAG:取引価格 == 0
+				PRINTFORMW %CALLNAME:TARGET%说没有办法、这次就原谅你了。
+			ELSE
+
+			ENDIF
+			PRINTL 
+		ENDIF
+
+		IF TFLAG:取引価格 > 0
+			PRINTFORML 所持金‐%MONEY_C(TFLAG:取引価格)%
+			MONEY -= TFLAG:取引価格
+		ENDIF
+		CALL SETFLAG, "事后避孕药"
+		PRINTFORMW %CALLNAME:TARGET%服用了事后避孕药。
+	ELSE
+		CALL KOJO_WISH, "事后避孕药拒否"
+		;台詞が無い場合には展開に応じた地の文を出す
+		IF LINECOUNT == MEMO_LINECOUNT
+			IF (COND("受精確認") || COND("胎内の精液量") ) && TALENT:恋慕
+				PRINTFORMW %CALLNAME:TARGET%移開了視線、说这様的话就没有办法、只能不避妊了。
+				PRINTFORMW 也许是心理作用、好像脸很红的様子……
+			;拝み倒して失敗した場合
+			ELSEIF TFLAG:取引価格 == 0
+				PRINTFORMW ……%CALLNAME:TARGET%似乎没有原谅你的様子。
+			ENDIF
+			PRINTL 
+		ENDIF
+		;相手も妊娠したくはないですが、你が無責任な対応をしたので飲んでくれません
+		PRINTFORMW %CALLNAME:TARGET%没有服用事后避孕药。
+	ENDIF
+
+CASE 39
+
+	STR:実行条件 = 
+	RESULT = 0
+	TRYCALLFORM ADDCOND_K{NO:TARGET}("避妊の護符の解除")
+	ADDCOND_RESULT = RESULT
+
+	IF TALENT:避妊の護符 == 0 && COND("初期避妊の護符")
+		CALL KOJO_WISH, "避妊の護符"
+		TALENT:避妊の護符 = 1
+		PRINTFORMW ＜%NAME:TARGET%装备了[避妊の護符]＞
+	;特殊条件で解除を拒否した場合
+	ELSEIF STR:実行条件 != ""
+		CALL KOJO_WISH, "避妊解除拒否"
+		CALL PRINT_STRW, STR:実行条件
+	ELSEIF TALENT:恋慕 || ADDCOND_RESULT
+		CALL KOJO_WISH, "避妊解除可"
+		TALENT:避妊の護符 = 0
+		PRINTFORMW ＜%NAME:TARGET%失去了[避妊の護符]＞
+		PRINTFORMW %CALLNAME:TARGET%以自己的意志解除了避妊の護符。
+	ELSE
+		CALL KOJO_WISH, "避妊解除拒否"
+		PRINTFORMW ……%CALLNAME:TARGET%拒绝了解除避妊結界。
+		PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+		CALL PRINT_STR, "イエロー_(※想让对方解除避妊的话、需要对方先獲得[恋慕])_W_"
+	ENDIF
+
+CASE 40
+	;改变髪型くれる
+	IF COND("改变髪型可能") || COND("合意：改变髪型")
+		CALL CHANGE_HAIRSTYLE
+	ELSE
+		CALL KOJO_WISH, "改变髪型拒否"
+		PRINTFORMW ……被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+		SELECTCASE TRUE_SEX(TARGET)
+		CASE "扶她", "女性"
+			CALL PRINT_STRW, "イエロー_(※想要髪改变髪型的话、需要[信頼LV5]or[屈服刻印LV3]or[恋慕])"
+		CASE "男性"
+			CALL PRINT_STRW, "イエロー_(※想要髪改变髪型的话、需要[信頼LV3]or[屈服刻印LV1]or[恋慕])"
+		ENDSELECT
+	ENDIF
+
+CASE 41
+	;履き替えてくれる
+	IF COND("希望着装了承")
+		CALL CHANGE_PANST
+	ELSE
+		CALL KOJO_WISH, "连褲襪着替え拒否"
+		PRINTFORMW ……被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+		CALL PRINT_STRW, "イエロー_(※想换上裤袜的话、需要[信頼LV3]以及[露出癖LV3]or[奉仕精神LV5])"
+	ENDIF
+CASE 42
+	IF DITEMTYPE:TARGET:TNUM("身嗜管理") == 0
+		CALL SHOW_COM_ORDER_COM, TNUM("身嗜管理")
+		CALL BLANKLINE
+	ENDIF
+	IF TCVAR:干劲 > 0
+		CALL KOJO_WISH, "拜託身嗜"
+		CALL SET_MIDASHINAMI
+	ELSE
+		CALL KOJO_WISH, "拜託身嗜拒否"
+		PRINTFORMW ……被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW %CALLNAME:TARGET%が心変わりした後ならあるいは……
+	ENDIF
+CASE 50 TO 52
+	CALL KOJO_WISH, WISHNAME:CHOICE
+	CALL SET_WISH, WISHNAME:CHOICE
+;partnerのちんこサイズを変更する。ここ来了なら魂 > 100なので魂が足りない場合の警告は考えなくていい
+CASE 53
+	;ちんこサイズの変更受け入れ
+	IF COND("巨根化して可能")
+		CALL KOJO_WISH, WISHNAME:CHOICE
+	ELSE
+		CALL KOJO_WISH, "巨根化して拒否"
+		TFLAG:取引拒否 = 1
+	ENDIF
+	IF TFLAG:取引拒否 == 0
+		;叶えたのは誰？
+		IF COND("悪魔の取引可能") + COND("天使の取引可能")
+			CALL SET_WISH, WISHNAME:CHOICE
+		ELSE
+			CALL SET_WISH, WISHNAME:CHOICE, ASSI
+		ENDIF
+	ELSE
+		PRINTFORMW ……被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW 如果和%CALLNAME:TARGET%的関系更好一点的话……
+	ENDIF
+CASE 54
+	;ちんこサイズの変更受け入れ
+	IF COND("短小化して可能")
+		CALL KOJO_WISH, WISHNAME:CHOICE
+	ELSE
+		CALL KOJO_WISH, "短小化して拒否"
+		TFLAG:取引拒否 = 1
+	ENDIF
+	IF TFLAG:取引拒否 == 0
+		;叶えたのは誰？
+		IF COND("悪魔の取引可能") + COND("天使の取引可能")
+			CALL SET_WISH, WISHNAME:CHOICE
+		ELSE
+			CALL SET_WISH, WISHNAME:CHOICE, ASSI
+		ENDIF
+	ELSE
+
+		PRINTFORMW ……被%CALLNAME:TARGET%拒绝了。
+		PRINTFORMW 如果和%CALLNAME:TARGET%的関系更好一点的话……
+	ENDIF
+
+;标记
+CASE 55
+	;ちんこサイズの変更受け入れ
+	PRINTFORMW 
+	IF CEVENT("电车乘坐可能",TARGET)
+		CALL PRINT_STRL, @"%CALLNAME:TARGET%现在的状态是_爱心粉紅_[搭乘]_"
+	ELSE
+		CALL PRINT_STRL, @"%CALLNAME:TARGET%现在的状态是_黄色_[不搭乘]_"
+	ENDIF
+	PRINTFORMW 请选择要求
+	CALL PRINT_SELECT, "搭乘/不搭乘"
+	IF RESULT == 0
+		CALL SET_CEVENT("电车乘坐可能",TARGET)
+		CALL KOJO_WISH, "电车乘坐接受"
+		PRINTFORMW %CALLNAME:TARGET%今后将搭乘电车前往学校
+	ELSE
+		CALL DEL_CEVENT("电车乘坐可能",TARGET)
+		CALL KOJO_WISH, "电车乘坐拒绝"
+		PRINTFORMW %CALLNAME:TARGET%今后将不再搭乘电车前往学校
+	ENDIF	
+CASE 98
+	MEMO_NICKNAME = %NICKNAME:TARGET%
+	CALL KOJO_WISH, WISHNAME:CHOICE
+
+	CALL NICKNAME_CONVERT, TARGET
+	PRINTL 
+	;変更した
+	IF MEMO_NICKNAME != NICKNAME:TARGET
+		CALL KOJO_WISH, "爱称変更完了"
+	ELSE
+		CALL KOJO_WISH, "爱称変更中止"
+	ENDIF
+	IF TFLAG:取引拒否
+		NICKNAME:TARGET = 
+		SIF MEMO_NICKNAME != ""
+			NICKNAME:TARGET = %MEMO_NICKNAME%
+	ENDIF
+CASE 99
+	IF CEVENT("二人称主人")
+		MEMO_CNAME = 二人称主人：%CEVENTS("二人称主人")%
+		MEMO_CNAME_KANA = 二人称主人かな：%CEVENTS("二人称主人かな")%
+	ENDIF
+
+	MEMO_MASTERCALLNAME = %CNAME("主人")%
+	CALL KOJO_WISH, WISHNAME:CHOICE
+
+	CALL NAME_CONVERT_SP, TARGET
+	PRINTL 
+	;変更した
+	IF MEMO_MASTERCALLNAME != CNAME("主人")
+		CALL KOJO_WISH, "称呼変更完了"
+	ELSE
+		CALL KOJO_WISH, "称呼変更中止"
+	ENDIF
+	IF TFLAG:取引拒否
+		CALL DEL_CEVENT_GROUP_EX, "二人称主人", TARGET
+		IF MEMO_CNAME != ""
+			CALL SET_CEVENT, MEMO_CNAME, TARGET
+			CALL SET_CEVENT, MEMO_CNAME_KANA, TARGET
+		ENDIF
+	ENDIF
+;以下は魂が必要
+CASEELSE
+	IF BASE:MASTER:魂 <= 100 && NO_SOUL:CHOICE == 0
+		CALL KOJO_WISH, "魂が足りない"
+	ELSE
+		SELECTCASE CHOICE
+		CASE 10
+			CALL KOJO_WISH, WISHNAME:CHOICE
+			CALL SET_WISH, WISHNAME:CHOICE
+		;素質の単純獲得
+		CASE 16, 60 TO 69
+			CALL KOJO_WISH, WISHNAME:CHOICE
+			CALL SET_WISH, WISHNAME:CHOICE
+		CASE 11 TO 19
+			CALL KOJO_WISH, WISHNAME:CHOICE
+			CALL SET_WISH, WISHNAME:CHOICE
+			IF TALENT:PLAYER:(WISHNAME:CHOICE) == 1
+				PRINTL 
+				PRINTFORMW [%WISHNAME:CHOICE%]最大可以升到LV9。有余裕的時候就慢慢升级吧。
+			ENDIF
+		;早漏or遅漏、皮変更
+		CASE 28, 29
+			CALL KOJO_WISH, WISHNAME:CHOICE
+			CALL SET_WISH, WISHNAME:CHOICE
+		;肉体変化＆性別変化
+		CASE 20 TO 32
+			;元の体型を記憶
+			MEMO_BODY = %CONDS("体型", PLAYER)%
+
+			CALL KOJO_WISH, WISHNAME:CHOICE
+			CALL SET_WISH, WISHNAME:CHOICE
+
+			;3サイズを格子
+			CALL CHECK_3SIZE, PLAYER
+			;体型自体が変わった？
+			IF MEMO_BODY != CONDS("体型", PLAYER)
+				PRINTFORM 随着変化、%NAME:PLAYER%的体型
+				SETCOLOR DEF_COLOR("黄色")
+				PRINTFORM [%CONDS("体型", PLAYER)%]
+				RESETCOLOR
+				PRINTFORMW 变成了。
+			ENDIF
+		ENDSELECT
+	ENDIF
+ENDSELECT
+
+;何か契約したりしたなら行動の記録をして終了
+IF STR:日常イベント名 != ""
+	PLAYER = MASTER
+	CALL SET_PREV_DAILYCOM
+	;現実時間フラグ取得
+	CALL GET_REALTIMEFORFLAG
+	RETURN 1
+ENDIF
+
+RESTART
+
+
+;-------------------------------------------------
+;胖次交易
+;-------------------------------------------------
+@EVENT_WISH_PANTU
+#DIMS EVENT_TABLE
+#DIM MEMO_LINECOUNT
+
+;取引に関わるTFLAG初期化
+TFLAG:取引承諾 = 0
+TFLAG:取引価格 = 0
+TFLAG:値切った = 0
+TFLAG:値上げ交渉 = 0
+TFLAG:取引拒否 = 0
+
+;胖次交易中フラグON
+SETBIT FLAG:状況判定, 30
+
+;没穿内褲or合意獲得なら魂は不要
+IF EQUIP:胖次 == 0
+	CALL KOJO_WISH, "没穿内褲"
+	IF COND("身嗜み：没穿内褲") == 0 && COND("胖次形状確認") == 0
+		PRINTFORMW ……%CALLNAME:TARGET%没有穿胖次！
+		CALL SETFLAG_DAILY, "胖次形状確認"
+	ENDIF
+;魂の取引の場合
+ELSEIF COND("魂の取引可能") || COND("天使の取引可能")
+	IF COND("合意：胖次交易")
+		IF CHARA_NUM("室内の邪魔者") == 0 && PLACE("野外") == 0
+			TFLAG:取引承諾 = 1
+		ELSE
+			TCVAR:干劲 = 0
+			;換装の実行判定
+			CALL COM_ORDER_COM175
+			TCVAR:干劲 = RESULT
+			SIF TCVAR:干劲 > 0
+				TFLAG:取引承諾 = 1
+		ENDIF
+		PRINTL 
+
+		;魂の做交易場合は基本的にここは空白。だが何かを条件に断っても良い
+		CALL KOJO_WISH, "胖次交易"
+
+		SIF TFLAG:取引拒否
+			TFLAG:取引承諾 = 0
+
+		IF TFLAG:取引承諾
+			MEMO_LINECOUNT = LINECOUNT
+			CALL KOJO_WISH, "胖次"
+			;台詞が無い場合には、胖次を脱いで渡してくる汎用地の文を出す
+			SIF LINECOUNT == MEMO_LINECOUNT
+				CALL DAILY_MESSAGE, "脱下胖次交了出去"
+			CALL SET_WISH, "胖次"
+			STR:日常イベント名 = 胖次交易
+		ELSE
+			CALL KOJO_WISH, "胖次拒否"
+			PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+		ENDIF
+	ELSE
+		;魂不足
+		IF BASE:MASTER:魂 <= 100
+			CALL KOJO_WISH, "魂が足りない"
+		ELSE
+			TFLAG:取引承諾 = 1
+			MEMO_LINECOUNT = LINECOUNT
+			CALL KOJO_WISH, "胖次"
+			;台詞が無い場合には、胖次を脱いで渡してくる汎用地の文を出す
+			SIF LINECOUNT == MEMO_LINECOUNT
+				CALL DAILY_MESSAGE, "脱下胖次交了出去"
+			CALL SET_WISH, "胖次"
+			STR:日常イベント名 = 胖次交易
+		ENDIF
+	ENDIF
+ELSE
+	IF COND("合意：胖次交易") && CHARA_NUM("室内の邪魔者") == 0 && PLACE("野外") == 0
+		TFLAG:取引承諾 = 1
+	ELSE
+		TCVAR:干劲 = 0
+		;換装の実行判定
+		CALL COM_ORDER_COM175
+		TCVAR:干劲 = RESULT
+		SIF TCVAR:干劲 > 0
+			TFLAG:取引承諾 = 1
+	ENDIF
+	PRINTL 
+
+	;基本価格は$500
+	TFLAG:取引価格 = 500
+
+	MEMO_LINECOUNT = LINECOUNT
+	CALL KOJO_WISH, "胖次交易"
+	SIF TFLAG:取引拒否
+		TFLAG:取引承諾 = 0
+
+	IF TFLAG:取引承諾
+		IF TFLAG:取引価格
+			;台詞が無い場合には、お金要求を示唆
+			SIF LINECOUNT == MEMO_LINECOUNT
+				PRINTFORMW %CALLNAME:TARGET%好像只要能拿到足够买一条新的%PANTIES(TARGET, "略")%的钱的话就可以接受的様子。
+			PRINTFORML 要怎么做？（所持金：%MONEY_C(MONEY)%）
+			SELECTCASE TFLAG:取引価格
+			;割高時
+			CASE IS > 500
+				IF MONEY >= 500
+					EVENT_TABLE = 按照%CALLNAME:TARGET%的要求支付%MONEY_C(TFLAG:取引価格)%\/……如果是%MONEY_C(500)%的话可以付\/不支付\/
+				ELSE
+					EVENT_TABLE = 按照%CALLNAME:TARGET%的要求支付%MONEY_C(TFLAG:取引価格)%\/不支付\/
+				ENDIF
+			CASEELSE
+				EVENT_TABLE = 考虑到因为是已经穿过的胖次了等各种因素所以支付%MONEY_C(TFLAG:取引価格)%\/不支付\/
+			ENDSELECT
+
+			VARSET LOCALS
+			SPLIT EVENT_TABLE, "/", LOCALS
+			CALL PRINT_SELECT, EVENT_TABLE
+
+			SELECTCASE LOCALS:RESULT
+			CASE @"按照%CALLNAME:TARGET%的要求支付%MONEY_C(TFLAG:取引価格)%", @"考虑到因为是已经穿过的胖次了等各种因素所以支付%MONEY_C(TFLAG:取引価格)%"
+				IF MONEY < TFLAG:取引価格
+					PRINTFORMW 想要付钱但是身上的却不够……！
+					TFLAG:取引承諾 = 0
+				ENDIF
+			CASE @"……如果是%MONEY_C(500)%的话可以付"
+				TFLAG:取引価格 = 500
+				TFLAG:取引承諾 = 1
+				TFLAG:値切った = 1
+			CASE "不支付"
+				TFLAG:取引承諾 = 0
+			ENDSELECT
+		ENDIF
+
+		IF TFLAG:取引承諾
+			;ここで値切った際にTFLAG:取引承諾 = 0に出来る
+			MEMO_LINECOUNT = LINECOUNT
+			CALL KOJO_WISH, "胖次"
+
+			IF TFLAG:取引承諾
+				CALL SET_WISH, "胖次"
+				;台詞が無い場合には、胖次を脱いで渡してくる汎用地の文を出す
+				SIF LINECOUNT == MEMO_LINECOUNT
+					CALL DAILY_MESSAGE, "脱下胖次交了出去"
+				STR:日常イベント名 = 胖次交易
+			ENDIF
+		ELSE
+			CALL KOJO_WISH, "胖次拒否"
+			PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+		ENDIF
+	ELSEIF TFLAG:取引承諾 == 0
+		IF TFLAG:取引価格 && TFLAG:値上げ交渉 && MONEY >= TFLAG:取引価格 + TFLAG:値上げ交渉
+			CALL KOJO_WISH, "胖次拒否"
+			PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+			PRINTL 
+			PRINTFORMW ……再咬咬牙稍微试一试吧？（所持金：%MONEY_C(MONEY)%）
+			EVENT_TABLE = 振作起来试图讲价到%MONEY_C(TFLAG:取引価格 + TFLAG:値上げ交渉)%\/放弃\/
+			VARSET LOCALS
+			SPLIT EVENT_TABLE, "/", LOCALS
+			CALL PRINT_SELECT, EVENT_TABLE
+
+			SELECTCASE LOCALS:RESULT
+			CASE @"振作起来试图讲价到%MONEY_C(TFLAG:取引価格 + TFLAG:値上げ交渉)%"
+				TFLAG:取引承諾 = 1
+				TFLAG:取引価格 += TFLAG:値上げ交渉
+
+				MEMO_LINECOUNT = LINECOUNT
+				CALL KOJO_WISH, "胖次"
+				;台詞が無い場合には、胖次を脱いで渡してくる汎用地の文を出す
+				SIF LINECOUNT == MEMO_LINECOUNT
+					CALL DAILY_MESSAGE, "脱下胖次交了出去"
+
+				CALL SET_WISH, "胖次"
+				STR:日常イベント名 = 胖次交易
+			CASE "放弃"
+
+			ENDSELECT
+		ELSE
+			CALL KOJO_WISH, "胖次拒否"
+			PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+		ENDIF
+	ENDIF
+ENDIF
+
+;胖次交易中フラグOFF
+CLEARBIT FLAG:状況判定, 30
+
+
+;-------------------------------------------------
+;裸体希望
+;-------------------------------------------------
+@EVENT_WISH_HADAKA
+#DIMS EVENT_TABLE
+#DIM MEMO_LINECOUNT
+#DIM ACTOR
+;淫紋が見えるよう变成了かを格子する
+#DIM IS_VISIBLE_INMON
+
+;淫紋確認の地の文を出すかの格子に使う
+IS_VISIBLE_INMON = CHECK_CLO("淫紋露出")
+
+;取引に関わるTFLAG初期化
+TFLAG:取引承諾 = 0
+TFLAG:取引価格 = 0
+TFLAG:値切った = 0
+TFLAG:値上げ交渉 = 0
+TFLAG:取引拒否 = 0
+
+;全裸交易中フラグON
+SETBIT FLAG:状況判定, 32
+
+;何度も拜托了のはしつこい
+IF CHOSE_DEVENT("变成裸体")
+	PRINTFORMW 因为拜托裸体好几次了所以好像被讨厌了……这次就算了吧。
+	;全裸交易中フラグOFF
+	CLEARBIT FLAG:状況判定, 32
+	RETURN 0
+ELSEIF COND("合意：全裸化") && CHARA_NUM("室内の邪魔者") == 0 && PLACE("個室")
+	TFLAG:取引承諾 = 1
+ELSE
+	TCVAR:干劲 = 0
+	;換装の実行判定
+	CALL COM_ORDER_COM175
+	TCVAR:干劲 = RESULT
+	SIF TCVAR:干劲 > 0
+		TFLAG:取引承諾 = 1
+ENDIF
+PRINTL 
+
+MEMO_LINECOUNT = LINECOUNT
+CALL KOJO_WISH, "全裸交易"
+SIF TFLAG:取引拒否
+	TFLAG:取引承諾 = 0
+
+IF TFLAG:取引承諾
+	;ここで値切った際にTFLAG:取引承諾 = 0に出来る
+	MEMO_LINECOUNT = LINECOUNT
+	CALL KOJO_WISH, "全裸"
+	;台詞が無い場合には汎用地の文を出す
+	SIF LINECOUNT == MEMO_LINECOUNT
+		CALL EVENT_DATUI, "裸体"
+ELSE
+	IF TFLAG:値上げ交渉 && MONEY >= TFLAG:値上げ交渉
+		CALL KOJO_WISH, "全裸拒否"
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+		PRINTL 
+		PRINTFORMW ……再咬咬牙稍微试一试吧？（所持金：%MONEY_C(MONEY)%）
+		EVENT_TABLE = 振作起来试图讲价到%MONEY_C(TFLAG:値上げ交渉)%\/放弃\/
+		VARSET LOCALS
+		SPLIT EVENT_TABLE, "/", LOCALS
+		CALL PRINT_SELECT, EVENT_TABLE
+
+		SELECTCASE LOCALS:RESULT
+		CASE @"振作起来试图讲价到%MONEY_C(TFLAG:値上げ交渉)%"
+			TFLAG:取引承諾 = 1
+			TFLAG:取引価格 += TFLAG:値上げ交渉
+
+			MEMO_LINECOUNT = LINECOUNT
+			CALL KOJO_WISH, "全裸"
+			;台詞が無い場合には汎用地の文を出す
+			SIF LINECOUNT == MEMO_LINECOUNT
+				CALL EVENT_DATUI, "裸体"
+		CASE "放弃"
+
+		ENDSELECT
+	ELSE
+		CALL KOJO_WISH, "全裸拒否"
+		PRINTFORMW 被%CALLNAME:TARGET%拒绝了。
+	ENDIF
+ENDIF
+
+IF TFLAG:取引承諾 && TFLAG:取引拒否 == 0
+	MONEY -= TFLAG:取引価格
+	SIF TFLAG:取引価格
+		PRINTFORMW 所持金‐%MONEY_C(TFLAG:取引価格)%
+
+	CALL SETFLAG, "全裸化", TARGET
+	CALL CHECK_GOUI, "全裸化", TARGET
+
+	;淫紋イベント
+	SIF IS_VISIBLE_INMON == 0 && MARK:淫紋 >= 2 && CFLAG:淫紋の様子 == 0 && CHECK_CLO("淫紋露出")
+		CALL TEXT, "淫紋の様子：脱衣後"
+
+	;誰かひとりの反応を出す
+	IF FIND_COND("現在存在", "起床中")
+		DRAWLINE
+		MEMO_LINECOUNT = LINECOUNT
+		ACTOR = FIND_COND("現在存在", "起床中")
+		CALL KOJO_GREETING, "全裸化への反応", ACTOR
+		IF LINECOUNT == MEMO_LINECOUNT
+			IF COND("合意：全裸化", ACTOR)
+				IF TALENT:ACTOR:不知羞恥
+					PRINTFORML 「…………」
+				ELSE
+					CALL PRINT_STRL, "「……_／／／_」"
+				ENDIF
+				PRINTFORMW 像是炫耀自己的裸体一様的%CALLNAME:TARGET%的姿态、%CALLNAME:ACTOR%想起了自己脱的時候的事情……
+			ELSEIF DEVENT("全裸化目撃", ACTOR) == 0
+				PRINTFORML 「……！？」
+				PRINTFORMW 看着遵照%CALLNAME:MASTER%的要求脱掉了衣服露出了裸体的%CALLNAME:TARGET%、%CALLNAME:ACTOR%简直无法掩饰自己的惊讶……
+				CALL SET_DEVENT, "全裸化目撃", ACTOR
+			ELSE
+				PRINTFORML 「……」
+				PRINTFORMW %CALLNAME:ACTOR%用难以言喻的表情看着把%CALLNAME:TARGET%弄得乱七八糟的%CALLNAME:MASTER%……
+			ENDIF
+		ENDIF
+	ENDIF
+	STR:日常イベント名 = 变成裸体
+ENDIF
+
+;全裸交易中フラグOFF
+CLEARBIT FLAG:状況判定, 32
+
+;-------------------------------------------------
+;髪型を長さを変えない範囲で弄ります
+;-------------------------------------------------
+@CHANGE_HAIRSTYLE
+#DIM MEMO_ASSI
+#DIM MEMO_ASSI2
+#DIM ASSI_CALLED
+#DIMS HAIR_TABLE
+#DIMS MEMO_HAIR
+#DIMS AFTER_HAIR
+#DIMS MEMO_HAIRTYPE
+#DIM MEMO_LINECOUNT
+
+MEMO_HAIR = %CONDS("髪型")%\/%CSTR:髪色%\/%CSTR:髪長%\/%CSTR:前髪%\/%CSTR:後髪%\/%CSTR:改髪%\/%CSTR:呆毛%\/%CSTR:蝴蝶結%\/
+MEMO_HAIRTYPE = %CONDS("髪型")%
+
+;指导者を記録
+MEMO_ASSI = ASSI
+
+;改变髪型にあたり補助役が一人現れる。指导者が現在いるならその人
+IF ASSI && ASSI != TARGET && COND("現在存在", ASSI)
+;現在指导者が居ないなら誰かが参加してくる
+ELSE
+	ASSI = FIND_COND("助手可能", "現在存在")
+ENDIF
+;指名お手伝いの判定用
+MEMO_ASSI2 = ASSI
+ASSI_CALLED = 0
+
+CALL KOJO_WISH, "改变髪型"
+
+;お手伝いの指名があった？
+SIF ASSI && ASSI != MEMO_ASSI2
+	ASSI_CALLED = ASSI
+
+CALL CHECK_GOUI, "改变髪型", TARGET
+
+;結局補助役は居るのか？
+SELECTCASE ASSI
+;補助无
+CASE 0
+	PRINTFORMW 那么開始改变%CALLNAME:TARGET%的髪型。
+;指名された人が補助
+CASE ASSI_CALLED
+	PRINTFORMW 那么開始在%CALLNAME:ASSI%的帮助下改变%CALLNAME:TARGET%的髪型。
+;指导者の人が補助
+CASE MEMO_ASSI
+	PRINTFORMW 难得有这样的机会、開始在%CALLNAME:ASSI%的帮助下改变%CALLNAME:TARGET%的髪型。
+;野次馬が参加
+CASEELSE
+	PRINTFORMW 非常開心地、在路过的%CALLNAME:ASSI%的帮助下改变%CALLNAME:TARGET%的髪型。
+ENDSELECT
+IF CFLAG:颜绘
+	PRINTFORML 現在%CALLNAME:TARGET%的髪型是%CONDS("髪色")%的%CONDS("髪型")%……要怎么做？
+ELSEIF CFLAG:髪型変更のお願い中
+	PRINTFORML 現在的%CALLNAME:TARGET%的髪型是%CONDS("髪型")%……该怎么做呢？
+ELSE
+	PRINTFORML ……要变成什么样的髪型呢？
+ENDIF
+
+SETBIT FLAG:状況判定, 26
+
+;颜绘表示がONになっている角色
+IF CFLAG:颜绘
+	CALL SIMULATE_MAIDFACE, TARGET
+ELSE
+	SELECTCASE CONDS("改髪")
+	CASE "无特殊髪型"
+		HAIR_TABLE = 双马尾/侧边马尾/马尾辫/三股辫/団子頭/
+	CASE "双马尾"
+		HAIR_TABLE = 无特殊髪型/侧边马尾/马尾辫/三股辫/団子頭/
+	CASE "侧边马尾"
+		HAIR_TABLE = 无特殊髪型/双马尾/马尾辫/三股辫/団子頭/
+	CASE "马尾辫"
+		HAIR_TABLE = 无特殊髪型/双马尾/侧边马尾/三股辫/団子頭/
+	CASE "三股辫"
+		HAIR_TABLE = 无特殊髪型/双马尾/侧边马尾/马尾辫/団子頭/
+	CASE "団子頭"
+		HAIR_TABLE = 无特殊髪型/双马尾/侧边马尾/马尾辫/三股辫/
+	ENDSELECT
+	HAIR_TABLE += "果然还是算了/"
+
+	VARSET LOCALS
+	SPLIT HAIR_TABLE, "/", LOCALS
+	CALL PRINT_SELECT, HAIR_TABLE
+
+	SIF LOCALS:RESULT != "果然还是算了"
+		CSTR:改髪 = %LOCALS:RESULT%
+ENDIF
+
+AFTER_HAIR = %CSTR:髪色%\/%CSTR:髪長%\/%CSTR:前髪%\/%CSTR:後髪%\/%CSTR:改髪%\/%CSTR:呆毛%\/%CSTR:蝴蝶結%\/
+
+IF MEMO_HAIR != AFTER_HAIR
+	;期間は2週間
+	CFLAG:髪型変更のお願い中 = 14
+	IF MEMO_HAIRTYPE != CONDS("髪型")
+		IF CFLAG:颜绘
+			CALL PRINT_STRW, @"%CALLNAME:TARGET%变成_黄色_%CONDS("髪色")%的%CONDS("髪型")%_了"
+		ELSE
+			CALL PRINT_STRW, @"%CALLNAME:TARGET%变成_黄色_%CONDS("髪型")%_了"
+		ENDIF
+	ELSE
+		CALL PRINT_STRW, @"%CALLNAME:TARGET%的髪型非常稍微的改了一下"
+	ENDIF
+	CALL PRINT_STRW, @"大概会保持_黄色_２週_左右的样子"
+	PRINTL 
+	MEMO_LINECOUNT = LINECOUNT
+	CALL KOJO_WISH, "髪型変更の感想", "改行没有"
+	SIF LINECOUNT == MEMO_LINECOUNT
+		CLEARLINE 1
+ELSE
+	PRINTFORMW やっぱりやめました。
+ENDIF
+
+;指导者を戻す
+ASSI = MEMO_ASSI
+
+CLEARBIT FLAG:状況判定, 26
+
+;-------------------------------------------------
+;连褲襪を着替えてもらう
+;-------------------------------------------------
+@CHANGE_PANST
+#DIM CHOICE
+#DIM MEMO_LINECOUNT
+#DIMS MEMO_BOTTOM
+#DIMS COLOR_TABLE
+#DIMS COLOR_CHOICE
+
+MEMO_BOTTOM = %BOTTOM(TARGET)%
+
+PRINTFORMW %CALLNAME:TARGET%听从了%CALLNAME:MASTER%的愿望。
+SIF CONDS("连褲襪") != ""
+	CALL PRINT_STRW, "黄色_今後穿裤袜的时候、也有高概率维持现在的选择"
+IF CHECK_BOTTOM("连褲襪")
+	PRINTFORML 	現在%CALLNAME:TARGET%穿着的是[%BOTTOM(TARGET)%]……要拜托换成什么呢？
+ELSEIF EQUIP:下身衣装
+	PRINTFORML 	現在%CALLNAME:TARGET%正穿着%BOTTOM(TARGET)%所以没法穿裤袜的样子……要怎么办？
+ELSEIF EQUIP:贴身制服
+	PRINTFORML 	現在%CALLNAME:TARGET%正穿着%BODYS(TARGET)%所以没法穿裤袜的样子……要怎么办？
+ELSE
+	PRINTFORML 	現在%CALLNAME:TARGET%没有穿裤袜……要怎么做？
+ENDIF
+PRINTFORML [ 0] 脱掉
+PRINTFORML [ 1] 普通的裤袜
+PRINTFORML [ 2] 渔网连褲襪
+PRINTFORML [ 3] 開放型连褲襪
+PRINTFORML [ 4] 果然還是放棄
+CALL INPUT_SELECT, 5
+
+CHOICE = RESULT
+
+SELECTCASE CHOICE
+CASE 4
+	CALL DEL_CEVENT_GROUP, "连褲襪"
+	RETURN 0
+CASE 0
+	CALL DEL_CEVENT_GROUP, "连褲襪"
+	CALL SET_CEVENT, "连褲襪：生足"
+	CALL SETFLAG, "请求换上连褲襪"
+	IF BOTTOM(TARGET) != MEMO_BOTTOM
+		PRINTFORMW %CALLNAME:TARGET%变成光腿了。
+	ELSE
+		PRINTFORMW 拜托%CALLNAME:TARGET%在今後也尽量不要穿裤袜、保持光腿。
+	ENDIF
+CASEELSE
+	PRINTFORML 想要什么颜色的？
+	COLOR_TABLE = 什么颜色都可以/白色/黒色/米色/棕色/粉色
+	VARSET LOCALS
+	SPLIT COLOR_TABLE, "/", LOCALS
+	CALL PRINT_SELECT, COLOR_TABLE
+	SELECTCASE RESULT
+	CASE 0
+		COLOR_CHOICE = 
+	CASEELSE
+		COLOR_CHOICE = %LOCALS:RESULT%
+	ENDSELECT
+
+	CALL DEL_CEVENT_GROUP, "连褲襪"
+	SELECTCASE CHOICE
+	CASE 1
+		CALL SET_CEVENT, @"连褲襪：连褲襪_%COLOR_CHOICE%"
+	CASE 2
+		CALL SET_CEVENT, @"连褲襪：渔网连褲襪_%COLOR_CHOICE%"
+	CASE 3
+		CALL SET_CEVENT, @"连褲襪：開放型连褲襪_%COLOR_CHOICE%"
+	ENDSELECT
+
+	CALL SETFLAG, "请求换上连褲襪"
+	IF BOTTOM(TARGET) != MEMO_BOTTOM
+		PRINTFORMW %CALLNAME:TARGET%穿上了[%BOTTOM(TARGET)%]。
+	ELSE
+		PRINTFORMW 拜托%CALLNAME:TARGET%在今後要穿裤袜的时候、尽量选择自己拜托的这一款。
+	ENDIF
+ENDSELECT
+
+PRINTL 
+MEMO_LINECOUNT = LINECOUNT
+CALL KOJO_WISH, "连褲襪着替え", "改行没有"
+SIF LINECOUNT == MEMO_LINECOUNT
+	CLEARLINE 1
+
+;-------------------------------------------------
+;悪魔との取引。
+;契約内容に伴ったフラグなどの変更もここで同時に行う
+;-------------------------------------------------
+@SET_WISH, ARGS, ARG
+#DIM LCOUNT
+#DIM MEMO_LINECOUNT
+#DIM PAY_SOUL
+#DIM MEMO_TARGET
+#DIMS CHOICES
+#DIMS EVENT_TABLE
+;日常イベント名を変える際に使う
+#DIMS EVENTNAME_WISH
+
+SIF ARG == 0 && TARGET
+	ARG = TARGET
+
+;基本は100。異なる場合には以下の選択肢内で値を代入する
+IF COND("魂の取引可能", ARG) || COND("天使の取引可能", ARG)
+	PAY_SOUL = 100
+ELSE
+	PAY_SOUL = 0
+ENDIF
+
+EVENTNAME_WISH = 契約成立
+
+MEMO_LINECOUNT = LINECOUNT
+SELECTCASE ARGS
+CASE "胖次"
+	SIF COND("合意：胖次交易", ARG)
+		PAY_SOUL = 0
+
+	PRINTFORM %CALLNAME:MASTER%
+	IF PAY_SOUL
+		PRINTFORM 用魂交换
+	ELSEIF TFLAG:取引価格
+		PRINTFORM 用%MONEY_C(TFLAG:取引価格)%交换了
+	ENDIF
+	SELECTCASE PANTIES(ARG, "略")
+	CASE "前貼"
+		PRINTFORMW 獲得了%CALLNAME:ARG%的%PANTIES(ARG)%！
+	CASE "Ｃ胖次"
+		PRINTFORMW 獲得了%CALLNAME:ARG%装备着的%PANTIES(ARG)%！
+	CASEELSE
+		PRINTFORMW 獲得了%CALLNAME:ARG%穿着的%PANTIES(ARG)%！
+	ENDSELECT
+
+	MONEY -= TFLAG:取引価格
+	SIF TFLAG:取引価格
+		PRINTFORML 所持金‐%MONEY_C(TFLAG:取引価格)%
+
+	CALL TEXT, "脱ぎたて胖次の描写", ARG
+
+	IF NUM("胖次没収数") == 0
+		PRINTL 
+		SETCOLOR DEF_COLOR("イエロー")
+		PRINTFORMW （点击主画面的%CALLNAME:MASTER%的名字下面排着的已取得的内衣的话可以回復精力）
+		RESETCOLOR
+	ENDIF
+
+	CALL SETFLAG, "胖次没収", ARG
+	CALL CHECK_GOUI, "胖次交易", ARG
+
+CASE "想要钱"
+	MONEY += 50000
+	PRINTFORMW %CALLNAME:MASTER%用魂交换了%MONEY_C(50000)%。
+
+CASE "性豪"
+	TALENT:MASTER:ARGS += 1
+	CALL SET_COUNTER_BASE
+	BASE:MASTER:精力 += 20
+	PRINTFORMW %CALLNAME:PLAYER%用魂交换了[%TALENT_NAME(GETNUM(TALENT, ARGS), TALENT:PLAYER:ARGS)%]。
+	PRINTFORMW 精力の上限+20
+
+CASE "淫紋刻印"
+	PRINTFORMW %CALLNAME:PLAYER%通过用魂交换獲得了[%ARGS%]。
+	PRINTL 
+	CALL PRINT_STRW, "被雕绘了淫紋的对象_黄色_愛液、体力、精力会增加、通过性交獲得的恭順、欲情、屈服也会増大。"
+	CALL PRINT_STRW, "以及、_黄色_欲求不満or受精時的紋章的颜色和形状会发生改变、变成无法隐藏这些事情的身体。"
+	PRINTFORMW 顺便一提、不刻印、只是简单的贴一个贴纸也是可以的……不过効果很弱。
+	CALL PRINT_STRW, "作对方容易接受这种情况的代价、_黄色_時间缩短到了１週限定_。"
+
+	TALENT:MASTER:ARGS = 1
+	IF TALENT:MASTER:禁断的知識 == 0
+		PRINTL 
+		PRINTFORMW %CALLNAME:PLAYER%在獲得了[%ARGS%]的同时、学会了[禁断的知識]。
+		TALENT:MASTER:禁断的知識 = 1
+	ENDIF
+CASE "具現"
+	PRINTFORMW %CALLNAME:PLAYER%通过用魂交换獲得了[%ARGS%]。
+	PRINTL 
+	CALL PRINT_STRW, "使用了这种力量的话、_黄色_男性以外的人也会长出阴茎_的这种事情变成了可能"
+	CALL PRINT_STRW, "不过、変化也只是短時間的……具体的说_黄色_H一次_之后效果就会消失、恢复到原来的状態"
+
+	TALENT:MASTER:ARGS = 1
+	IF TALENT:MASTER:禁断的知識 == 0
+		PRINTL 
+		PRINTFORMW %CALLNAME:PLAYER%在獲得了[%ARGS%]的同时、学会了[禁断的知識]。
+		TALENT:MASTER:禁断的知識 = 1
+	ENDIF
+CASE "認識阻害"
+	PRINTFORMW %CALLNAME:PLAYER%通过用魂交换獲得了[%ARGS%]。
+	PRINTL 
+	CALL PRINT_STRW, @"使用了这个力量的话、_黄色_対象就无法准确的认知到%CALLNAME:MASTER%_"
+	CALL PRINT_STRW, "这个效果会也会影响到記録录像以及类似的相関东西、_黄色_就算本人暴露了、也会被误认为相似的别人_的这种程度"
+	CALL PRINT_STRW, "……但并不是100％安全。所以还是注意不要过于兴奋较好"
+
+	TALENT:MASTER:ARGS = 1
+	IF TALENT:MASTER:禁断的知識 == 0
+		PRINTL 
+		PRINTFORMW %CALLNAME:PLAYER%在獲得了[%ARGS%]的同时、学会了[禁断的知識]。
+		TALENT:MASTER:禁断的知識 = 1
+	ENDIF
+
+CASE "甜言蜜语", "謎之魅力", "大力士", "錬金術", "射精量強化", "業物"
+	TALENT:MASTER:ARGS += 1
+	PRINTFORMW %CALLNAME:PLAYER%用魂交换了[%TALENT_NAME(GETNUM(TALENT, ARGS), TALENT:PLAYER:ARGS)%]。
+CASE "豊穣"
+	TALENT:MASTER:ARGS += 1
+	PRINTFORMW %CALLNAME:PLAYER%用魂交换了[豊穣]。
+	PRINTL 
+	CALL PRINT_STR, "被主人公揉胸部or把精液射在胸部上的女性、_黄色_胸部会变大_一点点！_W"
+	CALL PRINT_STR, "具体的说胸愛撫or胸部射精１回的话就长大_黄色_0.1cm_的程度_L"
+	PRINTFORMW 一定時間段内的成長上限是有限的、所以每日的揉揉工作是很重要的
+	CALL PRINT_STR, "想要暂時封印的時候、H画面的地方横着的过滤器里的[_黄色_豊穣_]点一下就行了_W"
+CASE "高大化"
+	IF TALENT:PLAYER:娇小
+		CALL SETFLAG_3SIZE, "普通体型化", PLAYER
+	ELSE
+		CALL SETFLAG_3SIZE, "高大化", PLAYER
+	ENDIF
+	IF TALENT:PLAYER:高大
+		PRINTFORMW %CALLNAME:PLAYER%用魂做交易、变成了[高大]。
+	ELSEIF TALENT:PLAYER:娇小
+		PRINTFORMW %CALLNAME:PLAYER%用魂做交易、变成了[娇小]。
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%用魂做交易、变成了平均的身高。
+	ENDIF
+CASE "娇小化"
+	IF TALENT:PLAYER:高大
+		CALL SETFLAG_3SIZE, "普通体型化", PLAYER
+	ELSE
+		CALL SETFLAG_3SIZE, "娇小化", PLAYER
+	ENDIF
+	IF TALENT:PLAYER:高大
+		PRINTFORMW %CALLNAME:PLAYER%用魂做交易、变成了[高大]。
+	ELSEIF TALENT:PLAYER:娇小
+		PRINTFORMW %CALLNAME:PLAYER%用魂做交易、变成了[娇小]。
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%用魂做交易、变成了平均的身高。
+	ENDIF
+CASE "巨根化"
+	TALENT:PLAYER:阴茎 += 1
+	PRINTFORMW %CALLNAME:PLAYER%用魂做交易、变成了[%TALENT_NAME(GETNUM(TALENT, "阴茎"), TALENT:PLAYER:阴茎, PLAYER)%]。
+;これは你ではなくpartnerのちんこをでかくする
+CASE "巨根化して"
+	TALENT:阴茎 += 1
+	PRINTFORMW %CALLNAME:PLAYER%の魂と引き換えに、%CALLNAME:TARGET%は[%TALENT_NAME(GETNUM(TALENT, "阴茎"), TALENT:阴茎, TARGET)%]变成了。
+	SIF ARG == TARGET
+		EVENTNAME_WISH = 巨根化契約成立
+CASE "短小化"
+	TALENT:PLAYER:阴茎 -= 1
+	PRINTFORMW %CALLNAME:PLAYER%用魂做交易、变成了[%TALENT_NAME(GETNUM(TALENT, "阴茎"), TALENT:PLAYER:阴茎, PLAYER)%]。
+;これは你ではなくpartnerのちんこを小さくする
+CASE "短小化して"
+	TALENT:阴茎 -= 1
+	PRINTFORMW %CALLNAME:PLAYER%の魂と引き換えに、%CALLNAME:TARGET%は[%TALENT_NAME(GETNUM(TALENT, "阴茎"), TALENT:阴茎, TARGET)%]变成了。
+	SIF ARG == TARGET
+		EVENTNAME_WISH = 短小化契約成立
+
+CASE "巨乳化"
+	IF TALENT:PLAYER:巨乳 >= 2
+		PRINTFORMW %CALLNAME:PLAYER%的胸部尺寸、变成了不可能的大小的超乳。
+		CALL SETFLAG_3SIZE, "超乳化", PLAYER
+	ELSEIF TALENT:PLAYER:巨乳
+		PRINTFORMW %CALLNAME:PLAYER%的胸部尺寸、变成了非常夸张的爆乳。
+		CALL SETFLAG_3SIZE, "爆乳化", PLAYER
+	ELSEIF TALENT:PLAYER:貧乳
+		PRINTFORMW %CALLNAME:PLAYER%的胸部尺寸、变成了没有希少価値的普通大小。
+		CALL SETFLAG_3SIZE, "並乳化", PLAYER
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%的胸部尺寸变成了[巨乳]。
+		CALL SETFLAG_3SIZE, "巨乳化", PLAYER
+	ENDIF
+CASE "貧乳化"
+	IF TALENT:PLAYER:巨乳 >= 3
+		PRINTFORMW %CALLNAME:PLAYER%的胸部尺寸变成了[爆乳]。
+		CALL SETFLAG_3SIZE, "爆乳化", PLAYER
+	ELSEIF TALENT:PLAYER:巨乳 == 2
+		PRINTFORMW %CALLNAME:PLAYER%的胸部尺寸变成了[巨乳]。
+		CALL SETFLAG_3SIZE, "巨乳化", PLAYER
+	ELSEIF TALENT:PLAYER:巨乳
+		PRINTFORMW %CALLNAME:PLAYER%的胸部尺寸从巨乳一下子变成了普通大小。
+		CALL SETFLAG_3SIZE, "並乳化", PLAYER
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%的胸部尺寸变成了[貧乳]。
+		CALL SETFLAG_3SIZE, "貧乳化", PLAYER
+	ENDIF
+CASE "巨尻化"
+	IF TALENT:PLAYER:巨尻 >= 2
+		PRINTFORMW %CALLNAME:PLAYER%变成了[超尻]。
+		CALL SETFLAG_3SIZE, "超尻化", PLAYER
+	ELSEIF TALENT:PLAYER:巨尻
+		PRINTFORMW %CALLNAME:PLAYER%变成了[爆尻]。
+		CALL SETFLAG_3SIZE, "爆尻化", PLAYER
+	ELSEIF TALENT:PLAYER:小尻
+		PRINTFORMW %CALLNAME:PLAYER%的臀部尺寸、变成了没有希少価値的普通大小。
+		CALL SETFLAG_3SIZE, "並尻化", PLAYER
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%变成了[巨尻]。
+		CALL SETFLAG_3SIZE, "巨尻化", PLAYER
+	ENDIF
+CASE "小尻化"
+	IF TALENT:PLAYER:巨尻 >= 3
+		PRINTFORMW %CALLNAME:PLAYER%变成了[爆尻]。
+		CALL SETFLAG_3SIZE, "爆尻化", PLAYER
+	ELSEIF TALENT:PLAYER:巨尻 == 2
+		PRINTFORMW %CALLNAME:PLAYER%变成了[巨尻]。
+		CALL SETFLAG_3SIZE, "巨尻化", PLAYER
+	ELSEIF TALENT:PLAYER:巨尻
+		PRINTFORMW %CALLNAME:PLAYER%的臀部部尺寸从巨尻一下子变成了普通大小。
+		CALL SETFLAG_3SIZE, "並尻化", PLAYER
+	ELSE
+		PRINTFORMW %CALLNAME:PLAYER%变成了[小尻]。
+		CALL SETFLAG_3SIZE, "小尻化", PLAYER
+	ENDIF
+CASE "早漏治療"
+	TALENT:PLAYER:早漏 = 0
+	PRINTFORMW %CALLNAME:PLAYER%的[早漏]治好了。
+CASE "遅漏治療"
+	TALENT:PLAYER:遅漏 = 0
+	PRINTFORMW %CALLNAME:PLAYER%的[遅漏]治好了。
+CASE "包茎ONOFF"
+	PRINTFORML 現在的你の阴茎は[%CONDS("皮の状態", PLAYER)%]です。该怎么做呢？
+	EVENT_TABLE = 
+
+	SIF TALENT:PLAYER:包茎
+		EVENT_TABLE += "变成[露茎]/"
+	SIF TALENT:PLAYER:包茎 != 1
+		EVENT_TABLE += "变成[假性包茎]/"
+	SIF TALENT:PLAYER:包茎 != 2
+		EVENT_TABLE += "变成[真性包茎]/"
+	EVENT_TABLE += "果然还是算了"
+
+	VARSET LOCALS
+	SPLIT EVENT_TABLE, "/", LOCALS
+	CALL PRINT_SELECT, EVENT_TABLE
+	CHOICES = %LOCALS:RESULT%
+
+	SELECTCASE CHOICES
+	CASE "果然还是算了"
+		RETURN 0
+	CASE "变成[露茎]"
+		TALENT:PLAYER:包茎 = 0
+		PRINTFORMW %CALLNAME:PLAYER%的陰莖变成了[露茎]。
+	CASE "变成[假性包茎]"
+		TALENT:PLAYER:包茎 = 1
+		PRINTFORMW %CALLNAME:PLAYER%的陰莖变成了[假性包茎]。
+	CASE "变成[真性包茎]"
+		TALENT:PLAYER:包茎 = 2
+		PRINTFORMW %CALLNAME:PLAYER%的陰莖变成了[真性包茎]。
+	ENDSELECT
+CASE "女性化"
+	IF TALENT:PLAYER:扶她
+		;具現持ちなら自力で女性化できる
+		SIF TALENT:PLAYER:具現
+			PAY_SOUL = 0
+		TALENT:PLAYER:女性 = 1
+		TALENT:PLAYER:扶她 = 0
+	ELSE
+		CALL CHANGE_SEX, PLAYER
+	ENDIF
+	PRINTFORMW %CALLNAME:PLAYER%的性别向女性\@ TRUE_SEX(PLAYER) == "女性" ? 恢复了 # 转变了 \@。
+CASE "女性化して"
+	PAY_SOUL = 0
+	IF TALENT:扶她
+		TALENT:女性 = 1
+		TALENT:扶她 = 0
+	ELSE
+		CALL CHANGE_SEX, TARGET
+	ENDIF
+	PRINTFORMW %CALLNAME:TARGET%的性别向女性\@ TRUE_SEX(TARGET) == "女性" ? 恢复了 # 转变了 \@。
+CASE "男性化"
+	CALL CHANGE_SEX, PLAYER
+	PRINTFORMW %CALLNAME:PLAYER%的性别向男性\@ TRUE_SEX(PLAYER) == "男性" ? 恢复了 # 转变了 \@。
+CASE "男性化して"
+	CALL CHANGE_SEX, TARGET
+	PRINTFORMW %CALLNAME:TARGET%的性别向男性\@ TRUE_SEX(TARGET) == "男性" ? 恢复了 # 转变了 \@。
+CASE "扶她化"
+	;具現持ちなら自力で扶她化できる
+	SIF TALENT:PLAYER:具現 && TALENT:PLAYER:女性
+		PAY_SOUL = 0
+	SIF TALENT:PLAYER:男性
+		CALL CHANGE_SEX, PLAYER
+	TALENT:PLAYER:男性 = 0
+	TALENT:PLAYER:女性 = 0
+	TALENT:PLAYER:扶她 = 2
+	PRINTFORMW %CALLNAME:PLAYER%、变成了扶她。
+CASE "扶她化して"
+	PAY_SOUL = 0
+	SIF TALENT:男性
+		CALL CHANGE_SEX, TARGET
+	TALENT:男性 = 0
+	TALENT:女性 = 0
+	TALENT:扶她 = 2
+	PRINTFORMW %CALLNAME:TARGET%、变成了扶她。
+ENDSELECT
+
+;テ接吻トが出力されたら１行開け
+SIF LINECOUNT > MEMO_LINECOUNT
+	CALL BLANKLINE
+
+CALL RECORD_SP_EXP_ALLACTOR
+
+;魂の支支付が無いならここまで
+SIF PAY_SOUL == 0
+	RETURN 1
+
+;前回指令が変わるかも
+STR:日常イベント名 = %EVENTNAME_WISH%
+
+;魂のやり取り
+CALL EXCHANGE_SOUL, "取引", PAY_SOUL, ARG
+
+IF ARG != TARGET
+	SWAP ARG, TARGET
+	CALL SET_PREV_DAILYCOM
+	SWAP ARG, TARGET
+ENDIF
+
+;-------------------------------------------------
+;ARGSでの魂のやり取り。你がARG:1へとARGだけ魂を渡す
+;-------------------------------------------------
+@EXCHANGE_SOUL, ARGS, ARG, ARG:1
+#DIM MEMO_LINECOUNT
+#DIM PAY_SOUL
+#DIM ACTOR
+
+SIF PLAYER != MASTER
+	RETURN 0
+
+SIF ARG:1 == 0 && TARGET
+	ARG:1 = TARGET
+
+PAY_SOUL = 0
+ACTOR = ARG:1
+
+SELECTCASE ARGS
+CASE "絶頂"
+	SIF TALENT:ACTOR:吸精体質
+		PAY_SOUL += LIMIT(ARG*ARG/2, 1, TALENT:ACTOR:吸精体質*4) + TALENT:ACTOR:吸精体質
+
+	IF COND("性処理契約", ACTOR)
+		PAY_SOUL += 10 * MIN(ARG, 3)
+	ELSEIF COND("炮友契約", ACTOR)
+		PAY_SOUL += 5 * MIN(ARG, 4)
+	ENDIF
+CASE "取引"
+	PAY_SOUL = ARG
+ENDSELECT
+
+SIF PAY_SOUL <= 0
+	RETURN 0
+
+SIF BASE:MASTER:魂 < PAY_SOUL
+	PAY_SOUL = BASE:MASTER:魂
+
+BASE:MASTER:魂 -= PAY_SOUL
+BASE:ACTOR:魂 += PAY_SOUL
+IF TFLAG:システム文スキップ == 0
+	SIF COND("調教中") == 0
+		PRINTFORML 魂-%TEXTS("0.01", PAY_SOUL)%（%CALLNAME:MASTER%）
+	SIF ACTOR != TARGET && COND("調教中") == 0
+		PRINTFORML 魂+%TEXTS("0.01", PAY_SOUL)%（%CALLNAME:ACTOR%）
+ENDIF
+IF BASE:MASTER:魂 <= 0 && COND("調教中") == 0
+	PRINTL 
+	PRINTFORMW %CALLNAME:MASTER%已经到达极限了……
+	CALL PRINT_STRW, "紅_＜復活！＞"
+	PRINTFORMW %CALLNAME:MASTER%用尽最后的力量复活了！
+	BASE:MASTER:魂 = 1
+ENDIF
+IF CFLAG:ACTOR:睡眠 == 0
+	;大口の取引をしたなら、信頼が３未満なら+1LV
+	IF PAY_SOUL >= 100 && ABL:ACTOR:信頼 < 3
+		ABL:ACTOR:信頼 += 1
+		SIF TFLAG:システム文スキップ == 0
+			CALL PRINT_STRW, @"イエロー_%CALLNAME:ACTOR%的信頼上升了１、变成了{ABL:ACTOR:信頼}LV。"
+	ENDIF
+ENDIF
+
